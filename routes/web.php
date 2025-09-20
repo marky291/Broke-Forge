@@ -70,6 +70,8 @@ Route::middleware('auth')->group(function () {
 
         // Provision services
         Route::prefix('provision')->name('provision.')->group(function () {
+            Route::post('retry', [ServerProvisioningController::class, 'retry'])
+                ->name('retry');
             Route::get('services', [ServerProvisioningController::class, 'services'])
                 ->name('services');
             Route::post('services', [ServerProvisioningController::class, 'storeServices'])

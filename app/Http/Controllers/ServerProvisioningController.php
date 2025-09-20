@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ProvisionEvent;
 use App\Models\Server;
+use App\Provision\Enums\Connection;
 use App\Provision\Enums\ProvisionStatus;
 use App\Provision\Enums\ServiceType;
 use App\Provision\Server\Access\ProvisionAccess;
@@ -96,6 +97,42 @@ class ServerProvisioningController extends Controller
     }
 
     /**
+     * Reset the server so provisioning can be attempted again.
+     */
+    public function retry(Server $server): RedirectResponse
+    {
+        if ($server->provision_status !== ProvisionStatus::Failed) {
+            return redirect()
+                ->route('servers.provisioning', $server)
+                ->with('error', 'Provisioning is not in a failed state.');
+        }
+
+        // Clear any recorded provisioning events so progress restarts cleanly.
+        $server->provisionEvents()->delete();
+
+        // Reset cached root password so a new secret is generated for the next attempt.
+        ServerCredentials::forgetRootPassword($server);
+
+        $server->connection = Connection::PENDING;
+        $server->provision_status = ProvisionStatus::Pending;
+        $server->save();
+
+        // Reset service progress indicators for web/PHP services if they exist.
+        $server->services()
+            ->whereIn('service_name', ['web', 'php'])
+            ->update([
+                'status' => 'pending',
+                'progress_step' => null,
+                'progress_total' => null,
+                'progress_label' => null,
+            ]);
+
+        return redirect()
+            ->route('servers.provisioning', $server)
+            ->with('success', 'Provisioning reset. Run the provisioning command again.');
+    }
+
+    /**
      * Get provision events for a server
      *
      * Returns all provision/deprovision events for tracking on the frontend
@@ -146,3 +183,4 @@ class ServerProvisioningController extends Controller
         return sprintf('wget -O %1$s "%2$s"; bash %1$s', $filename, $provisionUrl);
     }
 }
+

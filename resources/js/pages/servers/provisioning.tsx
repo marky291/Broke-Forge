@@ -6,7 +6,7 @@ import { edit as editServer, show as showServer } from '@/routes/servers';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import copyToClipboard from 'copy-to-clipboard';
-import { CheckIcon, CircleIcon, Loader2Icon, Trash2Icon, XCircleIcon } from 'lucide-react';
+import { CheckIcon, CircleIcon, Loader2Icon, RefreshCwIcon, Trash2Icon, XCircleIcon } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 type Server = {
@@ -65,6 +65,7 @@ export default function Provisioning({
 }) {
     const { props } = usePage<{ name?: string }>();
     const [copied, setCopied] = useState<'cmd' | 'root' | null>(null);
+    const [isRetrying, setIsRetrying] = useState(false);
     const [isDestroying, setIsDestroying] = useState(false);
 
     const breadcrumbs: BreadcrumbItem[] = [
@@ -139,6 +140,21 @@ export default function Provisioning({
         }
     };
 
+    const handleRetryProvisioning = () => {
+        const confirmed = window.confirm('Retry provisioning? This will reset the progress and issue a new root password.');
+
+        if (!confirmed) {
+            return;
+        }
+
+        setIsRetrying(true);
+
+        router.post(`/servers/${server.id}/provision/retry`, {}, {
+            preserveScroll: true,
+            onFinish: () => setIsRetrying(false),
+            onError: () => setIsRetrying(false),
+        });
+    };
     const handleDestroyServer = () => {
         const action = server.connection === 'pending' ? 'cancel provisioning' : 'delete';
         const confirmed = window.confirm(`Are you sure you want to ${action} this server? This action cannot be undone.`);
@@ -183,7 +199,7 @@ export default function Provisioning({
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title={`Server Provisioning — #${server.id}`} />
+            <Head title={`Server Provisioning - #${server.id}`} />
 
             <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
                 <div className="mb-2 flex items-center justify-between">
@@ -211,6 +227,21 @@ export default function Provisioning({
                         <Button variant="outline" asChild>
                             <Link href={dashboard().url}>Back to Dashboard</Link>
                         </Button>
+                        {server.provision_status === 'failed' && (
+                            <Button variant="outline" onClick={handleRetryProvisioning} disabled={isRetrying}>
+                                {isRetrying ? (
+                                    <>
+                                        <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
+                                        Retrying...
+                                    </>
+                                ) : (
+                                    <>
+                                        <RefreshCwIcon className="mr-2 h-4 w-4" />
+                                        Retry Provisioning
+                                    </>
+                                )}
+                            </Button>
+                        )}
                         <Button variant="destructive" onClick={handleDestroyServer} disabled={isDestroying}>
                             {isDestroying ? (
                                 <>
