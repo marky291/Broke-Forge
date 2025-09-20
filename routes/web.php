@@ -110,6 +110,9 @@ Route::middleware('auth')->group(function () {
                 ->name('sites.store');
         });
 
+        Route::get('explorer', [ServerFileExplorerController::class, 'show'])
+            ->name('explorer');
+
         // File explorer APIs
         Route::prefix('files')->name('files.')->group(function () {
             Route::get('/', [ServerFileExplorerController::class, 'index'])

@@ -11,11 +11,10 @@ import ServerLayout from '@/layouts/server/layout';
 import { dashboard } from '@/routes';
 import { show as showServer } from '@/routes/servers';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
+import { Head, Link, useForm } from '@inertiajs/react';
 import { Globe, Loader2, Lock, Plus, CheckCircle, XCircle, Clock } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import { show as showSite } from '@/routes/servers/sites';
-import ServerFileExplorerDialog from '@/components/server-file-explorer-dialog';
 
 type ServerType = {
     id: number;
@@ -61,52 +60,12 @@ type SitesProps = {
 };
 
 export default function Sites({ server, sites }: SitesProps) {
-    const { url } = usePage();
-    const parseFilesView = (targetUrl: string): boolean => {
-        const [, queryString = ''] = targetUrl.split('?');
-        return new URLSearchParams(queryString).get('view') === 'files';
-    };
-
     const [showAddSiteDialog, setShowAddSiteDialog] = useState(false);
     const form = useForm({
         domain: '',
         php_version: '8.3',
         ssl: false,
     } as { domain: string; php_version: string; ssl: boolean });
-    const [fileExplorerOpen, setFileExplorerOpen] = useState(() => parseFilesView(url));
-
-    useEffect(() => {
-        setFileExplorerOpen(parseFilesView(url));
-    }, [url]);
-
-    const handleFileExplorerToggle = useCallback((nextOpen: boolean) => {
-        setFileExplorerOpen(nextOpen);
-
-        const [path, search = ''] = url.split('?');
-        const params = new URLSearchParams(search);
-        const isCurrentlyFiles = params.get('view') === 'files';
-
-        if (nextOpen) {
-            if (!isCurrentlyFiles) {
-                params.set('view', 'files');
-            } else {
-                return;
-            }
-        } else if (isCurrentlyFiles) {
-            params.delete('view');
-        } else {
-            return;
-        }
-
-        const nextQuery = params.toString();
-        const targetUrl = nextQuery ? `${path}?${nextQuery}` : path;
-
-        router.visit(targetUrl, {
-            replace: true,
-            preserveScroll: true,
-            preserveState: true,
-        });
-    }, [router, url]);
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard().url },
@@ -165,8 +124,8 @@ export default function Sites({ server, sites }: SitesProps) {
                             Manage websites, domains, and applications hosted on your server.
                         </p>
                     </div>
-                    <Button variant="outline" onClick={() => handleFileExplorerToggle(true)}>
-                        Open File Explorer
+                    <Button asChild variant="outline">
+                        <Link href={`/servers/${server.id}/explorer`}>Open File Explorer</Link>
                     </Button>
                 </div>
 
@@ -313,11 +272,6 @@ export default function Sites({ server, sites }: SitesProps) {
                     </DialogContent>
                 </Dialog>
             </div>
-            <ServerFileExplorerDialog
-                serverId={server.id}
-                open={fileExplorerOpen}
-                onOpenChange={handleFileExplorerToggle}
-            />
         </ServerLayout>
     );
 }

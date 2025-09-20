@@ -21,15 +21,13 @@ interface ServerLayoutProps extends PropsWithChildren {
 
 export default function ServerLayout({ children, server, breadcrumbs, site }: ServerLayoutProps) {
     const { url } = usePage();
-    const [path = '', queryString = ''] = url.split('?');
-    const searchParams = new URLSearchParams(queryString);
-    const isFilesView = searchParams.get('view') === 'files';
+    const [path = ''] = url.split('?');
 
     // Check current section
     let currentSection: string = 'overview';
 
-    if (isFilesView) {
-        currentSection = 'files';
+    if (path.includes('/explorer')) {
+        currentSection = 'explorer';
     } else if (path.includes('/sites/') && path.includes('/commands')) {
         currentSection = 'site-commands';
     } else if (path.includes('/sites/') && site) {
@@ -52,13 +50,6 @@ export default function ServerLayout({ children, server, breadcrumbs, site }: Se
             isActive: currentSection === 'sites',
         },
     ];
-
-    sidebarNavItems.push({
-        title: 'File Explorer',
-        href: `/servers/${server.id}/sites?view=files`,
-        icon: Folder,
-        isActive: currentSection === 'files',
-    });
 
     if (site) {
         sidebarNavItems.push({
@@ -87,6 +78,12 @@ export default function ServerLayout({ children, server, breadcrumbs, site }: Se
             href: `/servers/${server.id}/database`,
             icon: DatabaseIcon,
             isActive: currentSection === 'database',
+        },
+        {
+            title: 'Explorer',
+            href: `/servers/${server.id}/explorer`,
+            icon: Folder,
+            isActive: currentSection === 'explorer',
         },
         {
             title: 'Settings',

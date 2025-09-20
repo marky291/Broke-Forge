@@ -9,10 +9,28 @@ use App\Http\Requests\Servers\ServerFileUploadRequest;
 use App\Models\Server;
 use App\Support\ServerFileExplorer;
 use Illuminate\Http\JsonResponse;
+use Inertia\Inertia;
+use Inertia\Response;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class ServerFileExplorerController extends Controller
 {
+    public function show(Server $server): Response
+    {
+        return Inertia::render('servers/explorer', [
+            'server' => $server->only([
+                'id',
+                'vanity_name',
+                'public_ip',
+                'ssh_port',
+                'private_ip',
+                'connection',
+                'created_at',
+                'updated_at',
+            ]),
+        ]);
+    }
+
     public function index(ServerFileIndexRequest $request, Server $server): JsonResponse
     {
         $explorer = new ServerFileExplorer($server);
