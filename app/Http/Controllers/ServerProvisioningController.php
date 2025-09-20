@@ -1,0 +1,148 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\ProvisionEvent;
+use App\Models\Server;
+use App\Provision\Enums\ProvisionStatus;
+use App\Provision\Enums\ServiceType;
+use App\Provision\Server\Access\ProvisionAccess;
+use App\Provision\Server\WebServer\WebServiceProvisionMilestones;
+use App\Support\ServerCredentials;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Str;
+use Inertia\Inertia;
+use Inertia\Response;
+use Symfony\Component\HttpFoundation\Response as HttpResponse;
+
+class ServerProvisioningController extends Controller
+{
+    public function show(Server $server): Response|\Illuminate\Http\RedirectResponse
+    {
+        // Redirect to server page if fully provisioned
+        if ($server->provision_status === ProvisionStatus::Completed) {
+            return redirect()->route('servers.show', $server);
+        }
+
+        // Collect provision events logged during web service installation
+        $events = $server->provisionEvents()
+            ->where('service_type', ServiceType::WEBSERVER)
+            ->orderBy('created_at')
+            ->get()
+            ->map(function (ProvisionEvent $event) {
+                $status = is_string($event->milestone) ? $event->milestone : 'unknown';
+
+                $label = null;
+
+                if (is_string($event->milestone)) {
+                    $label = WebServiceProvisionMilestones::label($event->milestone)
+                        ?? Str::headline($event->milestone);
+                } elseif (is_array($event->milestone) && array_key_exists('label', $event->milestone)) {
+                    $label = $event->milestone['label'];
+                }
+
+                return [
+                    'id' => $event->id,
+                    'status' => $status,
+                    'label' => $label,
+                    'step' => $event->current_step,
+                    'total_steps' => $event->total_steps,
+                    'occurred_at' => optional($event->created_at)->toISOString(),
+                ];
+            })
+            ->values()
+            ->all();
+
+        return Inertia::render('servers/provisioning', [
+            'server' => array_merge(
+                $server->only(['id', 'vanity_name', 'public_ip', 'ssh_port', 'private_ip', 'connection', 'server_type', 'created_at', 'updated_at']),
+                [
+                    'provision_status' => $server->provision_status->value,
+                    'provision_status_label' => $server->provision_status->label(),
+                    'provision_status_color' => $server->provision_status->color(),
+                ]
+            ),
+            'provision' => $this->getProvisionData($server),
+            'events' => $events,
+            'webServiceMilestones' => WebServiceProvisionMilestones::labels(),
+        ]);
+    }
+
+    public function provision(Server $server): HttpResponse
+    {
+        $rootPassword = ServerCredentials::rootPassword($server);
+        $script = (new ProvisionAccess)->makeScriptFor($server, $rootPassword);
+
+        return response($script, 200, [
+            'Content-Type' => 'text/x-shellscript; charset=utf-8',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
+    }
+
+    public function services(Server $server): Response
+    {
+        return Inertia::render('servers/provision/services', [
+            'server' => $server->only(['id', 'vanity_name', 'public_ip', 'ssh_port', 'private_ip', 'connection', 'created_at', 'updated_at']),
+        ]);
+    }
+
+    public function storeServices(Server $server): RedirectResponse
+    {
+        // TODO: Implement service provisioning logic
+        return redirect()
+            ->route('servers.provision.services', $server)
+            ->with('success', 'Services configured successfully');
+    }
+
+    /**
+     * Get provision events for a server
+     *
+     * Returns all provision/deprovision events for tracking on the frontend
+     */
+    public function events(Server $server): JsonResponse
+    {
+        $events = $server->provisionEvents()
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function (ProvisionEvent $event) {
+                return [
+                    'id' => $event->id,
+                    'service_type' => $event->service_type,
+                    'provision_type' => $event->provision_type,
+                    'milestone' => $event->milestone,
+                    'current_step' => $event->current_step,
+                    'total_steps' => $event->total_steps,
+                    'progress_percentage' => $event->progress_percentage,
+                    'details' => $event->details,
+                    'created_at' => $event->created_at->toISOString(),
+                ];
+            });
+
+        return response()->json([
+            'events' => $events,
+            'server_id' => $server->id,
+        ]);
+    }
+
+    protected function getProvisionData(Server $server): ?array
+    {
+        // Show provision data only when connection is pending
+        if ($server->connection !== 'pending') {
+            return null;
+        }
+
+        return [
+            'command' => $this->buildProvisionCommand($server),
+            'root_password' => ServerCredentials::rootPassword($server),
+        ];
+    }
+
+    protected function buildProvisionCommand(Server $server): string
+    {
+        $provisionUrl = route('servers.provision', ['server' => $server->id]);
+        $filename = Str::slug(config('app.name')).'.sh';
+
+        return sprintf('wget -O %1$s "%2$s"; bash %1$s', $filename, $provisionUrl);
+    }
+}

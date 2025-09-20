@@ -1,0 +1,63 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Http\Requests\Servers\StoreSiteRequest;
+use App\Jobs\ProvisionSiteJob;
+use App\Models\Server;
+use App\Models\Site;
+use Illuminate\Http\RedirectResponse;
+use Inertia\Inertia;
+use Inertia\Response;
+
+class ServerSitesController extends Controller
+{
+    public function index(Server $server): Response
+    {
+        $sites = $server->sites()
+            ->select(['id', 'domain', 'document_root', 'php_version', 'ssl_enabled', 'status', 'provisioned_at'])
+            ->latest()
+            ->paginate(10)
+            ->withQueryString();
+
+        return Inertia::render('servers/sites', [
+            'server' => $server->only(['id', 'vanity_name', 'public_ip', 'ssh_port', 'private_ip', 'connection', 'created_at', 'updated_at']),
+            'sites' => $sites,
+        ]);
+    }
+
+    public function show(Server $server, Site $site): Response
+    {
+        return Inertia::render('servers/site-application', [
+            'server' => $server->only(['id', 'vanity_name', 'public_ip', 'ssh_port', 'private_ip', 'connection', 'created_at', 'updated_at']),
+            'site' => $site->only([
+                'id',
+                'domain',
+                'document_root',
+                'php_version',
+                'ssl_enabled',
+                'status',
+                'configuration',
+                'provisioned_at',
+                'created_at',
+                'updated_at',
+            ]),
+        ]);
+    }
+
+    public function store(StoreSiteRequest $request, Server $server): RedirectResponse
+    {
+        $validated = $request->validated();
+
+        ProvisionSiteJob::dispatch(
+            $server,
+            $validated['domain'],
+            $validated['php_version'],
+            $validated['ssl']
+        );
+
+        return redirect()
+            ->route('servers.sites', $server)
+            ->with('success', 'Site provisioning started. This process may take a few minutes.');
+    }
+}

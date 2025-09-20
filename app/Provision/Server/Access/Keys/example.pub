@@ -1,0 +1,19 @@
+# Example SSH Public Key File
+# 
+# Instructions:
+# 1. Copy your SSH public key content here
+# 2. Save this file as 'ssh_key.pub' (remove the .example extension)
+# 3. Your SSH public key should look like:
+#    ssh-rsa AAAAB3NzaC1yc2E... user@example.com
+#    or
+#    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5... user@example.com
+#
+# To generate a new SSH key:
+# ssh-keygen -t rsa -b 4096 -C "your_email@example.com"
+# 
+# To copy your existing public key:
+# cat ~/.ssh/id_rsa.pub
+# or
+# cat ~/.ssh/id_ed25519.pub
+
+ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQ... your_email@example.com

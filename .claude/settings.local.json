@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash"
+    ]
+  },
+  "enabledMcpjsonServers": [
+    "laravel-boost",
+    "herd"
+  ]
+}
