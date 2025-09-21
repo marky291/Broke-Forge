@@ -34,6 +34,7 @@ class ServerController extends Controller
         $phpVersion = $data['php_version'];
         unset($data['php_version']);
 
+        $data['user_id'] = $request->user()->getKey();
         $data['ssh_port'] = 22;
         $data['ssh_root_user'] = 'root';
         $data['ssh_app_user'] = Str::slug(config('app.name'));

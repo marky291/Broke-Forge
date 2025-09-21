@@ -1,6 +1,6 @@
 import { Breadcrumb, BreadcrumbItem as BreadcrumbComponent, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import AppLayout from '@/layouts/app-layout';
-import { type NavItem, type BreadcrumbItem } from '@/types';
+import { type NavGroup, type NavItem, type BreadcrumbItem } from '@/types';
 import { usePage, Link } from '@inertiajs/react';
 import { AppWindow, DatabaseIcon, CodeIcon, Folder, Globe, Server, Terminal } from 'lucide-react';
 import { PropsWithChildren } from 'react';
@@ -19,6 +19,9 @@ interface ServerLayoutProps extends PropsWithChildren {
     };
 }
 
+/**
+ * Layout for server-scoped routes that surfaces grouped navigation for server and site contexts.
+ */
 export default function ServerLayout({ children, server, breadcrumbs, site }: ServerLayoutProps) {
     const { url } = usePage();
     const [path = ''] = url.split('?');
@@ -42,31 +45,16 @@ export default function ServerLayout({ children, server, breadcrumbs, site }: Se
         currentSection = 'settings';
     }
 
-    const sidebarNavItems: NavItem[] = [
+    /**
+     * Build navigation groups so users can quickly distinguish server-level tools from site-level actions.
+     */
+    const serverNavItems: NavItem[] = [
         {
             title: 'Sites',
             href: `/servers/${server.id}/sites`,
             icon: Globe,
             isActive: currentSection === 'sites',
         },
-    ];
-
-    if (site) {
-        sidebarNavItems.push({
-            title: 'Application',
-            href: `/servers/${server.id}/sites/${site.id}`,
-            icon: AppWindow,
-            isActive: currentSection === 'site-application',
-        });
-        sidebarNavItems.push({
-            title: 'Commands',
-            href: `/servers/${server.id}/sites/${site.id}/commands`,
-            icon: Terminal,
-            isActive: currentSection === 'site-commands',
-        });
-    }
-
-    sidebarNavItems.push(
         {
             title: 'PHP',
             href: `/servers/${server.id}/php`,
@@ -91,7 +79,39 @@ export default function ServerLayout({ children, server, breadcrumbs, site }: Se
             icon: Server,
             isActive: currentSection === 'settings',
         },
-    );
+    ];
+
+    const siteNavItems: NavItem[] = site
+        ? [
+              {
+                  title: 'Application',
+                  href: `/servers/${server.id}/sites/${site.id}`,
+                  icon: AppWindow,
+                  isActive: currentSection === 'site-application',
+              },
+              {
+                  title: 'Commands',
+                  href: `/servers/${server.id}/sites/${site.id}/commands`,
+                  icon: Terminal,
+                  isActive: currentSection === 'site-commands',
+              },
+          ]
+        : [];
+
+    const sidebarNavGroups: NavGroup[] = [
+        ...(siteNavItems.length
+            ? [
+                  {
+                      title: site?.domain ? `Site · ${site.domain}` : 'Current Site',
+                      items: siteNavItems,
+                  },
+              ]
+            : []),
+        {
+            title: 'Server',
+            items: serverNavItems,
+        },
+    ];
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -113,25 +133,32 @@ export default function ServerLayout({ children, server, breadcrumbs, site }: Se
 
                             {/* Navigation */}
                             <div className="flex-1 p-2">
-                                <nav className="space-y-1">
-                                    {sidebarNavItems.map((item, index) => {
-                                        const Icon = item.icon;
-                                        return (
-                                            <Link
-                                                key={`${item.href}-${index}`}
-                                                href={item.href}
-                                                className={cn(
-                                                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
-                                                    item.isActive
-                                                        ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                                                        : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                                                )}
-                                            >
-                                                {Icon && <Icon className="size-4" />}
-                                                {item.title}
-                                            </Link>
-                                        );
-                                    })}
+                                <nav className="space-y-4">
+                                    {sidebarNavGroups.map((group) => (
+                                        <div key={group.title} className="space-y-2">
+                                            <p className="px-3 text-xs font-medium uppercase text-muted-foreground">{group.title}</p>
+                                            <div className="space-y-1">
+                                                {group.items.map((item, index) => {
+                                                    const Icon = item.icon;
+                                                    return (
+                                                        <Link
+                                                            key={`${item.href}-${index}`}
+                                                            href={item.href}
+                                                            className={cn(
+                                                                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+                                                                item.isActive
+                                                                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                                                                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                                                            )}
+                                                        >
+                                                            {Icon && <Icon className="size-4" />}
+                                                            {item.title}
+                                                        </Link>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    ))}
                                 </nav>
                             </div>
                         </div>

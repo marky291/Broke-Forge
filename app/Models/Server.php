@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Support\ServerCredentials;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -18,12 +19,14 @@ use Illuminate\Support\Facades\Auth;
  * @property string|null $ssh_root_user
  * @property string|null $ssh_app_user
  * @property string $connection
+ * @property-read User|null $user
  */
 class Server extends Model
 {
     use HasFactory;
 
     protected $fillable = [
+        'user_id',
         'vanity_name',
         'public_ip',
         'private_ip',
@@ -59,6 +62,14 @@ class Server extends Model
     public function services(): HasMany
     {
         return $this->hasMany(ServerService::class);
+    }
+
+    /**
+     * Link the server back to its owning user for authorization concerns.
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 
     public function sites(): HasMany

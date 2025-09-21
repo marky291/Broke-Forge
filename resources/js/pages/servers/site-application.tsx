@@ -1,5 +1,4 @@
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -9,23 +8,18 @@ import { show as showServer } from '@/routes/servers';
 import { type BreadcrumbItem } from '@/types';
 import { cn } from '@/lib/utils';
 import { Head } from '@inertiajs/react';
-import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import {
     AppWindow,
-    AlertCircle,
     CheckCircle,
     Check,
     Clock,
-    Copy,
     DatabaseIcon,
-    ExternalLink,
-    Folder,
     GitBranch,
     Globe,
     Layers,
     Loader2,
-    Lock,
     XCircle,
 } from 'lucide-react';
 
@@ -164,31 +158,13 @@ const statusMeta: Record<string, { badgeClass: string; label: string; icon: Reac
     },
 };
 
-const formatTimestamp = (timestamp?: string | null, fallback = 'Not available') => {
-    if (!timestamp) {
-        return fallback;
-    }
-
-    const date = new Date(timestamp);
-    return Number.isNaN(date.getTime()) ? timestamp : date.toLocaleString();
-};
-
+/**
+ * Render the BrokeForge site application view with available installation workflows.
+ */
 export default function SiteApplication({ server, site }: { server: ServerType; site: Site }) {
     const initialOptionKey = installationOptions[0]?.key ?? 'install-application';
     const [selectedOption, setSelectedOption] = useState<InstallationOption['key'] | ''>(initialOptionKey);
     const [searchQuery, setSearchQuery] = useState('');
-    const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle');
-    const copyResetTimeout = useRef<number | null>(null);
-
-    useEffect(
-        () => () => {
-            if (copyResetTimeout.current !== null) {
-                window.clearTimeout(copyResetTimeout.current);
-                copyResetTimeout.current = null;
-            }
-        },
-        [],
-    );
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard().url },
@@ -198,21 +174,6 @@ export default function SiteApplication({ server, site }: { server: ServerType; 
     ];
 
     const activeStatus = statusMeta[site.status] ?? statusMeta.default;
-    const siteUrl = useMemo(() => {
-        if (!site.domain) {
-            return null;
-        }
-
-        const sanitizedDomain = site.domain.replace(/^https?:\/\//i, '');
-        const protocol = site.ssl_enabled ? 'https://' : 'http://';
-        return `${protocol}${sanitizedDomain}`;
-    }, [site.domain, site.ssl_enabled]);
-
-    const formattedProvisionedAt = useMemo(
-        () => formatTimestamp(site.provisioned_at, 'Provisioning not started'),
-        [site.provisioned_at],
-    );
-    const formattedUpdatedAt = useMemo(() => formatTimestamp(site.updated_at), [site.updated_at]);
     const filteredOptions = useMemo(() => {
         const query = searchQuery.trim().toLowerCase();
 
@@ -245,28 +206,6 @@ export default function SiteApplication({ server, site }: { server: ServerType; 
         }
     }, [filteredOptions, selectedOption]);
 
-    const handleCopyDocumentRoot = async () => {
-        if (copyResetTimeout.current !== null) {
-            window.clearTimeout(copyResetTimeout.current);
-        }
-
-        try {
-            if (typeof navigator === 'undefined' || !navigator.clipboard?.writeText) {
-                throw new Error('Clipboard unavailable');
-            }
-
-            await navigator.clipboard.writeText(site.document_root);
-            setCopyState('copied');
-        } catch {
-            setCopyState('failed');
-        }
-
-        copyResetTimeout.current = window.setTimeout(() => {
-            setCopyState('idle');
-            copyResetTimeout.current = null;
-        }, 2000);
-    };
-
     const selectedInstallation = useMemo(() => {
         if (!selectedOption) {
             return null;
@@ -294,101 +233,6 @@ export default function SiteApplication({ server, site }: { server: ServerType; 
                 </div>
 
                 <div className="space-y-6">
-                    <Card>
-                        <CardHeader className="space-y-2">
-                            <CardTitle>Site Snapshot</CardTitle>
-                            <p className="text-sm text-muted-foreground">
-                                Key details to keep in mind while choosing an installer.
-                            </p>
-                        </CardHeader>
-                        <Separator />
-                        <CardContent className="space-y-5 text-sm">
-                            <div className="space-y-2">
-                                <div className="text-xs font-medium uppercase text-muted-foreground">Domain</div>
-                                <div className="flex flex-wrap items-center gap-2 font-medium">
-                                    <Globe className="h-4 w-4 text-muted-foreground" />
-                                    <span>{site.domain}</span>
-                                    {siteUrl && (
-                                        <Button variant="outline" size="sm" className="h-8 px-3" asChild>
-                                            <a href={siteUrl} target="_blank" rel="noopener noreferrer">
-                                                <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
-                                                Visit
-                                            </a>
-                                        </Button>
-                                    )}
-                                </div>
-                            </div>
-
-                            <div className="space-y-2">
-                                <div className="text-xs font-medium uppercase text-muted-foreground">Document Root</div>
-                                <div className="flex flex-wrap items-center gap-2">
-                                    <Folder className="h-4 w-4 text-muted-foreground" />
-                                    <span className="break-all font-medium">{site.document_root}</span>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-8 px-3"
-                                        onClick={handleCopyDocumentRoot}
-                                        type="button"
-                                    >
-                                        {copyState === 'copied' ? (
-                                            <>
-                                                <Check className="mr-1.5 h-3.5 w-3.5" />
-                                                Copied
-                                            </>
-                                        ) : copyState === 'failed' ? (
-                                            <>
-                                                <AlertCircle className="mr-1.5 h-3.5 w-3.5" />
-                                                Try again
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Copy className="mr-1.5 h-3.5 w-3.5" />
-                                                Copy path
-                                            </>
-                                        )}
-                                        <span aria-live="polite" className="sr-only">
-                                            {copyState === 'copied'
-                                                ? 'Document root copied to clipboard'
-                                                : copyState === 'failed'
-                                                    ? 'Copy to clipboard failed. Try again.'
-                                                    : 'Copy the document root path to clipboard'}
-                                        </span>
-                                    </Button>
-                                </div>
-                            </div>
-
-                            <div className="grid gap-4 sm:grid-cols-2">
-                                <div>
-                                    <div className="text-xs font-medium uppercase text-muted-foreground">PHP Version</div>
-                                    <div className="mt-1 flex items-center gap-2">
-                                        <Badge variant="outline" className="border-dashed text-xs font-semibold">
-                                            {site.php_version}
-                                        </Badge>
-                                    </div>
-                                </div>
-                                <div>
-                                    <div className="text-xs font-medium uppercase text-muted-foreground">SSL</div>
-                                    <div className="mt-1 flex items-center gap-2 font-medium">
-                                        <Lock className={`h-4 w-4 ${site.ssl_enabled ? 'text-green-500' : 'text-muted-foreground'}`} />
-                                        {site.ssl_enabled ? 'Enabled' : 'Disabled'}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="grid gap-4 sm:grid-cols-2">
-                                <div>
-                                    <div className="text-xs font-medium uppercase text-muted-foreground">Provisioned</div>
-                                    <div className="mt-1 font-medium">{formattedProvisionedAt}</div>
-                                </div>
-                                <div>
-                                    <div className="text-xs font-medium uppercase text-muted-foreground">Last Updated</div>
-                                    <div className="mt-1 font-medium">{formattedUpdatedAt}</div>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
                     <Card>
                         <CardHeader className="space-y-4">
                             <div>

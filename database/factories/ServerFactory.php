@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\Server;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
@@ -18,6 +19,7 @@ class ServerFactory extends Factory
         $appUser = Str::slug($this->faker->domainWord());
 
         return [
+            'user_id' => User::factory(),
             'vanity_name' => $this->faker->domainWord().' server',
             'public_ip' => $this->faker->ipv4(),
             'private_ip' => $this->faker->optional()->ipv4(),
