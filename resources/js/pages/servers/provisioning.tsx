@@ -108,7 +108,9 @@ export default function Provisioning({
     }, [server.connection, server.provision_status]);
 
     const webProvisionSteps = useMemo(() => {
-        if (server.provision_status !== 'installing') {
+        // Show web provision steps if we have events or if we're installing
+        const shouldShow = events.length > 0 || server.provision_status === 'installing';
+        if (!shouldShow) {
             return [] as Array<{ status: (typeof WEB_SERVICE_SEQUENCE)[number]; label: string; state: StepState }>;
         }
 
@@ -188,8 +190,14 @@ export default function Provisioning({
             return;
         }
 
+        // Check if we have the complete milestone event
+        const hasCompleteEvent = events.some(event => event.status === 'complete');
+
         const isInitialProvision = server.provision_status === 'pending';
-        const shouldPoll = isInitialProvision || server.provision_status === 'connecting' || server.provision_status === 'installing';
+        const isActiveProvisioning = server.provision_status === 'connecting' || server.provision_status === 'installing';
+
+        // Continue polling if we haven't seen the complete event yet or if provisioning is active
+        const shouldPoll = isInitialProvision || isActiveProvisioning || (!hasCompleteEvent && events.length > 0);
 
         if (!shouldPoll) {
             return;
@@ -201,7 +209,7 @@ export default function Provisioning({
         }, intervalMs);
 
         return () => window.clearInterval(id);
-    }, [server.provision_status, server.id]);
+    }, [server.provision_status, server.id, events]);
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -454,7 +462,7 @@ export default function Provisioning({
                                         </li>
                                     ))}
                                 </ul>
-                                {server.provision_status === 'installing' && webProvisionSteps.length > 0 && (
+                                {webProvisionSteps.length > 0 && (
                                     <>
                                         <Separator className="my-4" />
                                         <div className="text-xs font-medium text-muted-foreground uppercase">Upcoming Web Service Steps</div>
