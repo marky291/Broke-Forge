@@ -8,8 +8,9 @@ use App\Http\Controllers\ServerFileExplorerController;
 use App\Http\Controllers\ServerPhpController;
 use App\Http\Controllers\ServerProvisioningController;
 use App\Http\Controllers\ServerSettingsController;
-use App\Http\Controllers\ServerSitesController;
 use App\Http\Controllers\ServerSiteCommandsController;
+use App\Http\Controllers\ServerSiteGitRepositoryController;
+use App\Http\Controllers\ServerSitesController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -106,6 +107,10 @@ Route::middleware('auth')->group(function () {
                 ->name('sites.commands');
             Route::post('{site}/commands', [ServerSiteCommandsController::class, 'store'])
                 ->name('sites.commands.execute');
+            Route::get('{site}/application/git-repository', [ServerSiteGitRepositoryController::class, 'show'])
+                ->name('sites.git-repository');
+            Route::post('{site}/application/git-repository', [ServerSiteGitRepositoryController::class, 'store'])
+                ->name('sites.git-repository.install');
             Route::get('{site}', [ServerSitesController::class, 'show'])
                 ->name('sites.show');
             Route::post('/', [ServerSitesController::class, 'store'])

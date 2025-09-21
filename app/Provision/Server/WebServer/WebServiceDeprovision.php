@@ -2,14 +2,14 @@
 
 namespace App\Provision\Server\WebServer;
 
-use App\Provision\Enums\ExecutableUser;
 use App\Provision\Enums\ServiceType;
 use App\Provision\Milestones;
 use App\Provision\RemovableService;
+use App\Provision\Server\Access\RootCredential;
+use App\Provision\Server\Access\SshCredential;
 
 class WebServiceDeprovision extends RemovableService
 {
-
     protected function serviceType(): string
     {
         return ServiceType::WEBSERVER;
@@ -20,9 +20,9 @@ class WebServiceDeprovision extends RemovableService
         return new WebServiceDeprovisionMilestones;
     }
 
-    protected function executableUser(): ExecutableUser
+    protected function sshCredential(): SshCredential
     {
-        return ExecutableUser::RootUser;
+        return new RootCredential;
     }
 
     /**

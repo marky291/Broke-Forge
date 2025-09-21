@@ -9,25 +9,31 @@ BrokeForge is a server management and deployment platform that automates server 
 ### Core Architecture
 
 **Provisioning System** (`app/Provision/`)
-- Base class `ProvisionableService` handles SSH connections via `spatie/ssh`
-- Service-specific provisioners extend the base (e.g., `ProvisionMySQL`, `ProvisionSite`)
-- Milestone tracking for progress reporting with callbacks
-- Database state tracking via Server, Site, and ServerService models
+- Base class `Serviceable` handles SSH connections via `spatie/ssh`
+- Service interfaces: `InstallableService`, `RemovableService` for service lifecycle
+- Service-specific provisioners extend the base (e.g., `MySqlProvision`, `ProvisionSite`)
+- Milestone tracking system with enum-based milestones and progress callbacks
+- SSH credential types: `RootCredential`, `UserCredential`, `WorkerCredential`
+- Git provisioning with `GitProvision` and `GitProvisionMilestones`
 
 **Controller Organization** (`app/Http/Controllers/`)
 - `ServerController` - Server CRUD operations only
 - `ServerSitesController` - Site management (index, store)
+- `ServerSiteGitRepositoryController` - Git repository installation on sites
+- `ServerSiteCommandsController` - Custom site command execution
 - `ServerDatabaseController` - Database installation/management (index, store, destroy, status)
 - `ServerPhpController` - PHP version/extension management
 - `ServerProvisioningController` - Provisioning workflow (show, provision, services)
+- `ServerFileExplorerController` - Remote file browsing capabilities
 - `ProvisionCallbackController` - Handles provisioning callbacks from remote servers
 
 **Key Architectural Patterns:**
 - **Command Pattern**: Provisioning commands are queued as jobs (`app/Jobs/`)
-- **Repository Pattern**: Server credentials managed via `ServerCredentials` helper
+- **Repository Pattern**: Server credentials managed via access classes
 - **Observer Pattern**: Activity logging via model events
 - **State Machine**: Server connection states (pending → connecting → connected → failed)
 - **Single Responsibility**: Controllers separated by domain concern
+- **Enum Usage**: `ProvisionStatus`, `ServiceType`, `Connection` enums for type safety
 
 ### Essential Development Commands
 
@@ -45,12 +51,15 @@ npm run build:ssr    # Production SSR build
 vendor/bin/pint --dirty  # Format changed PHP files
 npm run lint         # Fix JS/TS issues
 npm run types        # TypeScript type checking
+npm run format       # Prettier formatting for resources/
+npm run format:check # Check Prettier formatting
 ```
 
 **Testing Single Files:**
 ```bash
 php artisan test tests/Feature/ServerTest.php
 php artisan test --filter=testProvisioningSite
+php artisan test tests/Unit/Provision/SomeTest.php
 ```
 
 **Database & Migrations:**
@@ -60,6 +69,18 @@ php artisan migrate:fresh --seed  # Reset with seeders
 php artisan tinker  # Interactive REPL
 ```
 
+**Laravel Artisan Generators:**
+```bash
+php artisan make:model ModelName -mfc  # Model with migration, factory, controller
+php artisan make:controller ControllerName --resource
+php artisan make:request FormRequestName
+php artisan make:job JobName
+php artisan make:test TestName --unit  # Unit test
+php artisan make:test TestName         # Feature test (default)
+php artisan make:migration create_table_name
+php artisan make:enum EnumName         # Custom enum class
+```
+
 ### High-Level Architecture
 
 1. **Request Flow**:
@@ -67,26 +88,32 @@ php artisan tinker  # Interactive REPL
 
 2. **Provisioning Flow**:
    - Job creates database record → Provisioner runs SSH commands → Milestone callbacks update UI → Status tracked in DB
+   - Milestones report progress via `ProvisionEvent` records with signed callback URLs
 
 3. **SSH Architecture**:
    - Uses `spatie/ssh` for connections
    - Commands built dynamically with proper escaping
-   - Callbacks report progress via signed URLs
+   - Multiple credential types for different access levels
+   - Callbacks report progress via signed URLs to `ProvisionCallbackController`
 
 4. **Frontend State**:
-   - Inertia.js handles server-side props
-   - React components use `useForm` for mutations
+   - Inertia.js v2 handles server-side props
+   - React 19 components with TypeScript strict mode
+   - Components use `useForm` for mutations
    - Real-time updates via polling or SSE (planned)
+   - Radix UI components for UI consistency
 
 ### Key Technologies
 
 - **Laravel 12** - Streamlined structure (no Kernel.php, middleware in bootstrap/app.php)
 - **React 19 + TypeScript** - Frontend with strict mode
-- **Inertia.js v2** - SPA with server-side routing
-- **Tailwind CSS v4** - New import syntax, removed deprecated utilities
-- **Laravel Wayfinder** - Type-safe routing
+- **Inertia.js v2** - SPA with server-side routing, supports deferred props, polling
+- **Tailwind CSS v4** - New import syntax (@import "tailwindcss"), removed deprecated utilities
+- **Laravel Wayfinder** - Type-safe routing with @laravel/vite-plugin-wayfinder
 - **spatie/ssh** - Remote server command execution
-- **PHPUnit 11** - Testing framework
+- **PHPUnit 11** - Testing framework (no Pest)
+- **Laravel Pail** - Real-time log viewer
+- **Radix UI** - Headless UI components (@radix-ui/react-*)
 
 ### Development Configuration
 
@@ -95,6 +122,7 @@ php artisan tinker  # Interactive REPL
 - **Queue**: Database driver, auto-processed in dev mode
 - **Middleware**: Configured in `bootstrap/app.php`
 - **CSRF Exceptions**: Provisioning callbacks bypass CSRF
+- **Session**: Database driver configured in `config/session.php`
 
 <laravel-boost-guidelines>
 === foundation rules ===

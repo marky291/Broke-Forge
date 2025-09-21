@@ -173,7 +173,7 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | HTTP Access Only
+    | HTTP SshCredential Only
     |--------------------------------------------------------------------------
     |
     | Setting this value to true will prevent JavaScript from accessing the

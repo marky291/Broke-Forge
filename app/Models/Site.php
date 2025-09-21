@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\GitStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -21,8 +22,12 @@ class Site extends Model
         'ssl_key_path',
         'nginx_config_path',
         'status',
+        'git_status',
         'configuration',
         'provisioned_at',
+        'git_installed_at',
+        'last_deployment_sha',
+        'last_deployed_at',
         'deprovisioned_at',
     ];
 
@@ -31,7 +36,10 @@ class Site extends Model
         return [
             'ssl_enabled' => 'boolean',
             'configuration' => 'array',
+            'git_status' => GitStatus::class,
             'provisioned_at' => 'datetime',
+            'git_installed_at' => 'datetime',
+            'last_deployed_at' => 'datetime',
             'deprovisioned_at' => 'datetime',
         ];
     }
@@ -39,6 +47,37 @@ class Site extends Model
     public function server(): BelongsTo
     {
         return $this->belongsTo(Server::class);
+    }
+
+    /**
+     * Check if Git repository can be installed.
+     */
+    public function canInstallGitRepository(): bool
+    {
+        return ! $this->git_status || $this->git_status->canRetry();
+    }
+
+    /**
+     * Check if Git repository is currently being processed.
+     */
+    public function isGitProcessing(): bool
+    {
+        return $this->git_status?->isProcessing() ?? false;
+    }
+
+    /**
+     * Get Git repository configuration.
+     */
+    public function getGitConfiguration(): array
+    {
+        $config = $this->configuration['git_repository'] ?? [];
+
+        return [
+            'provider' => $config['provider'] ?? null,
+            'repository' => $config['repository'] ?? null,
+            'branch' => $config['branch'] ?? null,
+            'deploy_key' => $config['deploy_key'] ?? $config['deployKey'] ?? null,
+        ];
     }
 
     protected static function booted(): void

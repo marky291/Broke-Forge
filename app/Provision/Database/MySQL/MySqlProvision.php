@@ -2,10 +2,11 @@
 
 namespace App\Provision\Database\MySQL;
 
-use App\Provision\Enums\ExecutableUser;
 use App\Provision\Enums\ServiceType;
 use App\Provision\InstallableService;
 use App\Provision\Milestones;
+use App\Provision\Server\Access\RootCredential;
+use App\Provision\Server\Access\SshCredential;
 
 /**
  * MySQL Database Server Provisioning Class
@@ -25,9 +26,9 @@ class MySqlProvision extends InstallableService
         return new MySqlProvisionMilestones;
     }
 
-    protected function executableUser(): ExecutableUser
+    protected function sshCredential(): SshCredential
     {
-        return ExecutableUser::RootUser;
+        return new RootCredential;
     }
 
     /**

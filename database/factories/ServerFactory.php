@@ -26,6 +26,7 @@ class ServerFactory extends Factory
             'ssh_port' => 22,
             'ssh_root_user' => 'root',
             'ssh_app_user' => $appUser,
+            'connection' => 'connected',
         ];
     }
 }

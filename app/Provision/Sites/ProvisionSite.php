@@ -3,10 +3,11 @@
 namespace App\Provision\Sites;
 
 use App\Models\Site;
-use App\Provision\Enums\ExecutableUser;
 use App\Provision\Enums\ServiceType;
 use App\Provision\InstallableService;
 use App\Provision\Milestones;
+use App\Provision\Server\Access\SshCredential;
+use App\Provision\Server\Access\UserCredential;
 
 /**
  * Provisions a site using SSH terminal commands to a remote
@@ -33,8 +34,12 @@ class ProvisionSite extends InstallableService
      */
     public function setConfiguration(array $config): self
     {
+        // Get the app user that will own site directories
+        $userCredential = new \App\Provision\Server\Access\UserCredential;
+        $appUser = $userCredential->user();
+
         $this->domain = $config['domain'];
-        $this->documentRoot = $config['document_root'] ?? "/var/www/{$config['domain']}/public";
+        $this->documentRoot = $config['document_root'] ?? "/home/{$appUser}/{$config['domain']}/public";
         $this->phpVersion = $config['php_version'] ?? $this->detectPhpVersion();
         $this->ssl = $config['ssl'] ?? false;
         $this->sslCertPath = $config['ssl_cert_path'] ?? null;
@@ -79,6 +84,9 @@ class ProvisionSite extends InstallableService
     {
         $nginxConfig = $this->generateNginxConfig();
 
+        // Get the app user for ownership
+        $appUser = $this->sshCredential()->user();
+
         return [
             $this->track(ProvisionSiteMilestones::PREPARE_DIRECTORIES),
             "mkdir -p {$this->documentRoot}",
@@ -97,7 +105,7 @@ class ProvisionSite extends InstallableService
             'nginx -s reload',
 
             $this->track(ProvisionSiteMilestones::SET_PERMISSIONS),
-            "chown -R www-data:www-data {$this->documentRoot}",
+            "chown -R {$appUser}:{$appUser} {$this->documentRoot}",
             "chmod -R 755 {$this->documentRoot}",
             "echo '<?php phpinfo();' > {$this->documentRoot}/index.php",
 
@@ -150,8 +158,8 @@ class ProvisionSite extends InstallableService
         return new ProvisionSiteMilestones;
     }
 
-    protected function executableUser(): ExecutableUser
+    protected function sshCredential(): SshCredential
     {
-        return ExecutableUser::AppUser;
+        return new UserCredential;
     }
 }

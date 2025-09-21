@@ -5,9 +5,10 @@ import { Separator } from '@/components/ui/separator';
 import ServerLayout from '@/layouts/server/layout';
 import { dashboard } from '@/routes';
 import { show as showServer } from '@/routes/servers';
+import { gitRepository as gitRepositoryRoute } from '@/routes/servers/sites';
 import { type BreadcrumbItem } from '@/types';
 import { cn } from '@/lib/utils';
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import {
@@ -77,12 +78,12 @@ const installationOptions: InstallationOption[] = [
         description: 'Deploy an existing site by pulling from a Git provider.',
         icon: GitBranch,
         highlights: [
-            'Connect to GitHub, GitLab, or Bitbucket for automated deployments.',
+            'Connect to GitHub for automated deployments.',
             'Supports zero-downtime releases with BrokeForge deployment hooks.',
             'Great when your production workflow already lives in version control.',
         ],
         keywords: ['deploy', 'git', 'ci', 'existing project', 'repository'],
-        nextStep: 'Authorize BrokeForge to access your repository and deploy the latest commit.',
+        nextStep: 'Authorize BrokeForge to access your GitHub repository and deploy the latest commit.',
     },
     {
         key: 'statamic',
@@ -165,6 +166,7 @@ export default function SiteApplication({ server, site }: { server: ServerType; 
     const initialOptionKey = installationOptions[0]?.key ?? 'install-application';
     const [selectedOption, setSelectedOption] = useState<InstallationOption['key'] | ''>(initialOptionKey);
     const [searchQuery, setSearchQuery] = useState('');
+    const gitRepositorySetupUrl = gitRepositoryRoute({ server: server.id, site: site.id }).url;
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard().url },
@@ -214,6 +216,19 @@ export default function SiteApplication({ server, site }: { server: ServerType; 
         return installationOptions.find((option) => option.key === selectedOption) ?? null;
     }, [selectedOption]);
 
+    /**
+     * Navigate to the appropriate workflow when an installation option is chosen.
+     */
+    const handleOptionSelect = (option: InstallationOption) => {
+        if (option.key === 'git-repository') {
+            setSelectedOption(option.key);
+            router.visit(gitRepositorySetupUrl);
+            return;
+        }
+
+        setSelectedOption(option.key);
+    };
+
     return (
         <ServerLayout server={server} site={site} breadcrumbs={breadcrumbs}>
             <Head title={`Application — ${site.domain}`} />
@@ -262,7 +277,7 @@ export default function SiteApplication({ server, site }: { server: ServerType; 
                                                 <button
                                                     key={option.key}
                                                     type="button"
-                                                    onClick={() => setSelectedOption(option.key)}
+                                                    onClick={() => handleOptionSelect(option)}
                                                     aria-pressed={isActive}
                                                     className={cn(
                                                         'flex h-full w-full flex-col rounded-xl border bg-background p-4 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',

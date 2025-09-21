@@ -3,9 +3,9 @@
 namespace App\Models;
 
 use App\Support\ServerCredentials;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Auth;
 
@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\Auth;
  * @property string|null $ssh_root_user
  * @property string|null $ssh_app_user
  * @property string $connection
- * @property-read User|null $user
+ * @property string $vanity_name
  */
 class Server extends Model
 {
@@ -62,6 +62,22 @@ class Server extends Model
     public function services(): HasMany
     {
         return $this->hasMany(ServerService::class);
+    }
+
+    /**
+     * Check if the server is connected.
+     */
+    public function isConnected(): bool
+    {
+        return $this->connection === 'connected';
+    }
+
+    /**
+     * Check if the server is deleted.
+     */
+    public function isDeleted(): bool
+    {
+        return $this->deleted_at !== null;
     }
 
     /**

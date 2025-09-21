@@ -2,14 +2,14 @@
 
 namespace App\Provision\Database\MySQL;
 
-use App\Provision\Enums\ExecutableUser;
 use App\Provision\Enums\ServiceType;
 use App\Provision\Milestones;
 use App\Provision\RemovableService;
+use App\Provision\Server\Access\RootCredential;
+use App\Provision\Server\Access\SshCredential;
 
 class MySqlDeprovision extends RemovableService
 {
-
     protected function serviceType(): string
     {
         return ServiceType::DATABASE;
@@ -20,9 +20,9 @@ class MySqlDeprovision extends RemovableService
         return new MySqlDeprovisionMilestones;
     }
 
-    protected function executableUser(): ExecutableUser
+    protected function sshCredential(): SshCredential
     {
-        return ExecutableUser::RootUser;
+        return new RootCredential;
     }
 
     public function commands(): array

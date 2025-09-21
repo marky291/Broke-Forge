@@ -4,10 +4,9 @@ namespace App\Provision;
 
 use App\Models\ProvisionEvent;
 use App\Models\Server;
-use App\Provision\Enums\ExecutableUser;
+use App\Provision\Server\Access\SshCredential;
 use Closure;
 use Illuminate\Support\Facades\Log;
-use ReflectionClass;
 use Spatie\Ssh\Ssh;
 
 abstract class Serviceable
@@ -15,9 +14,12 @@ abstract class Serviceable
     protected Server $server;
 
     /**
+     * SSH access credentials leveraged when dispatching remote commands.
+     */
+    protected ?SshCredential $sshAccess = null;
+
+    /**
      * Get the total steps that have been run
-     *
-     * @var int
      */
     protected int $milestoneStep = 1;
 
@@ -40,15 +42,11 @@ abstract class Serviceable
      * The user to execute the command list on remote host.
      *
      * Uses an ENUM CLASS.
-     *
-     * @return ExecutableUser
      */
-    abstract protected function executableUser(): ExecutableUser;
+    abstract protected function sshCredential(): SshCredential;
 
     /**
      * Get the actionable name based on inherited class.
-     *
-     * @return string
      */
     protected function actionableName(): string
     {
@@ -106,7 +104,7 @@ abstract class Serviceable
 
     protected function sendCommandsToRemote(array $commandList): void
     {
-        $sshUser = $this->executableUser() == ExecutableUser::RootUser ? $this->server->ssh_root_user : $this->server->ssh_app_user;
+        $sshPort = $this->server->ssh_port ?: 22;
 
         foreach ($commandList as $command) {
             // Execute closures (milestones)
@@ -117,12 +115,12 @@ abstract class Serviceable
             }
 
             // Execute SSH commands
-            $process = Ssh::create($sshUser, $this->server->public_ip)
+            $process = Ssh::create($this->sshCredential()->user(), $this->server->public_ip, $sshPort)
                 ->disableStrictHostKeyChecking()
                 ->execute($command);
 
             if (! $process->isSuccessful()) {
-                Log::error("Failed to execute command $command", ['server' => $this->server]);
+                Log::error("Failed to execute command $command with {$this->sshCredential()->user()}", ['credential' => $this->sshCredential(), 'server' => $this->server]);
                 throw new \RuntimeException("Command failed: $command");
             }
         }

@@ -3,10 +3,11 @@
 namespace App\Provision\Sites;
 
 use App\Models\Site;
-use App\Provision\Enums\ExecutableUser;
 use App\Provision\Enums\ServiceType;
 use App\Provision\Milestones;
 use App\Provision\RemovableService;
+use App\Provision\Server\Access\SshCredential;
+use App\Provision\Server\Access\UserCredential;
 
 class DeprovisionSite extends RemovableService
 {
@@ -86,8 +87,8 @@ class DeprovisionSite extends RemovableService
         return new DeprovisionSiteMilestones;
     }
 
-    protected function executableUser(): ExecutableUser
+    protected function sshCredential(): SshCredential
     {
-        return ExecutableUser::AppUser;
+        return new UserCredential;
     }
 }

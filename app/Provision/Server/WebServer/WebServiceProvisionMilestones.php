@@ -7,12 +7,25 @@ use App\Provision\Milestones;
 class WebServiceProvisionMilestones extends Milestones
 {
     public const PREPARE_SYSTEM = 'prepare_system';
+
     public const SETUP_REPOSITORY = 'setup_repository';
+
     public const REMOVE_CONFLICTS = 'remove_conflicts';
+
     public const INSTALL_SOFTWARE = 'install_software';
+
     public const ENABLE_SERVICES = 'enable_services';
+
     public const CONFIGURE_FIREWALL = 'configure_firewall';
+
+    public const SETUP_DEFAULT_SITE = 'setup_default_site';
+
+    public const CONFIGURE_NGINX = 'configure_nginx';
+
+    public const SET_PERMISSIONS = 'set_permissions';
+
     public const VERIFY_INSTALL = 'verify_install';
+
     public const COMPLETE = 'complete';
 
     private const LABELS = [
@@ -22,6 +35,9 @@ class WebServiceProvisionMilestones extends Milestones
         self::INSTALL_SOFTWARE => 'Installing required software',
         self::ENABLE_SERVICES => 'Enabling and starting services',
         self::CONFIGURE_FIREWALL => 'Configuring firewall rules',
+        self::SETUP_DEFAULT_SITE => 'Setting up default site',
+        self::CONFIGURE_NGINX => 'Configuring Nginx',
+        self::SET_PERMISSIONS => 'Setting permissions',
         self::VERIFY_INSTALL => 'Verifying installation',
         self::COMPLETE => 'Setup complete',
     ];

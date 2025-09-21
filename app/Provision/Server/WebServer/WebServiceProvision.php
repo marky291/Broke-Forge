@@ -2,10 +2,11 @@
 
 namespace App\Provision\Server\WebServer;
 
-use App\Provision\Enums\ExecutableUser;
 use App\Provision\Enums\ServiceType;
 use App\Provision\InstallableService;
 use App\Provision\Milestones;
+use App\Provision\Server\Access\RootCredential;
+use App\Provision\Server\Access\SshCredential;
 
 class WebServiceProvision extends InstallableService
 {
@@ -19,9 +20,9 @@ class WebServiceProvision extends InstallableService
         return new WebServiceProvisionMilestones;
     }
 
-    protected function executableUser(): ExecutableUser
+    protected function sshCredential(): SshCredential
     {
-        return ExecutableUser::RootUser;
+        return new RootCredential;
     }
 
     public function provision(): void
@@ -48,6 +49,10 @@ class WebServiceProvision extends InstallableService
 
     protected function commands(string $phpVersion, $phpPackages): array
     {
+        // Get the app user that will own site directories
+        $userCredential = new \App\Provision\Server\Access\UserCredential;
+        $appUser = $userCredential->user();
+
         return [
 
             $this->track(WebServiceProvisionMilestones::PREPARE_SYSTEM),
@@ -85,11 +90,63 @@ class WebServiceProvision extends InstallableService
             'ufw allow 80/tcp >/dev/null 2>&1 || true',
             'ufw allow 443/tcp >/dev/null 2>&1 || true',
 
+            $this->track(WebServiceProvisionMilestones::SETUP_DEFAULT_SITE),
+            // Create default site structure in app user's home directory
+            "mkdir -p /home/{$appUser}/default/public",
+
+            // Create default index.php file with informative content
+            $this->createDefaultSiteFile($appUser),
+
+            $this->track(WebServiceProvisionMilestones::SET_PERMISSIONS),
+            // Set proper ownership and permissions for app user's site directories
+            "chown -R {$appUser}:{$appUser} /home/{$appUser}/",
+            "chmod 755 /home/{$appUser}/",
+            "chmod 755 /home/{$appUser}/default",
+            "chmod 755 /home/{$appUser}/default/public",
+            "chmod 644 /home/{$appUser}/default/public/index.php",
+
+            // Add app user to www-data group for PHP-FPM compatibility
+            "usermod -a -G www-data {$appUser}",
+
+            $this->track(WebServiceProvisionMilestones::CONFIGURE_NGINX),
+            // Create default Nginx configuration for the default site
+            $this->createDefaultNginxConfig($appUser, $phpVersion),
+
+            // Enable the default site
+            'ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default',
+
             $this->track(WebServiceProvisionMilestones::VERIFY_INSTALL),
-            // Get the status of nginx.
+            // Test Nginx configuration
+            'nginx -t',
+            // Reload Nginx to apply configuration
+            'systemctl reload nginx',
+            // Get the status of nginx
             'systemctl status nginx',
 
             $this->track(WebServiceProvisionMilestones::COMPLETE),
         ];
+    }
+
+    /**
+     * Create the command to write the default site file
+     */
+    protected function createDefaultSiteFile(string $appUser): string
+    {
+        $content = view('provision.default-site')->render();
+
+        return "cat > /home/{$appUser}/default/public/index.php << 'EOF'\n{$content}\nEOF";
+    }
+
+    /**
+     * Create the command to write the default Nginx configuration
+     */
+    protected function createDefaultNginxConfig(string $appUser, string $phpVersion): string
+    {
+        $nginxConfig = view('nginx.default', [
+            'appUser' => $appUser,
+            'phpVersion' => $phpVersion,
+        ])->render();
+
+        return "cat > /etc/nginx/sites-available/default << 'EOF'\n{$nginxConfig}\nEOF";
     }
 }

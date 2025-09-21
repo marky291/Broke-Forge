@@ -740,7 +740,7 @@ MAX_CONNECTIONS=$(( 70 * $RAM ))
 REAL_MAX_CONNECTIONS=$(( MAX_CONNECTIONS>70 ? MAX_CONNECTIONS : 100 ))
 sed -i "s/^max_connections.*=.*/max_connections=${REAL_MAX_CONNECTIONS}/" /etc/mysql/my.cnf
 
-# Configure Access Permissions For Root & Forge Users
+# Configure SshCredential Permissions For Root & Forge Users
 
 if grep -q "bind-address" /etc/mysql/mysql.conf.d/mysqld.cnf; then
   sed -i '/^bind-address/s/bind-address.*=.*/bind-address = */' /etc/mysql/mysql.conf.d/mysqld.cnf
@@ -843,7 +843,7 @@ MAX_CONNECTIONS=$(( 70 * $RAM ))
 REAL_MAX_CONNECTIONS=$(( MAX_CONNECTIONS>70 ? MAX_CONNECTIONS : 100 ))
 sed -i "s/^max_connections.*=.*/max_connections=${REAL_MAX_CONNECTIONS}/" /etc/mysql/my.cnf
 
-# Configure Access Permissions For Root & Forge Users
+# Configure SshCredential Permissions For Root & Forge Users
 
 if grep -q "bind-address" /etc/mysql/mysql.conf.d/mysqld.cnf; then
   sed -i '/^bind-address/s/bind-address.*=.*/bind-address = */' /etc/mysql/mysql.conf.d/mysqld.cnf
