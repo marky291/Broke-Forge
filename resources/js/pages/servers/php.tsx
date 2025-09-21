@@ -73,7 +73,10 @@ export default function Php({
         if (checked) {
             setData('extensions', [...data.extensions, extension]);
         } else {
-            setData('extensions', data.extensions.filter((ext) => ext !== extension));
+            setData(
+                'extensions',
+                data.extensions.filter((ext) => ext !== extension),
+            );
         }
     };
 
@@ -87,14 +90,11 @@ export default function Php({
             <Head title={`PHP — ${server.vanity_name}`} />
             <div className="space-y-6">
                 <div>
-                    <h2 className="text-2xl font-semibold">
-                        {installedPhp ? 'PHP Configuration' : 'PHP Installation'}
-                    </h2>
+                    <h2 className="text-2xl font-semibold">{installedPhp ? 'PHP Configuration' : 'PHP Installation'}</h2>
                     <p className="mt-1 text-sm text-muted-foreground">
                         {installedPhp
                             ? 'Configure PHP version, extensions, and settings for your server.'
-                            : 'Install and configure PHP for your server.'
-                        }
+                            : 'Install and configure PHP for your server.'}
                     </p>
                 </div>
 
@@ -103,9 +103,7 @@ export default function Php({
                         <div className="px-4 py-3">
                             <div className="flex items-center gap-2">
                                 <Download className="h-5 w-5 text-blue-600" />
-                                <div className="text-sm font-medium tracking-wide text-neutral-600 uppercase dark:text-neutral-300">
-                                    Install PHP
-                                </div>
+                                <div className="text-sm font-medium tracking-wide text-neutral-600 uppercase dark:text-neutral-300">Install PHP</div>
                             </div>
                         </div>
                         <Separator />
@@ -120,10 +118,7 @@ export default function Php({
                                     <h3 className="font-medium">PHP Version</h3>
                                     <div className="space-y-2">
                                         <Label htmlFor="version">Version</Label>
-                                        <Select
-                                            value={data.version}
-                                            onValueChange={(value) => setData('version', value)}
-                                        >
+                                        <Select value={data.version} onValueChange={(value) => setData('version', value)}>
                                             <SelectTrigger className="w-full md:w-1/3">
                                                 <SelectValue placeholder="Select PHP version" />
                                             </SelectTrigger>
@@ -193,7 +188,7 @@ export default function Php({
                                                 <div className="grid gap-1.5 leading-none">
                                                     <Label
                                                         htmlFor={extension}
-                                                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                                        className="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                                                     >
                                                         {extension}
                                                     </Label>
@@ -247,7 +242,7 @@ export default function Php({
                             </div>
                             {installedPhp.configuration.extensions && installedPhp.configuration.extensions.length > 0 && (
                                 <div className="mt-4">
-                                    <div className="text-sm text-muted-foreground mb-2">Installed Extensions</div>
+                                    <div className="mb-2 text-sm text-muted-foreground">Installed Extensions</div>
                                     <div className="flex flex-wrap gap-2">
                                         {installedPhp.configuration.extensions.map((ext) => (
                                             <span
@@ -280,10 +275,7 @@ export default function Php({
                             <div className="px-4 py-4">
                                 <div className="space-y-2">
                                     <Label htmlFor="version">Version</Label>
-                                    <Select
-                                        value={data.version}
-                                        onValueChange={(value) => setData('version', value)}
-                                    >
+                                    <Select value={data.version} onValueChange={(value) => setData('version', value)}>
                                         <SelectTrigger className="w-full md:w-1/3">
                                             <SelectValue placeholder="Select PHP version" />
                                         </SelectTrigger>
@@ -303,9 +295,7 @@ export default function Php({
                         {/* PHP Settings */}
                         <div className="rounded-xl border border-sidebar-border/70 bg-background shadow-sm dark:border-sidebar-border">
                             <div className="px-4 py-3">
-                                <div className="text-sm font-medium tracking-wide text-neutral-600 uppercase dark:text-neutral-300">
-                                    PHP Settings
-                                </div>
+                                <div className="text-sm font-medium tracking-wide text-neutral-600 uppercase dark:text-neutral-300">PHP Settings</div>
                             </div>
                             <Separator />
                             <div className="px-4 py-4">
@@ -367,7 +357,7 @@ export default function Php({
                                             <div className="grid gap-1.5 leading-none">
                                                 <Label
                                                     htmlFor={extension}
-                                                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                                    className="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                                                 >
                                                     {extension}
                                                 </Label>

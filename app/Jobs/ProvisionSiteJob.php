@@ -3,7 +3,6 @@
 namespace App\Jobs;
 
 use App\Models\Server;
-use App\Models\Site;
 use App\Provision\Sites\ProvisionSite;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;

@@ -3,7 +3,7 @@
 namespace Tests\Unit\Provision\Sites;
 
 use App\Models\Server;
-use App\Models\Site;
+use App\Models\ServerSite;
 use App\Provision\Sites\GitProvision;
 use InvalidArgumentException;
 use LogicException;
@@ -151,7 +151,7 @@ class GitProvisionTest extends TestCase
     public function test_repository_configuration_persists_when_site_exists(): void
     {
         $server = $this->makeServer();
-        $site = new class(['domain' => 'example.com', 'document_root' => '/var/www/example.com/public']) extends Site
+        $site = new class(['domain' => 'example.com', 'document_root' => '/var/www/example.com/public']) extends ServerSite
         {
             public array $updates = [];
 
@@ -204,9 +204,9 @@ class GitProvisionTest extends TestCase
         ]);
     }
 
-    private function makeSite(?string $documentRoot = '/var/www/example.com/public', string $domain = 'example.com'): Site
+    private function makeSite(?string $documentRoot = '/var/www/example.com/public', string $domain = 'example.com'): ServerSite
     {
-        return new Site([
+        return new ServerSite([
             'domain' => $domain,
             'document_root' => $documentRoot,
         ]);

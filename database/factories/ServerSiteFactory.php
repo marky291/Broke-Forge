@@ -7,9 +7,11 @@ use App\Models\Server;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Site>
+ * Factory for creating ServerSite model instances.
+ *
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\ServerSite>
  */
-class SiteFactory extends Factory
+class ServerSiteFactory extends Factory
 {
     /**
      * Define the model's default state.

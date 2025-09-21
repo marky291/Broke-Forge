@@ -40,6 +40,9 @@ const WEB_SERVICE_SEQUENCE = [
     'install_software',
     'enable_services',
     'configure_firewall',
+    'setup_default_site',
+    'set_permissions',
+    'configure_nginx',
     'verify_install',
     'complete',
 ] as const;
@@ -149,11 +152,15 @@ export default function Provisioning({
 
         setIsRetrying(true);
 
-        router.post(`/servers/${server.id}/provision/retry`, {}, {
-            preserveScroll: true,
-            onFinish: () => setIsRetrying(false),
-            onError: () => setIsRetrying(false),
-        });
+        router.post(
+            `/servers/${server.id}/provision/retry`,
+            {},
+            {
+                preserveScroll: true,
+                onFinish: () => setIsRetrying(false),
+                onError: () => setIsRetrying(false),
+            },
+        );
     };
     const handleDestroyServer = () => {
         const action = server.connection === 'pending' ? 'cancel provisioning' : 'delete';
@@ -182,8 +189,7 @@ export default function Provisioning({
         }
 
         const isInitialProvision = server.provision_status === 'pending';
-        const shouldPoll =
-            isInitialProvision || server.provision_status === 'connecting' || server.provision_status === 'installing';
+        const shouldPoll = isInitialProvision || server.provision_status === 'connecting' || server.provision_status === 'installing';
 
         if (!shouldPoll) {
             return;
@@ -207,14 +213,34 @@ export default function Provisioning({
                         <h1 className="text-2xl font-semibold">Server Provisioning</h1>
                         {(() => {
                             const color = server.provision_status_color;
-                            const dotClass = color === 'green' ? 'bg-green-500' : color === 'red' ? 'bg-red-500' : color === 'blue' ? 'bg-blue-500' : color === 'amber' ? 'bg-amber-500' : 'bg-gray-500';
-                            const pingClass = color === 'green' ? 'bg-green-400' : color === 'red' ? 'bg-red-400' : color === 'blue' ? 'bg-blue-400' : color === 'amber' ? 'bg-amber-400' : 'bg-gray-400';
+                            const dotClass =
+                                color === 'green'
+                                    ? 'bg-green-500'
+                                    : color === 'red'
+                                      ? 'bg-red-500'
+                                      : color === 'blue'
+                                        ? 'bg-blue-500'
+                                        : color === 'amber'
+                                          ? 'bg-amber-500'
+                                          : 'bg-gray-500';
+                            const pingClass =
+                                color === 'green'
+                                    ? 'bg-green-400'
+                                    : color === 'red'
+                                      ? 'bg-red-400'
+                                      : color === 'blue'
+                                        ? 'bg-blue-400'
+                                        : color === 'amber'
+                                          ? 'bg-amber-400'
+                                          : 'bg-gray-400';
                             const shouldAnimate = server.provision_status === 'connecting' || server.provision_status === 'installing';
                             return (
                                 <span className="inline-flex items-center gap-2 text-xs">
                                     <span className="relative inline-flex h-2 w-2">
                                         {shouldAnimate && (
-                                            <span className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-60 ${pingClass}`}></span>
+                                            <span
+                                                className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-60 ${pingClass}`}
+                                            ></span>
                                         )}
                                         <span className={`relative inline-flex h-2 w-2 rounded-full ${dotClass}`}></span>
                                     </span>
@@ -357,19 +383,48 @@ export default function Provisioning({
                                 <div className="mb-2 flex items-center gap-2">
                                     {(() => {
                                         const connection = server.connection;
-                                        const color = connection === 'connected' ? 'green' : connection === 'failed' ? 'red' : connection === 'connecting' ? 'amber' : 'gray';
-                                        const dot = color === 'green' ? 'bg-green-500' : color === 'red' ? 'bg-red-500' : color === 'amber' ? 'bg-amber-500' : 'bg-gray-500';
-                                        const ping = color === 'green' ? 'bg-green-400' : color === 'red' ? 'bg-red-400' : color === 'amber' ? 'bg-amber-400' : 'bg-gray-400';
-                                        const label = connection === 'pending' ? 'Waiting to start' :
-                                                     connection === 'connecting' ? 'Provisioning in progress' :
-                                                     connection === 'connected' ? 'Successfully provisioned' :
-                                                     connection === 'failed' ? 'Provisioning failed' : connection;
+                                        const color =
+                                            connection === 'connected'
+                                                ? 'green'
+                                                : connection === 'failed'
+                                                  ? 'red'
+                                                  : connection === 'connecting'
+                                                    ? 'amber'
+                                                    : 'gray';
+                                        const dot =
+                                            color === 'green'
+                                                ? 'bg-green-500'
+                                                : color === 'red'
+                                                  ? 'bg-red-500'
+                                                  : color === 'amber'
+                                                    ? 'bg-amber-500'
+                                                    : 'bg-gray-500';
+                                        const ping =
+                                            color === 'green'
+                                                ? 'bg-green-400'
+                                                : color === 'red'
+                                                  ? 'bg-red-400'
+                                                  : color === 'amber'
+                                                    ? 'bg-amber-400'
+                                                    : 'bg-gray-400';
+                                        const label =
+                                            connection === 'pending'
+                                                ? 'Waiting to start'
+                                                : connection === 'connecting'
+                                                  ? 'Provisioning in progress'
+                                                  : connection === 'connected'
+                                                    ? 'Successfully provisioned'
+                                                    : connection === 'failed'
+                                                      ? 'Provisioning failed'
+                                                      : connection;
                                         const shouldAnimate = connection === 'connecting';
                                         return (
                                             <span className="inline-flex items-center gap-2 text-xs">
                                                 <span className="relative inline-flex h-2 w-2">
                                                     {shouldAnimate && (
-                                                        <span className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-60 ${ping}`}></span>
+                                                        <span
+                                                            className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-60 ${ping}`}
+                                                        ></span>
                                                     )}
                                                     <span className={`relative inline-flex h-2 w-2 rounded-full ${dot}`}></span>
                                                 </span>
@@ -402,7 +457,7 @@ export default function Provisioning({
                                 {server.provision_status === 'installing' && webProvisionSteps.length > 0 && (
                                     <>
                                         <Separator className="my-4" />
-                                        <div className="text-xs font-medium uppercase text-muted-foreground">Upcoming Web Service Steps</div>
+                                        <div className="text-xs font-medium text-muted-foreground uppercase">Upcoming Web Service Steps</div>
                                         <ul className="mt-3 space-y-2 text-sm">
                                             {webProvisionSteps.map((step) => (
                                                 <li key={step.status} className="flex items-center gap-3">
@@ -411,7 +466,9 @@ export default function Provisioning({
                                                         {step.state === 'active' && <Loader2Icon className="size-4 animate-spin text-primary" />}
                                                         {step.state === 'pending' && <CircleIcon className="size-4 text-muted-foreground/50" />}
                                                     </span>
-                                                    <span className={step.state === 'active' ? 'font-medium' : 'text-muted-foreground'}>{step.label}</span>
+                                                    <span className={step.state === 'active' ? 'font-medium' : 'text-muted-foreground'}>
+                                                        {step.label}
+                                                    </span>
                                                 </li>
                                             ))}
                                         </ul>
@@ -420,28 +477,21 @@ export default function Provisioning({
                                 {events.length > 0 && (
                                     <>
                                         <Separator className="my-4" />
-                                        <div className="text-xs font-medium uppercase text-muted-foreground">Web Service Installation Progress</div>
+                                        <div className="text-xs font-medium text-muted-foreground uppercase">Web Service Installation Progress</div>
                                         <ul className="mt-3 space-y-2 text-sm">
                                             {events.map((event) => {
                                                 // Use the label from the event (milestone label) as primary display
                                                 const displayLabel =
-                                                    event.label ||
-                                                    webServiceMilestones[event.status] ||
-                                                    STATUS_LABELS[event.status] ||
-                                                    event.status;
+                                                    event.label || webServiceMilestones[event.status] || STATUS_LABELS[event.status] || event.status;
                                                 const stepInfo =
-                                                    event.step && event.total_steps
-                                                        ? `Step ${event.step} of ${event.total_steps}`
-                                                        : null;
-                                                const timestamp = event.occurred_at
-                                                    ? new Date(event.occurred_at).toLocaleTimeString()
-                                                    : '';
+                                                    event.step && event.total_steps ? `Step ${event.step} of ${event.total_steps}` : null;
+                                                const timestamp = event.occurred_at ? new Date(event.occurred_at).toLocaleTimeString() : '';
                                                 const tone =
                                                     event.status === 'failed'
                                                         ? 'bg-red-500'
                                                         : event.status === 'complete' || event.status === 'completed'
-                                                        ? 'bg-emerald-500'
-                                                        : 'bg-primary';
+                                                          ? 'bg-emerald-500'
+                                                          : 'bg-primary';
 
                                                 return (
                                                     <li key={event.id} className="flex items-center justify-between gap-4">
@@ -449,15 +499,11 @@ export default function Provisioning({
                                                             <span className={`h-2.5 w-2.5 rounded-full ${tone}`}></span>
                                                             <div className="min-w-0 flex-1 truncate">
                                                                 <div className="truncate font-medium">{displayLabel}</div>
-                                                                {stepInfo && (
-                                                                    <div className="truncate text-xs text-muted-foreground">
-                                                                        {stepInfo}
-                                                                    </div>
-                                                                )}
+                                                                {stepInfo && <div className="truncate text-xs text-muted-foreground">{stepInfo}</div>}
                                                             </div>
                                                         </div>
                                                         {timestamp && (
-                                                            <span className="whitespace-nowrap text-xs text-muted-foreground">{timestamp}</span>
+                                                            <span className="text-xs whitespace-nowrap text-muted-foreground">{timestamp}</span>
                                                         )}
                                                     </li>
                                                 );

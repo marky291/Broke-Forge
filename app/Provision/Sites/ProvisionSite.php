@@ -2,7 +2,7 @@
 
 namespace App\Provision\Sites;
 
-use App\Models\Site;
+use App\Models\ServerSite;
 use App\Provision\Enums\ServiceType;
 use App\Provision\InstallableService;
 use App\Provision\Milestones;
@@ -15,7 +15,7 @@ use App\Provision\Server\Access\UserCredential;
  */
 class ProvisionSite extends InstallableService
 {
-    protected ?Site $site = null;
+    protected ?ServerSite $site = null;
 
     protected string $domain;
 
@@ -46,7 +46,7 @@ class ProvisionSite extends InstallableService
         $this->sslKeyPath = $config['ssl_key_path'] ?? null;
 
         // Create or update site record in database
-        $this->site = Site::updateOrCreate(
+        $this->site = ServerSite::updateOrCreate(
             [
                 'server_id' => $this->server->id,
                 'domain' => $this->domain,

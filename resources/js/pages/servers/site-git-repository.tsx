@@ -85,7 +85,7 @@ export default function SiteGitRepository({ server, site, gitRepository, flash, 
             { title: site.domain, href: `/servers/${server.id}/sites/${site.id}` },
             { title: 'Git Repository', href: '#' },
         ],
-        [server.id, site.domain, site.id]
+        [server.id, site.domain, site.id],
     );
 
     const deployKey = useMemo(() => {
@@ -105,14 +105,22 @@ export default function SiteGitRepository({ server, site, gitRepository, flash, 
     const handleSubmit = useCallback(
         (event: React.FormEvent<HTMLFormElement>) => {
             event.preventDefault();
-            post(`/servers/${server.id}/sites/${site.id}/application/git-repository`);
+            post(`/servers/${server.id}/sites/${site.id}/application/git-repository`, {
+                onSuccess: () => {
+                    // Force reload to get updated status
+                    router.reload();
+                },
+            });
         },
-        [post, server.id, site.id]
+        [post, server.id, site.id],
     );
 
-    const handleProviderChange = useCallback((value: string) => {
-        setData('provider', value as GitProvider);
-    }, [setData]);
+    const handleProviderChange = useCallback(
+        (value: string) => {
+            setData('provider', value as GitProvider);
+        },
+        [setData],
+    );
 
     // Render installation in progress state
     if (site.git_status === GitStatus.Installing) {
@@ -128,11 +136,11 @@ export default function SiteGitRepository({ server, site, gitRepository, flash, 
 
                     <Card>
                         <CardContent className="flex flex-col items-center justify-center py-16">
-                            <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-                            <h2 className="text-lg font-semibold mb-2">Installing...</h2>
-                            <p className="text-sm text-muted-foreground text-center max-w-md">
-                                We're cloning your repository and setting up the deployment configuration. This usually takes 1-2 minutes depending on the repository
-                                size.
+                            <Loader2 className="mb-4 h-12 w-12 animate-spin text-primary" />
+                            <h2 className="mb-2 text-lg font-semibold">Installing...</h2>
+                            <p className="max-w-md text-center text-sm text-muted-foreground">
+                                We're cloning your repository and setting up the deployment configuration. This usually takes 1-2 minutes depending on
+                                the repository size.
                             </p>
                         </CardContent>
                     </Card>
@@ -141,8 +149,8 @@ export default function SiteGitRepository({ server, site, gitRepository, flash, 
         );
     }
 
-    // Render installed state with application info
-    if (site.git_status === GitStatus.Installed && gitRepository?.repository) {
+    // Render installed or failed state with application info
+    if ((site.git_status === GitStatus.Installed || site.git_status === GitStatus.Failed) && gitRepository?.repository) {
         return (
             <ServerLayout server={server} site={site} breadcrumbs={breadcrumbs}>
                 <Head title={`Git Repository — ${site.domain}`} />
@@ -150,13 +158,26 @@ export default function SiteGitRepository({ server, site, gitRepository, flash, 
                 <div className="space-y-8">
                     <div className="space-y-2">
                         <h1 className="text-2xl font-semibold">Git Repository</h1>
-                        <p className="text-sm text-muted-foreground">Your repository is connected and ready for deployments.</p>
+                        <p className="text-sm text-muted-foreground">
+                            {site.git_status === GitStatus.Installed
+                                ? 'Your repository is connected and ready for deployments.'
+                                : 'Repository configuration details. Installation failed - please retry.'}
+                        </p>
                     </div>
 
                     {flash?.success && (
                         <Alert>
                             <CheckCircle className="h-4 w-4" />
                             <AlertDescription>{flash.success}</AlertDescription>
+                        </Alert>
+                    )}
+
+                    {site.git_status === GitStatus.Failed && (
+                        <Alert variant="destructive">
+                            <XCircle className="h-4 w-4" />
+                            <AlertDescription>
+                                Repository installation failed. Please check your repository settings and SSH deploy key configuration, then try again.
+                            </AlertDescription>
                         </Alert>
                     )}
 
@@ -197,7 +218,7 @@ export default function SiteGitRepository({ server, site, gitRepository, flash, 
                                 </div>
                                 <div>
                                     <dt className="text-sm font-medium text-muted-foreground">Web Directory</dt>
-                                    <dd className="mt-1 text-sm font-mono text-xs">{getWebDirectory(gitRepository.repository)}</dd>
+                                    <dd className="mt-1 font-mono text-sm text-xs">{getWebDirectory(gitRepository.repository)}</dd>
                                 </div>
                                 <div>
                                     <dt className="text-sm font-medium text-muted-foreground">Last Deployed</dt>
@@ -213,9 +234,23 @@ export default function SiteGitRepository({ server, site, gitRepository, flash, 
                                 </div>
                             </dl>
                             <div className="mt-6 flex gap-3">
-                                <Button variant="default">Deploy Now</Button>
-                                <Button variant="outline">View Deployment History</Button>
-                                <Button variant="outline">Update Repository</Button>
+                                {site.git_status === GitStatus.Installed ? (
+                                    <>
+                                        <Button variant="default">Deploy Now</Button>
+                                        <Button variant="outline">View Deployment History</Button>
+                                        <Button variant="outline">Update Repository</Button>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Button
+                                            variant="default"
+                                            onClick={() => router.visit(`/servers/${server.id}/sites/${site.id}/application/git-repository`)}
+                                        >
+                                            Retry Installation
+                                        </Button>
+                                        <Button variant="outline">Edit Configuration</Button>
+                                    </>
+                                )}
                             </div>
                         </CardContent>
                     </Card>
@@ -303,7 +338,8 @@ export default function SiteGitRepository({ server, site, gitRepository, flash, 
                                         <p className="text-xs text-destructive">{errors.repository || serverErrors?.repository}</p>
                                     )}
                                     <p className="text-xs text-muted-foreground">
-                                        Use the <span className="font-medium">owner/name</span> format. BrokeForge clones via SSH using the deploy key below.
+                                        Use the <span className="font-medium">owner/name</span> format. BrokeForge clones via SSH using the deploy key
+                                        below.
                                     </p>
                                 </div>
 
@@ -319,8 +355,12 @@ export default function SiteGitRepository({ server, site, gitRepository, flash, 
                                         className="w-full md:w-1/2"
                                         required
                                     />
-                                    {(errors.branch || serverErrors?.branch) && <p className="text-xs text-destructive">{errors.branch || serverErrors?.branch}</p>}
-                                    <p className="text-xs text-muted-foreground">We will deploy this branch on new releases. Change it later if your workflow evolves.</p>
+                                    {(errors.branch || serverErrors?.branch) && (
+                                        <p className="text-xs text-destructive">{errors.branch || serverErrors?.branch}</p>
+                                    )}
+                                    <p className="text-xs text-muted-foreground">
+                                        We will deploy this branch on new releases. Change it later if your workflow evolves.
+                                    </p>
                                 </div>
 
                                 <div className="flex justify-end">
@@ -335,7 +375,9 @@ export default function SiteGitRepository({ server, site, gitRepository, flash, 
                     <Card>
                         <CardHeader className="space-y-1">
                             <CardTitle>SSH Deploy Key</CardTitle>
-                            <CardDescription>Add this key to your repository with read access. BrokeForge uses it to fetch your code.</CardDescription>
+                            <CardDescription>
+                                Add this key to your repository with read access. BrokeForge uses it to fetch your code.
+                            </CardDescription>
                         </CardHeader>
                         <Separator />
                         <CardContent className="space-y-4 py-6">
@@ -347,7 +389,9 @@ export default function SiteGitRepository({ server, site, gitRepository, flash, 
                                 <li>3. Paste the key below and grant read-only access.</li>
                             </ol>
                             <div className="rounded-md border border-border bg-muted/60 p-4">
-                                <pre className="max-h-56 overflow-y-auto whitespace-pre-wrap break-words font-mono text-xs leading-relaxed">{deployKey}</pre>
+                                <pre className="max-h-56 overflow-y-auto font-mono text-xs leading-relaxed break-words whitespace-pre-wrap">
+                                    {deployKey}
+                                </pre>
                             </div>
                             <Button type="button" variant="secondary" onClick={handleCopyDeployKey} className="inline-flex items-center gap-2">
                                 {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}

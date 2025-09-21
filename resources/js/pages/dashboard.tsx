@@ -3,8 +3,8 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import { provisioning as provisioningServer, show as showServer, store as storeServer } from '@/routes/servers';
@@ -33,12 +33,40 @@ type Server = {
 
 function generateFriendlyName(): string {
     const adjectives = [
-        'Swift', 'Brave', 'Bright', 'Noble', 'Quick', 'Wise', 'Bold', 'Grand',
-        'Prime', 'Elite', 'Alpha', 'Super', 'Mega', 'Ultra', 'Pro', 'Epic'
+        'Swift',
+        'Brave',
+        'Bright',
+        'Noble',
+        'Quick',
+        'Wise',
+        'Bold',
+        'Grand',
+        'Prime',
+        'Elite',
+        'Alpha',
+        'Super',
+        'Mega',
+        'Ultra',
+        'Pro',
+        'Epic',
     ];
     const nouns = [
-        'Server', 'Node', 'Engine', 'Machine', 'System', 'Core', 'Hub', 'Base',
-        'Cloud', 'Phoenix', 'Falcon', 'Eagle', 'Tiger', 'Lion', 'Bear', 'Wolf'
+        'Server',
+        'Node',
+        'Engine',
+        'Machine',
+        'System',
+        'Core',
+        'Hub',
+        'Base',
+        'Cloud',
+        'Phoenix',
+        'Falcon',
+        'Eagle',
+        'Tiger',
+        'Lion',
+        'Bear',
+        'Wolf',
     ];
 
     const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
@@ -147,9 +175,30 @@ export default function Dashboard({ activities, servers }: { activities: Activit
                                             </div>
                                             {s.private_ip && <div className="text-xs text-muted-foreground">Private: {s.private_ip}</div>}
                                             {(() => {
-                                                const color = status === 'connected' ? 'green' : status === 'failed' ? 'red' : status === 'disconnected' ? 'gray' : 'amber';
-                                                const dot = color === 'green' ? 'bg-green-500' : color === 'red' ? 'bg-red-500' : color === 'gray' ? 'bg-gray-500' : 'bg-amber-500';
-                                                const ping = color === 'green' ? 'bg-green-400' : color === 'red' ? 'bg-red-400' : color === 'gray' ? 'bg-gray-400' : 'bg-amber-400';
+                                                const color =
+                                                    status === 'connected'
+                                                        ? 'green'
+                                                        : status === 'failed'
+                                                          ? 'red'
+                                                          : status === 'disconnected'
+                                                            ? 'gray'
+                                                            : 'amber';
+                                                const dot =
+                                                    color === 'green'
+                                                        ? 'bg-green-500'
+                                                        : color === 'red'
+                                                          ? 'bg-red-500'
+                                                          : color === 'gray'
+                                                            ? 'bg-gray-500'
+                                                            : 'bg-amber-500';
+                                                const ping =
+                                                    color === 'green'
+                                                        ? 'bg-green-400'
+                                                        : color === 'red'
+                                                          ? 'bg-red-400'
+                                                          : color === 'gray'
+                                                            ? 'bg-gray-400'
+                                                            : 'bg-amber-400';
                                                 return (
                                                     <div className="mt-3 flex items-center gap-2 text-xs">
                                                         <span className="relative inline-flex h-2 w-2">

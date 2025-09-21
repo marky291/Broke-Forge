@@ -18,7 +18,11 @@ type Server = {
     ssh_app_user?: string | null;
 };
 
-type Site = {
+/**
+ * Represents a site hosted on a server.
+ * Maps to the ServerSite model on the backend.
+ */
+type ServerSite = {
     id: number;
     domain: string;
     document_root: string | null;
@@ -48,7 +52,7 @@ export default function SiteCommands({
     commandResult,
 }: {
     server: Server;
-    site: Site;
+    site: ServerSite;
     executionContext: ExecutionContext;
     commandResult?: CommandResult;
 }) {
@@ -75,9 +79,10 @@ export default function SiteCommands({
     };
 
     const timeoutInMinutes = executionContext.timeout / 60;
-    const formattedTimeout = executionContext.timeout % 60 === 0
-        ? `${timeoutInMinutes} minute${timeoutInMinutes === 1 ? '' : 's'}`
-        : `${executionContext.timeout} seconds`;
+    const formattedTimeout =
+        executionContext.timeout % 60 === 0
+            ? `${timeoutInMinutes} minute${timeoutInMinutes === 1 ? '' : 's'}`
+            : `${executionContext.timeout} seconds`;
 
     const hasCommand = data.command.trim().length > 0;
     const result = commandResult ?? null;
@@ -100,13 +105,9 @@ export default function SiteCommands({
                     <AlertTitle>Shell access, simplified</AlertTitle>
                     <AlertDescription>
                         BrokeForge allows you to execute arbitrary commands inside the site root. Commands run as
-                        <code className="mx-1 rounded bg-muted px-1.5 py-0.5 text-xs font-medium">
-                            {executionContext.user ?? 'ssh_app_user'}
-                        </code>
+                        <code className="mx-1 rounded bg-muted px-1.5 py-0.5 text-xs font-medium">{executionContext.user ?? 'ssh_app_user'}</code>
                         from
-                        <code className="mx-1 rounded bg-muted px-1.5 py-0.5 text-xs font-medium">
-                            {executionContext.workingDirectory}
-                        </code>
+                        <code className="mx-1 rounded bg-muted px-1.5 py-0.5 text-xs font-medium">{executionContext.workingDirectory}</code>
                         and timeout after {formattedTimeout}. Use with caution—these commands have full access to your site files.
                     </AlertDescription>
                 </Alert>
@@ -131,9 +132,7 @@ export default function SiteCommands({
                                         className="mt-2"
                                         name="command"
                                     />
-                                    {errors.command && (
-                                        <p className="mt-2 text-sm text-destructive">{errors.command}</p>
-                                    )}
+                                    {errors.command && <p className="mt-2 text-sm text-destructive">{errors.command}</p>}
                                 </div>
                                 <Alert variant="destructive">
                                     <AlertCircle className="h-4 w-4" />
@@ -234,7 +233,7 @@ export default function SiteCommands({
                             {result.errorOutput && (
                                 <div className="grid gap-2">
                                     <div className="text-muted-foreground">Error Output</div>
-                                    <pre className="overflow-auto rounded-lg bg-destructive/10 px-4 py-3 font-mono text-sm leading-relaxed text-destructive whitespace-pre-wrap">
+                                    <pre className="overflow-auto rounded-lg bg-destructive/10 px-4 py-3 font-mono text-sm leading-relaxed whitespace-pre-wrap text-destructive">
                                         {result.errorOutput}
                                     </pre>
                                 </div>

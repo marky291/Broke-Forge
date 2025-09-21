@@ -60,21 +60,6 @@ class ProvisionWebServiceJob implements ShouldQueue
             $service->status = 'active';
             $service->save();
 
-            // Persist the default Nginx site now that provisioning succeeded
-            $this->server->sites()->updateOrCreate(
-                ['domain' => 'default'],
-                [
-                    'document_root' => '/var/www/html',
-                    'nginx_config_path' => '/etc/nginx/sites-available/default',
-                    'php_version' => $phpVersion,
-                    'ssl_enabled' => false,
-                    'configuration' => ['is_default_site' => true],
-                    'status' => 'active',
-                    'provisioned_at' => now(),
-                    'deprovisioned_at' => null,
-                ]
-            );
-
             // set service as active for PHP, since it was installed with nginx
             $this->server->services()->where('service_name', 'php')->update(['status' => 'active']);
 

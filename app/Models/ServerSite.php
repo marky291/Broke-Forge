@@ -3,12 +3,19 @@
 namespace App\Models;
 
 use App\Enums\GitStatus;
+use App\Models\Activity;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
 
-class Site extends Model
+/**
+ * Represents a site hosted on a server.
+ *
+ * This model manages websites deployed on servers, including their
+ * configuration, SSL settings, Git integration, and provisioning status.
+ */
+class ServerSite extends Model
 {
     use HasFactory;
 

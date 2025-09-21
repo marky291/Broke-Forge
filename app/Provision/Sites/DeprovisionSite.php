@@ -2,7 +2,7 @@
 
 namespace App\Provision\Sites;
 
-use App\Models\Site;
+use App\Models\ServerSite;
 use App\Provision\Enums\ServiceType;
 use App\Provision\Milestones;
 use App\Provision\RemovableService;
@@ -11,11 +11,11 @@ use App\Provision\Server\Access\UserCredential;
 
 class DeprovisionSite extends RemovableService
 {
-    protected ?Site $site = null;
+    protected ?ServerSite $site = null;
 
     protected string $domain;
 
-    public function setSite(Site $site): self
+    public function setSite(ServerSite $site): self
     {
         $this->site = $site;
         $this->domain = $site->domain;
@@ -25,7 +25,7 @@ class DeprovisionSite extends RemovableService
 
     public function setConfiguration(array $config): self
     {
-        if (isset($config['site']) && $config['site'] instanceof Site) {
+        if (isset($config['site']) && $config['site'] instanceof ServerSite) {
             $this->setSite($config['site']);
         }
 

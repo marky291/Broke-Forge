@@ -3,7 +3,7 @@
 namespace App\Provision\Sites;
 
 use App\Models\Server;
-use App\Models\Site;
+use App\Models\ServerSite;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
 use Spatie\Ssh\Ssh;
@@ -14,7 +14,7 @@ class SiteCommandProvision
 {
     public function __construct(
         protected Server $server,
-        protected Site $site,
+        protected ServerSite $site,
     ) {}
 
     /**

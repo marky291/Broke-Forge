@@ -2,10 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\GitStatus;
 use App\Http\Requests\Servers\InstallSiteGitRepositoryRequest;
 use App\Jobs\InstallGitRepository;
 use App\Models\Server;
-use App\Models\Site;
+use App\Models\ServerSite;
 use App\Provision\Server\Access\WorkerCredential;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Log;
@@ -17,19 +18,26 @@ class ServerSiteGitRepositoryController extends Controller
     /**
      * Display the Git repository setup workflow.
      */
-    public function show(Server $server, Site $site): Response
+    public function show(Server $server, ServerSite $site): Response
     {
+        // Add success flash message if installation just completed
+        $flash = [];
+        if ($site->git_status === GitStatus::Installed && $site->git_installed_at?->diffInSeconds(now()) < 10) {
+            $flash['success'] = 'Git repository installed successfully! Your application is ready for deployments.';
+        }
+
         return Inertia::render('servers/site-git-repository', [
             'server' => $this->getServerData($server),
             'site' => $this->getSiteData($site),
             'gitRepository' => $this->getGitRepositoryData($site),
+            'flash' => $flash,
         ]);
     }
 
     /**
      * Install or update the Git repository for the site.
      */
-    public function store(InstallSiteGitRepositoryRequest $request, Server $server, Site $site): RedirectResponse
+    public function store(InstallSiteGitRepositoryRequest $request, Server $server, ServerSite $site): RedirectResponse
     {
         // Validate site can install Git
         if ($site->isGitProcessing()) {
@@ -42,6 +50,15 @@ class ServerSiteGitRepositoryController extends Controller
 
         // Prepare configuration
         $configuration = $this->prepareConfiguration($request->validated());
+
+        // Store configuration and update status to installing
+        $site->update([
+            'git_status' => GitStatus::Installing,
+            'configuration' => array_merge(
+                $site->configuration ?? [],
+                ['git_repository' => $configuration]
+            ),
+        ]);
 
         // Dispatch installation job
         InstallGitRepository::dispatch($server, $site, $configuration);
@@ -64,7 +81,7 @@ class ServerSiteGitRepositoryController extends Controller
     /**
      * Get site data for the view.
      */
-    protected function getSiteData(Site $site): array
+    protected function getSiteData(ServerSite $site): array
     {
         return array_merge(
             $site->only(['id', 'domain', 'status']),
@@ -78,7 +95,7 @@ class ServerSiteGitRepositoryController extends Controller
     /**
      * Get Git repository configuration data.
      */
-    protected function getGitRepositoryData(Site $site): array
+    protected function getGitRepositoryData(ServerSite $site): array
     {
         $config = $site->getGitConfiguration();
 
@@ -113,7 +130,7 @@ class ServerSiteGitRepositoryController extends Controller
     /**
      * Redirect with an error message.
      */
-    protected function redirectWithError(Server $server, Site $site, string $message): RedirectResponse
+    protected function redirectWithError(Server $server, ServerSite $site, string $message): RedirectResponse
     {
         return redirect()
             ->route('servers.sites.git-repository', [$server, $site])
@@ -123,7 +140,7 @@ class ServerSiteGitRepositoryController extends Controller
     /**
      * Log the start of Git installation.
      */
-    protected function logInstallationStart(Server $server, Site $site, array $configuration): void
+    protected function logInstallationStart(Server $server, ServerSite $site, array $configuration): void
     {
         Log::info('Git repository installation job dispatched', [
             'server_id' => $server->id,

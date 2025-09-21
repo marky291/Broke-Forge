@@ -2,7 +2,7 @@
 
 namespace App\Provision\Sites;
 
-use App\Models\Site;
+use App\Models\ServerSite;
 use App\Provision\Enums\ServiceType;
 use App\Provision\InstallableService;
 use App\Provision\Milestones;
@@ -17,7 +17,7 @@ use LogicException;
  */
 class GitProvision extends InstallableService
 {
-    protected ?Site $site = null;
+    protected ?ServerSite $site = null;
 
     /**
      * Original repository identifier supplied by the operator.
@@ -43,7 +43,7 @@ class GitProvision extends InstallableService
     /**
      * Associate the provisioner with a site record to use for path resolution and persistence.
      */
-    public function forSite(Site $site): self
+    public function forSite(ServerSite $site): self
     {
         $this->site = $site;
 
@@ -93,7 +93,7 @@ class GitProvision extends InstallableService
      */
     public function provision(): void
     {
-        if (! $this->site instanceof Site) {
+        if (! $this->site instanceof ServerSite) {
             throw new LogicException('A site must be associated before provisioning a repository.');
         }
 
@@ -224,7 +224,7 @@ class GitProvision extends InstallableService
      */
     protected function persistRepositoryConfiguration(): void
     {
-        if (! $this->site instanceof Site || ! $this->site->exists) {
+        if (! $this->site instanceof ServerSite || ! $this->site->exists) {
             return;
         }
 

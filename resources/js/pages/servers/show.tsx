@@ -47,12 +47,27 @@ export default function Show({ server }: { server: Server }) {
             <Head title={`Server #${server.id} — ${server.vanity_name}`} />
             <div className="space-y-6">
                 <div className="mb-2 flex items-center justify-between">
-                <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3">
                         <h1 className="text-2xl font-semibold">{server.vanity_name}</h1>
                         {(() => {
-                            const color = status === 'connected' ? 'green' : status === 'failed' ? 'red' : status === 'disconnected' ? 'gray' : 'amber';
-                            const dot = color === 'green' ? 'bg-green-500' : color === 'red' ? 'bg-red-500' : color === 'gray' ? 'bg-gray-500' : 'bg-amber-500';
-                            const ping = color === 'green' ? 'bg-green-400' : color === 'red' ? 'bg-red-400' : color === 'gray' ? 'bg-gray-400' : 'bg-amber-400';
+                            const color =
+                                status === 'connected' ? 'green' : status === 'failed' ? 'red' : status === 'disconnected' ? 'gray' : 'amber';
+                            const dot =
+                                color === 'green'
+                                    ? 'bg-green-500'
+                                    : color === 'red'
+                                      ? 'bg-red-500'
+                                      : color === 'gray'
+                                        ? 'bg-gray-500'
+                                        : 'bg-amber-500';
+                            const ping =
+                                color === 'green'
+                                    ? 'bg-green-400'
+                                    : color === 'red'
+                                      ? 'bg-red-400'
+                                      : color === 'gray'
+                                        ? 'bg-gray-400'
+                                        : 'bg-amber-400';
                             return (
                                 <span className="inline-flex items-center gap-2 text-xs">
                                     <span className="relative inline-flex h-2 w-2">
@@ -120,9 +135,7 @@ export default function Show({ server }: { server: Server }) {
                                         </div>
                                         <div>
                                             <div className="text-sm text-muted-foreground">Status</div>
-                                            <div className="font-medium">
-                                                {formattedStatus}
-                                            </div>
+                                            <div className="font-medium">{formattedStatus}</div>
                                         </div>
                                         <div>
                                             <div className="text-sm text-muted-foreground">Created</div>

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Provision\Enums\ProvisionStatus;
 use App\Support\ServerCredentials;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -20,6 +21,7 @@ use Illuminate\Support\Facades\Auth;
  * @property string|null $ssh_app_user
  * @property string $connection
  * @property string $vanity_name
+ * @property ProvisionStatus $provision_status
  */
 class Server extends Model
 {
@@ -90,7 +92,7 @@ class Server extends Model
 
     public function sites(): HasMany
     {
-        return $this->hasMany(Site::class);
+        return $this->hasMany(ServerSite::class);
     }
 
     /**

@@ -1,3 +1,4 @@
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -6,15 +7,14 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
-import { Badge } from '@/components/ui/badge';
 import ServerLayout from '@/layouts/server/layout';
 import { dashboard } from '@/routes';
 import { show as showServer } from '@/routes/servers';
+import { show as showSite } from '@/routes/servers/sites';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/react';
-import { Globe, Loader2, Lock, Plus, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { CheckCircle, Clock, Globe, Loader2, Lock, Plus, XCircle } from 'lucide-react';
 import { useState } from 'react';
-import { show as showSite } from '@/routes/servers/sites';
 
 type ServerType = {
     id: number;
@@ -27,7 +27,11 @@ type ServerType = {
     updated_at: string;
 };
 
-type Site = {
+/**
+ * Represents a site hosted on a server.
+ * Maps to the ServerSite model on the backend.
+ */
+type ServerSite = {
     id: number;
     domain: string;
     document_root: string;
@@ -40,7 +44,7 @@ type Site = {
 type SitesProps = {
     server: ServerType;
     sites: {
-        data: Site[];
+        data: ServerSite[];
         links: Record<string, string | null>;
         meta: {
             current_page: number;
@@ -86,13 +90,13 @@ export default function Sites({ server, sites }: SitesProps) {
     const getStatusBadge = (status: string) => {
         switch (status) {
             case 'active':
-                return <Badge className="bg-green-500/10 text-green-500 border-green-500/20">Active</Badge>;
+                return <Badge className="border-green-500/20 bg-green-500/10 text-green-500">Active</Badge>;
             case 'provisioning':
-                return <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20">Provisioning</Badge>;
+                return <Badge className="border-blue-500/20 bg-blue-500/10 text-blue-500">Provisioning</Badge>;
             case 'disabled':
-                return <Badge className="bg-gray-500/10 text-gray-500 border-gray-500/20">Disabled</Badge>;
+                return <Badge className="border-gray-500/20 bg-gray-500/10 text-gray-500">Disabled</Badge>;
             case 'failed':
-                return <Badge className="bg-red-500/10 text-red-500 border-red-500/20">Failed</Badge>;
+                return <Badge className="border-red-500/20 bg-red-500/10 text-red-500">Failed</Badge>;
             default:
                 return <Badge variant="outline">{status}</Badge>;
         }
@@ -103,7 +107,7 @@ export default function Sites({ server, sites }: SitesProps) {
             case 'active':
                 return <CheckCircle className="h-4 w-4 text-green-500" />;
             case 'provisioning':
-                return <Loader2 className="h-4 w-4 text-blue-500 animate-spin" />;
+                return <Loader2 className="h-4 w-4 animate-spin text-blue-500" />;
             case 'disabled':
                 return <XCircle className="h-4 w-4 text-gray-500" />;
             case 'failed':
@@ -120,9 +124,7 @@ export default function Sites({ server, sites }: SitesProps) {
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <div>
                         <h2 className="text-2xl font-semibold">Sites Management</h2>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                            Manage websites, domains, and applications hosted on your server.
-                        </p>
+                        <p className="mt-1 text-sm text-muted-foreground">Manage websites, domains, and applications hosted on your server.</p>
                     </div>
                     <Button asChild variant="outline">
                         <Link href={`/servers/${server.id}/explorer`}>Open File Explorer</Link>
@@ -146,7 +148,7 @@ export default function Sites({ server, sites }: SitesProps) {
                                     <Link
                                         key={site.id}
                                         href={showSite({ server: server.id, site: site.id }).url}
-                                        className="block transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                        className="block transition-colors hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                                     >
                                         <div className="p-4">
                                             <div className="flex items-start justify-between">
@@ -154,9 +156,7 @@ export default function Sites({ server, sites }: SitesProps) {
                                                     <div className="flex items-center gap-2">
                                                         {getStatusIcon(site.status)}
                                                         <h3 className="font-medium">{site.domain}</h3>
-                                                        {site.ssl_enabled && (
-                                                            <Lock className="h-3.5 w-3.5 text-green-500" />
-                                                        )}
+                                                        {site.ssl_enabled && <Lock className="h-3.5 w-3.5 text-green-500" />}
                                                     </div>
                                                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                                                         <span>PHP {site.php_version}</span>
@@ -164,9 +164,7 @@ export default function Sites({ server, sites }: SitesProps) {
                                                         <span>{site.document_root}</span>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center gap-2">
-                                                    {getStatusBadge(site.status)}
-                                                </div>
+                                                <div className="flex items-center gap-2">{getStatusBadge(site.status)}</div>
                                             </div>
                                         </div>
                                     </Link>
@@ -176,14 +174,8 @@ export default function Sites({ server, sites }: SitesProps) {
                             <div className="p-8 text-center">
                                 <Globe className="mx-auto h-12 w-12 text-muted-foreground/50" />
                                 <h3 className="mt-4 text-lg font-semibold">No sites configured</h3>
-                                <p className="mt-2 text-sm text-muted-foreground">
-                                    Get started by adding your first site to this server.
-                                </p>
-                                <Button
-                                    onClick={() => setShowAddSiteDialog(true)}
-                                    className="mt-4"
-                                    variant="outline"
-                                >
+                                <p className="mt-2 text-sm text-muted-foreground">Get started by adding your first site to this server.</p>
+                                <Button onClick={() => setShowAddSiteDialog(true)} className="mt-4" variant="outline">
                                     <Plus className="mr-2 h-4 w-4" />
                                     Add Your First Site
                                 </Button>
@@ -212,9 +204,7 @@ export default function Sites({ server, sites }: SitesProps) {
                                         onChange={(e) => form.setData('domain', e.target.value)}
                                         disabled={form.processing}
                                     />
-                                    {form.errors.domain && (
-                                        <p className="text-sm text-red-500">{form.errors.domain}</p>
-                                    )}
+                                    {form.errors.domain && <p className="text-sm text-red-500">{form.errors.domain}</p>}
                                 </div>
                                 <div className="grid gap-2">
                                     <Label htmlFor="php_version">PHP Version</Label>
@@ -242,19 +232,14 @@ export default function Sites({ server, sites }: SitesProps) {
                                         onCheckedChange={(checked) => form.setData('ssl', checked)}
                                         disabled={form.processing}
                                     />
-                                    <Label htmlFor="ssl" className="flex items-center gap-2 cursor-pointer">
+                                    <Label htmlFor="ssl" className="flex cursor-pointer items-center gap-2">
                                         <Lock className="h-4 w-4" />
                                         Enable SSL (HTTPS)
                                     </Label>
                                 </div>
                             </div>
                             <DialogFooter>
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={() => setShowAddSiteDialog(false)}
-                                    disabled={form.processing}
-                                >
+                                <Button type="button" variant="outline" onClick={() => setShowAddSiteDialog(false)} disabled={form.processing}>
                                     Cancel
                                 </Button>
                                 <Button type="submit" disabled={form.processing}>

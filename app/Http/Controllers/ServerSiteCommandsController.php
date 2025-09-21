@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\Servers\ExecuteSiteCommandRequest;
 use App\Models\Server;
-use App\Models\Site;
+use App\Models\ServerSite;
 use App\Provision\Sites\SiteCommandProvision;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Log;
@@ -13,7 +13,7 @@ use Inertia\Response;
 
 class ServerSiteCommandsController extends Controller
 {
-    public function __invoke(Server $server, Site $site): Response
+    public function __invoke(Server $server, ServerSite $site): Response
     {
         $serverDetails = $server->only([
             'id',
@@ -47,7 +47,7 @@ class ServerSiteCommandsController extends Controller
         ]);
     }
 
-    public function store(ExecuteSiteCommandRequest $request, Server $server, Site $site): RedirectResponse
+    public function store(ExecuteSiteCommandRequest $request, Server $server, ServerSite $site): RedirectResponse
     {
         $validated = $request->validated();
         $provisioner = new SiteCommandProvision($server, $site);

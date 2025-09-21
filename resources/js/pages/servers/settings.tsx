@@ -33,16 +33,12 @@ export default function Settings({ server }: { server: Server }) {
             <div className="space-y-6">
                 <div className="mb-2">
                     <h1 className="text-2xl font-semibold">Server Settings</h1>
-                    <p className="text-sm text-muted-foreground mt-1">
-                        Manage your server configuration and connection details
-                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">Manage your server configuration and connection details</p>
                 </div>
 
                 <div className="rounded-xl border border-sidebar-border/70 bg-background shadow-sm dark:border-sidebar-border">
                     <div className="px-4 py-3">
-                        <div className="text-sm font-medium tracking-wide text-neutral-600 uppercase dark:text-neutral-300">
-                            General Settings
-                        </div>
+                        <div className="text-sm font-medium tracking-wide text-neutral-600 uppercase dark:text-neutral-300">General Settings</div>
                     </div>
                     <Separator />
                     <div className="px-4 py-4">
@@ -61,7 +57,7 @@ export default function Settings({ server }: { server: Server }) {
                                         <InputError className="mt-1" message={errors.vanity_name} />
                                     </div>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                                         <div className="grid gap-2">
                                             <Label htmlFor="public_ip">Public IP Address</Label>
                                             <Input
@@ -76,12 +72,7 @@ export default function Settings({ server }: { server: Server }) {
 
                                         <div className="grid gap-2">
                                             <Label htmlFor="private_ip">Private IP Address (optional)</Label>
-                                            <Input
-                                                id="private_ip"
-                                                name="private_ip"
-                                                defaultValue={server.private_ip ?? ''}
-                                                placeholder="10.0.0.1"
-                                            />
+                                            <Input id="private_ip" name="private_ip" defaultValue={server.private_ip ?? ''} placeholder="10.0.0.1" />
                                             <InputError className="mt-1" message={errors.private_ip} />
                                         </div>
                                     </div>
@@ -105,11 +96,7 @@ export default function Settings({ server }: { server: Server }) {
                                         <Button type="submit" disabled={processing}>
                                             {processing ? 'Saving...' : 'Save Changes'}
                                         </Button>
-                                        {recentlySuccessful && (
-                                            <span className="text-sm text-green-600">
-                                                Settings saved successfully
-                                            </span>
-                                        )}
+                                        {recentlySuccessful && <span className="text-sm text-green-600">Settings saved successfully</span>}
                                     </div>
                                 </>
                             )}
@@ -125,7 +112,7 @@ export default function Settings({ server }: { server: Server }) {
                     </div>
                     <Separator />
                     <div className="px-4 py-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                             <div>
                                 <div className="text-sm text-muted-foreground">Connection Status</div>
                                 <div className="font-medium capitalize">{server.connection}</div>

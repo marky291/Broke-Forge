@@ -1,4 +1,3 @@
-import { useMemo, useRef, type ChangeEvent } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
@@ -6,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Download, FileText, Folder, FolderOpen, Loader2, RefreshCw, Upload } from 'lucide-react';
+import { useMemo, useRef, type ChangeEvent } from 'react';
 import type { FileBrowserState, FileItem } from './types';
 
 const formatBytes = (size: number | null): string => {
@@ -45,15 +45,7 @@ type ServerFileBrowserProps = {
     onDismissError: () => void;
 };
 
-export const ServerFileBrowser = ({
-    state,
-    onNavigate,
-    onNavigateUp,
-    onRefresh,
-    onUpload,
-    onDownload,
-    onDismissError,
-}: ServerFileBrowserProps) => {
+export const ServerFileBrowser = ({ state, onNavigate, onNavigateUp, onRefresh, onUpload, onDownload, onDismissError }: ServerFileBrowserProps) => {
     const fileInputRef = useRef<HTMLInputElement | null>(null);
 
     const breadcrumbSegments = useMemo(() => {
@@ -102,11 +94,7 @@ export const ServerFileBrowser = ({
                     </Button>
                     <input ref={fileInputRef} type="file" className="hidden" onChange={handleUploadChange} />
                     <Button size="sm" onClick={handleUploadClick} disabled={state.uploading}>
-                        {state.uploading ? (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                            <Upload className="mr-2 h-4 w-4" />
-                        )}
+                        {state.uploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
                         Upload
                     </Button>
                 </div>
@@ -187,7 +175,7 @@ export const ServerFileBrowser = ({
                                         key={item.path}
                                         className={cn(
                                             'flex items-center justify-between gap-3 px-4 py-3 transition-colors',
-                                            'border-b last:border-b-0 border-border/60'
+                                            'border-b border-border/60 last:border-b-0',
                                         )}
                                     >
                                         <button
@@ -198,8 +186,8 @@ export const ServerFileBrowser = ({
                                                 }
                                             }}
                                             className={cn(
-                                                'flex flex-1 items-center gap-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                                                item.type === 'directory' ? 'hover:text-foreground' : ''
+                                                'flex flex-1 items-center gap-3 text-left focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
+                                                item.type === 'directory' ? 'hover:text-foreground' : '',
                                             )}
                                         >
                                             {item.type === 'directory' ? (
@@ -210,9 +198,7 @@ export const ServerFileBrowser = ({
                                             <div className="min-w-0">
                                                 <div className="truncate text-sm font-medium text-foreground">{item.name}</div>
                                                 <div className="text-xs text-muted-foreground">
-                                                    {item.type === 'directory'
-                                                        ? 'Directory'
-                                                        : `${formatBytes(item.size)} • ${item.permissions}`}
+                                                    {item.type === 'directory' ? 'Directory' : `${formatBytes(item.size)} • ${item.permissions}`}
                                                 </div>
                                             </div>
                                         </button>
@@ -220,12 +206,7 @@ export const ServerFileBrowser = ({
                                         <div className="flex items-center gap-3 text-xs text-muted-foreground">
                                             <span>{formatTimestamp(item.modifiedAt)}</span>
                                             {item.type === 'file' && (
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    onClick={() => onDownload(item)}
-                                                    title="Download"
-                                                >
+                                                <Button variant="ghost" size="icon" onClick={() => onDownload(item)} title="Download">
                                                     <Download className="h-4 w-4" />
                                                 </Button>
                                             )}

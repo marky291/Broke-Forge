@@ -20,9 +20,9 @@ class WebServiceProvisionMilestones extends Milestones
 
     public const SETUP_DEFAULT_SITE = 'setup_default_site';
 
-    public const CONFIGURE_NGINX = 'configure_nginx';
-
     public const SET_PERMISSIONS = 'set_permissions';
+
+    public const CONFIGURE_NGINX = 'configure_nginx';
 
     public const VERIFY_INSTALL = 'verify_install';
 
@@ -36,8 +36,8 @@ class WebServiceProvisionMilestones extends Milestones
         self::ENABLE_SERVICES => 'Enabling and starting services',
         self::CONFIGURE_FIREWALL => 'Configuring firewall rules',
         self::SETUP_DEFAULT_SITE => 'Setting up default site',
-        self::CONFIGURE_NGINX => 'Configuring Nginx',
         self::SET_PERMISSIONS => 'Setting permissions',
+        self::CONFIGURE_NGINX => 'Configuring Nginx',
         self::VERIFY_INSTALL => 'Verifying installation',
         self::COMPLETE => 'Setup complete',
     ];

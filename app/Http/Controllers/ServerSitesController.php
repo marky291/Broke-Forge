@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\Servers\StoreSiteRequest;
 use App\Jobs\ProvisionSiteJob;
 use App\Models\Server;
-use App\Models\Site;
+use App\Models\ServerSite;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -26,7 +26,7 @@ class ServerSitesController extends Controller
         ]);
     }
 
-    public function show(Server $server, Site $site): Response
+    public function show(Server $server, ServerSite $site): Response
     {
         return Inertia::render('servers/site-application', [
             'server' => $server->only(['id', 'vanity_name', 'public_ip', 'ssh_port', 'private_ip', 'connection', 'created_at', 'updated_at']),

@@ -1,3 +1,4 @@
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -7,9 +8,8 @@ import ServerLayout from '@/layouts/server/layout';
 import { dashboard } from '@/routes';
 import { show as showServer } from '@/routes/servers';
 import { type BreadcrumbItem } from '@/types';
-import { Head, useForm, router } from '@inertiajs/react';
+import { Head, router, useForm } from '@inertiajs/react';
 import { CheckIcon, DatabaseIcon, Download, Loader2 } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useEffect, useState } from 'react';
 
 type Server = {
@@ -63,9 +63,7 @@ export default function Database({
     availableDatabases: AvailableDatabases;
     installedDatabase: InstalledDatabase;
 }) {
-    const [selectedType, setSelectedType] = useState<string>(
-        installedDatabase?.configuration?.type || 'mysql'
-    );
+    const [selectedType, setSelectedType] = useState<string>(installedDatabase?.configuration?.type || 'mysql');
 
     const { data, setData, post, processing, errors, reset } = useForm({
         type: installedDatabase?.configuration?.type || 'mysql',
@@ -77,11 +75,11 @@ export default function Database({
     const [progress, setProgress] = useState<{ step: number; total: number; label?: string } | null>(
         installedDatabase?.status === 'installing' && installedDatabase?.progress_total
             ? {
-                step: installedDatabase.progress_step ?? 0,
-                total: installedDatabase.progress_total ?? 0,
-                label: installedDatabase.progress_label ?? undefined,
-            }
-            : null
+                  step: installedDatabase.progress_step ?? 0,
+                  total: installedDatabase.progress_total ?? 0,
+                  label: installedDatabase.progress_label ?? undefined,
+              }
+            : null,
     );
 
     const isInstalling = installedDatabase?.status === 'installing';
@@ -91,7 +89,7 @@ export default function Database({
         let cancelled = false;
         const id = window.setInterval(async () => {
             try {
-                const res = await fetch(`/servers/${server.id}/database/status`, { headers: { 'Accept': 'application/json' } });
+                const res = await fetch(`/servers/${server.id}/database/status`, { headers: { Accept: 'application/json' } });
                 if (!res.ok) return;
                 const json = await res.json();
                 if (cancelled) return;
@@ -149,14 +147,11 @@ export default function Database({
             <Head title={`Database — ${server.vanity_name}`} />
             <div className="space-y-6">
                 <div>
-                    <h2 className="text-2xl font-semibold">
-                        {installedDatabase ? 'Database Configuration' : 'Database Installation'}
-                    </h2>
+                    <h2 className="text-2xl font-semibold">{installedDatabase ? 'Database Configuration' : 'Database Installation'}</h2>
                     <p className="mt-1 text-sm text-muted-foreground">
                         {installedDatabase
                             ? 'Configure and manage database services for your server.'
-                            : 'Install and configure a database service for your server.'
-                        }
+                            : 'Install and configure a database service for your server.'}
                     </p>
                 </div>
 
@@ -190,7 +185,7 @@ export default function Database({
                                         {Object.entries(availableDatabases).map(([type, database]) => (
                                             <div key={type} className="relative">
                                                 <div
-                                                    className={`relative rounded-lg border-2 p-4 transition-all cursor-pointer ${
+                                                    className={`relative cursor-pointer rounded-lg border-2 p-4 transition-all ${
                                                         selectedType === type
                                                             ? 'border-primary bg-primary/5'
                                                             : 'border-sidebar-border/70 bg-background hover:border-primary/50'
@@ -223,10 +218,7 @@ export default function Database({
                                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                         <div className="space-y-2">
                                             <Label htmlFor="version">Version</Label>
-                                            <Select
-                                                value={data.version}
-                                                onValueChange={(value) => setData('version', value)}
-                                            >
+                                            <Select value={data.version} onValueChange={(value) => setData('version', value)}>
                                                 <SelectTrigger disabled={processing}>
                                                     <SelectValue placeholder="Select version" />
                                                 </SelectTrigger>
@@ -302,9 +294,12 @@ export default function Database({
                                 </div>
                                 <div>
                                     <div className="text-sm text-muted-foreground">Status</div>
-                                    <div className="font-medium capitalize">{installedDatabase.status}
+                                    <div className="font-medium capitalize">
+                                        {installedDatabase.status}
                                         {isInstalling && progress?.total ? (
-                                            <span className="ml-2 text-xs text-muted-foreground">({progress.step}/{progress.total})</span>
+                                            <span className="ml-2 text-xs text-muted-foreground">
+                                                ({progress.step}/{progress.total})
+                                            </span>
                                         ) : null}
                                     </div>
                                 </div>
@@ -314,16 +309,24 @@ export default function Database({
                                     <div className="mb-1 flex items-center justify-between">
                                         <div className="text-sm text-muted-foreground">{progress?.label || 'Running installation steps...'}</div>
                                         {progress?.total ? (
-                                            <div className="text-xs text-muted-foreground">{Math.floor(((progress.step ?? 0) / (progress.total ?? 1)) * 100)}%</div>
+                                            <div className="text-xs text-muted-foreground">
+                                                {Math.floor(((progress.step ?? 0) / (progress.total ?? 1)) * 100)}%
+                                            </div>
                                         ) : null}
                                     </div>
                                     <div className="h-2 w-full overflow-hidden rounded bg-muted">
                                         <div
                                             className="h-full bg-primary transition-all"
-                                            style={{ width: progress?.total ? `${Math.floor(((progress.step ?? 0) / (progress.total ?? 1)) * 100)}%` : '25%' }}
+                                            style={{
+                                                width: progress?.total
+                                                    ? `${Math.floor(((progress.step ?? 0) / (progress.total ?? 1)) * 100)}%`
+                                                    : '25%',
+                                            }}
                                         />
                                     </div>
-                                    <div className="mt-2 text-xs text-muted-foreground">Do not close this page — we’re installing the database over SSH.</div>
+                                    <div className="mt-2 text-xs text-muted-foreground">
+                                        Do not close this page — we’re installing the database over SSH.
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -347,10 +350,7 @@ export default function Database({
                                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                     <div className="space-y-2">
                                         <Label htmlFor="version">Version</Label>
-                                        <Select
-                                            value={data.version}
-                                            onValueChange={(value) => setData('version', value)}
-                                        >
+                                        <Select value={data.version} onValueChange={(value) => setData('version', value)}>
                                             <SelectTrigger disabled={processing}>
                                                 <SelectValue placeholder="Select version" />
                                             </SelectTrigger>
@@ -366,9 +366,7 @@ export default function Database({
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label htmlFor="root_password">
-                                            Root Password
-                                        </Label>
+                                        <Label htmlFor="root_password">Root Password</Label>
                                         <Input
                                             id="root_password"
                                             type="password"

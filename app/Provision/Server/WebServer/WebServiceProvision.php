@@ -112,6 +112,21 @@ class WebServiceProvision extends InstallableService
             // Create default Nginx configuration for the default site
             $this->createDefaultNginxConfig($appUser, $phpVersion),
 
+            // Persist the default Nginx site now that provisioning succeeded
+            fn () => $this->server->sites()->updateOrCreate(
+                ['domain' => 'default'],
+                [
+                    'document_root' => "/home/{$appUser}/default",
+                    'nginx_config_path' => '/etc/nginx/sites-available/default',
+                    'php_version' => $phpVersion,
+                    'ssl_enabled' => false,
+                    'configuration' => ['is_default_site' => true],
+                    'status' => 'active',
+                    'provisioned_at' => now(),
+                    'deprovisioned_at' => null,
+                ]
+            ),
+
             // Enable the default site
             'ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default',
 

@@ -1,28 +1,17 @@
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import ServerLayout from '@/layouts/server/layout';
+import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import { show as showServer } from '@/routes/servers';
 import { gitRepository as gitRepositoryRoute } from '@/routes/servers/sites';
 import { type BreadcrumbItem } from '@/types';
-import { cn } from '@/lib/utils';
 import { Head, router } from '@inertiajs/react';
-import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import {
-    AppWindow,
-    CheckCircle,
-    Check,
-    Clock,
-    DatabaseIcon,
-    GitBranch,
-    Globe,
-    Layers,
-    Loader2,
-    XCircle,
-} from 'lucide-react';
+import { AppWindow, Check, CheckCircle, Clock, DatabaseIcon, GitBranch, Globe, Layers, Loader2, XCircle } from 'lucide-react';
+import { type ReactNode, useEffect, useMemo, useState } from 'react';
 
 type ServerType = {
     id: number;
@@ -35,7 +24,11 @@ type ServerType = {
     updated_at: string;
 };
 
-type Site = {
+/**
+ * Represents a site hosted on a server.
+ * Maps to the ServerSite model on the backend.
+ */
+type ServerSite = {
     id: number;
     domain: string;
     document_root: string;
@@ -162,7 +155,7 @@ const statusMeta: Record<string, { badgeClass: string; label: string; icon: Reac
 /**
  * Render the BrokeForge site application view with available installation workflows.
  */
-export default function SiteApplication({ server, site }: { server: ServerType; site: Site }) {
+export default function SiteApplication({ server, site }: { server: ServerType; site: ServerSite }) {
     const initialOptionKey = installationOptions[0]?.key ?? 'install-application';
     const [selectedOption, setSelectedOption] = useState<InstallationOption['key'] | ''>(initialOptionKey);
     const [searchQuery, setSearchQuery] = useState('');
@@ -184,14 +177,7 @@ export default function SiteApplication({ server, site }: { server: ServerType; 
         }
 
         return installationOptions.filter((option) => {
-            const haystack = [
-                option.title,
-                option.description,
-                ...option.highlights,
-                ...option.keywords,
-            ]
-                .join(' ')
-                .toLowerCase();
+            const haystack = [option.title, option.description, ...option.highlights, ...option.keywords].join(' ').toLowerCase();
 
             return haystack.includes(query);
         });
@@ -242,8 +228,7 @@ export default function SiteApplication({ server, site }: { server: ServerType; 
                         </div>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                        Choose how you want to bootstrap this site. Pick an installer and BrokeForge will surface the
-                        right workflow.
+                        Choose how you want to bootstrap this site. Pick an installer and BrokeForge will surface the right workflow.
                     </p>
                 </div>
 
@@ -280,7 +265,7 @@ export default function SiteApplication({ server, site }: { server: ServerType; 
                                                     onClick={() => handleOptionSelect(option)}
                                                     aria-pressed={isActive}
                                                     className={cn(
-                                                        'flex h-full w-full flex-col rounded-xl border bg-background p-4 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                                                        'flex h-full w-full flex-col rounded-xl border bg-background p-4 text-left transition-all focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none',
                                                         isActive
                                                             ? 'border-primary/60 bg-primary/5 shadow-sm ring-1 ring-primary/30'
                                                             : 'border-border hover:border-primary/40 hover:bg-muted/50',
@@ -296,7 +281,7 @@ export default function SiteApplication({ server, site }: { server: ServerType; 
                                                     >
                                                         <Icon className="h-5 w-5" />
                                                     </span>
-                                                    <span className="text-sm font-semibold leading-tight">{option.title}</span>
+                                                    <span className="text-sm leading-tight font-semibold">{option.title}</span>
                                                     <span className="mt-1 text-xs text-muted-foreground">{option.description}</span>
                                                 </button>
                                             );
@@ -307,9 +292,7 @@ export default function SiteApplication({ server, site }: { server: ServerType; 
                                         <div className="space-y-4 rounded-xl border border-dashed border-primary/40 bg-primary/5 p-5 text-sm">
                                             <div>
                                                 <div className="text-sm font-semibold">{selectedInstallation.title}</div>
-                                                <p className="mt-1 text-sm text-muted-foreground">
-                                                    {selectedInstallation.nextStep}
-                                                </p>
+                                                <p className="mt-1 text-sm text-muted-foreground">{selectedInstallation.nextStep}</p>
                                             </div>
                                             <ul className="space-y-2 text-xs text-muted-foreground">
                                                 {selectedInstallation.highlights.map((highlight) => (

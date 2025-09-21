@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('sites', function (Blueprint $table) {
+        Schema::create('server_sites', function (Blueprint $table) {
             $table->id();
             $table->foreignId('server_id')->constrained()->onDelete('cascade');
             $table->string('domain');
@@ -23,6 +23,10 @@ return new class extends Migration
             $table->string('nginx_config_path');
             $table->string('status')->default('provisioning');
             $table->json('configuration')->nullable();
+            $table->string('git_status')->nullable();
+            $table->timestamp('git_installed_at')->nullable();
+            $table->string('last_deployment_sha')->nullable();
+            $table->timestamp('last_deployed_at')->nullable();
             $table->timestamp('provisioned_at')->nullable();
             $table->timestamp('deprovisioned_at')->nullable();
             $table->timestamps();
@@ -37,6 +41,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('sites');
+        Schema::dropIfExists('server_sites');
     }
 };

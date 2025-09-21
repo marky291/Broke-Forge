@@ -5,7 +5,7 @@ namespace Tests\Feature\Git;
 use App\Enums\GitStatus;
 use App\Jobs\InstallGitRepository;
 use App\Models\Server;
-use App\Models\Site;
+use App\Models\ServerSite;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
@@ -19,7 +19,7 @@ class GitInstallationTest extends TestCase
 
     protected Server $server;
 
-    protected Site $site;
+    protected ServerSite $site;
 
     protected function setUp(): void
     {
@@ -30,7 +30,7 @@ class GitInstallationTest extends TestCase
             'user_id' => $this->user->id,
             'connection' => 'connected',
         ]);
-        $this->site = Site::factory()->create(['server_id' => $this->server->id]);
+        $this->site = ServerSite::factory()->create(['server_id' => $this->server->id]);
     }
 
     public function test_can_view_git_repository_page(): void

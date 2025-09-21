@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { Download, FileText, Folder, FolderOpen, Loader2, RefreshCw, Upload } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 
 const getCsrfToken = (): string | null => {
     const match = document.cookie.split('; ').find((row) => row.startsWith('XSRF-TOKEN='));
@@ -125,7 +125,7 @@ const ServerFileExplorerDialog = ({ serverId, open, onOpenChange }: ServerFileEx
                 }
             }
         },
-        [serverId]
+        [serverId],
     );
 
     const handleRefresh = useCallback(() => {
@@ -201,7 +201,7 @@ const ServerFileExplorerDialog = ({ serverId, open, onOpenChange }: ServerFileEx
                 setUploading(false);
             }
         },
-        [currentPath, loadDirectory, serverId]
+        [currentPath, loadDirectory, serverId],
     );
 
     const handleDownload = useCallback(
@@ -210,7 +210,7 @@ const ServerFileExplorerDialog = ({ serverId, open, onOpenChange }: ServerFileEx
 
             window.open(url, '_blank', 'noopener');
         },
-        [serverId]
+        [serverId],
     );
 
     const breadcrumbSegments = useMemo(() => {
@@ -242,7 +242,7 @@ const ServerFileExplorerDialog = ({ serverId, open, onOpenChange }: ServerFileEx
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-3xl flex min-h-[420px] flex-col gap-4">
+            <DialogContent className="flex min-h-[420px] flex-col gap-4 sm:max-w-3xl">
                 <DialogHeader className="space-y-2">
                     <DialogTitle>Server File Explorer</DialogTitle>
                     <DialogDescription>
@@ -300,11 +300,7 @@ const ServerFileExplorerDialog = ({ serverId, open, onOpenChange }: ServerFileEx
                             </Button>
                             <input ref={fileInputRef} type="file" className="hidden" onChange={handleUpload} />
                             <Button size="sm" onClick={handleUploadClick} disabled={uploading}>
-                                {uploading ? (
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                ) : (
-                                    <Upload className="mr-2 h-4 w-4" />
-                                )}
+                                {uploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
                                 Upload
                             </Button>
                         </div>
@@ -341,7 +337,7 @@ const ServerFileExplorerDialog = ({ serverId, open, onOpenChange }: ServerFileEx
                                         }}
                                         className={cn(
                                             'flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors',
-                                            'hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
+                                            'hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
                                         )}
                                     >
                                         <div className="flex min-w-0 flex-1 items-center gap-3">
@@ -353,9 +349,7 @@ const ServerFileExplorerDialog = ({ serverId, open, onOpenChange }: ServerFileEx
                                             <div className="min-w-0">
                                                 <div className="truncate text-sm font-medium text-foreground">{item.name}</div>
                                                 <div className="text-xs text-muted-foreground">
-                                                    {item.type === 'directory'
-                                                        ? 'Directory'
-                                                        : `${formatBytes(item.size)} • ${item.permissions}`}
+                                                    {item.type === 'directory' ? 'Directory' : `${formatBytes(item.size)} • ${item.permissions}`}
                                                 </div>
                                             </div>
                                         </div>

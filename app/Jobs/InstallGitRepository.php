@@ -4,7 +4,7 @@ namespace App\Jobs;
 
 use App\Enums\GitStatus;
 use App\Models\Server;
-use App\Models\Site;
+use App\Models\ServerSite;
 use App\Provision\Sites\GitProvision;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -38,7 +38,7 @@ class InstallGitRepository implements ShouldQueue
      */
     public function __construct(
         protected Server $server,
-        protected Site $site,
+        protected ServerSite $site,
         protected array $configuration
     ) {
         $this->onQueue('provisioning');
@@ -69,10 +69,14 @@ class InstallGitRepository implements ShouldQueue
                 ->setConfiguration($this->configuration)
                 ->provision();
 
-            // Mark Git installation as complete
+            // Mark Git installation as complete and store configuration
             $this->site->update([
                 'git_status' => GitStatus::Installed,
                 'git_installed_at' => now(),
+                'configuration' => array_merge(
+                    $this->site->configuration ?? [],
+                    ['git_repository' => $this->configuration]
+                ),
             ]);
 
             $this->logSuccess();
@@ -127,7 +131,14 @@ class InstallGitRepository implements ShouldQueue
      */
     protected function handleFailure(Throwable $exception): void
     {
-        $this->updateGitStatus(GitStatus::Failed);
+        // Update status to failed but keep the configuration
+        $this->site->update([
+            'git_status' => GitStatus::Failed,
+            'configuration' => array_merge(
+                $this->site->configuration ?? [],
+                ['git_repository' => $this->configuration]
+            ),
+        ]);
 
         Log::error('Git repository installation failed', [
             'server_id' => $this->server->id,

@@ -1,10 +1,17 @@
-import { Breadcrumb, BreadcrumbItem as BreadcrumbComponent, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
+import {
+    Breadcrumb,
+    BreadcrumbItem as BreadcrumbComponent,
+    BreadcrumbLink,
+    BreadcrumbList,
+    BreadcrumbPage,
+    BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
 import AppLayout from '@/layouts/app-layout';
-import { type NavGroup, type NavItem, type BreadcrumbItem } from '@/types';
-import { usePage, Link } from '@inertiajs/react';
-import { AppWindow, DatabaseIcon, CodeIcon, Folder, Globe, Server, Terminal } from 'lucide-react';
-import { PropsWithChildren } from 'react';
 import { cn } from '@/lib/utils';
+import { type BreadcrumbItem, type NavGroup, type NavItem } from '@/types';
+import { Link, usePage } from '@inertiajs/react';
+import { AppWindow, CodeIcon, DatabaseIcon, Folder, Globe, Server, Terminal } from 'lucide-react';
+import { PropsWithChildren } from 'react';
 
 interface ServerLayoutProps extends PropsWithChildren {
     server: {
@@ -118,10 +125,10 @@ export default function ServerLayout({ children, server, breadcrumbs, site }: Se
             <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
                 <div className="flex h-full">
                     {/* Server Sidebar */}
-                    <div className="relative h-svh w-[16rem] bg-transparent transition-[width] duration-200 ease-linear group-data-[collapsible=offcanvas]:w-0 group-data-[side=right]:rotate-180 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4)))]">
-                        <div className="bg-sidebar text-sidebar-foreground border-sidebar-border flex h-full w-full flex-col rounded-lg border shadow-sm">
+                    <div className="relative h-svh w-[16rem] bg-transparent transition-[width] duration-200 ease-linear group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4)))] group-data-[collapsible=offcanvas]:w-0 group-data-[side=right]:rotate-180">
+                        <div className="flex h-full w-full flex-col rounded-lg border border-sidebar-border bg-sidebar text-sidebar-foreground shadow-sm">
                             {/* Server Header */}
-                            <div className="flex items-center gap-3 p-4 border-b border-sidebar-border">
+                            <div className="flex items-center gap-3 border-b border-sidebar-border p-4">
                                 <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
                                     <Server className="size-4" />
                                 </div>
@@ -136,7 +143,7 @@ export default function ServerLayout({ children, server, breadcrumbs, site }: Se
                                 <nav className="space-y-4">
                                     {sidebarNavGroups.map((group) => (
                                         <div key={group.title} className="space-y-2">
-                                            <p className="px-3 text-xs font-medium uppercase text-muted-foreground">{group.title}</p>
+                                            <p className="px-3 text-xs font-medium text-muted-foreground uppercase">{group.title}</p>
                                             <div className="space-y-1">
                                                 {group.items.map((item, index) => {
                                                     const Icon = item.icon;
@@ -145,10 +152,10 @@ export default function ServerLayout({ children, server, breadcrumbs, site }: Se
                                                             key={`${item.href}-${index}`}
                                                             href={item.href}
                                                             className={cn(
-                                                                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+                                                                'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
                                                                 item.isActive
-                                                                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                                                                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                                                                    ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                                                                    : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
                                                             )}
                                                         >
                                                             {Icon && <Icon className="size-4" />}
@@ -165,7 +172,7 @@ export default function ServerLayout({ children, server, breadcrumbs, site }: Se
                     </div>
 
                     {/* Main Content Area */}
-                    <div className="flex-1 flex flex-col min-w-0 ml-4">
+                    <div className="ml-4 flex min-w-0 flex-1 flex-col">
                         {/* Breadcrumbs Header */}
                         {breadcrumbs && (
                             <header className="flex h-16 shrink-0 items-center gap-2">
@@ -178,9 +185,7 @@ export default function ServerLayout({ children, server, breadcrumbs, site }: Se
                                                     {index === breadcrumbs.length - 1 ? (
                                                         <BreadcrumbPage>{breadcrumb.title}</BreadcrumbPage>
                                                     ) : (
-                                                        <BreadcrumbLink href={breadcrumb.href}>
-                                                            {breadcrumb.title}
-                                                        </BreadcrumbLink>
+                                                        <BreadcrumbLink href={breadcrumb.href}>{breadcrumb.title}</BreadcrumbLink>
                                                     )}
                                                 </BreadcrumbComponent>
                                             </div>
@@ -191,9 +196,7 @@ export default function ServerLayout({ children, server, breadcrumbs, site }: Se
                         )}
 
                         {/* Page Content */}
-                        <div className="flex-1 overflow-auto">
-                            {children}
-                        </div>
+                        <div className="flex-1 overflow-auto">{children}</div>
                     </div>
                 </div>
             </div>
