@@ -8,13 +8,15 @@ BrokeForge, a server management and deployment platform that automates server pr
 
 ### Core Architecture
 
-**Provisioning System** (`app/Provision/`)
-- Base class `Serviceable` handles SSH connections via `spatie/ssh`
-- Service interfaces: `InstallableService`, `RemovableService` for service lifecycle
-- Service-specific provisioners extend the base (e.g., `MySqlProvision`, `ProvisionSite`)
-- Milestone tracking system with enum-based milestones and progress callbacks
-- SSH credential types: `RootCredential`, `UserCredential`, `WorkerCredential`
-- Git provisioning with `GitProvision` and `GitProvisionMilestones`
+**Package System** (`app/Packages/`)
+- **New unified package architecture** replacing legacy `app/Provision/` structure
+- Base classes: `PackageInstaller`, `PackageRemover`, `PackageManager` for SSH and milestone functionality
+- Service organization: `Services/{Category}/{ServiceName}/` (e.g., `Services/Database/MySQL/`, `Services/WebServer/`)
+- **ALL packages must follow** `execute()` and `commands()` method pattern (no standalone `run()` methods)
+- **Before creating new packages**: ALWAYS review existing packages to understand patterns and reuse solutions
+- SSH credential types: `RootCredential`, `UserCredential`, `WorkerCredential` in `Packages/Credentials/`
+- Milestone tracking with progress callbacks via `ProvisionEvent` records
+- Job integration with queue processing for all package operations
 
 **Controller Organization** (`app/Http/Controllers/`)
 - `ServerController` - Server CRUD operations only
@@ -42,6 +44,15 @@ BrokeForge, a server management and deployment platform that automates server pr
 composer dev         # Runs server + queue + logs + vite concurrently
 composer dev:ssr     # With SSR support
 composer test        # Run test suite (clears config first)
+```
+
+**Package Development:**
+```bash
+# CRITICAL: Before creating any new package, review existing packages
+ls app/Packages/Services/         # Examine service categories
+ls app/Packages/Services/Database/MySQL/  # Review MySQL implementation
+cat app/Packages/Base/PackageInstaller.php  # Check base patterns
+cat app/Packages/Services/WebServer/WebServiceInstaller.php  # Example installer
 ```
 
 **Build & Quality:**
@@ -102,6 +113,29 @@ php artisan make:enum EnumName         # Custom enum class
    - Components use `useForm` for mutations
    - Real-time updates via polling or SSE (planned)
    - Radix UI components for UI consistency
+
+### Package Development Guidelines
+
+**CRITICAL RULE: Review Before Creating**
+- Before creating ANY new package, examine existing packages in `app/Packages/Services/`
+- Study `WebServiceInstaller`, `MySqlInstaller`, `SiteInstaller` for established patterns
+- Check `app/Packages/Base/` classes to understand what's already available
+- Reuse existing SSH credentials (`RootCredential`, `UserCredential`, `WorkerCredential`)
+- Use existing enums (`ServiceType`, `ProvisionStatus`) before creating new ones
+
+**Package Structure Requirements:**
+- ALL packages must extend `PackageInstaller` or `PackageRemover`
+- ALL packages must follow `execute()` and `commands()` method pattern
+- Even single command executors must use installer pattern (no standalone `run()` methods)
+- File naming: `{PackageName}Installer.php`, `{PackageName}InstallerMilestones.php`
+- Directory structure: `Services/{Category}/{ServiceName}/`
+
+**Implementation Pattern:**
+- `execute()` method: Contains ALL logic, data preparation, validation
+- `commands()` method: Contains ONLY SSH commands and milestone tracking closures
+- Pass configuration via parameters, not constructors
+- Use Blade templates for configuration files (`view('template', $data)->render()`)
+- Avoid helper methods - keep logic within the two required methods
 
 ### Key Technologies
 

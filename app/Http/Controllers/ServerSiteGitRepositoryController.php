@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\GitStatus;
 use App\Http\Requests\Servers\InstallSiteGitRepositoryRequest;
-use App\Jobs\InstallGitRepository;
 use App\Models\Server;
 use App\Models\ServerSite;
-use App\Provision\Server\Access\WorkerCredential;
+use App\Packages\Credentials\WorkerCredential;
+use App\Packages\Enums\GitStatus;
+use App\Packages\Services\Sites\GitRepositoryInstallerJob;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
@@ -61,7 +61,7 @@ class ServerSiteGitRepositoryController extends Controller
         ]);
 
         // Dispatch installation job
-        InstallGitRepository::dispatch($server, $site, $configuration);
+        GitRepositoryInstallerJob::dispatch($server, $site, $configuration);
 
         $this->logInstallationStart($server, $site, $configuration);
 

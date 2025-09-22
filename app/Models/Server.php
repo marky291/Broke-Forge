@@ -2,7 +2,8 @@
 
 namespace App\Models;
 
-use App\Provision\Enums\ProvisionStatus;
+use App\Packages\Enums\ProvisionStatus;
+use App\Packages\Enums\ServerType;
 use App\Support\ServerCredentials;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -22,6 +23,7 @@ use Illuminate\Support\Facades\Auth;
  * @property string $connection
  * @property string $vanity_name
  * @property ProvisionStatus $provision_status
+ * @property ServerType $server_type
  */
 class Server extends Model
 {
@@ -46,8 +48,8 @@ class Server extends Model
 
     protected $casts = [
         'ssh_port' => 'integer',
-        'server_type' => \App\Provision\Enums\ServerType::class,
-        'provision_status' => \App\Provision\Enums\ProvisionStatus::class,
+        'server_type' => ServerType::class,
+        'provision_status' => ProvisionStatus::class,
     ];
 
     public static function register(string $user, string $publicIp): self
@@ -108,7 +110,7 @@ class Server extends Model
      */
     public function isProvisioned(): bool
     {
-        return $this->provision_status === \App\Provision\Enums\ProvisionStatus::Completed;
+        return $this->provision_status === ProvisionStatus::Completed;
     }
 
     protected static function booted(): void

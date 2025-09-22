@@ -4,11 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\ProvisionEvent;
 use App\Models\Server;
-use App\Provision\Enums\Connection;
-use App\Provision\Enums\ProvisionStatus;
-use App\Provision\Enums\ServiceType;
-use App\Provision\Server\Access\ProvisionAccess;
-use App\Provision\Server\WebServer\WebServiceProvisionMilestones;
+use App\Packages\Credentials\ProvisionAccess;
+use App\Packages\Enums\Connection;
+use App\Packages\Enums\ProvisionStatus;
+use App\Packages\Enums\ServiceType;
+use App\Packages\Services\WebServer\WebServiceInstallerMilestones;
 use App\Support\ServerCredentials;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -37,7 +37,7 @@ class ServerProvisioningController extends Controller
                 $label = null;
 
                 if (is_string($event->milestone)) {
-                    $label = WebServiceProvisionMilestones::label($event->milestone)
+                    $label = WebServiceInstallerMilestones::label($event->milestone)
                         ?? Str::headline($event->milestone);
                 } elseif (is_array($event->milestone) && array_key_exists('label', $event->milestone)) {
                     $label = $event->milestone['label'];
@@ -66,7 +66,7 @@ class ServerProvisioningController extends Controller
             ),
             'provision' => $this->getProvisionData($server),
             'events' => $events,
-            'webServiceMilestones' => WebServiceProvisionMilestones::labels(),
+            'webServiceMilestones' => WebServiceInstallerMilestones::labels(),
         ]);
     }
 
@@ -183,4 +183,3 @@ class ServerProvisioningController extends Controller
         return sprintf('wget -O %1$s "%2$s"; bash %1$s', $filename, $provisionUrl);
     }
 }
-

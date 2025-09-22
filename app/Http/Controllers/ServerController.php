@@ -6,7 +6,7 @@ use App\Http\Requests\Servers\StoreServerRequest;
 use App\Http\Requests\Servers\UpdateServerRequest;
 use App\Models\Server;
 use App\Models\ServerService;
-use App\Provision\Enums\ServiceType;
+use App\Packages\Enums\ServiceType;
 use App\Support\ServerCredentials;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Str;

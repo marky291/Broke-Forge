@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\Servers\ExecuteSiteCommandRequest;
 use App\Models\Server;
 use App\Models\ServerSite;
-use App\Provision\Sites\SiteCommandProvision;
+use App\Packages\Services\Sites\SiteCommandInstaller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
@@ -50,10 +50,10 @@ class ServerSiteCommandsController extends Controller
     public function store(ExecuteSiteCommandRequest $request, Server $server, ServerSite $site): RedirectResponse
     {
         $validated = $request->validated();
-        $provisioner = new SiteCommandProvision($server, $site);
+        $executor = new SiteCommandInstaller($server, $site);
 
         try {
-            $result = $provisioner->run($validated['command']);
+            $result = $executor->execute($validated['command']);
         } catch (\Throwable $exception) {
             Log::error('Site command execution failed.', [
                 'server_id' => $server->id,

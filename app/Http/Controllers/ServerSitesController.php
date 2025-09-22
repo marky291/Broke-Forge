@@ -3,9 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\Servers\StoreSiteRequest;
-use App\Jobs\ProvisionSiteJob;
 use App\Models\Server;
 use App\Models\ServerSite;
+use App\Packages\Services\Sites\SiteInstallerJob;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -49,7 +49,7 @@ class ServerSitesController extends Controller
     {
         $validated = $request->validated();
 
-        ProvisionSiteJob::dispatch(
+        SiteInstallerJob::dispatch(
             $server,
             $validated['domain'],
             $validated['php_version'],

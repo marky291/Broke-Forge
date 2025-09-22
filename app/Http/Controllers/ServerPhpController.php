@@ -28,7 +28,7 @@ class ServerPhpController extends Controller
             'gd' => 'GD - Image processing',
             'intl' => 'Intl - Internationalization',
             'mbstring' => 'Multibyte String - String handling',
-            'mysql' => 'MySqlProvision - Database connectivity',
+            'mysql' => 'MySQL - Database connectivity',
             'opcache' => 'OPcache - Bytecode cache',
             'pdo' => 'PDO - PHP Data Objects',
             'redis' => 'Redis - In-memory data structure store',

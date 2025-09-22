@@ -1,0 +1,163 @@
+<?php
+
+namespace App\Packages\Services\Sites;
+
+use App\Models\ServerSite;
+use App\Packages\Base\Milestones;
+use App\Packages\Base\PackageInstaller;
+use App\Packages\Credentials\SshCredential;
+use App\Packages\Credentials\UserCredential;
+use App\Packages\Enums\ServiceType;
+use Illuminate\Support\Arr;
+use InvalidArgumentException;
+use LogicException;
+
+/**
+ * Git Repository Installation Class
+ *
+ * Handle cloning or updating a site's Git repository over SSH
+ */
+class GitRepositoryInstaller extends PackageInstaller
+{
+    /**
+     * Execute the Git repository installation
+     */
+    public function execute(ServerSite $site, array $config): void
+    {
+        if (! isset($config['repository']) || ! is_string($config['repository'])) {
+            throw new InvalidArgumentException('A repository identifier is required.');
+        }
+
+        $repositoryInput = trim($config['repository']);
+
+        // Normalize repository inline (avoid helper methods)
+        $repository = trim($repositoryInput);
+        if ($repository === '') {
+            throw new InvalidArgumentException('Repository cannot be empty.');
+        }
+        if (str_starts_with($repository, 'git@') || str_starts_with($repository, 'ssh://') || str_starts_with($repository, 'https://')) {
+            $repositorySshUrl = $repository;
+        } elseif (preg_match('/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/', $repository)) {
+            $repositorySshUrl = sprintf('git@github.com:%s.git', $repository);
+        } else {
+            throw new InvalidArgumentException('Repository must be an SSH URL or follow the owner/name format.');
+        }
+
+        // Normalize branch inline (avoid helper methods)
+        $branch = isset($config['branch']) ? trim($config['branch']) : 'main';
+        if ($branch === '') {
+            $branch = 'main';
+        }
+        if (! preg_match('/^[A-Za-z0-9._\/-]{1,255}$/', $branch)) {
+            throw new InvalidArgumentException('Branch may only contain letters, numbers, periods, hyphens, underscores, or slashes.');
+        }
+
+        $documentRoot = null;
+        if (isset($config['document_root'])) {
+            if (! is_string($config['document_root']) || trim($config['document_root']) === '') {
+                throw new InvalidArgumentException('Document root must be a non-empty string when provided.');
+            }
+            $documentRoot = trim($config['document_root']);
+        }
+
+        // Resolve document root inline (avoid helper methods)
+        if ($documentRoot) {
+            $resolvedDocumentRoot = $documentRoot;
+        } elseif ($site && is_string($site->document_root) && $site->document_root !== '') {
+            $resolvedDocumentRoot = $site->document_root;
+        } elseif ($site && is_string($site->domain) && $site->domain !== '') {
+            $resolvedDocumentRoot = "/var/www/{$site->domain}/public";
+        } else {
+            throw new LogicException('Unable to determine repository document root.');
+        }
+
+        $provider = isset($config['provider']) && is_string($config['provider'])
+            ? trim($config['provider'])
+            : 'github';
+
+        $repositoryConfiguration = [
+            'provider' => $provider,
+            'repository' => $repositoryInput,
+            'branch' => $branch,
+        ];
+
+        $this->install($this->commands($resolvedDocumentRoot, $repositorySshUrl, $branch, $site, $repositoryConfiguration));
+    }
+
+    protected function serviceType(): string
+    {
+        return ServiceType::SITE;
+    }
+
+    protected function milestones(): Milestones
+    {
+        return new GitRepositoryInstallerMilestones;
+    }
+
+    protected function sshCredential(): SshCredential
+    {
+        return new UserCredential;
+    }
+
+    /**
+     * Compile the command list executed on the remote host.
+     */
+    protected function commands(string $documentRoot, string $repositorySshUrl, string $branch, ServerSite $site, array $repositoryConfiguration): array
+    {
+        $documentRoot = rtrim($documentRoot, '/');
+
+        return [
+            $this->track(GitRepositoryInstallerMilestones::ENSURE_REPOSITORY_DIRECTORY),
+            sprintf('mkdir -p %s', escapeshellarg($documentRoot)),
+
+            $this->track(GitRepositoryInstallerMilestones::CLONE_OR_FETCH_REPOSITORY),
+            sprintf(
+                'REPO_DIR=%1$s; if [ -d "$REPO_DIR/.git" ]; then cd "$REPO_DIR" && git fetch --all --prune; else git clone %2$s "$REPO_DIR"; fi',
+                escapeshellarg($documentRoot),
+                escapeshellarg($repositorySshUrl)
+            ),
+
+            $this->track(GitRepositoryInstallerMilestones::CHECKOUT_TARGET_BRANCH),
+            sprintf(
+                'REPO_DIR=%1$s; cd "$REPO_DIR" && git checkout %2$s',
+                escapeshellarg($documentRoot),
+                escapeshellarg($branch)
+            ),
+
+            $this->track(GitRepositoryInstallerMilestones::SYNC_WORKTREE),
+            sprintf(
+                'REPO_DIR=%1$s; cd "$REPO_DIR" && git reset --hard origin/%2$s && git pull origin %3$s',
+                escapeshellarg($documentRoot),
+                $branch,
+                escapeshellarg($branch)
+            ),
+
+            $this->track(GitRepositoryInstallerMilestones::COMPLETE),
+            function () use ($site, $repositoryConfiguration) {
+                // Persist repository configuration inline (avoid helper methods)
+                if (! $site instanceof ServerSite || ! $site->exists) {
+                    return;
+                }
+
+                $configuration = $site->configuration ?? [];
+
+                // Resolve deploy key inline (avoid helper methods)
+                $sshAccess = $this->sshCredential();
+                $publicKeyPath = $sshAccess->publicKey();
+                $deployKey = null;
+                if (is_string($publicKeyPath) && is_readable($publicKeyPath)) {
+                    $deployKey = trim((string) file_get_contents($publicKeyPath));
+                }
+
+                $configuration['git_repository'] = array_filter([
+                    'provider' => Arr::get($repositoryConfiguration, 'provider'),
+                    'repository' => Arr::get($repositoryConfiguration, 'repository'),
+                    'branch' => Arr::get($repositoryConfiguration, 'branch'),
+                    'deploy_key' => $deployKey,
+                ], fn ($value) => $value !== null && $value !== '');
+
+                $site->update(['configuration' => $configuration]);
+            },
+        ];
+    }
+}

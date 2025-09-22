@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Jobs\ProvisionWebServiceJob;
 use App\Models\Server;
-use App\Provision\Enums\Connection;
-use App\Provision\Enums\ProvisionStatus;
+use App\Packages\Enums\Connection;
+use App\Packages\Enums\ProvisionStatus;
+use App\Packages\Services\WebServer\WebServiceInstallerJob;
 use App\Support\ServerCredentials;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -61,7 +61,7 @@ class ProvisionCallbackController extends Controller
             } else {
                 // Connection successful, update status and dispatch web service provisioning job
                 $server->provision_status = ProvisionStatus::Installing;
-                ProvisionWebServiceJob::dispatch($server);
+                WebServiceInstallerJob::dispatch($server);
                 Log::info("Dispatched web service provisioning job for server #{$server->id}");
             }
 

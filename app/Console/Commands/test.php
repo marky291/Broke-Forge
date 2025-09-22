@@ -3,7 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\Server;
-use App\Provision\Server\WebServer\WebServiceProvision;
+use App\Packages\Server\WebServer\WebServiceProvision;
 use Illuminate\Console\Command;
 
 class test extends Command
