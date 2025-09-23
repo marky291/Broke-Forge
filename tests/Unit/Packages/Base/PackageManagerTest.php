@@ -51,7 +51,7 @@ class PackageManagerTest extends TestCase
         $this->assertEquals(5, $this->manager->getCountMilestones());
     }
 
-    public function test_track_creates_provision_event_with_correct_data(): void
+    public function test_track_creates_server_package_event_with_correct_data(): void
     {
         $milestone = 'TEST_MILESTONE';
         $trackClosure = $this->manager->getTrack($milestone);
@@ -63,14 +63,14 @@ class PackageManagerTest extends TestCase
                 ['server_id' => $this->server->id, 'service' => 'test-service']
             );
 
-        $this->assertDatabaseMissing('provision_events', [
+        $this->assertDatabaseMissing('server_package_events', [
             'server_id' => $this->server->id,
             'service_type' => 'test-service',
         ]);
 
         $trackClosure();
 
-        $this->assertDatabaseHas('provision_events', [
+        $this->assertDatabaseHas('server_package_events', [
             'server_id' => $this->server->id,
             'service_type' => 'test-service',
             'provision_type' => 'install',
@@ -90,12 +90,12 @@ class PackageManagerTest extends TestCase
         $track1();
         $track2();
 
-        $this->assertDatabaseHas('provision_events', [
+        $this->assertDatabaseHas('server_package_events', [
             'milestone' => 'MILESTONE_1',
             'current_step' => 1,
         ]);
 
-        $this->assertDatabaseHas('provision_events', [
+        $this->assertDatabaseHas('server_package_events', [
             'milestone' => 'MILESTONE_2',
             'current_step' => 2,
         ]);

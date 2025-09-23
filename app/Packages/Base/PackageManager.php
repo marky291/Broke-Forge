@@ -2,8 +2,8 @@
 
 namespace App\Packages\Base;
 
-use App\Models\ProvisionEvent;
 use App\Models\Server;
+use App\Models\ServerPackageEvent;
 use App\Packages\Credentials\SshCredential;
 use Closure;
 use Illuminate\Support\Facades\Log;
@@ -25,7 +25,7 @@ abstract class PackageManager
      * Get the service type identifier (e.g., 'mysql', 'nginx', 'php')
      *
      * This is used by the milestone tracking system to determine the source
-     * for ProvisionEvent records (e.g., 'service:mysql', 'service:nginx')
+     * for ServerPackageEvent records (e.g., 'service:mysql', 'service:nginx')
      */
     abstract protected function serviceType(): string;
 
@@ -84,7 +84,7 @@ abstract class PackageManager
             ]);
 
             // Persist the provision event to database for frontend tracking
-            ProvisionEvent::create([
+            ServerPackageEvent::create([
                 'server_id' => $this->server->id,
                 'service_type' => $service,
                 'provision_type' => $this->actionableName() == 'Installing' ? 'install' : 'uninstall',

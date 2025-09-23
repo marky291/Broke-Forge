@@ -1,545 +1,150 @@
-# CLAUDE.md
+# BrokeForge Project Guide
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+**Server management platform for automated provisioning and deployment with SSH-based configuration and real-time progress tracking.**
 
-## BrokeForge Project Overview
+## Development Principles
+- Use Laravel 12 best practices with Laravel Boost MCP
+- Maintain minimal, clean implementations
+- Write forward-thinking code without backward compatibility
+- Add helpful docblocks for maintainability
+- Validate server operations and self-correct on failure
 
-BrokeForge, a server management and deployment platform that automates server provisioning, site management, and application deployment. BrokeForge provides SSH-based remote server configuration with real-time progress tracking. Begin with a concise checklist (3-7 bullets) of what you will do; keep these items conceptual rather than implementation-level. Always maintain clean and minimal implementations to reduce future technical debt. For each substantive server operation or configuration change, validate the result in 1-2 lines upon completion and proceed or self-correct if validation fails. Ensure that code is commented beautifully using helpful docblocks throughout to improve maintainability and clarity. Do not write tests. Always use Laravel 12 best practices when developing or refactoring, and always use Laravel Boost MCP throughout your work. When unsure about documentation standards, use Context 7 MCP. When writing new code or refactoring existing code, ensure consistency across the entire codebase. Do not write code for backward compatibility; instead, write with a forward-thinking approach focused on current and future best practices.
+## Architecture
 
-### Core Architecture
+### Package System (`app/Packages/`)
+- Base classes: `PackageInstaller`, `PackageRemover`, `PackageManager`
+- Structure: `Services/{Category}/{ServiceName}/`
+- **Required pattern**: `execute()` for logic, `commands()` for SSH commands
+- **Review existing packages before creating new ones**
+- Credentials: `RootCredential`, `UserCredential`, `WorkerCredential`
+- Progress tracking via `ProvisionEvent` records
 
-**Package System** (`app/Packages/`)
-- **New unified package architecture** replacing legacy `app/Provision/` structure
-- Base classes: `PackageInstaller`, `PackageRemover`, `PackageManager` for SSH and milestone functionality
-- Service organization: `Services/{Category}/{ServiceName}/` (e.g., `Services/Database/MySQL/`, `Services/WebServer/`)
-- **ALL packages must follow** `execute()` and `commands()` method pattern (no standalone `run()` methods)
-- **Before creating new packages**: ALWAYS review existing packages to understand patterns and reuse solutions
-- SSH credential types: `RootCredential`, `UserCredential`, `WorkerCredential` in `Packages/Credentials/`
-- Milestone tracking with progress callbacks via `ProvisionEvent` records
-- Job integration with queue processing for all package operations
+### Controllers
+- `ServerController` - Server CRUD
+- `ServerSitesController` - Site management
+- `ServerDatabaseController` - Database operations
+- `ServerProvisioningController` - Provisioning workflow
+- `ProvisionCallbackController` - Remote callbacks
+- Each controller handles single domain concern
 
-**Controller Organization** (`app/Http/Controllers/`)
-- `ServerController` - Server CRUD operations only
-- `ServerSitesController` - Site management (index, store)
-- `ServerSiteGitRepositoryController` - Git repository installation on sites
-- `ServerSiteCommandsController` - Custom site command execution
-- `ServerDatabaseController` - Database installation/management (index, store, destroy, status)
-- `ServerPhpController` - PHP version/extension management
-- `ServerProvisioningController` - Provisioning workflow (show, provision, services)
-- `ServerFileExplorerController` - Remote file browsing capabilities
-- `ProvisionCallbackController` - Handles provisioning callbacks from remote servers
+## Key Commands
 
-**Key Architectural Patterns:**
-- **Command Pattern**: Provisioning commands are queued as jobs (`app/Jobs/`)
-- **Repository Pattern**: Server credentials managed via access classes
-- **Observer Pattern**: Activity logging via model events
-- **State Machine**: Server connection states (pending → connecting → connected → failed)
-- **Single Responsibility**: Controllers separated by domain concern
-- **Enum Usage**: `ProvisionStatus`, `ServiceType`, `Connection` enums for type safety
-
-### Essential Development Commands
-
-**Development Environment:**
 ```bash
-composer dev         # Runs server + queue + logs + vite concurrently
-composer dev:ssr     # With SSR support
-composer test        # Run test suite (clears config first)
-```
+# Development
+composer dev              # Run server + queue + logs + vite
+npm run build             # Production build
+vendor/bin/pint --dirty   # Format PHP
+npm run lint              # Fix JS/TS
+npm run types             # TypeScript check
 
-**Package Development:**
-```bash
-# CRITICAL: Before creating any new package, review existing packages
-ls app/Packages/Services/         # Examine service categories
-ls app/Packages/Services/Database/MySQL/  # Review MySQL implementation
-cat app/Packages/Base/PackageInstaller.php  # Check base patterns
-cat app/Packages/Services/WebServer/WebServiceInstaller.php  # Example installer
-```
-
-**Build & Quality:**
-```bash
-npm run build        # Production build
-npm run build:ssr    # Production SSR build
-vendor/bin/pint --dirty  # Format changed PHP files
-npm run lint         # Fix JS/TS issues
-npm run types        # TypeScript type checking
-npm run format       # Prettier formatting for resources/
-npm run format:check # Check Prettier formatting
-```
-
-**Testing Single Files:**
-```bash
+# Testing
 php artisan test tests/Feature/ServerTest.php
-php artisan test --filter=testProvisioningSite
-php artisan test tests/Unit/Provision/SomeTest.php
-```
+php artisan test --filter=testName
 
-**Database & Migrations:**
-```bash
+# Database
 php artisan migrate
-php artisan migrate:fresh --seed  # Reset with seeders
-php artisan tinker  # Interactive REPL
-```
+php artisan migrate:fresh --seed
 
-**Laravel Artisan Generators:**
-```bash
-php artisan make:model ModelName -mfc  # Model with migration, factory, controller
+# Generators
+php artisan make:model ModelName -mfc
 php artisan make:controller ControllerName --resource
-php artisan make:request FormRequestName
 php artisan make:job JobName
-php artisan make:test TestName --unit  # Unit test
-php artisan make:test TestName         # Feature test (default)
-php artisan make:migration create_table_name
-php artisan make:enum EnumName         # Custom enum class
 ```
 
-### High-Level Architecture
-
-1. **Request Flow**:
-   - User action → Inertia request → Controller → Form Request validation → Job dispatch → Queue worker
-
-2. **Provisioning Flow**:
-   - Job creates database record → Provisioner runs SSH commands → Milestone callbacks update UI → Status tracked in DB
-   - Milestones report progress via `ProvisionEvent` records with signed callback URLs
-
-3. **SSH Architecture**:
-   - Uses `spatie/ssh` for connections
-   - Commands built dynamically with proper escaping
-   - Multiple credential types for different access levels
-   - Callbacks report progress via signed URLs to `ProvisionCallbackController`
-
-4. **Frontend State**:
-   - Inertia.js v2 handles server-side props
-   - React 19 components with TypeScript strict mode
-   - Components use `useForm` for mutations
-   - Real-time updates via polling or SSE (planned)
-   - Radix UI components for UI consistency
-
-### Package Development Guidelines
-
-**CRITICAL RULE: Review Before Creating**
-- Before creating ANY new package, examine existing packages in `app/Packages/Services/`
-- Study `WebServiceInstaller`, `MySqlInstaller`, `SiteInstaller` for established patterns
-- Check `app/Packages/Base/` classes to understand what's already available
-- Reuse existing SSH credentials (`RootCredential`, `UserCredential`, `WorkerCredential`)
-- Use existing enums (`ServiceType`, `ProvisionStatus`) before creating new ones
-
-**Package Structure Requirements:**
-- ALL packages must extend `PackageInstaller` or `PackageRemover`
-- ALL packages must follow `execute()` and `commands()` method pattern
-- Even single command executors must use installer pattern (no standalone `run()` methods)
-- File naming: `{PackageName}Installer.php`, `{PackageName}InstallerMilestones.php`
-- Directory structure: `Services/{Category}/{ServiceName}/`
-
-**Implementation Pattern:**
-- `execute()` method: Contains ALL logic, data preparation, validation
-- `commands()` method: Contains ONLY SSH commands and milestone tracking closures
-- Pass configuration via parameters, not constructors
-- Use Blade templates for configuration files (`view('template', $data)->render()`)
-- Avoid helper methods - keep logic within the two required methods
-
-### Key Technologies
-
-- **Laravel 12** - Streamlined structure (no Kernel.php, middleware in bootstrap/app.php)
-- **React 19 + TypeScript** - Frontend with strict mode
-- **Inertia.js v2** - SPA with server-side routing, supports deferred props, polling
-- **Tailwind CSS v4** - New import syntax (@import "tailwindcss"), removed deprecated utilities
-- **Laravel Wayfinder** - Type-safe routing with @laravel/vite-plugin-wayfinder
-- **spatie/ssh** - Remote server command execution
-- **PHPUnit 11** - Testing framework (no Pest)
-- **Laravel Pail** - Real-time log viewer
-- **Radix UI** - Headless UI components (@radix-ui/react-*)
-
-### Development Configuration
-
-- **URL**: `https://brokeforge.test` (via Laravel Herd)
-- **Database**: SQLite by default, MySQL for production
-- **Queue**: Database driver, auto-processed in dev mode
-- **Middleware**: Configured in `bootstrap/app.php`
-- **CSRF Exceptions**: Provisioning callbacks bypass CSRF
-- **Session**: Database driver configured in `config/session.php`
-
-<laravel-boost-guidelines>
-=== foundation rules ===
-
-# Laravel Boost Guidelines
-
-The Laravel Boost guidelines are specifically curated by Laravel maintainers for this application. These guidelines should be followed closely to enhance the user's satisfaction building Laravel applications.
-
-## Foundational Context
-This application is a Laravel application and its main Laravel ecosystems package & versions are below. You are an expert with them all. Ensure you abide by these specific packages & versions.
-
-- php - 8.4.12
-- inertiajs/inertia-laravel (INERTIA) - v2
-- laravel/framework (LARAVEL) - v12
-- laravel/prompts (PROMPTS) - v0
-- laravel/wayfinder (WAYFINDER) - v0
-- laravel/pint (PINT) - v1
-- laravel/sail (SAIL) - v1
-- phpunit/phpunit (PHPUNIT) - v11
-- @inertiajs/react (INERTIA) - v2
-- react (REACT) - v19
-- tailwindcss (TAILWINDCSS) - v4
-- @laravel/vite-plugin-wayfinder (WAYFINDER) - v0
-- eslint (ESLINT) - v9
-- prettier (PRETTIER) - v3
-
-
-## Conventions
-- You must follow all existing code conventions used in this application. When creating or editing a file, check sibling files for the correct structure, approach, naming.
-- Use descriptive names for variables and methods. For example, `isRegisteredForDiscounts`, not `discount()`.
-- Check for existing components to reuse before writing a new one.
-
-## Verification Scripts
-- Do not create verification scripts or tinker when tests cover that functionality and prove it works. Unit and feature tests are more important.
-
-## Application Structure & Architecture
-- Stick to existing directory structure - don't create new base folders without approval.
-- Do not change the application's dependencies without approval.
-
-## Frontend Bundling
-- If the user doesn't see a frontend change reflected in the UI, it could mean they need to run `npm run build`, `npm run dev`, or `composer run dev`. Ask them.
-
-## Replies
-- Be concise in your explanations - focus on what's important rather than explaining obvious details.
-
-## Documentation Files
-- You must only create documentation files if explicitly requested by the user.
-
-
-=== boost rules ===
-
-## Laravel Boost
-- Laravel Boost is an MCP server that comes with powerful tools designed specifically for this application. Use them.
-
-## Artisan
-- Use the `list-artisan-commands` tool when you need to call an Artisan command to double check the available parameters.
-
-## URLs
-- Whenever you share a project URL with the user you should use the `get-absolute-url` tool to ensure you're using the correct scheme, domain / IP, and port.
-
-## Tinker / Debugging
-- You should use the `tinker` tool when you need to execute PHP to debug code or query Eloquent models directly.
-- Use the `database-query` tool when you only need to read from the database.
-
-## Reading Browser Logs With the `browser-logs` Tool
-- You can read browser logs, errors, and exceptions using the `browser-logs` tool from Boost.
-- Only recent browser logs will be useful - ignore old logs.
-
-## Searching Documentation (Critically Important)
-- Boost comes with a powerful `search-docs` tool you should use before any other approaches. This tool automatically passes a list of installed packages and their versions to the remote Boost API, so it returns only version-specific documentation specific for the user's circumstance. You should pass an array of packages to filter on if you know you need docs for particular packages.
-- The 'search-docs' tool is perfect for all Laravel related packages, including Laravel, Inertia, Livewire, Filament, Tailwind, Pest, Nova, Nightwatch, etc.
-- You must use this tool to search for Laravel-ecosystem documentation before falling back to other approaches.
-- Search the documentation before making code changes to ensure we are taking the correct approach.
-- Use multiple, broad, simple, topic based queries to start. For example: `['rate limiting', 'routing rate limiting', 'routing']`.
-- Do not add package names to queries - package information is already shared. For example, use `test resource table`, not `filament 4 test resource table`.
-
-### Available Search Syntax
-- You can and should pass multiple queries at once. The most relevant results will be returned first.
-
-1. Simple Word Searches with auto-stemming - query=authentication - finds 'authenticate' and 'auth'
-2. Multiple Words (AND Logic) - query=rate limit - finds knowledge containing both "rate" AND "limit"
-3. Quoted Phrases (Exact Position) - query="infinite scroll" - Words must be adjacent and in that order
-4. Mixed Queries - query=middleware "rate limit" - "middleware" AND exact phrase "rate limit"
-5. Multiple Queries - queries=["authentication", "middleware"] - ANY of these terms
-
-
-=== php rules ===
-
-## PHP
-
-- Always use curly braces for control structures, even if it has one line.
-
-### Constructors
-- Use PHP 8 constructor property promotion in `__construct()`.
-    - <code-snippet>public function __construct(public GitHub $github) { }</code-snippet>
-- Do not allow empty `__construct()` methods with zero parameters.
-
-### Type Declarations
-- Always use explicit return type declarations for methods and functions.
-- Use appropriate PHP type hints for method parameters.
-
-<code-snippet name="Explicit Return Types and Method Params" lang="php">
-protected function isAccessible(User $user, ?string $path = null): bool
-{
-    ...
-}
-</code-snippet>
-
-## Comments
-- Prefer PHPDoc blocks over comments. Never use comments within the code itself unless there is something _very_ complex going on.
-
-## PHPDoc Blocks
-- Add useful array shape type definitions for arrays when appropriate.
-
-## Enums
-- Typically, keys in an Enum should be TitleCase. For example: `FavoritePerson`, `BestLake`, `Monthly`.
-
-
-=== herd rules ===
-
-## Laravel Herd
-
-- The application is served by Laravel Herd and will be available at: https?://[kebab-case-project-dir].test. Use the `get-absolute-url` tool to generate URLs for the user to ensure valid URLs.
-- You must not run any commands to make the site available via HTTP(s). It is _always_ available through Laravel Herd.
-
-
-=== inertia-laravel/core rules ===
-
-## Inertia Core
-
-- Inertia.js components should be placed in the `resources/js/pages` directory unless specified differently in the JS bundler (vite.config.js).
-- Use `Inertia::render()` for server-side routing instead of traditional Blade views.
-- Use `search-docs` for accurate guidance on all things Inertia.
-
-<code-snippet lang="php" name="Inertia::render Example">
-// routes/web.php example
-Route::get('/users', function () {
-    return Inertia::render('Users/Index', [
-        'users' => User::all()
-    ]);
-});
-</code-snippet>
-
-
-=== inertia-laravel/v2 rules ===
-
-## Inertia v2
-
-- Make use of all Inertia features from v1 & v2. Check the documentation before making any changes to ensure we are taking the correct approach.
-
-### Inertia v2 New Features
-- Polling
-- Prefetching
-- Deferred props
-- Infinite scrolling using merging props and `WhenVisible`
-- Lazy loading data on scroll
-
-### Deferred Props & Empty States
-- When using deferred props on the frontend, you should add a nice empty state with pulsing / animated skeleton.
-
-### Inertia Form General Guidance
-- The recommended way to build forms when using Inertia is with the `<Form>` component - a useful example is below. Use `search-docs` with a query of `form component` for guidance.
-- Forms can also be built using the `useForm` helper for more programmatic control, or to follow existing conventions. Use `search-docs` with a query of `useForm helper` for guidance.
-- `resetOnError`, `resetOnSuccess`, and `setDefaultsOnSuccess` are available on the `<Form>` component. Use `search-docs` with a query of 'form component resetting' for guidance.
-
-
-=== laravel/core rules ===
-
-## Do Things the Laravel Way
-
-- Use `php artisan make:` commands to create new files (i.e. migrations, controllers, models, etc.). You can list available Artisan commands using the `list-artisan-commands` tool.
-- If you're creating a generic PHP class, use `artisan make:class`.
-- Pass `--no-interaction` to all Artisan commands to ensure they work without user input. You should also pass the correct `--options` to ensure correct behavior.
-
-### Database
-- Always use proper Eloquent relationship methods with return type hints. Prefer relationship methods over raw queries or manual joins.
-- Use Eloquent models and relationships before suggesting raw database queries
-- Avoid `DB::`; prefer `Model::query()`. Generate code that leverages Laravel's ORM capabilities rather than bypassing them.
-- Generate code that prevents N+1 query problems by using eager loading.
-- Use Laravel's query builder for very complex database operations.
-
-### Model Creation
-- When creating new models, create useful factories and seeders for them too. Ask the user if they need any other things, using `list-artisan-commands` to check the available options to `php artisan make:model`.
-
-### APIs & Eloquent Resources
-- For APIs, default to using Eloquent API Resources and API versioning unless existing API routes do not, then you should follow existing application convention.
-
-### Controllers & Validation
-- Always create Form Request classes for validation rather than inline validation in controllers. Include both validation rules and custom error messages.
-- Check sibling Form Requests to see if the application uses array or string based validation rules.
-- Follow Single Responsibility Principle - each controller should handle one domain concern.
-
-### Queues
-- Use queued jobs for time-consuming operations with the `ShouldQueue` interface.
-
-### Authentication & Authorization
-- Use Laravel's built-in authentication and authorization features (gates, policies, Sanctum, etc.).
-
-### URL Generation
-- When generating links to other pages, prefer named routes and the `route()` function.
-
-### Configuration
-- Use environment variables only in configuration files - never use the `env()` function directly outside of config files. Always use `config('app.name')`, not `env('APP_NAME')`.
-
-### Testing
-- When creating models for tests, use the factories for the models. Check if the factory has custom states that can be used before manually setting up the model.
-- Faker: Use methods such as `$this->faker->word()` or `fake()->randomDigit()`. Follow existing conventions whether to use `$this->faker` or `fake()`.
-- When creating tests, make use of `php artisan make:test [options] <name>` to create a feature test, and pass `--unit` to create a unit test. Most tests should be feature tests.
-
-### Vite Error
-- If you receive an "Illuminate\Foundation\ViteException: Unable to locate file in Vite manifest" error, you can run `npm run build` or ask the user to run `npm run dev` or `composer run dev`.
-
-
-=== laravel/v12 rules ===
-
-## Laravel 12
-
-- Use the `search-docs` tool to get version specific documentation.
-- Since Laravel 11, Laravel has a new streamlined file structure which this project uses.
+## Request Flow
+1. User → Inertia → Controller → Form Request → Job → Queue
+2. Provisioning: Job → SSH commands → Milestone callbacks → UI updates
+3. SSH: `spatie/ssh` with dynamic commands and signed callback URLs
+4. Frontend: Inertia v2 + React 19 + TypeScript + Radix UI
+
+## Package Guidelines
+
+**Before creating packages:** Review existing packages in `app/Packages/Services/`
+
+**Requirements:**
+- Extend `PackageInstaller` or `PackageRemover`
+- Implement `execute()` (logic) and `commands()` (SSH only)
+- Structure: `Services/{Category}/{ServiceName}/{PackageName}Installer.php`
+- Use existing credentials and enums
+- Pass config via parameters, use Blade for templates
+
+## Stack
+- Laravel 12 (middleware in `bootstrap/app.php`)
+- React 19 + TypeScript + Inertia v2
+- Tailwind CSS v4 (`@import "tailwindcss"`)
+- PHPUnit 11, spatie/ssh, Radix UI
+- URL: `https://brokeforge.test`
+- Database: SQLite (dev), MySQL (prod)
+
+## Laravel Boost Guidelines
+
+### Package Versions
+- PHP 8.4.12, Laravel 12, Inertia v2, React 19, Tailwind v4, PHPUnit 11
+
+### Key Conventions
+- Follow existing code patterns in sibling files
+- Use descriptive names (`isRegisteredForDiscounts` not `discount()`)
+- Reuse existing components
+- Don't create new base folders or change dependencies
+- Create docs only when explicitly requested
+
+### Laravel Boost Tools
+- **search-docs**: Use FIRST for Laravel ecosystem docs (version-specific)
+  - Pass multiple simple queries: `['routing', 'rate limiting']`
+  - Don't include package names in queries
+- **tinker**: Debug PHP and Eloquent queries
+- **database-query**: Read-only database operations
+- **browser-logs**: Read browser errors
+- **get-absolute-url**: Get correct project URLs
+- **list-artisan-commands**: Check command parameters
+
+### PHP Standards
+- Use constructor property promotion
+- Always add return types and parameter types
+- Use PHPDoc blocks, not inline comments
+- Enum keys: TitleCase (`FavoritePerson`)
+- Always use braces for control structures
+
+### Inertia v2
+- Components in `resources/js/Pages/`
+- Use `Inertia::render()` not Blade views
+- Features: polling, prefetching, deferred props, infinite scroll
+- Forms: Use `<Form>` component or `useForm` hook
+- Add skeletons for deferred props
+
+### Laravel Best Practices
+- Use `php artisan make:` with `--no-interaction`
+- Eloquent over DB facade, use eager loading
+- Form Requests for validation
+- Named routes with `route()` helper
+- `config()` not `env()` outside config files
+- Queue long-running jobs with `ShouldQueue`
+- Use factories in tests
 
 ### Laravel 12 Structure
-- No middleware files in `app/Http/Middleware/`.
-- `bootstrap/app.php` is the file to register middleware, exceptions, and routing files.
-- `bootstrap/providers.php` contains application specific service providers.
-- **No app\Console\Kernel.php** - use `bootstrap/app.php` or `routes/console.php` for console configuration.
-- **Commands auto-register** - files in `app/Console/Commands/` are automatically available and do not require manual registration.
+- Middleware in `bootstrap/app.php`
+- No `app/Http/Middleware/` or `Kernel.php`
+- Commands auto-register from `app/Console/Commands/`
+- Model casts in `casts()` method
+- Column migrations must include all attributes
 
-### Database
-- When modifying a column, the migration must include all of the attributes that were previously defined on the column. Otherwise, they will be dropped and lost.
-- Laravel 11 allows limiting eagerly loaded records natively, without external packages: `$query->latest()->limit(10);`.
+### Code Quality
+- Run `vendor/bin/pint --dirty` before finalizing
+- PHPUnit only (no Pest), run tests after changes
+- Test happy/failure/edge cases
+- `php artisan test --filter=testName`
 
-### Models
-- Casts can and likely should be set in a `casts()` method on a model rather than the `$casts` property. Follow existing conventions from other models.
+### React + Inertia
+- Use `<Link>` or `router.visit()` for navigation
+- Forms: `<Form>` component with render props for errors/processing/success states
 
+### Tailwind v4
+- Import: `@import "tailwindcss";` (not `@tailwind`)
+- Use gap utilities not margins
+- Support dark mode with `dark:`
+- Replaced: `bg-opacity-*` → `bg-black/*`, `flex-grow-*` → `grow-*`
 
-=== pint/core rules ===
-
-## Laravel Pint Code Formatter
-
-- You must run `vendor/bin/pint --dirty` before finalizing changes to ensure your code matches the project's expected style.
-- Do not run `vendor/bin/pint --test`, simply run `vendor/bin/pint` to fix any formatting issues.
-
-
-=== phpunit/core rules ===
-
-## PHPUnit Core
-
-- This application uses PHPUnit for testing. All tests must be written as PHPUnit classes. Use `php artisan make:test --phpunit <name>` to create a new test.
-- If you see a test using "Pest", convert it to PHPUnit.
-- Every time a test has been updated, run that singular test.
-- When the tests relating to your feature are passing, ask the user if they would like to also run the entire test suite to make sure everything is still passing.
-- Tests should test all of the happy paths, failure paths, and weird paths.
-- You must not remove any tests or test files from the tests directory without approval. These are not temporary or helper files, these are core to the application.
-
-### Running Tests
-- Run the minimal number of tests, using an appropriate filter, before finalizing.
-- To run all tests: `php artisan test`.
-- To run all tests in a file: `php artisan test tests/Feature/ExampleTest.php`.
-- To filter on a particular test name: `php artisan test --filter=testName` (recommended after making a change to a related file).
-
-
-=== inertia-react/core rules ===
-
-## Inertia + React
-
-- Use `router.visit()` or `<Link>` for navigation instead of traditional links.
-
-<code-snippet name="Inertia Client Navigation" lang="react">
-
-import { Link } from '@inertiajs/react'
-<Link href="/">Home</Link>
-
-</code-snippet>
-
-
-=== inertia-react/v2/forms rules ===
-
-## Inertia + React Forms
-
-<code-snippet name="`<Form>` Component Example" lang="react">
-
-import { Form } from '@inertiajs/react'
-
-export default () => (
-    <Form action="/users" method="post">
-        {({
-            errors,
-            hasErrors,
-            processing,
-            wasSuccessful,
-            recentlySuccessful,
-            clearErrors,
-            resetAndClearErrors,
-            defaults
-        }) => (
-        <>
-        <input type="text" name="name" />
-
-        {errors.name && <div>{errors.name}</div>}
-
-        <button type="submit" disabled={processing}>
-            {processing ? 'Creating...' : 'Create User'}
-        </button>
-
-        {wasSuccessful && <div>User created successfully!</div>}
-        </>
-    )}
-    </Form>
-)
-
-</code-snippet>
-
-
-=== tailwindcss/core rules ===
-
-## Tailwind Core
-
-- Use Tailwind CSS classes to style HTML, check and use existing tailwind conventions within the project before writing your own.
-- Offer to extract repeated patterns into components that match the project's conventions (i.e. Blade, JSX, Vue, etc..)
-- Think through class placement, order, priority, and defaults - remove redundant classes, add classes to parent or child carefully to limit repetition, group elements logically
-- You can use the `search-docs` tool to get exact examples from the official documentation when needed.
-
-### Spacing
-- When listing items, use gap utilities for spacing, don't use margins.
-
-    <code-snippet name="Valid Flex Gap Spacing Example" lang="html">
-        <div class="flex gap-8">
-            <div>Superior</div>
-            <div>Michigan</div>
-            <div>Erie</div>
-        </div>
-    </code-snippet>
-
-
-### Dark Mode
-- If existing pages and components support dark mode, new pages and components must support dark mode in a similar way, typically using `dark:`.
-
-
-=== tailwindcss/v4 rules ===
-
-## Tailwind 4
-
-- Always use Tailwind CSS v4 - do not use the deprecated utilities.
-- `corePlugins` is not supported in Tailwind v4.
-- In Tailwind v4, you import Tailwind using a regular CSS `@import` statement, not using the `@tailwind` directives used in v3:
-
-<code-snippet name="Tailwind v4 Import Tailwind Diff" lang="diff"
-   - @tailwind base;
-   - @tailwind components;
-   - @tailwind utilities;
-   + @import "tailwindcss";
-</code-snippet>
-
-
-### Replaced Utilities
-- Tailwind v4 removed deprecated utilities. Do not use the deprecated option - use the replacement.
-- Opacity values are still numeric.
-
-| Deprecated |	Replacement |
-|------------+--------------|
-| bg-opacity-* | bg-black/* |
-| text-opacity-* | text-black/* |
-| border-opacity-* | border-black/* |
-| divide-opacity-* | divide-black/* |
-| ring-opacity-* | ring-black/* |
-| placeholder-opacity-* | placeholder-black/* |
-| flex-shrink-* | shrink-* |
-| flex-grow-* | grow-* |
-| overflow-ellipsis | text-ellipsis |
-| decoration-slice | box-decoration-slice |
-| decoration-clone | box-decoration-clone |
-
-
-=== tests rules ===
-
-## Test Enforcement
-
-- Every change must be programmatically tested. Write a new test or update an existing test, then run the affected tests to make sure they pass.
-- Run the minimum number of tests needed to ensure code quality and speed. Use `php artisan test` with a specific filename or filter.
-</laravel-boost-guidelines>
-
-# important-instruction-reminders
-Do what has been asked; nothing more, nothing less.
-NEVER create files unless they're absolutely necessary for achieving your goal.
-ALWAYS prefer editing an existing file to creating a new one.
-NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
+## Important Reminders
+- Do only what's asked
+- Edit existing files rather than creating new ones
+- Never create docs unless explicitly requested

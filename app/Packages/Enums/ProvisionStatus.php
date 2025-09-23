@@ -44,6 +44,18 @@ enum ProvisionStatus: string
     }
 
     /**
+     * Get status labels for milestone fallbacks
+     */
+    public static function statusLabels(): array
+    {
+        return [
+            'pending' => 'Pending',
+            'failed' => 'Provisioning failed',
+            'completed' => 'Setup complete',
+        ];
+    }
+
+    /**
      * Get the color associated with this status
      */
     public function color(): string

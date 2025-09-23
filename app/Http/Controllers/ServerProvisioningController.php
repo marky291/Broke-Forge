@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\ProvisionEvent;
 use App\Models\Server;
+use App\Models\ServerPackageEvent;
 use App\Packages\Credentials\ProvisionAccess;
 use App\Packages\Enums\Connection;
 use App\Packages\Enums\ProvisionStatus;
@@ -26,14 +26,11 @@ class ServerProvisioningController extends Controller
             return redirect()->route('servers.show', $server);
         }
 
-        // Collect provision events logged during web service installation
-        $events = $server->provisionEvents()
-            ->where('service_type', ServiceType::WEBSERVER)
+        // Get all package events for comprehensive progress tracking
+        $events = $server->packageEvents()
             ->orderBy('created_at')
             ->get()
-            ->map(function (ProvisionEvent $event) {
-                $status = is_string($event->milestone) ? $event->milestone : 'unknown';
-
+            ->map(function (ServerPackageEvent $event) {
                 $label = null;
 
                 if (is_string($event->milestone)) {
@@ -45,13 +42,25 @@ class ServerProvisioningController extends Controller
 
                 return [
                     'id' => $event->id,
-                    'status' => $status,
-                    'label' => $label,
-                    'step' => $event->current_step,
+                    'server_id' => $event->server_id,
+                    'service_type' => $event->service_type,
+                    'provision_type' => $event->provision_type,
+                    'milestone' => $event->milestone,
+                    'current_step' => $event->current_step,
                     'total_steps' => $event->total_steps,
-                    'occurred_at' => optional($event->created_at)->toISOString(),
+                    'progress_percentage' => $event->progress_percentage,
+                    'details' => $event->details,
+                    'label' => $label,
+                    'created_at' => $event->created_at->toISOString(),
                 ];
             })
+            ->values()
+            ->all();
+
+        // Get the latest progress for each service type
+        $latestProgress = collect($events)
+            ->groupBy('service_type')
+            ->map(fn ($serviceEvents) => $serviceEvents->last())
             ->values()
             ->all();
 
@@ -66,7 +75,10 @@ class ServerProvisioningController extends Controller
             ),
             'provision' => $this->getProvisionData($server),
             'events' => $events,
+            'latestProgress' => $latestProgress,
             'webServiceMilestones' => WebServiceInstallerMilestones::labels(),
+            'serviceTypeLabels' => ServiceType::labels(),
+            'statusLabels' => ProvisionStatus::statusLabels(),
         ]);
     }
 
@@ -107,8 +119,8 @@ class ServerProvisioningController extends Controller
                 ->with('error', 'Provisioning is not in a failed state.');
         }
 
-        // Clear any recorded provisioning events so progress restarts cleanly.
-        $server->provisionEvents()->delete();
+        // Clear any recorded package events so progress restarts cleanly.
+        $server->packageEvents()->delete();
 
         // Reset cached root password so a new secret is generated for the next attempt.
         ServerCredentials::forgetRootPassword($server);
@@ -133,16 +145,16 @@ class ServerProvisioningController extends Controller
     }
 
     /**
-     * Get provision events for a server
+     * Get package events for a server
      *
-     * Returns all provision/deprovision events for tracking on the frontend
+     * Returns all package install/uninstall events for tracking on the frontend
      */
     public function events(Server $server): JsonResponse
     {
-        $events = $server->provisionEvents()
+        $events = $server->packageEvents()
             ->orderBy('created_at', 'desc')
             ->get()
-            ->map(function (ProvisionEvent $event) {
+            ->map(function (ServerPackageEvent $event) {
                 return [
                     'id' => $event->id,
                     'service_type' => $event->service_type,

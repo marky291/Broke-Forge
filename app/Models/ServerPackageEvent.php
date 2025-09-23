@@ -2,11 +2,21 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class ProvisionEvent extends Model
+/**
+ * @property string $provision_type
+ * @property int $current_step
+ * @property int $total_steps
+ * @property string $progressPercentage
+ */
+class ServerPackageEvent extends Model
 {
+    use HasFactory;
+
     /**
      * The attributes that are mass assignable.
      *
@@ -45,15 +55,15 @@ class ProvisionEvent extends Model
     }
 
     /**
-     * Calculate the progress percentage of the provision event.
+     * Calculate the progress percentage of the server package event.
      */
-    public function getProgressPercentageAttribute(): float
+    public function getProgressPercentageAttribute(): string
     {
-        if ($this->total_steps === 0) {
-            return 0;
+        if ($this->total_steps == 0) {
+            return "0";
         }
 
-        return round(($this->current_step / $this->total_steps) * 100, 2);
+        return str(($this->current_step / $this->total_steps) * 100);
     }
 
     /**

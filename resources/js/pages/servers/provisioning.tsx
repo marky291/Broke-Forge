@@ -3,55 +3,13 @@ import { Separator } from '@/components/ui/separator';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import { edit as editServer, show as showServer } from '@/routes/servers';
-import { type BreadcrumbItem } from '@/types';
+import { type BreadcrumbItem, type Server, type ServerPackageEvent } from '@/types';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import copyToClipboard from 'copy-to-clipboard';
 import { CheckIcon, CircleIcon, Loader2Icon, RefreshCwIcon, Trash2Icon, XCircleIcon } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
-type Server = {
-    id: number;
-    vanity_name: string;
-    public_ip: string;
-    ssh_port: number;
-    private_ip?: string | null;
-    connection: 'pending' | 'connecting' | 'connected' | 'failed' | 'disconnected';
-    server_type?: string | null;
-    provision_status: 'pending' | 'connecting' | 'installing' | 'completed' | 'failed';
-    provision_status_label: string;
-    provision_status_color: string;
-    created_at: string;
-    updated_at: string;
-};
 type ProvisionInfo = { command: string; root_password: string } | null;
-type ProvisionEvent = {
-    id: number | string;
-    status: string;
-    label?: string | null;
-    step?: number | null;
-    total_steps?: number | null;
-    occurred_at?: string | null;
-};
-
-const WEB_SERVICE_SEQUENCE = [
-    'prepare_system',
-    'setup_repository',
-    'remove_conflicts',
-    'install_software',
-    'enable_services',
-    'configure_firewall',
-    'setup_default_site',
-    'set_permissions',
-    'configure_nginx',
-    'verify_install',
-    'complete',
-] as const;
-
-const STATUS_LABELS: Record<string, string> = {
-    pending: 'Pending',
-    failed: 'Provisioning failed',
-    completed: 'Setup complete',
-};
 
 type StepState = 'pending' | 'active' | 'complete' | 'failed';
 
@@ -60,11 +18,15 @@ export default function Provisioning({
     provision,
     events,
     webServiceMilestones,
+    serviceTypeLabels,
+    statusLabels,
 }: {
     server: Server;
     provision?: ProvisionInfo;
-    events: ProvisionEvent[];
+    events: ServerPackageEvent[];
     webServiceMilestones: Record<string, string>;
+    serviceTypeLabels: Record<string, string>;
+    statusLabels: Record<string, string>;
 }) {
     const { props } = usePage<{ name?: string }>();
     const [copied, setCopied] = useState<'cmd' | 'root' | null>(null);
@@ -107,32 +69,63 @@ export default function Provisioning({
         return stages;
     }, [server.connection, server.provision_status]);
 
+    const progressByServiceType = useMemo(() => {
+        const groupedProgress = events.reduce(
+            (acc, event) => {
+                if (!acc[event.service_type]) {
+                    acc[event.service_type] = [];
+                }
+                acc[event.service_type].push(event);
+                return acc;
+            },
+            {} as Record<string, ServerPackageEvent[]>,
+        );
+
+        // Get the latest event for each service type with progress calculation
+        return Object.entries(groupedProgress).map(([serviceType, serviceEvents]) => {
+            const latestEvent = serviceEvents[serviceEvents.length - 1];
+            const isComplete = serviceEvents.some((e) => e.milestone === 'complete');
+            const isActive = server.provision_status === 'installing' && !isComplete;
+
+            return {
+                serviceType,
+                events: serviceEvents,
+                latestEvent,
+                progress: latestEvent.progress_percentage,
+                isComplete,
+                isActive,
+                label: serviceTypeLabels[serviceType] || serviceType.charAt(0).toUpperCase() + serviceType.slice(1),
+            };
+        });
+    }, [events, server.provision_status, serviceTypeLabels]);
+
     const webProvisionSteps = useMemo(() => {
-        // Show web provision steps if we have events or if we're installing
-        const shouldShow = events.length > 0 || server.provision_status === 'installing';
+        // Show web provision steps if we have webserver events or if we're installing
+        const webserverEvents = events.filter((event) => event.service_type === 'webserver');
+        const shouldShow = webserverEvents.length > 0 || server.provision_status === 'installing';
         if (!shouldShow) {
-            return [] as Array<{ status: (typeof WEB_SERVICE_SEQUENCE)[number]; label: string; state: StepState }>;
+            return [] as Array<{ milestone: string; label: string; state: StepState; progress?: number }>;
         }
 
-        const completed = new Set(events.map((event) => event.status));
-        const activeIndex = (() => {
-            const firstPending = WEB_SERVICE_SEQUENCE.findIndex((status) => !completed.has(status));
-            return firstPending === -1 ? WEB_SERVICE_SEQUENCE.length : firstPending;
-        })();
+        const completed = new Set(webserverEvents.map((event) => event.milestone));
+        const isInstalling = server.provision_status === 'installing';
 
-        return WEB_SERVICE_SEQUENCE.map((status, index) => {
-            let state: StepState = 'pending';
+        return webserverEvents.map((event) => {
+            let state: StepState = 'complete';
 
-            if (index < activeIndex || completed.has(status)) {
+            if (event.milestone === 'complete') {
                 state = 'complete';
-            } else if (index === activeIndex) {
-                state = 'active';
+            } else if (isInstalling && !completed.has('complete')) {
+                // If we're still installing and haven't hit complete, the latest events are active
+                const isLatest = event === webserverEvents[webserverEvents.length - 1];
+                state = isLatest ? 'active' : 'complete';
             }
 
             return {
-                status,
-                label: webServiceMilestones[status] ?? STATUS_LABELS[status] ?? status,
+                milestone: event.milestone,
+                label: event.label || webServiceMilestones[event.milestone] || event.milestone,
                 state,
+                progress: event.progress_percentage,
             };
         });
     }, [events, server.provision_status, webServiceMilestones]);
@@ -191,7 +184,7 @@ export default function Provisioning({
         }
 
         // Check if we have the complete milestone event
-        const hasCompleteEvent = events.some(event => event.status === 'complete');
+        const hasCompleteEvent = events.some(event => event.milestone === 'complete');
 
         const isInitialProvision = server.provision_status === 'pending';
         const isActiveProvisioning = server.provision_status === 'connecting' || server.provision_status === 'installing';
@@ -205,7 +198,7 @@ export default function Provisioning({
 
         const intervalMs = isInitialProvision ? 3000 : 1000;
         const id = window.setInterval(() => {
-            router.reload({ only: ['server', 'events', 'provision'] });
+            router.reload({ only: ['server', 'events', 'latestProgress', 'provision', 'serviceTypeLabels', 'statusLabels'] });
         }, intervalMs);
 
         return () => window.clearInterval(id);
@@ -462,21 +455,63 @@ export default function Provisioning({
                                         </li>
                                     ))}
                                 </ul>
+                                {progressByServiceType.length > 0 && (
+                                    <>
+                                        <Separator className="my-4" />
+                                        <div className="text-xs font-medium text-muted-foreground uppercase">Service Installation Progress</div>
+                                        <div className="mt-3 space-y-3">
+                                            {progressByServiceType.map((service) => (
+                                                <div key={service.serviceType} className="space-y-2">
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-sm font-medium">{service.label}</span>
+                                                        <span className="text-xs text-muted-foreground">
+                                                            {service.progress.toFixed(0)}%
+                                                        </span>
+                                                    </div>
+                                                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                                                        <div
+                                                            className={`h-full transition-all duration-300 ${
+                                                                service.isComplete
+                                                                    ? 'bg-green-500'
+                                                                    : service.isActive
+                                                                      ? 'bg-blue-500'
+                                                                      : 'bg-gray-400'
+                                                            }`}
+                                                            style={{ width: `${Math.max(service.progress, 0)}%` }}
+                                                        />
+                                                    </div>
+                                                    {service.latestEvent.label && (
+                                                        <p className="text-xs text-muted-foreground">
+                                                            {service.latestEvent.label}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </>
+                                )}
                                 {webProvisionSteps.length > 0 && (
                                     <>
                                         <Separator className="my-4" />
-                                        <div className="text-xs font-medium text-muted-foreground uppercase">Upcoming Web Service Steps</div>
+                                        <div className="text-xs font-medium text-muted-foreground uppercase">Detailed Web Service Steps</div>
                                         <ul className="mt-3 space-y-2 text-sm">
                                             {webProvisionSteps.map((step) => (
-                                                <li key={step.status} className="flex items-center gap-3">
-                                                    <span className="inline-flex items-center justify-center">
-                                                        {step.state === 'complete' && <CheckIcon className="size-4 text-green-600" />}
-                                                        {step.state === 'active' && <Loader2Icon className="size-4 animate-spin text-primary" />}
-                                                        {step.state === 'pending' && <CircleIcon className="size-4 text-muted-foreground/50" />}
-                                                    </span>
-                                                    <span className={step.state === 'active' ? 'font-medium' : 'text-muted-foreground'}>
-                                                        {step.label}
-                                                    </span>
+                                                <li key={step.milestone} className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-3">
+                                                        <span className="inline-flex items-center justify-center">
+                                                            {step.state === 'complete' && <CheckIcon className="size-4 text-green-600" />}
+                                                            {step.state === 'active' && <Loader2Icon className="size-4 animate-spin text-primary" />}
+                                                            {step.state === 'pending' && <CircleIcon className="size-4 text-muted-foreground/50" />}
+                                                        </span>
+                                                        <span className={step.state === 'active' ? 'font-medium' : 'text-muted-foreground'}>
+                                                            {step.label}
+                                                        </span>
+                                                    </div>
+                                                    {step.progress !== undefined && (
+                                                        <span className="text-xs text-muted-foreground">
+                                                            {step.progress.toFixed(0)}%
+                                                        </span>
+                                                    )}
                                                 </li>
                                             ))}
                                         </ul>
@@ -485,19 +520,19 @@ export default function Provisioning({
                                 {events.length > 0 && (
                                     <>
                                         <Separator className="my-4" />
-                                        <div className="text-xs font-medium text-muted-foreground uppercase">Web Service Installation Progress</div>
+                                        <div className="text-xs font-medium text-muted-foreground uppercase">All Provision Events</div>
                                         <ul className="mt-3 space-y-2 text-sm">
                                             {events.map((event) => {
                                                 // Use the label from the event (milestone label) as primary display
                                                 const displayLabel =
-                                                    event.label || webServiceMilestones[event.status] || STATUS_LABELS[event.status] || event.status;
+                                                    event.label || webServiceMilestones[event.milestone] || statusLabels[event.milestone] || event.milestone;
                                                 const stepInfo =
-                                                    event.step && event.total_steps ? `Step ${event.step} of ${event.total_steps}` : null;
-                                                const timestamp = event.occurred_at ? new Date(event.occurred_at).toLocaleTimeString() : '';
+                                                    event.current_step && event.total_steps ? `Step ${event.current_step} of ${event.total_steps}` : null;
+                                                const timestamp = event.created_at ? new Date(event.created_at).toLocaleTimeString() : '';
                                                 const tone =
-                                                    event.status === 'failed'
+                                                    event.milestone === 'failed'
                                                         ? 'bg-red-500'
-                                                        : event.status === 'complete' || event.status === 'completed'
+                                                        : event.milestone === 'complete'
                                                           ? 'bg-emerald-500'
                                                           : 'bg-primary';
 
@@ -507,7 +542,23 @@ export default function Provisioning({
                                                             <span className={`h-2.5 w-2.5 rounded-full ${tone}`}></span>
                                                             <div className="min-w-0 flex-1 truncate">
                                                                 <div className="truncate font-medium">{displayLabel}</div>
-                                                                {stepInfo && <div className="truncate text-xs text-muted-foreground">{stepInfo}</div>}
+                                                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                                                    <span className="capitalize">{event.service_type}</span>
+                                                                    <span>•</span>
+                                                                    <span className="capitalize">{event.provision_type}</span>
+                                                                    {stepInfo && (
+                                                                        <>
+                                                                            <span>•</span>
+                                                                            <span>{stepInfo}</span>
+                                                                        </>
+                                                                    )}
+                                                                    {event.progress_percentage > 0 && (
+                                                                        <>
+                                                                            <span>•</span>
+                                                                            <span>{event.progress_percentage.toFixed(0)}%</span>
+                                                                        </>
+                                                                    )}
+                                                                </div>
                                                             </div>
                                                         </div>
                                                         {timestamp && (

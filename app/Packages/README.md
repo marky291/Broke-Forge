@@ -961,8 +961,8 @@ public function test_milestone_tracking_creates_provision_events(): void
 
     $installer->execute(['version' => '8.3']);
 
-    // Test real ProvisionEvent creation
-    $this->assertDatabaseHas('provision_events', [
+    // Test real ServerPackageEvent creation
+    $this->assertDatabaseHas('server_package_events', [
         'server_id' => $server->id,
         'service_type' => ServiceType::{CATEGORY},
         'provision_type' => 'install',
@@ -976,7 +976,7 @@ public function test_milestone_tracking_creates_provision_events(): void
 - Database operations and Eloquent models
 - Laravel framework features (views, config, etc.)
 - Internal application logic
-- Milestone tracking and ProvisionEvent creation
+- Milestone tracking and ServerPackageEvent creation
 - Server and ServerService model updates
 - Queue job logic and state management
 
@@ -1206,14 +1206,14 @@ All package jobs should:
 
 ### Frontend Integration
 
-#### Progress Tracking with ProvisionEvent Model
+#### Progress Tracking with ServerPackageEvent Model
 
-The frontend should track package installation/removal progress by querying the `ProvisionEvent` model directly from the database. Each milestone tracked in packages automatically creates `ProvisionEvent` records.
+The frontend should track package installation/removal progress by querying the `ServerPackageEvent` model directly from the database. Each milestone tracked in packages automatically creates `ServerPackageEvent` records.
 
-**ProvisionEvent Model Structure:**
+**ServerPackageEvent Model Structure:**
 ```php
-// app/Models/ProvisionEvent.php
-class ProvisionEvent extends Model
+// app/Models/ServerPackageEvent.php
+class ServerPackageEvent extends Model
 {
     protected $fillable = [
         'server_id',        // Server being provisioned
@@ -1241,7 +1241,7 @@ class ProvisionEvent extends Model
 
 ```php
 // Get latest progress for a specific service installation
-$latestProgress = ProvisionEvent::where('server_id', $serverId)
+$latestProgress = ServerPackageEvent::where('server_id', $serverId)
     ->where('service_type', 'webserver')
     ->where('provision_type', 'install')
     ->latest()
@@ -1251,14 +1251,14 @@ $progressPercentage = $latestProgress?->progress_percentage ?? 0;
 $currentMilestone = $latestProgress?->milestone;
 
 // Get all progress events for detailed step-by-step display
-$progressEvents = ProvisionEvent::where('server_id', $serverId)
+$progressEvents = ServerPackageEvent::where('server_id', $serverId)
     ->where('service_type', 'webserver')
     ->where('provision_type', 'install')
     ->orderBy('created_at')
     ->get();
 
 // Check if installation is complete (last milestone)
-$isComplete = ProvisionEvent::where('server_id', $serverId)
+$isComplete = ServerPackageEvent::where('server_id', $serverId)
     ->where('service_type', 'webserver')
     ->where('provision_type', 'install')
     ->where('milestone', 'complete')
@@ -1273,10 +1273,10 @@ public function provisionStatus(Server $server)
 {
     return Inertia::render('Server/ProvisionStatus', [
         'server' => $server,
-        'progress' => ProvisionEvent::where('server_id', $server->id)
+        'progress' => ServerPackageEvent::where('server_id', $server->id)
             ->latest()
             ->first(),
-        'allEvents' => ProvisionEvent::where('server_id', $server->id)
+        'allEvents' => ServerPackageEvent::where('server_id', $server->id)
             ->orderBy('created_at')
             ->get(),
     ]);
@@ -1285,7 +1285,7 @@ public function provisionStatus(Server $server)
 
 ```typescript
 // React component for progress tracking
-interface ProvisionEvent {
+interface ServerPackageEvent {
     id: number;
     service_type: string;
     provision_type: 'install' | 'uninstall';

@@ -98,11 +98,11 @@ class Server extends Model
     }
 
     /**
-     * Get all provision events for the server.
+     * Get all package events for the server.
      */
-    public function provisionEvents(): HasMany
+    public function packageEvents(): HasMany
     {
-        return $this->hasMany(ProvisionEvent::class);
+        return $this->hasMany(ServerPackageEvent::class);
     }
 
     /**

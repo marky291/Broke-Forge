@@ -12,7 +12,7 @@ use App\Packages\Enums\ServiceType;
  * MySQL Database Server Installation Class
  *
  * Handles installation of MySQL server with progress tracking
- * using ProvisionEvent for real-time status updates
+ * using ServerPackageEvent for real-time status updates
  */
 class MySqlInstaller extends PackageInstaller
 {
