@@ -1,18 +1,18 @@
 <?php
 
-namespace Tests\Unit\Packages\Services\WebServer;
+namespace Tests\Unit\Packages\Services\Nginx;
 
-use App\Packages\Services\WebServer\WebServiceRemoverMilestones;
+use App\Packages\Services\Nginx\NginxRemoverMilestones;
 use PHPUnit\Framework\TestCase;
 
-class WebServiceRemoverMilestonesTest extends TestCase
+class NginxRemoverMilestonesTest extends TestCase
 {
-    private WebServiceRemoverMilestones $milestones;
+    private NginxRemoverMilestones $milestones;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->milestones = new WebServiceRemoverMilestones;
+        $this->milestones = new NginxRemoverMilestones;
     }
 
     public function test_extends_milestones_base_class(): void
@@ -27,7 +27,7 @@ class WebServiceRemoverMilestonesTest extends TestCase
 
     public function test_count_matches_actual_constants(): void
     {
-        $reflection = new \ReflectionClass(WebServiceRemoverMilestones::class);
+        $reflection = new \ReflectionClass(NginxRemoverMilestones::class);
         $constants = $reflection->getConstants();
 
         // Should have 5 milestone constants + 1 LABELS array = 6 total
@@ -37,7 +37,7 @@ class WebServiceRemoverMilestonesTest extends TestCase
 
     public function test_class_structure_is_correct(): void
     {
-        $reflection = new \ReflectionClass(WebServiceRemoverMilestones::class);
+        $reflection = new \ReflectionClass(NginxRemoverMilestones::class);
 
         // Test that it has the required method
         $this->assertTrue($reflection->hasMethod('countLabels'));

@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\Servers\StoreServerRequest;
 use App\Http\Requests\Servers\UpdateServerRequest;
 use App\Models\Server;
-use App\Models\ServerService;
+use App\Models\ServerPackage;
 use App\Packages\Enums\ServiceType;
 use App\Support\ServerCredentials;
 use Illuminate\Http\RedirectResponse;
@@ -41,7 +41,7 @@ class ServerController extends Controller
 
         $server = Server::create($data);
 
-        ServerService::updateOrCreate(
+        ServerPackage::updateOrCreate(
             [
                 'server_id' => $server->id,
                 'service_name' => 'php',

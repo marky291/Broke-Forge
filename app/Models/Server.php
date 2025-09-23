@@ -65,7 +65,7 @@ class Server extends Model
 
     public function services(): HasMany
     {
-        return $this->hasMany(ServerService::class);
+        return $this->hasMany(ServerPackage::class);
     }
 
     /**

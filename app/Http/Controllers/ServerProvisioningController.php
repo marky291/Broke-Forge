@@ -8,7 +8,7 @@ use App\Packages\Credentials\ProvisionAccess;
 use App\Packages\Enums\Connection;
 use App\Packages\Enums\ProvisionStatus;
 use App\Packages\Enums\ServiceType;
-use App\Packages\Services\WebServer\WebServiceInstallerMilestones;
+use App\Packages\Services\Nginx\NginxInstallerMilestones;
 use App\Support\ServerCredentials;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -34,7 +34,7 @@ class ServerProvisioningController extends Controller
                 $label = null;
 
                 if (is_string($event->milestone)) {
-                    $label = WebServiceInstallerMilestones::label($event->milestone)
+                    $label = NginxInstallerMilestones::label($event->milestone)
                         ?? Str::headline($event->milestone);
                 } elseif (is_array($event->milestone) && array_key_exists('label', $event->milestone)) {
                     $label = $event->milestone['label'];
@@ -76,7 +76,7 @@ class ServerProvisioningController extends Controller
             'provision' => $this->getProvisionData($server),
             'events' => $events,
             'latestProgress' => $latestProgress,
-            'webServiceMilestones' => WebServiceInstallerMilestones::labels(),
+            'webServiceMilestones' => NginxInstallerMilestones::labels(),
             'serviceTypeLabels' => ServiceType::labels(),
             'statusLabels' => ProvisionStatus::statusLabels(),
         ]);

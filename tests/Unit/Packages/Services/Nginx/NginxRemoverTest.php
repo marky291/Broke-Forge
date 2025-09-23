@@ -1,21 +1,21 @@
 <?php
 
-namespace Tests\Unit\Packages\Services\WebServer;
+namespace Tests\Unit\Packages\Services\Nginx;
 
 use App\Models\Server;
 use App\Packages\Credentials\RootCredential;
 use App\Packages\Enums\ServiceType;
-use App\Packages\Services\WebServer\WebServiceRemover;
-use App\Packages\Services\WebServer\WebServiceRemoverMilestones;
+use App\Packages\Services\Nginx\NginxRemover;
+use App\Packages\Services\Nginx\NginxRemoverMilestones;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Mockery;
 use Tests\TestCase;
 
-class WebServiceRemoverTest extends TestCase
+class NginxRemoverTest extends TestCase
 {
     use RefreshDatabase;
 
-    private WebServiceRemover $remover;
+    private NginxRemover $remover;
 
     private Server $server;
 
@@ -24,7 +24,7 @@ class WebServiceRemoverTest extends TestCase
         parent::setUp();
 
         $this->server = Server::factory()->create();
-        $this->remover = new WebServiceRemover($this->server);
+        $this->remover = new NginxRemover($this->server);
     }
 
     public function test_service_type_returns_webserver(): void
@@ -53,7 +53,7 @@ class WebServiceRemoverTest extends TestCase
         $method->setAccessible(true);
 
         $milestones = $method->invoke($this->remover);
-        $this->assertInstanceOf(WebServiceRemoverMilestones::class, $milestones);
+        $this->assertInstanceOf(NginxRemoverMilestones::class, $milestones);
     }
 
     public function test_execute_calls_remove_with_commands(): void
@@ -66,7 +66,7 @@ class WebServiceRemoverTest extends TestCase
         ]);
 
         // Mock the remover to track remove calls
-        $remover = Mockery::mock(WebServiceRemover::class, [$this->server])->makePartial();
+        $remover = Mockery::mock(NginxRemover::class, [$this->server])->makePartial();
         $remover->shouldAllowMockingProtectedMethods();
         $remover->shouldReceive('remove')->once();
         $remover->shouldReceive('commands')->once()->andReturn([]);
@@ -90,7 +90,7 @@ class WebServiceRemoverTest extends TestCase
         ]);
 
         // Mock to access the protected execute method logic
-        $remover = Mockery::mock(WebServiceRemover::class, [$this->server])->makePartial();
+        $remover = Mockery::mock(NginxRemover::class, [$this->server])->makePartial();
         $remover->shouldAllowMockingProtectedMethods();
         $remover->shouldReceive('remove')->once();
         $remover->shouldReceive('commands')->once()->andReturn([]);

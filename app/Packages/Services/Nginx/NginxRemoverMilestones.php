@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Packages\Services\WebServer;
+namespace App\Packages\Services\Nginx;
 
 use App\Packages\Base\Milestones;
 
-class WebServiceRemoverMilestones extends Milestones
+class NginxRemoverMilestones extends Milestones
 {
     public const STOP_SERVICES = 'stop_services';
 

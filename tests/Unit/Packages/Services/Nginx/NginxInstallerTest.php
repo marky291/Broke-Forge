@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Unit\Packages\Services\WebServer;
+namespace Tests\Unit\Packages\Services\Nginx;
 
 use App\Models\Server;
 use App\Packages\Base\Milestones;
@@ -8,20 +8,20 @@ use App\Packages\Contracts\Installer;
 use App\Packages\Credentials\RootCredential;
 use App\Packages\Credentials\SshCredential;
 use App\Packages\Enums\ServiceType;
-use App\Packages\Services\WebServer\WebServiceInstaller;
-use App\Packages\Services\WebServer\WebServiceInstallerMilestones;
+use App\Packages\Services\Nginx\NginxInstaller;
+use App\Packages\Services\Nginx\NginxInstallerMilestones;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\View;
 use Mockery;
 use Tests\TestCase;
 
-class WebServiceInstallerTest extends TestCase
+class NginxInstallerTest extends TestCase
 {
     use RefreshDatabase;
 
     private Server $server;
 
-    private WebServiceInstaller $installer;
+    private NginxInstaller $installer;
 
     protected function setUp(): void
     {
@@ -33,7 +33,7 @@ class WebServiceInstallerTest extends TestCase
             'ssh_port' => 22,
         ]);
 
-        $this->installer = new WebServiceInstaller($this->server);
+        $this->installer = new NginxInstaller($this->server);
     }
 
     public function test_implements_installer_interface(): void
@@ -57,7 +57,7 @@ class WebServiceInstallerTest extends TestCase
         $method->setAccessible(true);
 
         $milestones = $method->invoke($this->installer);
-        $this->assertInstanceOf(WebServiceInstallerMilestones::class, $milestones);
+        $this->assertInstanceOf(NginxInstallerMilestones::class, $milestones);
         $this->assertInstanceOf(Milestones::class, $milestones);
     }
 

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Packages\Services\WebServer;
+namespace App\Packages\Services\Nginx;
 
 use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageInstaller;
@@ -14,7 +14,7 @@ use App\Packages\Enums\ServiceType;
  *
  * Handles installation of NGINX and PHP-FPM with progress tracking
  */
-class WebServiceInstaller extends PackageInstaller
+class NginxInstaller extends PackageInstaller
 {
     protected function serviceType(): string
     {
@@ -23,7 +23,7 @@ class WebServiceInstaller extends PackageInstaller
 
     protected function milestones(): Milestones
     {
-        return new WebServiceInstallerMilestones;
+        return new NginxInstallerMilestones;
     }
 
     protected function sshCredential(): SshCredential
@@ -64,24 +64,24 @@ class WebServiceInstaller extends PackageInstaller
 
         return [
 
-            $this->track(WebServiceInstallerMilestones::PREPARE_SYSTEM),
+            $this->track(NginxInstallerMilestones::PREPARE_SYSTEM),
 
             // Update package lists and install prerequisites
             'DEBIAN_FRONTEND=noninteractive apt-get update -y',
             'DEBIAN_FRONTEND=noninteractive apt-get install -y ca-certificates curl gnupg lsb-release software-properties-common',
 
-            $this->track(WebServiceInstallerMilestones::SETUP_REPOSITORY),
+            $this->track(NginxInstallerMilestones::SETUP_REPOSITORY),
 
             // On Ubuntu, add Ondrej PPAs for PHP and NGINX (ignore errors on non-Ubuntu)
             'if command -v lsb_release >/dev/null 2>&1 && [ "$(lsb_release -is)" = "Ubuntu" ]; then add-apt-repository -y ppa:ondrej/php || true; add-apt-repository -y ppa:ondrej/nginx || true; DEBIAN_FRONTEND=noninteractive apt-get update -y; fi',
 
-            $this->track(WebServiceInstallerMilestones::REMOVE_CONFLICTS),
+            $this->track(NginxInstallerMilestones::REMOVE_CONFLICTS),
             // Ensure Apache is not competing for port 80 (stop, disable, and mask if present)
             'systemctl stop apache2 >/dev/null 2>&1 || true',
             'systemctl disable apache2 >/dev/null 2>&1 || true',
             'systemctl mask apache2 >/dev/null 2>&1 || true',
 
-            $this->track(WebServiceInstallerMilestones::INSTALL_SOFTWARE),
+            $this->track(NginxInstallerMilestones::INSTALL_SOFTWARE),
 
             // Optionally remove apache packages if installed
             'DEBIAN_FRONTEND=noninteractive apt-get remove -y --purge apache2 apache2-bin apache2-data apache2-utils libapache2-mod-php libapache2-mod-php* >/dev/null 2>&1 || true',
@@ -89,17 +89,17 @@ class WebServiceInstaller extends PackageInstaller
             // Install NGINX and PHP (attempt versioned packages first, then fall back to default php if needed)
             "DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends nginx {$phpPackages} || DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends nginx php-fpm php-cli php-common php-curl php-mbstring php-xml php-zip php-intl php-mysql php-gd",
 
-            $this->track(WebServiceInstallerMilestones::ENABLE_SERVICES),
+            $this->track(NginxInstallerMilestones::ENABLE_SERVICES),
             // Enable and start services
             'systemctl enable --now nginx',
             "systemctl enable --now php{$phpVersion}-fpm || systemctl enable --now php-fpm",
 
-            $this->track(WebServiceInstallerMilestones::CONFIGURE_FIREWALL),
+            $this->track(NginxInstallerMilestones::CONFIGURE_FIREWALL),
             // Open HTTP/HTTPS ports if ufw exists (safe no-ops otherwise)
             'ufw allow 80/tcp >/dev/null 2>&1 || true',
             'ufw allow 443/tcp >/dev/null 2>&1 || true',
 
-            $this->track(WebServiceInstallerMilestones::SETUP_DEFAULT_SITE),
+            $this->track(NginxInstallerMilestones::SETUP_DEFAULT_SITE),
             // Create default site structure in app user's home directory
             "mkdir -p /home/{$appUser}/default/public",
 
@@ -110,7 +110,7 @@ class WebServiceInstaller extends PackageInstaller
                 return "cat > /home/{$appUser}/default/public/index.php << 'EOF'\n{$content}\nEOF";
             },
 
-            $this->track(WebServiceInstallerMilestones::SET_PERMISSIONS),
+            $this->track(NginxInstallerMilestones::SET_PERMISSIONS),
             // Set proper ownership and permissions for app user's site directories
             "chown -R {$appUser}:{$appUser} /home/{$appUser}/",
             "chmod 755 /home/{$appUser}/",
@@ -121,7 +121,7 @@ class WebServiceInstaller extends PackageInstaller
             // Add app user to www-data group for PHP-FPM compatibility
             "usermod -a -G www-data {$appUser}",
 
-            $this->track(WebServiceInstallerMilestones::CONFIGURE_NGINX),
+            $this->track(NginxInstallerMilestones::CONFIGURE_NGINX),
             // Create default Nginx configuration for the default site (inline config generation)
             function () use ($appUser, $phpVersion) {
                 $nginxConfig = view('nginx.default', [
@@ -150,7 +150,7 @@ class WebServiceInstaller extends PackageInstaller
             // Enable the default site
             'ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default',
 
-            $this->track(WebServiceInstallerMilestones::VERIFY_INSTALL),
+            $this->track(NginxInstallerMilestones::VERIFY_INSTALL),
             // Test Nginx configuration
             'nginx -t',
             // Reload Nginx to apply configuration
@@ -158,7 +158,7 @@ class WebServiceInstaller extends PackageInstaller
             // Get the status of nginx
             'systemctl status nginx',
 
-            $this->track(WebServiceInstallerMilestones::COMPLETE),
+            $this->track(NginxInstallerMilestones::COMPLETE),
         ];
     }
 }

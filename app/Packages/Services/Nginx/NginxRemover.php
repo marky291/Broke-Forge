@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Packages\Services\WebServer;
+namespace App\Packages\Services\Nginx;
 
 use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageRemover;
@@ -13,7 +13,7 @@ use App\Packages\Enums\ServiceType;
  *
  * Handles removal of NGINX and PHP-FPM with progress tracking
  */
-class WebServiceRemover extends PackageRemover
+class NginxRemover extends PackageRemover
 {
     protected function serviceType(): string
     {
@@ -22,7 +22,7 @@ class WebServiceRemover extends PackageRemover
 
     protected function milestones(): Milestones
     {
-        return new WebServiceRemoverMilestones;
+        return new NginxRemoverMilestones;
     }
 
     protected function sshCredential(): SshCredential
@@ -58,26 +58,26 @@ class WebServiceRemover extends PackageRemover
     protected function commands(string $phpVersion, string $phpPackages): array
     {
         return [
-            $this->track(WebServiceRemoverMilestones::STOP_SERVICES),
+            $this->track(NginxRemoverMilestones::STOP_SERVICES),
             'systemctl stop nginx >/dev/null 2>&1 || true',
             "systemctl stop php{$phpVersion}-fpm >/dev/null 2>&1 || true",
             'systemctl disable nginx >/dev/null 2>&1 || true',
             "systemctl disable php{$phpVersion}-fpm >/dev/null 2>&1 || true",
 
-            $this->track(WebServiceRemoverMilestones::REMOVE_SITES),
+            $this->track(NginxRemoverMilestones::REMOVE_SITES),
             'rm -rf /etc/nginx/sites-enabled/*',
             'rm -rf /etc/nginx/sites-available/*',
 
-            $this->track(WebServiceRemoverMilestones::REMOVE_PACKAGES),
+            $this->track(NginxRemoverMilestones::REMOVE_PACKAGES),
             "DEBIAN_FRONTEND=noninteractive apt-get remove -y --purge nginx {$phpPackages}",
             'DEBIAN_FRONTEND=noninteractive apt-get autoremove -y',
 
-            $this->track(WebServiceRemoverMilestones::CLEANUP_CONFIG),
+            $this->track(NginxRemoverMilestones::CLEANUP_CONFIG),
             'rm -rf /etc/nginx',
             'rm -rf /var/log/nginx',
             'rm -rf /var/www/html',
 
-            $this->track(WebServiceRemoverMilestones::COMPLETE),
+            $this->track(NginxRemoverMilestones::COMPLETE),
         ];
     }
 }

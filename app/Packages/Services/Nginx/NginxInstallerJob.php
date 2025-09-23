@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Packages\Services\WebServer;
+namespace App\Packages\Services\Nginx;
 
 use App\Models\Server;
 use App\Models\ServerService;
@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Log;
 /**
  * Job for installing web services (NGINX + PHP) on servers
  */
-class WebServiceInstallerJob implements ShouldQueue
+class NginxInstallerJob implements ShouldQueue
 {
     use Queueable;
 
@@ -34,7 +34,7 @@ class WebServiceInstallerJob implements ShouldQueue
 
         try {
             // Create the web service installer
-            $installer = new WebServiceInstaller($this->server);
+            $installer = new NginxInstaller($this->server);
 
             // Get PHP version from existing PHP service or use default
             $phpVersion = $this->getPhpVersion();

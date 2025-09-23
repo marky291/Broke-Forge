@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class ServerService extends Model
+class ServerPackage extends Model
 {
     use HasFactory;
 
@@ -16,9 +16,6 @@ class ServerService extends Model
         'service_type',
         'configuration',
         'status',
-        'progress_step',
-        'progress_total',
-        'progress_label',
         'installed_at',
         'uninstalled_at',
     ];

@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Packages\Services\WebServer;
+namespace App\Packages\Services\Nginx;
 
 use App\Packages\Base\Milestones;
 
-class WebServiceInstallerMilestones extends Milestones
+class NginxInstallerMilestones extends Milestones
 {
     public const PREPARE_SYSTEM = 'prepare_system';
 

@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Server;
-use App\Models\ServerService;
+use App\Models\ServerPackage;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -81,7 +81,7 @@ class ServerPhpController extends Controller
             ]);
         } else {
             // Create new service
-            ServerService::create([
+            ServerPackage::create([
                 'server_id' => $server->id,
                 'service_name' => 'php',
                 'configuration' => $configuration,
