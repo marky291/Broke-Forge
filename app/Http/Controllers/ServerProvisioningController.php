@@ -5,11 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\Server;
 use App\Models\ServerPackageEvent;
 use App\Packages\Credentials\ProvisionAccess;
+use App\Packages\Credentials\TemporaryCredentialCache;
 use App\Packages\Enums\Connection;
 use App\Packages\Enums\ProvisionStatus;
-use App\Packages\Enums\ServiceType;
+use App\Packages\Enums\PackageName;
 use App\Packages\Services\Nginx\NginxInstallerMilestones;
-use App\Support\ServerCredentials;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Str;
@@ -51,6 +51,8 @@ class ServerProvisioningController extends Controller
                     'progress_percentage' => $event->progress_percentage,
                     'details' => $event->details,
                     'label' => $label,
+                    'status' => $event->status,
+                    'error_log' => $event->error_log,
                     'created_at' => $event->created_at->toISOString(),
                 ];
             })
@@ -77,14 +79,14 @@ class ServerProvisioningController extends Controller
             'events' => $events,
             'latestProgress' => $latestProgress,
             'webServiceMilestones' => NginxInstallerMilestones::labels(),
-            'serviceTypeLabels' => ServiceType::labels(),
+            'serviceTypeLabels' => PackageName::labels(),
             'statusLabels' => ProvisionStatus::statusLabels(),
         ]);
     }
 
     public function provision(Server $server): HttpResponse
     {
-        $rootPassword = ServerCredentials::rootPassword($server);
+        $rootPassword = TemporaryCredentialCache::rootPassword($server);
         $script = (new ProvisionAccess)->makeScriptFor($server, $rootPassword);
 
         return response($script, 200, [
@@ -123,14 +125,14 @@ class ServerProvisioningController extends Controller
         $server->packageEvents()->delete();
 
         // Reset cached root password so a new secret is generated for the next attempt.
-        ServerCredentials::forgetRootPassword($server);
+        TemporaryCredentialCache::forgetRootPassword($server);
 
         $server->connection = Connection::PENDING;
         $server->provision_status = ProvisionStatus::Pending;
         $server->save();
 
         // Reset service progress indicators for web/PHP services if they exist.
-        $server->services()
+        $server->packages()
             ->whereIn('service_name', ['web', 'php'])
             ->update([
                 'status' => 'pending',
@@ -164,6 +166,8 @@ class ServerProvisioningController extends Controller
                     'total_steps' => $event->total_steps,
                     'progress_percentage' => $event->progress_percentage,
                     'details' => $event->details,
+                    'status' => $event->status,
+                    'error_log' => $event->error_log,
                     'created_at' => $event->created_at->toISOString(),
                 ];
             });
@@ -183,7 +187,7 @@ class ServerProvisioningController extends Controller
 
         return [
             'command' => $this->buildProvisionCommand($server),
-            'root_password' => ServerCredentials::rootPassword($server),
+            'root_password' => TemporaryCredentialCache::rootPassword($server),
         ];
     }
 

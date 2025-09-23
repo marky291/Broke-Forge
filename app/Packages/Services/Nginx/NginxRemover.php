@@ -6,7 +6,8 @@ use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageRemover;
 use App\Packages\Credentials\RootCredential;
 use App\Packages\Credentials\SshCredential;
-use App\Packages\Enums\ServiceType;
+use App\Packages\Enums\PackageName;
+use App\Packages\Enums\PackageType;
 
 /**
  * Web Server Removal Class
@@ -15,17 +16,23 @@ use App\Packages\Enums\ServiceType;
  */
 class NginxRemover extends PackageRemover
 {
-    protected function serviceType(): string
+
+    public function packageName(): PackageName
     {
-        return ServiceType::WEBSERVER;
+        return PackageName::Nginx;
     }
 
-    protected function milestones(): Milestones
+    public function packageType(): PackageType
+    {
+        return PackageType::ReverseProxy;
+    }
+
+    public function milestones(): Milestones
     {
         return new NginxRemoverMilestones;
     }
 
-    protected function sshCredential(): SshCredential
+    public function sshCredential(): SshCredential
     {
         return new RootCredential;
     }
@@ -35,7 +42,7 @@ class NginxRemover extends PackageRemover
      */
     public function execute(): void
     {
-        $phpService = $this->server->services()->where('service_name', 'php')->latest('id')->first();
+        $phpService = $this->server->packages()->where('service_name', 'php')->latest('id')->first();
         $phpVersion = $phpService ? $phpService->configuration['version'] : '8.3';
 
         // Compose common PHP packages for the chosen version.

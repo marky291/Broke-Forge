@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\Servers\ExecuteSiteCommandRequest;
 use App\Models\Server;
 use App\Models\ServerSite;
-use App\Packages\Services\Sites\SiteCommandInstaller;
+use App\Packages\Services\Sites\Command\SiteCommandInstaller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;

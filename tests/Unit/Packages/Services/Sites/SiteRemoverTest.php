@@ -5,7 +5,7 @@ namespace Tests\Unit\Packages\Services\Sites;
 use App\Models\Server;
 use App\Models\ServerSite;
 use App\Packages\Credentials\UserCredential;
-use App\Packages\Enums\ServiceType;
+use App\Packages\Enums\PackageName;
 use App\Packages\Services\Sites\SiteRemover;
 use App\Packages\Services\Sites\SiteRemoverMilestones;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -41,7 +41,7 @@ class SiteRemoverTest extends TestCase
         $method = $reflection->getMethod('serviceType');
         $method->setAccessible(true);
 
-        $this->assertEquals(ServiceType::SITE, $method->invoke($this->remover));
+        $this->assertEquals(PackageName::SITE, $method->invoke($this->remover));
     }
 
     public function test_ssh_credential_returns_user_credential(): void

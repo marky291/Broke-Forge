@@ -7,7 +7,7 @@ use App\Packages\Base\Milestones;
 use App\Packages\Contracts\Remover;
 use App\Packages\Credentials\RootCredential;
 use App\Packages\Credentials\SshCredential;
-use App\Packages\Enums\ServiceType;
+use App\Packages\Enums\PackageName;
 use App\Packages\Services\Database\MySQL\MySqlRemover;
 use App\Packages\Services\Database\MySQL\MySqlRemoverMilestones;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -43,7 +43,7 @@ class MySqlRemoverTest extends TestCase
         $method = $reflection->getMethod('serviceType');
         $method->setAccessible(true);
 
-        $this->assertEquals(ServiceType::DATABASE, $method->invoke($this->remover));
+        $this->assertEquals(PackageName::DATABASE, $method->invoke($this->remover));
     }
 
     public function test_milestones_returns_correct_instance(): void

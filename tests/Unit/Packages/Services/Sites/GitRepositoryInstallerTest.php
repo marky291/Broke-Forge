@@ -5,9 +5,9 @@ namespace Tests\Unit\Packages\Services\Sites;
 use App\Models\Server;
 use App\Models\ServerSite;
 use App\Packages\Credentials\UserCredential;
-use App\Packages\Enums\ServiceType;
-use App\Packages\Services\Sites\GitRepositoryInstaller;
-use App\Packages\Services\Sites\GitRepositoryInstallerMilestones;
+use App\Packages\Enums\PackageName;
+use App\Packages\Services\Sites\Git\GitRepositoryInstaller;
+use App\Packages\Services\Sites\Git\GitRepositoryInstallerMilestones;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Mockery;
 use Tests\TestCase;
@@ -41,7 +41,7 @@ class GitRepositoryInstallerTest extends TestCase
         $method = $reflection->getMethod('serviceType');
         $method->setAccessible(true);
 
-        $this->assertEquals(ServiceType::SITE, $method->invoke($this->installer));
+        $this->assertEquals(PackageName::SITE, $method->invoke($this->installer));
     }
 
     public function test_ssh_credential_returns_user_credential(): void

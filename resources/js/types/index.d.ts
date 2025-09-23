@@ -52,6 +52,8 @@ export interface ServerPackageEvent {
     progress_percentage: number;
     details: Record<string, unknown> | null;
     label?: string | null;
+    status: 'pending' | 'success' | 'failed';
+    error_log?: string | null;
     created_at: string;
     updated_at: string;
 }

@@ -9,6 +9,7 @@ The package system is built on a layered architecture that provides a consistent
 ```
 app/Packages/
 ├── Base/                    # Abstract base classes
+│   ├── Package.php              # Package interface (ALL packages must implement)
 │   ├── PackageInstaller.php    # Base installer class
 │   ├── PackageRemover.php       # Base remover class
 │   ├── PackageManager.php       # Core SSH and milestone functionality
@@ -22,7 +23,8 @@ app/Packages/
 │   ├── WorkerCredential.php    # Worker user access
 │   └── SshCredential.php       # Interface for all credentials
 ├── Enums/                   # Type definitions
-│   ├── ServiceType.php         # Service categories
+│   ├── PackageName.php         # Service categories
+│   ├── PackageType.php         # Package type categories
 │   ├── ProvisionStatus.php     # Provision states
 │   └── Connection.php          # Connection states
 └── Services/                # Service implementations
@@ -92,7 +94,7 @@ All class names must use PascalCase and match their filename exactly.
 2. **Check Base Classes**: Review `PackageInstaller`, `PackageRemover`, `PackageManager` capabilities
 3. **Review Existing Credentials**: Use `RootCredential`, `UserCredential`, `WorkerCredential` before creating new ones
 4. **Examine Milestone Patterns**: Look at existing milestone classes for consistent naming and structure
-5. **Check Service Types**: Use existing `ServiceType` constants before adding new ones
+5. **Check Service Types**: Use existing `PackageName` constants before adding new ones
 
 ### Questions to Ask Before Implementation
 
@@ -113,8 +115,8 @@ ls app/Packages/Services/Database/
 cat app/Packages/Base/PackageInstaller.php
 
 # Review service types
-cat app/Packages/Enums/ServiceType.php
-# Use ServiceType::DATABASE (already exists)
+cat app/Packages/Enums/PackageName.php
+# Use PackageName::DATABASE (already exists)
 
 # Check credentials
 ls app/Packages/Credentials/
@@ -129,7 +131,7 @@ class RedisInstaller extends PackageInstaller  // Existing base class
 {
     protected function serviceType(): string
     {
-        return ServiceType::DATABASE;  // Existing enum value
+        return PackageName::DATABASE;  // Existing enum value
     }
 
     protected function sshCredential(): SshCredential
@@ -149,7 +151,7 @@ class RedisInstaller extends CustomRedisBaseClass  // Unnecessary new base
 {
     protected function serviceType(): string
     {
-        return ServiceType::REDIS;  // Unnecessary new enum value
+        return PackageName::REDIS;  // Unnecessary new enum value
     }
 
     protected function sshCredential(): SshCredential
@@ -159,11 +161,44 @@ class RedisInstaller extends CustomRedisBaseClass  // Unnecessary new base
 }
 ```
 
+## Package Interface Implementation
+
+### The Package Interface
+
+**IMPORTANT**: All packages (installers, removers, and single command executors) MUST implement the `Package` interface. This interface is automatically implemented through the `PackageManager` base class, which both `PackageInstaller` and `PackageRemover` extend.
+
+The `Package` interface requires:
+
+```php
+interface Package
+{
+    /**
+     * Generic name of the current package.
+     */
+    public function packageName(): PackageName;
+
+    /**
+     * Package categorization type such as database, cache, queue etc.
+     */
+    public function packageType(): PackageType;
+
+    /**
+     * Milestones to track package progression.
+     */
+    public function milestones(): Milestones;
+
+    /**
+     * Credentials used to run the package on SSH
+     */
+    public function sshCredential(): SshCredential;
+}
+```
+
 ## Package Installer Implementation
 
 ### Required Structure
 
-Every Package Installer must extend `PackageInstaller` and implement these abstract methods:
+Every Package Installer must extend `PackageInstaller` (which implements `Package` through `PackageManager`) and implement these required methods:
 
 ```php
 <?php
@@ -173,6 +208,8 @@ namespace App\Packages\Services\{Category};
 use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageInstaller;
 use App\Packages\Credentials\SshCredential;
+use App\Packages\Enums\PackageName;
+use App\Packages\Enums\PackageType;
 
 /**
  * {Service} Installation Class
@@ -182,11 +219,28 @@ use App\Packages\Credentials\SshCredential;
 class {ServiceName}Installer extends PackageInstaller
 {
     /**
+     * Generic name of the current package
+     */
+    public function packageName(): PackageName
+    {
+        return PackageName::{SPECIFIC_NAME};
+    }
+
+    /**
+     * Package categorization type
+     */
+    public function packageType(): PackageType
+    {
+        return PackageType::{CATEGORY};
+    }
+
+    /**
      * Service type identifier for milestone tracking
+     * @deprecated Use packageName() instead
      */
     protected function serviceType(): string
     {
-        return ServiceType::{CATEGORY};
+        return $this->packageName()->value;
     }
 
     /**
@@ -305,7 +359,9 @@ use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageInstaller;
 use App\Packages\Credentials\SshCredential;
 use App\Packages\Credentials\UserCredential;
-use App\Packages\Enums\ServiceType;
+use App\Packages\Enums\PackageName;
+use App\Packages\Enums\PackageType;
+use App\Packages\Services\Sites\Command\SiteCommandInstallerMilestones;
 
 /**
  * Site Command Installer
@@ -322,9 +378,29 @@ class SiteCommandInstaller extends PackageInstaller
         $this->site = $site;
     }
 
+    /**
+     * Generic name of the current package
+     */
+    public function packageName(): PackageName
+    {
+        return PackageName::SITE;
+    }
+
+    /**
+     * Package categorization type
+     */
+    public function packageType(): PackageType
+    {
+        return PackageType::SITE;
+    }
+
+    /**
+     * Service type identifier for milestone tracking
+     * @deprecated Use packageName() instead
+     */
     protected function serviceType(): string
     {
-        return ServiceType::SITE;
+        return $this->packageName()->value;
     }
 
     protected function milestones(): Milestones
@@ -499,7 +575,7 @@ class SiteCommandInstaller extends PackageInstaller
 
 ## Package Remover Implementation
 
-Package Removers follow the same pattern but extend `PackageRemover`:
+Package Removers follow the same pattern but extend `PackageRemover` (which also implements `Package` through `PackageManager`):
 
 ```php
 <?php
@@ -509,12 +585,34 @@ namespace App\Packages\Services\{Category};
 use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageRemover;
 use App\Packages\Credentials\SshCredential;
+use App\Packages\Enums\PackageName;
+use App\Packages\Enums\PackageType;
 
 class {ServiceName}Remover extends PackageRemover
 {
+    /**
+     * Generic name of the current package
+     */
+    public function packageName(): PackageName
+    {
+        return PackageName::{SPECIFIC_NAME};
+    }
+
+    /**
+     * Package categorization type
+     */
+    public function packageType(): PackageType
+    {
+        return PackageType::{CATEGORY};
+    }
+
+    /**
+     * Service type identifier for milestone tracking
+     * @deprecated Use packageName() instead
+     */
     protected function serviceType(): string
     {
-        return ServiceType::{CATEGORY};
+        return $this->packageName()->value;
     }
 
     protected function milestones(): Milestones
@@ -693,9 +791,9 @@ Every installer should have a corresponding job for queue processing:
 namespace App\Packages\Services\{Category};
 
 use App\Models\Server;
-use App\Models\ServerService;
+use App\Models\ServerPackage;
 use App\Packages\Enums\ProvisionStatus;
-use App\Packages\Enums\ServiceType;
+use App\Packages\Enums\PackageName;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
@@ -718,13 +816,13 @@ class {ServiceName}InstallerJob implements ShouldQueue
             $installer = new {ServiceName}Installer($this->server);
 
             // Create database service record
-            $service = ServerService::updateOrCreate(
+            $package = ServerPackage::updateOrCreate(
                 [
                     'server_id' => $this->server->id,
                     'service_name' => '{service_name}',
                 ],
                 [
-                    'service_type' => ServiceType::{CATEGORY},
+                    'service_type' => PackageName::{CATEGORY},
                     'configuration' => $this->configuration,
                     'status' => 'installing',
                 ]
@@ -733,9 +831,9 @@ class {ServiceName}InstallerJob implements ShouldQueue
             // Execute installation with configuration parameters
             $installer->execute($this->configuration);
 
-            // Update service status
-            $service->status = 'active';
-            $service->save();
+            // Update package status
+            $package->status = 'active';
+            $package->save();
 
             // Update server status if needed
             $this->server->provision_status = ProvisionStatus::Completed;
@@ -748,10 +846,10 @@ class {ServiceName}InstallerJob implements ShouldQueue
                 'trace' => $e->getTraceAsString(),
             ]);
 
-            // Update service status
-            if (isset($service)) {
-                $service->status = 'failed';
-                $service->save();
+            // Update package status
+            if (isset($package)) {
+                $package->status = 'failed';
+                $package->save();
             }
 
             // Update server status
@@ -767,17 +865,17 @@ class {ServiceName}InstallerJob implements ShouldQueue
 ### Job Integration Best Practices
 
 1. **Error Handling**: Always wrap execution in try-catch blocks
-2. **Database Updates**: Update `ServerService` and `Server` records appropriately
+2. **Database Updates**: Update `ServerPackage` and `Server` records appropriately
 3. **Logging**: Log start, success, and failure events
 4. **Status Management**: Use proper enum values for status updates
 5. **Configuration**: Accept configuration parameters through constructor
 
 ## Service Type Classification
 
-Use the `ServiceType` enum to categorize services:
+Use the `PackageName` enum to categorize services:
 
 ```php
-class ServiceType
+class PackageName
 {
     public const DATABASE = 'database';      // MySQL, PostgreSQL, Redis
     public const SERVER = 'server';          // System-level services
@@ -820,7 +918,7 @@ class {ServiceName}InstallerTest extends TestCase
         $server = Server::factory()->create();
         $installer = new {ServiceName}Installer($server);
 
-        $this->assertEquals(ServiceType::{CATEGORY}, $installer->serviceType());
+        $this->assertEquals(PackageName::{CATEGORY}, $installer->serviceType());
     }
 
     public function test_milestone_class_is_instantiated(): void
@@ -875,7 +973,7 @@ Test job integration and database interactions using real implementations, only 
 namespace Tests\Feature\Packages\Services\{Category};
 
 use App\Models\Server;
-use App\Models\ServerService;
+use App\Models\ServerPackage;
 use App\Packages\Services\{Category}\{ServiceName}InstallerJob;
 use Illuminate\Support\Facades\Queue;
 use Spatie\Ssh\Ssh;
@@ -906,7 +1004,7 @@ class {ServiceName}InstallerJobTest extends TestCase
         $job->handle();
 
         // Test real database interactions
-        $this->assertDatabaseHas('server_services', [
+        $this->assertDatabaseHas('server_packages', [
             'server_id' => $server->id,
             'service_name' => '{service_name}',
             'status' => 'active',
@@ -935,8 +1033,8 @@ class {ServiceName}InstallerJobTest extends TestCase
         $job->handle();
 
         // Verify failure is recorded in real database
-        $service = ServerService::where('server_id', $server->id)->first();
-        $this->assertEquals('failed', $service?->status);
+        $package = ServerPackage::where('server_id', $server->id)->first();
+        $this->assertEquals('failed', $package?->status);
     }
 }
 ```
@@ -964,7 +1062,7 @@ public function test_milestone_tracking_creates_provision_events(): void
     // Test real ServerPackageEvent creation
     $this->assertDatabaseHas('server_package_events', [
         'server_id' => $server->id,
-        'service_type' => ServiceType::{CATEGORY},
+        'service_type' => PackageName::{CATEGORY},
         'provision_type' => 'install',
     ]);
 }
@@ -977,7 +1075,7 @@ public function test_milestone_tracking_creates_provision_events(): void
 - Laravel framework features (views, config, etc.)
 - Internal application logic
 - Milestone tracking and ServerPackageEvent creation
-- Server and ServerService model updates
+- Server and ServerPackage model updates
 - Queue job logic and state management
 
 **⚠️ Only Mock When Absolutely Necessary:**
@@ -1194,7 +1292,7 @@ protected function commands(string $phpVersion, string $phpPackages): array
 Packages automatically integrate with the `Server` model:
 - Access server properties via `$this->server`
 - Update server status through the model
-- Create related `ServerService` records
+- Create related `ServerPackage` records
 
 ### Queue Integration
 
@@ -1217,7 +1315,7 @@ class ServerPackageEvent extends Model
 {
     protected $fillable = [
         'server_id',        // Server being provisioned
-        'service_type',     // ServiceType enum value (database, webserver, etc.)
+        'service_type',     // PackageName enum value (database, webserver, etc.)
         'provision_type',   // 'install' or 'uninstall'
         'milestone',        // Milestone constant (e.g., 'install_software')
         'current_step',     // Current step number

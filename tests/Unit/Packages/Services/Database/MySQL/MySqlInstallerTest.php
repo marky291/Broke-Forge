@@ -7,7 +7,7 @@ use App\Packages\Base\Milestones;
 use App\Packages\Contracts\Installer;
 use App\Packages\Credentials\RootCredential;
 use App\Packages\Credentials\SshCredential;
-use App\Packages\Enums\ServiceType;
+use App\Packages\Enums\PackageName;
 use App\Packages\Services\Database\MySQL\MySqlInstaller;
 use App\Packages\Services\Database\MySQL\MySqlInstallerMilestones;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -43,7 +43,7 @@ class MySqlInstallerTest extends TestCase
         $method = $reflection->getMethod('serviceType');
         $method->setAccessible(true);
 
-        $this->assertEquals(ServiceType::DATABASE, $method->invoke($this->installer));
+        $this->assertEquals(PackageName::DATABASE, $method->invoke($this->installer));
     }
 
     public function test_milestones_returns_correct_instance(): void

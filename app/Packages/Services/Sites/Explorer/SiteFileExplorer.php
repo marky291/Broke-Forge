@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Support;
+namespace App\Packages\Services\Sites\Explorer;
 
 use App\Exceptions\ServerFileExplorerException;
 use App\Models\Server;
@@ -9,7 +9,7 @@ use Illuminate\Support\Str;
 use Spatie\Ssh\Ssh;
 use Symfony\Component\Process\Process;
 
-class ServerFileExplorer
+class SiteFileExplorer
 {
     protected const LIST_EXIT_INVALID_BASE = 3;
     protected const LIST_EXIT_INVALID_PATH = 4;

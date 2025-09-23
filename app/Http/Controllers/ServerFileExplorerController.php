@@ -7,7 +7,7 @@ use App\Http\Requests\Servers\ServerFileDownloadRequest;
 use App\Http\Requests\Servers\ServerFileIndexRequest;
 use App\Http\Requests\Servers\ServerFileUploadRequest;
 use App\Models\Server;
-use App\Support\ServerFileExplorer;
+use App\Packages\Services\Sites\Explorer\SiteFileExplorer;
 use Illuminate\Http\JsonResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -33,7 +33,7 @@ class ServerFileExplorerController extends Controller
 
     public function index(ServerFileIndexRequest $request, Server $server): JsonResponse
     {
-        $explorer = new ServerFileExplorer($server);
+        $explorer = new SiteFileExplorer($server);
 
         try {
             $listing = $explorer->list($request->input('path', ''));
@@ -48,7 +48,7 @@ class ServerFileExplorerController extends Controller
 
     public function store(ServerFileUploadRequest $request, Server $server): JsonResponse
     {
-        $explorer = new ServerFileExplorer($server);
+        $explorer = new SiteFileExplorer($server);
 
         try {
             $explorer->upload($request->input('path', ''), $request->file('file'));
@@ -65,7 +65,7 @@ class ServerFileExplorerController extends Controller
 
     public function download(ServerFileDownloadRequest $request, Server $server): BinaryFileResponse|JsonResponse
     {
-        $explorer = new ServerFileExplorer($server);
+        $explorer = new SiteFileExplorer($server);
 
         try {
             $result = $explorer->download($request->input('path'));

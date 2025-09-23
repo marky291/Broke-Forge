@@ -77,6 +77,7 @@ class PackageManagerTest extends TestCase
             'milestone' => 'TEST_MILESTONE',
             'current_step' => 1,
             'total_steps' => 5,
+            'status' => 'pending',
         ]);
     }
 
@@ -98,6 +99,38 @@ class PackageManagerTest extends TestCase
         $this->assertDatabaseHas('server_package_events', [
             'milestone' => 'MILESTONE_2',
             'current_step' => 2,
+        ]);
+    }
+
+    public function test_track_marks_previous_milestone_as_success(): void
+    {
+        $track1 = $this->manager->getTrack('MILESTONE_1');
+        $track2 = $this->manager->getTrack('MILESTONE_2');
+
+        Log::shouldReceive('info')->twice();
+
+        // Execute first milestone
+        $track1();
+
+        // First milestone should be pending
+        $this->assertDatabaseHas('server_package_events', [
+            'milestone' => 'MILESTONE_1',
+            'status' => 'pending',
+        ]);
+
+        // Execute second milestone
+        $track2();
+
+        // First milestone should now be success
+        $this->assertDatabaseHas('server_package_events', [
+            'milestone' => 'MILESTONE_1',
+            'status' => 'success',
+        ]);
+
+        // Second milestone should be pending
+        $this->assertDatabaseHas('server_package_events', [
+            'milestone' => 'MILESTONE_2',
+            'status' => 'pending',
         ]);
     }
 
@@ -132,6 +165,10 @@ class PackageManagerTest extends TestCase
             ->method('disableStrictHostKeyChecking')
             ->willReturn($ssh);
         $ssh->expects($this->once())
+            ->method('setTimeout')
+            ->with(300)
+            ->willReturn($ssh);
+        $ssh->expects($this->once())
             ->method('execute')
             ->with('test command')
             ->willReturn($process);
@@ -148,10 +185,17 @@ class PackageManagerTest extends TestCase
         $process->expects($this->once())
             ->method('isSuccessful')
             ->willReturn(false);
+        $process->expects($this->once())
+            ->method('getErrorOutput')
+            ->willReturn('Error output');
 
         $ssh = $this->createMock(Ssh::class);
         $ssh->expects($this->once())
             ->method('disableStrictHostKeyChecking')
+            ->willReturn($ssh);
+        $ssh->expects($this->once())
+            ->method('setTimeout')
+            ->with(300)
             ->willReturn($ssh);
         $ssh->expects($this->once())
             ->method('execute')
@@ -160,12 +204,19 @@ class PackageManagerTest extends TestCase
 
         $this->manager->setSshMock($ssh);
 
+        // Expect both debug and error logs
+        Log::shouldReceive('debug')
+            ->once()
+            ->withArgs(function ($message) {
+                return str_contains($message, 'SSH command:');
+            });
+
         Log::shouldReceive('error')
             ->once()
-            ->with(
-                'Failed to execute command failing command with test-user',
-                \Mockery::any()
-            );
+            ->withArgs(function ($message, $context) {
+                return str_contains($message, 'Failed to execute command: failing command') &&
+                       str_contains($message, 'Error Output: Error output');
+            });
 
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('Command failed: failing command');
@@ -183,6 +234,7 @@ class PackageManagerTest extends TestCase
 
         $ssh = $this->createMock(Ssh::class);
         $ssh->method('disableStrictHostKeyChecking')->willReturn($ssh);
+        $ssh->method('setTimeout')->willReturn($ssh);
         $ssh->method('execute')->willReturn($process);
 
         $this->manager->setSshMock($ssh);
@@ -204,6 +256,7 @@ class PackageManagerTest extends TestCase
 
         $ssh = $this->createMock(Ssh::class);
         $ssh->method('disableStrictHostKeyChecking')->willReturn($ssh);
+        $ssh->method('setTimeout')->willReturn($ssh);
         $ssh->method('execute')->willReturn($process);
 
         $this->manager->setSshMock($ssh);

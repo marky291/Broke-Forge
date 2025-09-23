@@ -2,7 +2,7 @@
 
 namespace Tests\Unit\Packages\Services\Sites;
 
-use App\Packages\Services\Sites\GitRepositoryInstallerMilestones;
+use App\Packages\Services\Sites\Git\GitRepositoryInstallerMilestones;
 use PHPUnit\Framework\TestCase;
 
 class GitRepositoryInstallerMilestonesTest extends TestCase

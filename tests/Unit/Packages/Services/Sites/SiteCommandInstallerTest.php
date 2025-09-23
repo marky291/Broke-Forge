@@ -5,9 +5,9 @@ namespace Tests\Unit\Packages\Services\Sites;
 use App\Models\Server;
 use App\Models\ServerSite;
 use App\Packages\Credentials\UserCredential;
-use App\Packages\Enums\ServiceType;
-use App\Packages\Services\Sites\SiteCommandInstaller;
-use App\Packages\Services\Sites\SiteCommandInstallerMilestones;
+use App\Packages\Enums\PackageName;
+use App\Packages\Services\Sites\Command\SiteCommandInstaller;
+use App\Packages\Services\Sites\Command\SiteCommandInstallerMilestones;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use RuntimeException;
 use Tests\TestCase;
@@ -47,7 +47,7 @@ class SiteCommandInstallerTest extends TestCase
         $method = $reflection->getMethod('serviceType');
         $method->setAccessible(true);
 
-        $this->assertEquals(ServiceType::SITE, $method->invoke($this->executor));
+        $this->assertEquals(PackageName::SITE, $method->invoke($this->executor));
     }
 
     public function test_milestone_class_is_instantiated(): void

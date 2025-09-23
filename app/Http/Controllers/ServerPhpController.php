@@ -37,7 +37,7 @@ class ServerPhpController extends Controller
         ];
 
         // Get installed PHP service
-        $installedPhp = $server->services()
+        $installedPhp = $server->packages()
             ->where('service_name', 'php')
             ->first();
 
@@ -61,7 +61,7 @@ class ServerPhpController extends Controller
         ]);
 
         // Check if PHP service already exists
-        $existingService = $server->services()
+        $existingService = $server->packages()
             ->where('service_name', 'php')
             ->first();
 

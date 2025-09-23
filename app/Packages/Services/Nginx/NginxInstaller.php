@@ -3,11 +3,13 @@
 namespace App\Packages\Services\Nginx;
 
 use App\Packages\Base\Milestones;
+use App\Packages\Base\Package;
 use App\Packages\Base\PackageInstaller;
 use App\Packages\Credentials\RootCredential;
 use App\Packages\Credentials\SshCredential;
 use App\Packages\Credentials\UserCredential;
-use App\Packages\Enums\ServiceType;
+use App\Packages\Enums\PackageName;
+use App\Packages\Enums\PackageType;
 
 /**
  * Web Server Installation Class
@@ -16,17 +18,22 @@ use App\Packages\Enums\ServiceType;
  */
 class NginxInstaller extends PackageInstaller
 {
-    protected function serviceType(): string
+    public function packageName(): PackageName
     {
-        return ServiceType::WEBSERVER;
+        return PackageName::Nginx;
     }
 
-    protected function milestones(): Milestones
+    public function packageType(): PackageType
+    {
+        return PackageType::ReverseProxy;
+    }
+
+    public function milestones(): Milestones
     {
         return new NginxInstallerMilestones;
     }
 
-    protected function sshCredential(): SshCredential
+    public function sshCredential(): SshCredential
     {
         return new RootCredential;
     }
@@ -36,7 +43,7 @@ class NginxInstaller extends PackageInstaller
      */
     public function execute(): void
     {
-        $phpService = $this->server->services()->where('service_name', 'php')->latest('id')->first();
+        $phpService = $this->server->packages()->where('service_name', 'php')->latest('id')->first();
         $phpVersion = $phpService->configuration['version'];
 
         // Compose common PHP packages for the chosen version.
@@ -103,11 +110,10 @@ class NginxInstaller extends PackageInstaller
             // Create default site structure in app user's home directory
             "mkdir -p /home/{$appUser}/default/public",
 
-            // Create default index.php file with informative content (inline config generation)
+            // Create default index.php file from the blade template
             function () use ($appUser) {
                 $content = view('provision.default-site')->render();
-
-                return "cat > /home/{$appUser}/default/public/index.php << 'EOF'\n{$content}\nEOF";
+                return "echo '{$content}' > /home/{$appUser}/default/public/index.php";
             },
 
             $this->track(NginxInstallerMilestones::SET_PERMISSIONS),
@@ -116,7 +122,6 @@ class NginxInstaller extends PackageInstaller
             "chmod 755 /home/{$appUser}/",
             "chmod 755 /home/{$appUser}/default",
             "chmod 755 /home/{$appUser}/default/public",
-            "chmod 644 /home/{$appUser}/default/public/index.php",
 
             // Add app user to www-data group for PHP-FPM compatibility
             "usermod -a -G www-data {$appUser}",
@@ -133,19 +138,21 @@ class NginxInstaller extends PackageInstaller
             },
 
             // Persist the default Nginx site now that provisioning succeeded
-            fn () => $this->server->sites()->updateOrCreate(
-                ['domain' => 'default'],
-                [
-                    'document_root' => "/home/{$appUser}/default",
-                    'nginx_config_path' => '/etc/nginx/sites-available/default',
-                    'php_version' => $phpVersion,
-                    'ssl_enabled' => false,
-                    'configuration' => ['is_default_site' => true],
-                    'status' => 'active',
-                    'provisioned_at' => now(),
-                    'deprovisioned_at' => null,
-                ]
-            ),
+            function () use ($appUser, $phpVersion) {
+                $this->server->sites()->updateOrCreate(
+                    ['domain' => 'default'],
+                    [
+                        'document_root' => "/home/{$appUser}/default",
+                        'nginx_config_path' => '/etc/nginx/sites-available/default',
+                        'php_version' => $phpVersion,
+                        'ssl_enabled' => false,
+                        'configuration' => ['is_default_site' => true],
+                        'status' => 'active',
+                        'provisioned_at' => now(),
+                        'deprovisioned_at' => null,
+                    ]
+                );
+            },
 
             // Enable the default site
             'ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default',

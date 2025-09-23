@@ -7,7 +7,8 @@ use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageRemover;
 use App\Packages\Credentials\SshCredential;
 use App\Packages\Credentials\UserCredential;
-use App\Packages\Enums\ServiceType;
+use App\Packages\Enums\PackageName;
+use App\Packages\Enums\PackageType;
 
 /**
  * Site Removal Class
@@ -72,16 +73,26 @@ class SiteRemover extends PackageRemover
 
     protected function serviceType(): string
     {
-        return ServiceType::SITE;
+        return PackageName::SITE;
     }
 
-    protected function milestones(): Milestones
+    public function milestones(): Milestones
     {
         return new SiteRemoverMilestones;
     }
 
-    protected function sshCredential(): SshCredential
+    public function sshCredential(): SshCredential
     {
         return new UserCredential;
+    }
+
+    public function packageName(): PackageName
+    {
+        return PackageName::Site;
+    }
+
+    public function packageType(): PackageType
+    {
+        return PackageType::Site;
     }
 }

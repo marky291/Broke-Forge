@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Support;
+namespace App\Packages\Credentials;
 
 use App\Models\Server;
 use Illuminate\Support\Facades\Cache;
 
-class ServerCredentials
+class TemporaryCredentialCache
 {
     public static function rootPassword(Server $server): string
     {

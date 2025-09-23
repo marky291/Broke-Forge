@@ -7,7 +7,7 @@ use App\Models\Server;
 use App\Models\ServerSite;
 use App\Packages\Credentials\WorkerCredential;
 use App\Packages\Enums\GitStatus;
-use App\Packages\Services\Sites\GitRepositoryInstallerJob;
+use App\Packages\Services\Sites\Git\GitRepositoryInstallerJob;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;

@@ -8,11 +8,12 @@ use App\Packages\Credentials\SshCredential;
 use Closure;
 use Illuminate\Support\Facades\Log;
 use Spatie\Ssh\Ssh;
+use Stringable;
 
 /**
  * Base class for managing server services (installation and removal)
  */
-abstract class PackageManager
+abstract class PackageManager implements Package
 {
     protected Server $server;
 
@@ -22,26 +23,14 @@ abstract class PackageManager
     protected int $milestoneStep = 1;
 
     /**
-     * Get the service type identifier (e.g., 'mysql', 'nginx', 'php')
-     *
-     * This is used by the milestone tracking system to determine the source
-     * for ServerPackageEvent records (e.g., 'service:mysql', 'service:nginx')
+     * Track the current event being processed
      */
-    abstract protected function serviceType(): string;
+    protected ?ServerPackageEvent $currentEvent = null;
 
     /**
-     * Milestones that are used in the provision
-     *
-     * Returns the FQCN of an enum or constants class
+     * Track all events created during this execution
      */
-    abstract protected function milestones(): Milestones;
-
-    /**
-     * The user to execute the command list on remote host
-     *
-     * Uses an ENUM CLASS
-     */
-    abstract protected function sshCredential(): SshCredential;
+    protected array $allEvents = [];
 
     /**
      * Get the actionable name based on inherited class
@@ -83,8 +72,13 @@ abstract class PackageManager
                 'service' => $service,
             ]);
 
+            // Mark previous event as success if exists
+            if ($this->currentEvent) {
+                $this->currentEvent->update(['status' => 'success']);
+            }
+
             // Persist the provision event to database for frontend tracking
-            ServerPackageEvent::create([
+            $this->currentEvent = ServerPackageEvent::create([
                 'server_id' => $this->server->id,
                 'service_type' => $service,
                 'provision_type' => $this->actionableName() == 'Installing' ? 'install' : 'uninstall',
@@ -96,7 +90,12 @@ abstract class PackageManager
                     'server_name' => $this->server->vanity_name,
                     'timestamp' => now()->toISOString(),
                 ],
+                'status' => 'pending', // Start as pending
+                'error_log' => null,
             ]);
+
+            // Track this event
+            $this->allEvents[] = $this->currentEvent;
         };
     }
 
@@ -107,25 +106,100 @@ abstract class PackageManager
 
     protected function sendCommandsToRemote(array $commandList): void
     {
-        $sshPort = $this->server->ssh_port ?: 22;
+        try {
+            foreach ($commandList as $index => $command) {
 
-        foreach ($commandList as $command) {
-            // Execute closures (milestones)
-            if ($command instanceof Closure) {
-                $command();
+                // Execute closures, only use SSH if its string return.
+                // allowing other logic to bypass ssh command execution.
+                if ($command instanceof Closure) {
+                    try {
+                        $output = $command();
+                    } catch (\Throwable $e) {
+                        Log::warning('Closure command threw an exception', [
+                            'index' => $index ?? null,
+                            'exception' => $e->getMessage(),
+                        ]);
+                        continue;
+                    }
 
-                continue;
+                    // Accept Stringable outputs too
+                    if ($output instanceof Stringable) {
+                        $output = (string) $output;
+                    } elseif (!is_string($output)) {
+                        Log::debug('Skipping non-string command output', [
+                            'index' => $index ?? null,
+                            'type'  => get_debug_type($output),
+                        ]);
+                        continue;
+                    }
+
+                    Log::debug('Found closure-based string command', [
+                        'index'  => $index ?? null,
+                        'output' => $output
+                    ]);
+                }
+
+                // Execute SSH commands with timeout to prevent hanging
+                $process = $this->ssh($this->sshCredential()->user(), $this->server->public_ip, $this->server->ssh_port)
+                    ->disableStrictHostKeyChecking()
+                    ->setTimeout(300)
+                    ->execute($command instanceof Closure ? $command() : $command);
+
+                Log::debug("SSH command: {$process->getCommandLine()}");
+
+                if (! $process->isSuccessful()) {
+                    $error = "Failed to execute command: $command\nError Output: " . $process->getErrorOutput();
+
+                    // Mark current event as failed if exists
+                    if ($this->currentEvent) {
+                        $this->currentEvent->update([
+                            'status' => 'failed',
+                            'error_log' => $error,
+                        ]);
+                    }
+
+                    Log::error($error, ['credential' => $this->sshCredential(), 'server' => $this->server]);
+                    throw new \RuntimeException("Command failed: $command");
+                }
+
             }
 
-            // Execute SSH commands
-            $process = $this->ssh($this->sshCredential()->user(), $this->server->public_ip, $sshPort)
-                ->disableStrictHostKeyChecking()
-                ->execute($command);
-
-            if (! $process->isSuccessful()) {
-                Log::error("Failed to execute command $command with {$this->sshCredential()->user()}", ['credential' => $this->sshCredential(), 'server' => $this->server]);
-                throw new \RuntimeException("Command failed: $command");
+            // Mark the last event as success after completing all commands successfully
+            if ($this->currentEvent) {
+                $this->currentEvent->update(['status' => 'success']);
             }
+        } catch (\Exception $e) {
+            // Handle any exception including timeout errors
+            $errorMessage = $e->getMessage();
+
+            // Check for timeout error
+            if (str_contains($errorMessage, 'Maximum execution time') || str_contains($errorMessage, 'timeout')) {
+                $errorMessage = "Process timeout: " . $errorMessage;
+            }
+
+            // Mark current event as failed
+            if ($this->currentEvent) {
+                $this->currentEvent->update([
+                    'status' => 'failed',
+                    'error_log' => $errorMessage . "\n\nStack trace:\n" . $e->getTraceAsString(),
+                ]);
+            }
+
+            // Mark any previous events that are still pending as completed up to the failure point
+            // This ensures we have accurate tracking of which milestones succeeded
+            foreach ($this->allEvents as $event) {
+                if ($event->id !== $this->currentEvent->id && $event->status === 'pending') {
+                    $event->update(['status' => 'success']);
+                }
+            }
+
+            Log::error("Package manager error: " . $errorMessage, [
+                'server' => $this->server->id,
+                'service' => $this->serviceType(),
+                'exception' => $e,
+            ]);
+
+            throw $e;
         }
     }
 }

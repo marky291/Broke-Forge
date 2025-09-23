@@ -4,10 +4,12 @@ namespace App\Packages\Services\Sites;
 
 use App\Models\ServerSite;
 use App\Packages\Base\Milestones;
+use App\Packages\Base\Package;
 use App\Packages\Base\PackageInstaller;
 use App\Packages\Credentials\SshCredential;
 use App\Packages\Credentials\UserCredential;
-use App\Packages\Enums\ServiceType;
+use App\Packages\Enums\PackageName;
+use App\Packages\Enums\PackageType;
 
 /**
  * Site Installation Class
@@ -15,13 +17,8 @@ use App\Packages\Enums\ServiceType;
  * Provisions a site using SSH terminal commands to a remote
  * server that has NGINX installed
  */
-class SiteInstaller extends PackageInstaller
+class SiteInstaller extends PackageInstaller implements Package
 {
-    protected function serviceType(): string
-    {
-        return ServiceType::SITE;
-    }
-
     /**
      * Execute the site installation
      */
@@ -40,7 +37,7 @@ class SiteInstaller extends PackageInstaller
         $documentRoot = $config['document_root'] ?? "/home/{$appUser}/{$config['domain']}/public";
 
         // Detect PHP version from server services (inline logic)
-        $phpService = $this->server->services()
+        $phpService = $this->server->packages()
             ->where('service_name', 'php')
             ->latest('id')
             ->first();
@@ -124,13 +121,23 @@ class SiteInstaller extends PackageInstaller
         ];
     }
 
-    protected function milestones(): Milestones
+    public function packageName(): PackageName
     {
-        return new SiteInstallerMilestones;
+        return PackageName::Site;
     }
 
-    protected function sshCredential(): SshCredential
+    public function packageType(): PackageType
     {
-        return new UserCredential;
+        return PackageType::Site;
+    }
+
+    public function milestones(): Milestones
+    {
+        // TODO: Implement milestones() method.
+    }
+
+    public function sshCredential(): SshCredential
+    {
+        // TODO: Implement sshCredential() method.
     }
 }

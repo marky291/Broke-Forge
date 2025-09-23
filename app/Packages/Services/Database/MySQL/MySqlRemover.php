@@ -6,7 +6,8 @@ use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageRemover;
 use App\Packages\Credentials\RootCredential;
 use App\Packages\Credentials\SshCredential;
-use App\Packages\Enums\ServiceType;
+use App\Packages\Enums\PackageName;
+use App\Packages\Enums\PackageType;
 
 /**
  * MySQL Database Server Removal Class
@@ -15,17 +16,7 @@ use App\Packages\Enums\ServiceType;
  */
 class MySqlRemover extends PackageRemover
 {
-    protected function serviceType(): string
-    {
-        return ServiceType::DATABASE;
-    }
-
-    protected function milestones(): Milestones
-    {
-        return new MySqlRemoverMilestones;
-    }
-
-    protected function sshCredential(): SshCredential
+    public function sshCredential(): SshCredential
     {
         return new RootCredential;
     }
@@ -75,5 +66,20 @@ class MySqlRemover extends PackageRemover
             'apt-get clean',
             $this->track(MySqlRemoverMilestones::UNINSTALLATION_COMPLETE),
         ];
+    }
+
+    public function packageName(): PackageName
+    {
+        return PackageName::MySql80;
+    }
+
+    public function packageType(): PackageType
+    {
+        return PackageType::Database;
+    }
+
+    public function milestones(): Milestones
+    {
+        return new MySqlRemoverMilestones;
     }
 }

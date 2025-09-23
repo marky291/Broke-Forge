@@ -5,7 +5,7 @@ namespace Tests\Unit\Packages\Services\Sites;
 use App\Models\Server;
 use App\Models\ServerSite;
 use App\Packages\Credentials\UserCredential;
-use App\Packages\Enums\ServiceType;
+euse App\Packages\Enums\PackageName;
 use App\Packages\Services\Sites\SiteInstaller;
 use App\Packages\Services\Sites\SiteInstallerMilestones;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -34,7 +34,7 @@ class SiteInstallerTest extends TestCase
         $method = $reflection->getMethod('serviceType');
         $method->setAccessible(true);
 
-        $this->assertEquals(ServiceType::SITE, $method->invoke($this->installer));
+        $this->assertEquals(PackageName::SITE, $method->invoke($this->installer));
     }
 
     public function test_ssh_credential_returns_user_credential(): void
@@ -130,7 +130,7 @@ class SiteInstallerTest extends TestCase
     public function test_execute_detects_php_version_from_server(): void
     {
         // Create a PHP service for the server
-        $this->server->services()->create([
+        $this->server->packages()->create([
             'service_name' => 'php',
             'configuration' => ['version' => '8.2'],
             'status' => 'active',

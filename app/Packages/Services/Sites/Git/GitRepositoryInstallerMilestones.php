@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Packages\Services\Sites;
+namespace App\Packages\Services\Sites\Git;
 
 use App\Packages\Base\Milestones;
 

@@ -119,15 +119,17 @@ export default function Dashboard({ activities, servers }: { activities: Activit
                                                 />
                                                 <InputError className="mt-1" message={errors.vanity_name} />
                                             </div>
-                                            <div className="grid gap-2">
-                                                <Label htmlFor="public_ip">IP Address</Label>
-                                                <Input id="public_ip" name="public_ip" placeholder="203.0.113.10" required />
-                                                <InputError className="mt-1" message={errors.public_ip} />
-                                            </div>
-                                            <div className="grid gap-2">
-                                                <Label htmlFor="private_ip">Private IP (optional)</Label>
-                                                <Input id="private_ip" name="private_ip" placeholder="10.0.0.5" />
-                                                <InputError className="mt-1" message={errors.private_ip} />
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="grid gap-2">
+                                                    <Label htmlFor="public_ip">IP Address</Label>
+                                                    <Input id="public_ip" name="public_ip" placeholder="203.0.113.10" required />
+                                                    <InputError className="mt-1" message={errors.public_ip} />
+                                                </div>
+                                                <div className="grid gap-2">
+                                                    <Label htmlFor="ssh_port">SSH Port</Label>
+                                                    <Input id="ssh_port" name="ssh_port" type="number" defaultValue="22" placeholder="22" required />
+                                                    <InputError className="mt-1" message={errors.ssh_port} />
+                                                </div>
                                             </div>
                                             <div className="grid gap-2">
                                                 <Label htmlFor="php_version">PHP Version</Label>

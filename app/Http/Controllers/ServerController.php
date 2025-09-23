@@ -6,8 +6,8 @@ use App\Http\Requests\Servers\StoreServerRequest;
 use App\Http\Requests\Servers\UpdateServerRequest;
 use App\Models\Server;
 use App\Models\ServerPackage;
-use App\Packages\Enums\ServiceType;
-use App\Support\ServerCredentials;
+use App\Packages\Credentials\TemporaryCredentialCache;
+use App\Packages\Enums\PackageName;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -35,7 +35,6 @@ class ServerController extends Controller
         unset($data['php_version']);
 
         $data['user_id'] = $request->user()->getKey();
-        $data['ssh_port'] = 22;
         $data['ssh_root_user'] = 'root';
         $data['ssh_app_user'] = Str::slug(config('app.name'));
 
@@ -47,7 +46,7 @@ class ServerController extends Controller
                 'service_name' => 'php',
             ],
             [
-                'service_type' => ServiceType::SERVER,
+                'service_type' => PackageName::SERVER,
                 'configuration' => [
                     'version' => $phpVersion,
                 ],
@@ -55,7 +54,7 @@ class ServerController extends Controller
             ]
         );
 
-        $rootPassword = ServerCredentials::rootPassword($server);
+        $rootPassword = TemporaryCredentialCache::rootPassword($server);
         $provisionCommand = $this->buildProvisionCommand($server);
 
         return redirect()

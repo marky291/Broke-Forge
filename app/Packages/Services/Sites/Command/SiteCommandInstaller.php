@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Packages\Services\Sites;
+namespace App\Packages\Services\Sites\Command;
 
 use App\Models\Server;
 use App\Models\ServerSite;
@@ -8,7 +8,8 @@ use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageInstaller;
 use App\Packages\Credentials\SshCredential;
 use App\Packages\Credentials\UserCredential;
-use App\Packages\Enums\ServiceType;
+use App\Packages\Enums\PackageName;
+use App\Packages\Enums\PackageType;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
 use Symfony\Component\Process\Exception\ProcessTimedOutException;
@@ -30,30 +31,6 @@ class SiteCommandInstaller extends PackageInstaller
     {
         parent::__construct($server);
         $this->site = $site;
-    }
-
-    /**
-     * Service type identifier for milestone tracking
-     */
-    protected function serviceType(): string
-    {
-        return ServiceType::SITE;
-    }
-
-    /**
-     * Milestone implementation for progress tracking
-     */
-    protected function milestones(): Milestones
-    {
-        return new SiteCommandInstallerMilestones;
-    }
-
-    /**
-     * SSH credential type for remote execution
-     */
-    protected function sshCredential(): SshCredential
-    {
-        return new UserCredential;
     }
 
     /**
@@ -153,5 +130,25 @@ class SiteCommandInstaller extends PackageInstaller
 
             $this->track(SiteCommandInstallerMilestones::COMMAND_COMPLETE),
         ];
+    }
+
+    public function packageName(): PackageName
+    {
+        return PackageName::Command;
+    }
+
+    public function packageType(): PackageType
+    {
+        return PackageType::Command;
+    }
+
+    public function milestones(): Milestones
+    {
+        return new SiteCommandInstallerMilestones;
+    }
+
+    public function sshCredential(): SshCredential
+    {
+        return new UserCredential;
     }
 }

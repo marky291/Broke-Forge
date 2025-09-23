@@ -18,6 +18,8 @@ class ServerPackageEventFactory extends Factory
         $totalSteps = $this->faker->numberBetween(3, 10);
         $currentStep = $this->faker->numberBetween(1, $totalSteps);
 
+        $status = $this->faker->randomElement(['pending', 'success', 'failed']);
+
         return [
             'server_id' => Server::factory(),
             'service_type' => $this->faker->randomElement(['mysql', 'postgresql', 'nginx', 'apache', 'redis']),
@@ -30,6 +32,8 @@ class ServerPackageEventFactory extends Factory
                 'command' => $this->faker->optional()->word(),
                 'output' => $this->faker->optional()->text(50),
             ],
+            'status' => $status,
+            'error_log' => $status === 'failed' ? $this->faker->text(200) : null,
         ];
     }
 
@@ -86,6 +90,39 @@ class ServerPackageEventFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'current_step' => $currentStep,
             'total_steps' => $totalSteps,
+        ]);
+    }
+
+    /**
+     * Indicate that the event is pending.
+     */
+    public function pending(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => 'pending',
+            'error_log' => null,
+        ]);
+    }
+
+    /**
+     * Indicate that the event was successful.
+     */
+    public function success(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => 'success',
+            'error_log' => null,
+        ]);
+    }
+
+    /**
+     * Indicate that the event failed with an error.
+     */
+    public function failed(string $errorLog = null): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => 'failed',
+            'error_log' => $errorLog ?? $this->faker->text(200),
         ]);
     }
 }

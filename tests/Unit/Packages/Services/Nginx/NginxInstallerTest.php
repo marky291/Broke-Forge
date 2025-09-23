@@ -7,7 +7,7 @@ use App\Packages\Base\Milestones;
 use App\Packages\Contracts\Installer;
 use App\Packages\Credentials\RootCredential;
 use App\Packages\Credentials\SshCredential;
-use App\Packages\Enums\ServiceType;
+use App\Packages\Enums\PackageName;
 use App\Packages\Services\Nginx\NginxInstaller;
 use App\Packages\Services\Nginx\NginxInstallerMilestones;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -47,7 +47,7 @@ class NginxInstallerTest extends TestCase
         $method = $reflection->getMethod('serviceType');
         $method->setAccessible(true);
 
-        $this->assertEquals(ServiceType::WEBSERVER, $method->invoke($this->installer));
+        $this->assertEquals(PackageName::WEBSERVER, $method->invoke($this->installer));
     }
 
     public function test_milestones_returns_correct_instance(): void

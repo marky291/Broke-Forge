@@ -3,10 +3,10 @@
 namespace App\Packages\Services\Nginx;
 
 use App\Models\Server;
-use App\Models\ServerService;
+use App\Models\ServerPackage;
 use App\Packages\Enums\ProvisionStatus;
-use App\Packages\Enums\ServerType;
-use App\Packages\Enums\ServiceType;
+use App\Packages\Enums\PackageType;
+use App\Packages\Enums\PackageName;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
@@ -40,13 +40,13 @@ class NginxInstallerJob implements ShouldQueue
             $phpVersion = $this->getPhpVersion();
 
             // Create or update the web service record in database
-            $service = ServerService::updateOrCreate(
+            $service = ServerPackage::updateOrCreate(
                 [
                     'server_id' => $this->server->id,
                     'service_name' => 'web',
                 ],
                 [
-                    'service_type' => ServiceType::WEBSERVER,
+                    'service_type' => PackageName::WEBSERVER,
                     'configuration' => [
                         'nginx_version' => 'latest',
                         'php_version' => $phpVersion,
@@ -63,10 +63,10 @@ class NginxInstallerJob implements ShouldQueue
             $service->save();
 
             // set service as active for PHP, since it was installed with nginx
-            $this->server->services()->where('service_name', 'php')->update(['status' => 'active']);
+            $this->server->packages()->where('service_name', 'php')->update(['status' => 'active']);
 
             // Update server type and provision status after successful installation
-            $this->server->server_type = ServerType::WebServer;
+            $this->server->server_type = PackageType::WebServer;
             $this->server->provision_status = ProvisionStatus::Completed;
             $this->server->save();
 
@@ -97,10 +97,10 @@ class NginxInstallerJob implements ShouldQueue
      */
     protected function getPhpVersion(): string
     {
-        $phpService = $this->server->services()->where('service_name', 'php')->latest('id')->first();
+        $phpPackage = $this->server->packages()->where('service_name', 'php')->latest('id')->first();
 
-        if ($phpService && is_array($phpService->configuration) && isset($phpService->configuration['version'])) {
-            return (string) $phpService->configuration['version'];
+        if ($phpPackage && is_array($phpPackage->configuration) && isset($phpPackage->configuration['version'])) {
+            return (string) $phpPackage->configuration['version'];
         }
 
         return '8.3';

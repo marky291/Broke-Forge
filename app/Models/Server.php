@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
+use App\Packages\Credentials\TemporaryCredentialCache;
 use App\Packages\Enums\ProvisionStatus;
-use App\Packages\Enums\ServerType;
-use App\Support\ServerCredentials;
+use App\Packages\Enums\PackageType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -23,7 +23,7 @@ use Illuminate\Support\Facades\Auth;
  * @property string $connection
  * @property string $vanity_name
  * @property ProvisionStatus $provision_status
- * @property ServerType $server_type
+ * @property PackageType $server_type
  */
 class Server extends Model
 {
@@ -48,7 +48,7 @@ class Server extends Model
 
     protected $casts = [
         'ssh_port' => 'integer',
-        'server_type' => ServerType::class,
+        'server_type' => PackageType::class,
         'provision_status' => ProvisionStatus::class,
     ];
 
@@ -63,7 +63,7 @@ class Server extends Model
         );
     }
 
-    public function services(): HasMany
+    public function packages(): HasMany
     {
         return $this->hasMany(ServerPackage::class);
     }
@@ -131,7 +131,7 @@ class Server extends Model
         });
 
         static::deleted(function (self $server): void {
-            ServerCredentials::forgetRootPassword($server);
+            TemporaryCredentialCache::forgetRootPassword($server);
         });
     }
 }

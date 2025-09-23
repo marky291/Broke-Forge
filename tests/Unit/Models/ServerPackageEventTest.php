@@ -40,6 +40,8 @@ class ServerPackageEventTest extends TestCase
             'current_step' => 2,
             'total_steps' => 5,
             'details' => ['message' => 'Installing packages'],
+            'status' => 'pending',
+            'error_log' => null,
         ];
 
         $event = ServerPackageEvent::create($data);
@@ -51,6 +53,8 @@ class ServerPackageEventTest extends TestCase
         $this->assertEquals(2, $event->current_step);
         $this->assertEquals(5, $event->total_steps);
         $this->assertEquals(['message' => 'Installing packages'], $event->details);
+        $this->assertEquals('pending', $event->status);
+        $this->assertNull($event->error_log);
     }
 
     /**
@@ -288,5 +292,95 @@ class ServerPackageEventTest extends TestCase
         ]);
 
         $this->assertEquals($milestone, $event->milestone);
+    }
+
+    /**
+     * Test status helper methods.
+     */
+    public function test_status_helper_methods(): void
+    {
+        $pendingEvent = ServerPackageEvent::factory()->pending()->create();
+        $successEvent = ServerPackageEvent::factory()->success()->create();
+        $failedEvent = ServerPackageEvent::factory()->failed()->create();
+
+        // Test isPending()
+        $this->assertTrue($pendingEvent->isPending());
+        $this->assertFalse($successEvent->isPending());
+        $this->assertFalse($failedEvent->isPending());
+
+        // Test isSuccess()
+        $this->assertFalse($pendingEvent->isSuccess());
+        $this->assertTrue($successEvent->isSuccess());
+        $this->assertFalse($failedEvent->isSuccess());
+
+        // Test isFailed()
+        $this->assertFalse($pendingEvent->isFailed());
+        $this->assertFalse($successEvent->isFailed());
+        $this->assertTrue($failedEvent->isFailed());
+    }
+
+    /**
+     * Test status defaults to pending.
+     */
+    public function test_status_defaults_to_pending(): void
+    {
+        $server = Server::factory()->create();
+        $event = ServerPackageEvent::create([
+            'server_id' => $server->id,
+            'service_type' => 'mysql',
+            'provision_type' => 'install',
+            'milestone' => 'Starting installation',
+            'current_step' => 1,
+            'total_steps' => 5,
+        ]);
+
+        // Refresh to get database default value
+        $event->refresh();
+
+        $this->assertEquals('pending', $event->status);
+        $this->assertTrue($event->isPending());
+    }
+
+    /**
+     * Test failed status with error log.
+     */
+    public function test_failed_status_with_error_log(): void
+    {
+        $errorMessage = 'Maximum execution time of 30 seconds exceeded';
+        $event = ServerPackageEvent::factory()->failed($errorMessage)->create();
+
+        $this->assertEquals('failed', $event->status);
+        $this->assertEquals($errorMessage, $event->error_log);
+        $this->assertTrue($event->isFailed());
+    }
+
+    /**
+     * Test success status has null error log.
+     */
+    public function test_success_status_has_null_error_log(): void
+    {
+        $event = ServerPackageEvent::factory()->success()->create();
+
+        $this->assertEquals('success', $event->status);
+        $this->assertNull($event->error_log);
+        $this->assertTrue($event->isSuccess());
+    }
+
+    /**
+     * Test factory states for status.
+     */
+    public function test_factory_status_states(): void
+    {
+        $pendingEvent = ServerPackageEvent::factory()->pending()->create();
+        $this->assertEquals('pending', $pendingEvent->status);
+        $this->assertNull($pendingEvent->error_log);
+
+        $successEvent = ServerPackageEvent::factory()->success()->create();
+        $this->assertEquals('success', $successEvent->status);
+        $this->assertNull($successEvent->error_log);
+
+        $failedEvent = ServerPackageEvent::factory()->failed('Custom error message')->create();
+        $this->assertEquals('failed', $failedEvent->status);
+        $this->assertEquals('Custom error message', $failedEvent->error_log);
     }
 }

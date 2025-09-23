@@ -1,13 +1,14 @@
 <?php
 
-namespace App\Packages\Services\Sites;
+namespace App\Packages\Services\Sites\Git;
 
 use App\Models\ServerSite;
 use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageInstaller;
 use App\Packages\Credentials\SshCredential;
 use App\Packages\Credentials\UserCredential;
-use App\Packages\Enums\ServiceType;
+use App\Packages\Enums\PackageName;
+use App\Packages\Enums\PackageType;
 use Illuminate\Support\Arr;
 use InvalidArgumentException;
 use LogicException;
@@ -84,17 +85,7 @@ class GitRepositoryInstaller extends PackageInstaller
         $this->install($this->commands($resolvedDocumentRoot, $repositorySshUrl, $branch, $site, $repositoryConfiguration));
     }
 
-    protected function serviceType(): string
-    {
-        return ServiceType::SITE;
-    }
-
-    protected function milestones(): Milestones
-    {
-        return new GitRepositoryInstallerMilestones;
-    }
-
-    protected function sshCredential(): SshCredential
+    public function sshCredential(): SshCredential
     {
         return new UserCredential;
     }
@@ -159,5 +150,20 @@ class GitRepositoryInstaller extends PackageInstaller
                 $site->update(['configuration' => $configuration]);
             },
         ];
+    }
+
+    public function packageName(): PackageName
+    {
+        return PackageName::Git;
+    }
+
+    public function packageType(): PackageType
+    {
+        // TODO: Implement packageType() method.
+    }
+
+    public function milestones(): Milestones
+    {
+        // TODO: Implement milestones() method.
     }
 }

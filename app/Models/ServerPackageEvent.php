@@ -12,6 +12,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $current_step
  * @property int $total_steps
  * @property string $progressPercentage
+ * @property string $status
+ * @property string|null $error_log
  */
 class ServerPackageEvent extends Model
 {
@@ -30,6 +32,8 @@ class ServerPackageEvent extends Model
         'current_step',
         'total_steps',
         'details',
+        'status',
+        'error_log',
     ];
 
     /**
@@ -80,5 +84,29 @@ class ServerPackageEvent extends Model
     public function isUninstall(): bool
     {
         return $this->provision_type === 'uninstall';
+    }
+
+    /**
+     * Check if the event is pending.
+     */
+    public function isPending(): bool
+    {
+        return $this->status === 'pending';
+    }
+
+    /**
+     * Check if the event was successful.
+     */
+    public function isSuccess(): bool
+    {
+        return $this->status === 'success';
+    }
+
+    /**
+     * Check if the event failed.
+     */
+    public function isFailed(): bool
+    {
+        return $this->status === 'failed';
     }
 }

@@ -6,7 +6,8 @@ use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageInstaller;
 use App\Packages\Credentials\RootCredential;
 use App\Packages\Credentials\SshCredential;
-use App\Packages\Enums\ServiceType;
+use App\Packages\Enums\PackageName;
+use App\Packages\Enums\PackageType;
 
 /**
  * MySQL Database Server Installation Class
@@ -16,17 +17,12 @@ use App\Packages\Enums\ServiceType;
  */
 class MySqlInstaller extends PackageInstaller
 {
-    protected function serviceType(): string
-    {
-        return ServiceType::DATABASE;
-    }
-
-    protected function milestones(): Milestones
+    public function milestones(): Milestones
     {
         return new MySqlInstallerMilestones;
     }
 
-    protected function sshCredential(): SshCredential
+    public function sshCredential(): SshCredential
     {
         return new RootCredential;
     }
@@ -91,5 +87,15 @@ class MySqlInstaller extends PackageInstaller
             "mysql -u root -p{$rootPassword} -e 'SELECT VERSION();'",
             $this->track(MySqlInstallerMilestones::INSTALLATION_COMPLETE),
         ];
+    }
+
+    public function packageName(): PackageName
+    {
+        return PackageName::MySql80;
+    }
+
+    public function packageType(): PackageType
+    {
+        return PackageType::Git;
     }
 }

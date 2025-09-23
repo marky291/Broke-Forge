@@ -17,7 +17,7 @@ class ServerDatabaseController extends Controller
     {
         $availableDatabases = $this->getAvailableDatabases();
 
-        $installedDatabase = $server->services()
+        $installedDatabase = $server->packages()
             ->where('service_type', 'database')
             ->whereIn('status', ['installing', 'installed'])
             ->first();
@@ -42,7 +42,7 @@ class ServerDatabaseController extends Controller
     {
         $validated = $request->validated();
 
-        $existingDatabase = $server->services()
+        $existingDatabase = $server->packages()
             ->where('service_type', 'database')
             ->whereIn('status', ['installing', 'installed'])
             ->first();
@@ -53,7 +53,7 @@ class ServerDatabaseController extends Controller
                 ->with('error', 'A database is already installed on this server. Please uninstall it first.');
         }
 
-        $service = $server->services()->create([
+        $service = $server->packages()->create([
             'service_name' => $validated['type'],
             'service_type' => 'database',
             'configuration' => [
@@ -114,7 +114,7 @@ class ServerDatabaseController extends Controller
 
     public function destroy(Server $server): RedirectResponse
     {
-        $service = $server->services()
+        $service = $server->packages()
             ->where('service_type', 'database')
             ->whereIn('status', ['installed', 'failed'])
             ->first();
@@ -164,7 +164,7 @@ class ServerDatabaseController extends Controller
 
     public function status(Server $server): JsonResponse
     {
-        $service = $server->services()
+        $service = $server->packages()
             ->where('service_type', 'database')
             ->orderByDesc('id')
             ->first();

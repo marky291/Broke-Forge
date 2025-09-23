@@ -3,10 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Server;
+use App\Packages\Credentials\TemporaryCredentialCache;
 use App\Packages\Enums\Connection;
 use App\Packages\Enums\ProvisionStatus;
 use App\Packages\Services\Nginx\NginxInstallerJob;
-use App\Support\ServerCredentials;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -65,7 +65,7 @@ class ProvisionCallbackController extends Controller
                 Log::info("Dispatched web service provisioning job for server #{$server->id}");
             }
 
-            ServerCredentials::forgetRootPassword($server);
+            TemporaryCredentialCache::forgetRootPassword($server);
             $server->save();
         }
 

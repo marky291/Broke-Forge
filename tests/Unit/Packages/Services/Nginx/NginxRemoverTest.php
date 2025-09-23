@@ -4,7 +4,7 @@ namespace Tests\Unit\Packages\Services\Nginx;
 
 use App\Models\Server;
 use App\Packages\Credentials\RootCredential;
-use App\Packages\Enums\ServiceType;
+use App\Packages\Enums\PackageName;
 use App\Packages\Services\Nginx\NginxRemover;
 use App\Packages\Services\Nginx\NginxRemoverMilestones;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -33,7 +33,7 @@ class NginxRemoverTest extends TestCase
         $method = $reflection->getMethod('serviceType');
         $method->setAccessible(true);
 
-        $this->assertEquals(ServiceType::WEBSERVER, $method->invoke($this->remover));
+        $this->assertEquals(PackageName::WEBSERVER, $method->invoke($this->remover));
     }
 
     public function test_ssh_credential_returns_root_credential(): void
@@ -59,7 +59,7 @@ class NginxRemoverTest extends TestCase
     public function test_execute_calls_remove_with_commands(): void
     {
         // Create a PHP service for the server
-        $this->server->services()->create([
+        $this->server->packages()->create([
             'service_name' => 'php',
             'configuration' => ['version' => '8.3'],
             'status' => 'active',
@@ -83,7 +83,7 @@ class NginxRemoverTest extends TestCase
     public function test_execute_retrieves_php_version_from_server_services(): void
     {
         // Create a PHP service for the server
-        $phpService = $this->server->services()->create([
+        $phpService = $this->server->packages()->create([
             'service_name' => 'php',
             'configuration' => ['version' => '8.2'],
             'status' => 'active',
