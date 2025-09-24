@@ -9,4 +9,6 @@ enum PackageType: string
     case Git = 'git';
     case Site = 'site';
     case Command = 'command';
+    case PHP = 'php';
+    case Firewall = 'firewall';
 }

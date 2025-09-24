@@ -8,7 +8,7 @@ use App\Packages\Credentials\ProvisionAccess;
 use App\Packages\Credentials\TemporaryCredentialCache;
 use App\Packages\Enums\Connection;
 use App\Packages\Enums\ProvisionStatus;
-use App\Packages\Enums\PackageName;
+use App\Packages\Enums\PackageType;
 use App\Packages\Services\Nginx\NginxInstallerMilestones;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -79,7 +79,13 @@ class ServerProvisioningController extends Controller
             'events' => $events,
             'latestProgress' => $latestProgress,
             'webServiceMilestones' => NginxInstallerMilestones::labels(),
-            'serviceTypeLabels' => PackageName::labels(),
+            'packageNameLabels' => [
+                PackageType::ReverseProxy->value => 'Reverse Proxy',
+                PackageType::Database->value => 'Database',
+                PackageType::Git->value => 'Git',
+                PackageType::Site->value => 'Site',
+                PackageType::Command->value => 'Command',
+            ],
             'statusLabels' => ProvisionStatus::statusLabels(),
         ]);
     }

@@ -27,5 +27,16 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        //
+        $exceptions->respond(function ($response, $exception, $request) {
+            if ($request->header('X-Inertia')) {
+                // For Inertia requests, we need to ensure proper error handling
+                // When APP_DEBUG is false, show a generic error
+                // When APP_DEBUG is true, let Laravel's default error handler work
+                if (!config('app.debug') && $response->status() >= 500) {
+                    return back()->with('error', 'An error occurred. Please try again.');
+                }
+            }
+
+            return $response;
+        });
     })->create();

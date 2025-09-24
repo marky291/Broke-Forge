@@ -43,7 +43,7 @@ export function MainHeader() {
                                 <AppLogoIcon className="size-5 fill-current text-primary" />
                             </div>
                             <div className="hidden lg:block">
-                                <h1 className="text-lg font-semibold text-white">Laravel Starter Kit</h1>
+                                <h1 className="text-lg font-semibold text-white">Forge</h1>
                             </div>
                         </Link>
 

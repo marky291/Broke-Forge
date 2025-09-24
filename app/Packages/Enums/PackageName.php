@@ -9,4 +9,6 @@ enum PackageName: string
     case Git = 'git';
     case Site = 'site';
     case Command = 'command';
+    case Php83 = 'php83';
+    case FirewallUfw = 'firewall-ufw';
 }
