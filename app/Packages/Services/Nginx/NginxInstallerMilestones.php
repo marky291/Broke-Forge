@@ -16,8 +16,6 @@ class NginxInstallerMilestones extends Milestones
 
     public const ENABLE_SERVICES = 'enable_services';
 
-    public const CONFIGURE_FIREWALL = 'configure_firewall';
-
     public const SETUP_DEFAULT_SITE = 'setup_default_site';
 
     public const SET_PERMISSIONS = 'set_permissions';
@@ -30,16 +28,15 @@ class NginxInstallerMilestones extends Milestones
 
     private const LABELS = [
         self::PREPARE_SYSTEM => 'Preparing system',
-        self::SETUP_REPOSITORY => 'Setting up software sources',
-        self::REMOVE_CONFLICTS => 'Removing conflicting software',
-        self::INSTALL_SOFTWARE => 'Installing required software',
-        self::ENABLE_SERVICES => 'Enabling and starting services',
-        self::CONFIGURE_FIREWALL => 'Configuring firewall rules',
+        self::SETUP_REPOSITORY => 'Setting up Nginx repository',
+        self::REMOVE_CONFLICTS => 'Removing conflicting web servers',
+        self::INSTALL_SOFTWARE => 'Installing Nginx web server',
+        self::ENABLE_SERVICES => 'Enabling Nginx service',
         self::SETUP_DEFAULT_SITE => 'Setting up default site',
         self::SET_PERMISSIONS => 'Setting permissions',
         self::CONFIGURE_NGINX => 'Configuring Nginx',
-        self::VERIFY_INSTALL => 'Verifying installation',
-        self::COMPLETE => 'Setup complete',
+        self::VERIFY_INSTALL => 'Verifying Nginx installation',
+        self::COMPLETE => 'Nginx setup complete',
     ];
 
     /**

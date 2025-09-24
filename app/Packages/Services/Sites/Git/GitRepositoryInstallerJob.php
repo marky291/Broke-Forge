@@ -4,14 +4,14 @@ namespace App\Packages\Services\Sites\Git;
 
 use App\Models\Server;
 use App\Models\ServerSite;
-use App\Packages\Enums\GitStatus;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
-use Throwable;
 
 /**
- * Job for installing Git repositories on sites
+ * Git Repository Installation Job
+ *
+ * Handles queued Git repository installation on sites
  */
 class GitRepositoryInstallerJob implements ShouldQueue
 {
@@ -47,124 +47,31 @@ class GitRepositoryInstallerJob implements ShouldQueue
     }
 
     /**
-     * Execute the job to install Git repository on the site.
+     * Execute the job.
      */
     public function handle(): void
     {
-        // Validate the site can install Git
-        if (! $this->site->canInstallGitRepository()) {
-            Log::warning('Git installation skipped - invalid state', [
-                'site_id' => $this->site->id,
-                'current_status' => $this->site->git_status?->value,
-            ]);
-
-            return;
-        }
-
-        // Mark Git installation as in progress
-        $this->updateGitStatus(GitStatus::Installing);
-
-        try {
-            // Create and run the Git installer
-            $installer = new GitRepositoryInstaller($this->server);
-            $installer->execute($this->site, $this->configuration);
-
-            // Mark Git installation as complete and store configuration
-            $this->site->update([
-                'git_status' => GitStatus::Installed,
-                'git_installed_at' => now(),
-                'configuration' => array_merge(
-                    $this->site->configuration ?? [],
-                    ['git_repository' => $this->configuration]
-                ),
-            ]);
-
-            $this->logSuccess();
-        } catch (Throwable $exception) {
-            $this->handleFailure($exception);
-            throw $exception; // Re-throw for retry mechanism
-        }
-    }
-
-    /**
-     * Handle job failure.
-     */
-    public function failed(Throwable $exception): void
-    {
-        // Ensure status is marked as failed on final failure
-        $this->updateGitStatus(GitStatus::Failed);
-
-        Log::error('Git repository installation permanently failed', [
-            'server_id' => $this->server->id,
-            'site_id' => $this->site->id,
-            'repository' => $this->configuration['repository'] ?? 'unknown',
-            'attempts' => $this->attempts(),
-            'error' => $exception->getMessage(),
-            'trace' => $exception->getTraceAsString(),
-        ]);
-    }
-
-    /**
-     * Update the Git status for the site.
-     */
-    protected function updateGitStatus(GitStatus $status): void
-    {
-        $this->site->update(['git_status' => $status]);
-    }
-
-    /**
-     * Log successful installation.
-     */
-    protected function logSuccess(): void
-    {
-        Log::info('Git repository installed successfully', [
-            'server_id' => $this->server->id,
-            'site_id' => $this->site->id,
+        Log::info("Starting Git repository installation for site #{$this->site->id} on server #{$this->server->id}", [
             'repository' => $this->configuration['repository'] ?? 'unknown',
             'branch' => $this->configuration['branch'] ?? 'unknown',
-            'attempts' => $this->attempts(),
-        ]);
-    }
-
-    /**
-     * Handle installation failure.
-     */
-    protected function handleFailure(Throwable $exception): void
-    {
-        // Update status to failed but keep the configuration
-        $this->site->update([
-            'git_status' => GitStatus::Failed,
-            'configuration' => array_merge(
-                $this->site->configuration ?? [],
-                ['git_repository' => $this->configuration]
-            ),
         ]);
 
-        Log::error('Git repository installation failed', [
-            'server_id' => $this->server->id,
-            'site_id' => $this->site->id,
-            'repository' => $this->configuration['repository'] ?? 'unknown',
-            'attempt' => $this->attempts(),
-            'max_tries' => $this->tries,
-            'error' => $exception->getMessage(),
-        ]);
-    }
+        try {
+            // Create installer instance
+            $installer = new GitRepositoryInstaller($this->server);
 
-    /**
-     * Determine if the job should be retried.
-     */
-    public function shouldRetry(Throwable $exception): bool
-    {
-        // Don't retry on validation errors
-        if ($exception instanceof \InvalidArgumentException) {
-            return false;
+            // Execute installation - the installer handles all logic, validation, and database tracking
+            $installer->execute($this->site, $this->configuration);
+
+            Log::info("Git repository installation completed for site #{$this->site->id} on server #{$this->server->id}");
+        } catch (\Exception $e) {
+            Log::error("Git repository installation failed for site #{$this->site->id} on server #{$this->server->id}", [
+                'repository' => $this->configuration['repository'] ?? 'unknown',
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            throw $e;
         }
-
-        // Don't retry if server is permanently disconnected
-        if (! $this->server->exists || $this->server->isDeleted()) {
-            return false;
-        }
-
-        return $this->attempts() < $this->tries;
     }
 }

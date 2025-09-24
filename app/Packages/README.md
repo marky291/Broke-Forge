@@ -10,6 +10,8 @@ The package system is built on a layered architecture that provides a consistent
 app/Packages/
 ├── Base/                    # Abstract base classes
 │   ├── Package.php              # Package interface (ALL packages must implement)
+│   ├── ServerPackage.php        # Interface for server-level packages
+│   ├── SitePackage.php          # Interface for site-level packages
 │   ├── PackageInstaller.php    # Base installer class
 │   ├── PackageRemover.php       # Base remover class
 │   ├── PackageManager.php       # Core SSH and milestone functionality
@@ -28,16 +30,19 @@ app/Packages/
 │   ├── ProvisionStatus.php     # Provision states
 │   └── Connection.php          # Connection states
 └── Services/                # Service implementations
-    ├── {Category}/             # Service category (WebServer, Database, etc.)
+    ├── {Category}/             # Server-level services (Nginx, Database, PHP, Firewall, etc.)
     │   └── {ServiceName}/      # Specific service implementation
     │       ├── {Service}Installer.php
     │       ├── {Service}InstallerMilestones.php
     │       ├── {Service}InstallerJob.php
     │       ├── {Service}Remover.php (optional)
     │       └── {Service}RemoverMilestones.php (optional)
-    └── Sites/                  # Special category for site management
+    └── Sites/                  # Site-level packages (MUST be in Sites directory)
         ├── SiteInstaller.php
         ├── SiteRemover.php
+        ├── Command/            # Site command executors
+        ├── Git/                # Git repository management
+        ├── Explorer/           # File exploration
         └── ...
 ```
 
@@ -45,29 +50,53 @@ app/Packages/
 
 ### Service Organization
 
-Services are organized hierarchically by category and specific implementation:
+Services are organized hierarchically with a clear distinction between server-level and site-level packages:
 
-- **Category**: Broad service type (e.g., `WebServer`, `Database`, `Sites`)
-- **ServiceName**: Specific implementation (e.g., `MySQL`, `Redis`, `GitRepository`)
+#### Server-Level Packages (implement ServerPackage)
+Located in `Services/{Category}/` where Category is the service type:
 
-**Examples:**
 ```
-Services/WebServer/                    # Web server category
-├── WebServiceInstaller.php           # NGINX + PHP installer
-├── WebServiceInstallerMilestones.php # Progress tracking
-└── WebServiceInstallerJob.php        # Queue job
+Services/Nginx/                        # Web server services
+├── NginxInstaller.php                # Implements ServerPackage
+├── NginxInstallerMilestones.php
+└── NginxInstallerJob.php
 
-Services/Database/MySQL/               # Database category, MySQL specific
-├── MySqlInstaller.php
+Services/Database/MySQL/               # Database services
+├── MySqlInstaller.php                # Implements ServerPackage
 ├── MySqlInstallerMilestones.php
 ├── MySqlRemover.php
 └── MySqlRemoverMilestones.php
 
-Services/Sites/                        # Site management category
-├── SiteInstaller.php                  # Generic site provisioning
-├── GitRepositoryInstaller.php        # Git-specific functionality
+Services/PHP/                          # Runtime environments
+├── PhpInstaller.php                  # Implements ServerPackage
+├── PhpInstallerMilestones.php
+└── PhpInstallerJob.php
+
+Services/Firewall/                    # Security services
+├── FirewallInstaller.php             # Implements ServerPackage
+├── FirewallRuleInstaller.php         # Implements ServerPackage
 └── ...
 ```
+
+#### Site-Level Packages (implement SitePackage)
+**MUST** be located in `Services/Sites/` directory:
+
+```
+Services/Sites/                        # All site-level packages
+├── SiteInstaller.php                 # Implements SitePackage
+├── SiteRemover.php                   # Implements SitePackage
+├── Command/                          # Site command execution
+│   └── SiteCommandInstaller.php     # Implements SitePackage
+├── Git/                              # Git repository management
+│   └── GitRepositoryInstaller.php   # Implements SitePackage
+└── Explorer/                         # File exploration
+    └── SiteFileExplorer.php         # Implements SitePackage
+```
+
+**Key Rules:**
+- Server packages: Use any category under `Services/` EXCEPT `Sites/`
+- Site packages: MUST be in `Services/Sites/` or its subdirectories
+- This separation ensures clear boundaries between infrastructure and application-level concerns
 
 ### File Naming Conventions
 
@@ -193,6 +222,131 @@ interface Package
     public function sshCredential(): SshCredential;
 }
 ```
+
+### ServerPackage and SitePackage Interfaces
+
+**IMPORTANT**: To maintain clear separation between server-level and site-level packages, two specialized interfaces extend the base `Package` interface:
+
+#### ServerPackage Interface
+
+All server-level packages (Nginx, MySQL, PHP, Firewall, etc.) MUST implement the `ServerPackage` interface:
+
+```php
+interface ServerPackage extends Package
+{
+    // Inherits all methods from Package interface
+    // Server-level packages typically:
+    // - Use RootCredential for SSH access
+    // - Install system-wide services
+    // - Configure server infrastructure
+}
+```
+
+**Server-level packages include:**
+- **Nginx/Apache**: Web server installations
+- **MySQL/PostgreSQL/Redis**: Database services
+- **PHP/Node.js/Python**: Runtime environments
+- **Firewall**: Security and network configuration
+- **System utilities**: Mail servers, monitoring, etc.
+
+**Directory Structure**: Server packages MUST be organized under `Services/{Category}/`
+
+#### SitePackage Interface
+
+All site-level packages MUST implement the `SitePackage` interface and be located in the `Services/Sites/` directory:
+
+```php
+interface SitePackage extends Package
+{
+    // Inherits all methods from Package interface
+    // Site-level packages typically:
+    // - Use UserCredential for SSH access
+    // - Operate within user home directories
+    // - Manage individual site/application configurations
+}
+```
+
+**Site-level packages include:**
+- **SiteInstaller/SiteRemover**: Core site provisioning
+- **GitRepositoryInstaller**: Git repository management
+- **SiteCommandInstaller**: Custom command execution within sites
+- **SiteFileExplorer**: File management within site directories
+
+**Directory Structure**: Site packages MUST be located under `Services/Sites/` or its subdirectories
+
+### Implementation Examples
+
+#### Server-Level Package Example
+
+```php
+namespace App\Packages\Services\Nginx;
+
+use App\Packages\Base\ServerPackage;
+use App\Packages\Base\PackageInstaller;
+
+class NginxInstaller extends PackageInstaller implements ServerPackage
+{
+    public function packageName(): PackageName
+    {
+        return PackageName::Nginx;
+    }
+
+    public function packageType(): PackageType
+    {
+        return PackageType::ReverseProxy;
+    }
+
+    public function sshCredential(): SshCredential
+    {
+        return new RootCredential; // Server-level = root access
+    }
+}
+```
+
+#### Site-Level Package Example
+
+```php
+namespace App\Packages\Services\Sites;
+
+use App\Packages\Base\SitePackage;
+use App\Packages\Base\PackageInstaller;
+
+class SiteInstaller extends PackageInstaller implements SitePackage
+{
+    public function packageName(): PackageName
+    {
+        return PackageName::Site;
+    }
+
+    public function packageType(): PackageType
+    {
+        return PackageType::Site;
+    }
+
+    public function sshCredential(): SshCredential
+    {
+        return new UserCredential; // Site-level = user access
+    }
+}
+```
+
+### Interface Selection Guidelines
+
+1. **Use ServerPackage when:**
+   - Installing system-wide services
+   - Requiring root privileges
+   - Modifying server configuration
+   - Managing infrastructure components
+
+2. **Use SitePackage when:**
+   - Working within user directories
+   - Managing individual sites/applications
+   - Requiring user-level permissions
+   - Operating on site-specific resources
+
+3. **Directory Placement:**
+   - ServerPackage implementations: `Services/{Category}/` (e.g., `Services/Database/`, `Services/PHP/`)
+   - SitePackage implementations: `Services/Sites/` (all site packages MUST be in this directory)
 
 ## Package Installer Implementation
 
@@ -325,6 +479,12 @@ protected function commands(string $version = '8.3', array $config = []): array
         // Configuration generation (inline, no helper methods)
         "cat > /etc/service/config << 'EOF'\n{$configContent}\nEOF",
 
+        // Database persistence - track what's installed on remote server
+        $this->persist(PackageType::SERVICE, PackageName::SERVICE_NAME, PackageVersion::Version1, [
+            'version' => $version,
+            'config' => $config
+        ]),
+
         // Database operations (closures) - use parameters in closures
         fn () => $this->server->services()->updateOrCreate([
             'configuration' => array_merge(['version' => $version], $config)
@@ -333,6 +493,296 @@ protected function commands(string $version = '8.3', array $config = []): array
         // Final milestone
         $this->track({ServiceName}InstallerMilestones::COMPLETE),
     ];
+}
+```
+
+## Database Persistence with the `persist` Method
+
+### Purpose
+
+The `persist` method is used to track what packages and configurations are installed on the remote server. This creates a record in the database that mirrors the actual state of the remote server, allowing you to:
+- Track installed packages and their versions
+- Store configuration details
+- Query what's installed on any server
+- Manage dependencies between packages
+
+### Method Signature
+
+```php
+$this->persist(
+    PackageType $type,           // The type of package (PHP, Firewall, Database, etc.)
+    PackageName $name,           // The specific package name
+    PackageVersion $version,     // The version installed
+    array $configuration = []    // Additional configuration data
+)
+```
+
+### Usage in Commands Array
+
+Place `persist` calls after the SSH commands that actually install the package:
+
+```php
+protected function commands(): array
+{
+    return [
+        $this->track(NginxInstallerMilestones::INSTALL_PHP),
+
+        // Install PHP packages
+        "apt-get install -y php{$phpVersion->value}-fpm php{$phpVersion->value}-cli",
+
+        // Persist PHP installation to database
+        $this->persist(
+            PackageType::PHP,
+            PackageName::Php83,
+            $phpVersion,
+            ['modules' => ['fpm', 'cli', 'mysql', 'xml']]
+        ),
+
+        $this->track(NginxInstallerMilestones::CONFIGURE_FIREWALL),
+
+        // Configure firewall
+        'ufw allow 80/tcp',
+        'ufw allow 443/tcp',
+
+        // Persist firewall configuration
+        $this->persist(
+            PackageType::Firewall,
+            PackageName::FirewallUfw,
+            PackageVersion::Version1,
+            ['rules' => [
+                ['port' => 80, 'protocol' => 'tcp'],
+                ['port' => 443, 'protocol' => 'tcp']
+            ]]
+        ),
+    ];
+}
+```
+
+### Real-World Example from NginxInstaller
+
+```php
+// After installing and starting services
+$this->track(NginxInstallerMilestones::ENABLE_SERVICES),
+'systemctl enable --now nginx',
+"systemctl enable --now php{$phpVersion->value}-fpm",
+
+// Persist PHP installation
+$this->persist(PackageType::PHP, PackageName::Php83, $phpVersion, []),
+
+// After configuring firewall
+$this->track(NginxInstallerMilestones::CONFIGURE_FIREWALL),
+'ufw allow 80/tcp >/dev/null 2>&1 || true',
+'ufw allow 443/tcp >/dev/null 2>&1 || true',
+
+// Persist firewall configuration
+$this->persist(
+    PackageType::Firewall,
+    PackageName::FirewallUfw,
+    PackageVersion::Version1,
+    ['rules' => [
+        ['port' => 80],
+        ['port' => 443]
+    ]]
+),
+```
+
+### Best Practices for Using `persist`
+
+1. **Call After Installation**: Always call `persist` AFTER the SSH commands that install the package
+2. **Include Configuration**: Store relevant configuration in the array parameter for future reference
+3. **Use Appropriate Enums**: Use existing PackageType, PackageName, and PackageVersion enums
+4. **Track Dependencies**: Include dependency information in the configuration array when relevant
+5. **Be Specific**: Include version information and specific modules/features installed
+
+### Configuration Array Examples
+
+Different package types should include relevant configuration:
+
+```php
+// PHP Installation
+$this->persist(PackageType::PHP, PackageName::Php83, $phpVersion, [
+    'modules' => ['fpm', 'cli', 'mysql', 'xml', 'mbstring'],
+    'ini_settings' => ['memory_limit' => '256M', 'max_execution_time' => '30']
+]);
+
+// MySQL Installation
+$this->persist(PackageType::Database, PackageName::MySQL, PackageVersion::Version80, [
+    'port' => 3306,
+    'datadir' => '/var/lib/mysql',
+    'root_password_set' => true
+]);
+
+// Nginx Installation
+$this->persist(PackageType::WebServer, PackageName::Nginx, PackageVersion::Version1, [
+    'worker_processes' => 'auto',
+    'worker_connections' => 1024,
+    'sites_enabled' => ['default']
+]);
+
+// Firewall Rules
+$this->persist(PackageType::Firewall, PackageName::FirewallUfw, PackageVersion::Version1, [
+    'rules' => [
+        ['port' => 22, 'protocol' => 'tcp', 'source' => 'any'],
+        ['port' => 80, 'protocol' => 'tcp', 'source' => 'any'],
+        ['port' => 443, 'protocol' => 'tcp', 'source' => 'any'],
+        ['port' => 3306, 'protocol' => 'tcp', 'source' => '10.0.0.0/8']
+    ]
+]);
+```
+
+### Database Schema
+
+#### For Server-Level Packages
+
+The `persist` method creates/updates records in the `server_packages` table:
+
+```sql
+server_packages
+├── id
+├── server_id           // The server this package is installed on
+├── package_type        // PackageType enum value
+├── package_name        // PackageName enum value
+├── package_version     // PackageVersion enum value
+├── configuration       // JSON column with configuration details
+├── status             // Installation status
+├── created_at
+└── updated_at
+```
+
+#### For Site-Level Packages
+
+Site packages use the `server_site_packages` table which includes site association:
+
+```sql
+server_site_packages
+├── id
+├── server_id           // The server this package is installed on
+├── site_id            // The specific site this package belongs to
+├── service_name        // Service name identifier
+├── service_type        // Service type category
+├── configuration       // JSON column with configuration details
+├── status             // Installation status
+├── installed_at        // Installation timestamp
+├── uninstalled_at     // Uninstallation timestamp
+├── created_at
+└── updated_at
+```
+
+### Querying Persisted Data
+
+#### For Server-Level Packages
+
+Query server-level packages using the `server_packages` table:
+
+```php
+// Get all packages on a server
+$packages = $server->packages;
+
+// Check if PHP is installed
+$phpInstalled = $server->packages()
+    ->where('package_type', PackageType::PHP)
+    ->exists();
+
+// Get PHP configuration
+$phpConfig = $server->packages()
+    ->where('package_type', PackageType::PHP)
+    ->where('package_name', PackageName::Php83)
+    ->first()
+    ?->configuration;
+
+// Find all servers with specific firewall rules
+$serversWithHttps = Server::whereHas('packages', function ($query) {
+    $query->where('package_type', PackageType::Firewall)
+          ->whereJsonContains('configuration->rules', ['port' => 443]);
+})->get();
+```
+
+#### For Site-Level Packages
+
+Query site-level packages using the `server_site_packages` table:
+
+```php
+// Get all site packages for a specific site
+$sitePackages = $site->packages;
+
+// Check if Git is configured for a site
+$gitEnabled = $site->packages()
+    ->where('service_type', 'git')
+    ->exists();
+
+// Get site command history
+$commandHistory = $site->packages()
+    ->where('service_type', 'command')
+    ->orderBy('installed_at', 'desc')
+    ->get();
+
+// Find all sites with specific packages
+$sitesWithGit = ServerSite::whereHas('packages', function ($query) {
+    $query->where('service_type', 'git')
+          ->where('status', 'active');
+})->get();
+
+// Get all site packages for a server
+$allSitePackages = ServerSitePackage::where('server_id', $server->id)
+    ->with('site')
+    ->get()
+    ->groupBy('site_id');
+```
+
+### Integration with Package Removers
+
+#### For Server-Level Package Removers
+
+Server package removers should remove the persisted records from `server_packages`:
+
+```php
+class NginxRemover extends PackageRemover implements ServerPackage
+{
+    protected function commands(): array
+    {
+        return [
+            $this->track(NginxRemoverMilestones::STOP_SERVICE),
+            'systemctl stop nginx',
+            'systemctl disable nginx',
+
+            $this->track(NginxRemoverMilestones::REMOVE_PACKAGE),
+            'apt-get remove -y nginx',
+
+            // Remove persisted record from server_packages
+            fn() => $this->server->packages()
+                ->where('package_type', PackageType::WebServer)
+                ->where('package_name', PackageName::Nginx)
+                ->delete(),
+        ];
+    }
+}
+```
+
+#### For Site-Level Package Removers
+
+Site package removers should remove records from `server_site_packages`:
+
+```php
+class GitRepositoryRemover extends PackageRemover implements SitePackage
+{
+    protected function commands(): array
+    {
+        return [
+            $this->track(GitRemoverMilestones::REMOVE_REPOSITORY),
+            'rm -rf .git',
+
+            // Remove persisted record from server_site_packages
+            fn() => $this->site->packages()
+                ->where('service_type', 'git')
+                ->delete(),
+
+            // Or remove by server and site
+            fn() => ServerSitePackage::where('server_id', $this->server->id)
+                ->where('site_id', $this->site->id)
+                ->where('service_type', 'git')
+                ->delete(),
+        ];
+    }
 }
 ```
 
@@ -781,9 +1231,17 @@ class CustomCredential implements SshCredential
 
 ## Job Integration
 
-### Job Class Structure
+### Job Class Philosophy
 
-Every installer should have a corresponding job for queue processing:
+**IMPORTANT**: Job classes should be lightweight wrappers that only handle logging and error reporting. All business logic, database operations, and milestone tracking must be handled by the installer/remover classes themselves. Jobs should NOT:
+- Create or update database records directly
+- Use the `persist()` method (this belongs in installer/remover)
+- Track milestones (this belongs in installer/remover)
+- Contain installation/removal logic
+
+### Correct Job Class Structure
+
+Every installer should have a corresponding job for queue processing. Here's the correct pattern:
 
 ```php
 <?php
@@ -791,20 +1249,23 @@ Every installer should have a corresponding job for queue processing:
 namespace App\Packages\Services\{Category};
 
 use App\Models\Server;
-use App\Models\ServerPackage;
-use App\Packages\Enums\ProvisionStatus;
-use App\Packages\Enums\PackageName;
+use App\Packages\Enums\{SpecificConfiguration};
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * {ServiceName} Installation Job
+ *
+ * Handles queued {service} installation on remote servers
+ */
 class {ServiceName}InstallerJob implements ShouldQueue
 {
     use Queueable;
 
     public function __construct(
         public Server $server,
-        public array $configuration = []
+        public {ConfigurationType} $configuration
     ) {}
 
     public function handle(): void
@@ -815,29 +1276,8 @@ class {ServiceName}InstallerJob implements ShouldQueue
             // Create installer instance
             $installer = new {ServiceName}Installer($this->server);
 
-            // Create database service record
-            $package = ServerPackage::updateOrCreate(
-                [
-                    'server_id' => $this->server->id,
-                    'service_name' => '{service_name}',
-                ],
-                [
-                    'service_type' => PackageName::{CATEGORY},
-                    'configuration' => $this->configuration,
-                    'status' => 'installing',
-                ]
-            );
-
-            // Execute installation with configuration parameters
+            // Execute installation - the installer's persist() method handles database tracking
             $installer->execute($this->configuration);
-
-            // Update package status
-            $package->status = 'active';
-            $package->save();
-
-            // Update server status if needed
-            $this->server->provision_status = ProvisionStatus::Completed;
-            $this->server->save();
 
             Log::info("{Service} installation completed for server #{$this->server->id}");
         } catch (\Exception $e) {
@@ -846,15 +1286,58 @@ class {ServiceName}InstallerJob implements ShouldQueue
                 'trace' => $e->getTraceAsString(),
             ]);
 
-            // Update package status
-            if (isset($package)) {
-                $package->status = 'failed';
-                $package->save();
-            }
+            throw $e;
+        }
+    }
+}
+```
 
-            // Update server status
-            $this->server->provision_status = ProvisionStatus::Failed;
-            $this->server->save();
+### Real-World Example: PHP Installer Job
+
+This example demonstrates the correct pattern where the job is minimal and delegates everything to the installer:
+
+```php
+<?php
+
+namespace App\Packages\Services\PHP;
+
+use App\Models\Server;
+use App\Packages\Enums\PhpVersion;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\Log;
+
+/**
+ * PHP Installation Job
+ *
+ * Handles queued PHP installation on remote servers
+ */
+class PhpInstallerJob implements ShouldQueue
+{
+    use Queueable;
+
+    public function __construct(
+        public Server $server,
+        public PhpVersion $phpVersion
+    ) {}
+
+    public function handle(): void
+    {
+        Log::info("Starting PHP {$this->phpVersion->value} installation for server #{$this->server->id}");
+
+        try {
+            // Create installer instance
+            $installer = new PhpInstaller($this->server);
+
+            // Execute installation - the installer's persist() method handles database tracking
+            $installer->execute($this->phpVersion);
+
+            Log::info("PHP {$this->phpVersion->value} installation completed for server #{$this->server->id}");
+        } catch (\Exception $e) {
+            Log::error("PHP {$this->phpVersion->value} installation failed for server #{$this->server->id}", [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
 
             throw $e;
         }
@@ -862,13 +1345,21 @@ class {ServiceName}InstallerJob implements ShouldQueue
 }
 ```
 
+### Why Jobs Should Be Minimal
+
+1. **Single Responsibility**: Jobs handle queueing and logging, installers handle installation
+2. **No Duplication**: Database persistence happens once in the installer via `persist()`
+3. **Consistency**: All database tracking is centralized in installer/remover classes
+4. **Testability**: Simpler jobs are easier to test
+5. **Maintainability**: Business logic stays in one place (the installer/remover)
+
 ### Job Integration Best Practices
 
-1. **Error Handling**: Always wrap execution in try-catch blocks
-2. **Database Updates**: Update `ServerPackage` and `Server` records appropriately
-3. **Logging**: Log start, success, and failure events
-4. **Status Management**: Use proper enum values for status updates
-5. **Configuration**: Accept configuration parameters through constructor
+1. **Keep It Simple**: Jobs should only create the installer, execute it, and handle logging
+2. **No Database Operations**: Let the installer/remover handle all database updates via `persist()`
+3. **No Business Logic**: All installation/removal logic belongs in the installer/remover classes
+4. **Error Handling**: Log errors but let exceptions bubble up for Laravel's job retry mechanism
+5. **Configuration**: Pass configuration through constructor to the installer's `execute()` method
 
 ## Service Type Classification
 
@@ -1304,9 +1795,11 @@ All package jobs should:
 
 ### Frontend Integration
 
-#### Progress Tracking with ServerPackageEvent Model
+#### Progress Tracking with Event Models
 
-The frontend should track package installation/removal progress by querying the `ServerPackageEvent` model directly from the database. Each milestone tracked in packages automatically creates `ServerPackageEvent` records.
+##### Server-Level Package Events (ServerPackageEvent)
+
+The frontend tracks server-level package installation/removal progress by querying the `ServerPackageEvent` model. Each milestone tracked in server packages automatically creates `ServerPackageEvent` records.
 
 **ServerPackageEvent Model Structure:**
 ```php
@@ -1332,6 +1825,50 @@ class ServerPackageEvent extends Model
     // Helper methods
     public function isInstall(): bool;
     public function isUninstall(): bool;
+}
+```
+
+##### Site-Level Package Events (ServerSitePackageEvent)
+
+For site-level packages, use `ServerSitePackageEvent` which includes site association:
+
+**ServerSitePackageEvent Model Structure:**
+```php
+// app/Models/ServerSitePackageEvent.php
+class ServerSitePackageEvent extends Model
+{
+    protected $fillable = [
+        'server_id',        // Server containing the site
+        'site_id',          // Specific site being modified
+        'service_type',     // Service type (git, command, etc.)
+        'provision_type',   // 'install' or 'uninstall'
+        'milestone',        // Milestone constant
+        'current_step',     // Current step number
+        'total_steps',      // Total number of steps
+        'details',          // Additional metadata (array)
+        'status',          // Event status
+        'error_log',       // Error details if failed
+    ];
+
+    // Automatic progress percentage calculation
+    public function getProgressPercentageAttribute(): string
+    {
+        if ($this->total_steps == 0) {
+            return "0";
+        }
+        return str(($this->current_step / $this->total_steps) * 100);
+    }
+
+    // Relationship methods
+    public function server(): BelongsTo;
+    public function site(): BelongsTo;
+
+    // Helper methods
+    public function isInstall(): bool;
+    public function isUninstall(): bool;
+    public function isPending(): bool;
+    public function isSuccess(): bool;
+    public function isFailed(): bool;
 }
 ```
 

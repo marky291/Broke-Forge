@@ -40,20 +40,6 @@ class ServerController extends Controller
 
         $server = Server::create($data);
 
-        ServerPackage::updateOrCreate(
-            [
-                'server_id' => $server->id,
-                'service_name' => 'php',
-            ],
-            [
-                'service_type' => PackageName::SERVER,
-                'configuration' => [
-                    'version' => $phpVersion,
-                ],
-                'status' => 'pending',
-            ]
-        );
-
         $rootPassword = TemporaryCredentialCache::rootPassword($server);
         $provisionCommand = $this->buildProvisionCommand($server);
 

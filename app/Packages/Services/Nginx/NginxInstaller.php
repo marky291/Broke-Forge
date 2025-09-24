@@ -10,11 +10,15 @@ use App\Packages\Credentials\SshCredential;
 use App\Packages\Credentials\UserCredential;
 use App\Packages\Enums\PackageName;
 use App\Packages\Enums\PackageType;
+use App\Packages\Enums\PackageVersion;
+use App\Packages\Enums\PhpVersion;
+use App\Packages\Services\PHP\PhpInstallerJob;
+use App\Packages\Services\Firewall\FirewallRuleInstallerJob;
 
 /**
- * Web Server Installation Class
+ * Nginx Web Server Installation Class
  *
- * Handles installation of NGINX and PHP-FPM with progress tracking
+ * Handles installation of NGINX web server with PHP dependency
  */
 class NginxInstaller extends PackageInstaller
 {
@@ -39,31 +43,25 @@ class NginxInstaller extends PackageInstaller
     }
 
     /**
-     * Execute the web server installation
+     * Execute the Nginx web server installation
      */
-    public function execute(): void
+    public function execute(PhpVersion $phpVersion): void
     {
-        $phpService = $this->server->packages()->where('service_name', 'php')->latest('id')->first();
-        $phpVersion = $phpService->configuration['version'];
+        // First install PHP as a dependency using the dedicated PHP installer
+        PhpInstallerJob::dispatchSync($this->server, $phpVersion);
 
-        // Compose common PHP packages for the chosen version.
-        $phpPackages = implode(' ', [
-            "php{$phpVersion}-fpm",
-            "php{$phpVersion}-cli",
-            "php{$phpVersion}-common",
-            "php{$phpVersion}-curl",
-            "php{$phpVersion}-mbstring",
-            "php{$phpVersion}-xml",
-            "php{$phpVersion}-zip",
-            "php{$phpVersion}-intl",
-            "php{$phpVersion}-mysql",
-            "php{$phpVersion}-gd",
-        ]);
+        // Configure firewall rules for HTTP and HTTPS
+        $firewallRules = [
+            ['port' => 80, 'protocol' => 'tcp', 'action' => 'allow', 'comment' => 'HTTP'],
+            ['port' => 443, 'protocol' => 'tcp', 'action' => 'allow', 'comment' => 'HTTPS'],
+        ];
+        FirewallRuleInstallerJob::dispatchSync($this->server, $firewallRules, 'nginx');
 
-        $this->install($this->commands($phpVersion, $phpPackages));
+        // Then proceed with Nginx installation
+        $this->install($this->commands($phpVersion));
     }
 
-    protected function commands(string $phpVersion, $phpPackages): array
+    protected function commands(PhpVersion $phpVersion): array
     {
         // Get the app user that will own site directories
         $userCredential = new UserCredential;
@@ -79,8 +77,9 @@ class NginxInstaller extends PackageInstaller
 
             $this->track(NginxInstallerMilestones::SETUP_REPOSITORY),
 
-            // On Ubuntu, add Ondrej PPAs for PHP and NGINX (ignore errors on non-Ubuntu)
-            'if command -v lsb_release >/dev/null 2>&1 && [ "$(lsb_release -is)" = "Ubuntu" ]; then add-apt-repository -y ppa:ondrej/php || true; add-apt-repository -y ppa:ondrej/nginx || true; DEBIAN_FRONTEND=noninteractive apt-get update -y; fi',
+            // On Ubuntu, add Ondrej PPA for NGINX (ignore errors on non-Ubuntu)
+            // PHP repository is handled by PhpInstaller
+            'if command -v lsb_release >/dev/null 2>&1 && [ "$(lsb_release -is)" = "Ubuntu" ]; then add-apt-repository -y ppa:ondrej/nginx || true; DEBIAN_FRONTEND=noninteractive apt-get update -y; fi',
 
             $this->track(NginxInstallerMilestones::REMOVE_CONFLICTS),
             // Ensure Apache is not competing for port 80 (stop, disable, and mask if present)
@@ -90,21 +89,15 @@ class NginxInstaller extends PackageInstaller
 
             $this->track(NginxInstallerMilestones::INSTALL_SOFTWARE),
 
-            // Optionally remove apache packages if installed
+            // Remove apache packages if installed
             'DEBIAN_FRONTEND=noninteractive apt-get remove -y --purge apache2 apache2-bin apache2-data apache2-utils libapache2-mod-php libapache2-mod-php* >/dev/null 2>&1 || true',
 
-            // Install NGINX and PHP (attempt versioned packages first, then fall back to default php if needed)
-            "DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends nginx {$phpPackages} || DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends nginx php-fpm php-cli php-common php-curl php-mbstring php-xml php-zip php-intl php-mysql php-gd",
+            // Install NGINX only (PHP is already installed via PhpInstallerJob)
+            'DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends nginx',
 
             $this->track(NginxInstallerMilestones::ENABLE_SERVICES),
-            // Enable and start services
+            // Enable and start Nginx service (PHP-FPM is already running from PhpInstaller)
             'systemctl enable --now nginx',
-            "systemctl enable --now php{$phpVersion}-fpm || systemctl enable --now php-fpm",
-
-            $this->track(NginxInstallerMilestones::CONFIGURE_FIREWALL),
-            // Open HTTP/HTTPS ports if ufw exists (safe no-ops otherwise)
-            'ufw allow 80/tcp >/dev/null 2>&1 || true',
-            'ufw allow 443/tcp >/dev/null 2>&1 || true',
 
             $this->track(NginxInstallerMilestones::SETUP_DEFAULT_SITE),
             // Create default site structure in app user's home directory
@@ -164,7 +157,13 @@ class NginxInstaller extends PackageInstaller
             'systemctl reload nginx',
             // Get the status of nginx
             'systemctl status nginx',
+            // Persist nginx package to database
+            $this->persist(PackageType::ReverseProxy, PackageName::Nginx, PackageVersion::Version1, [
+                'worker_processes' => 'auto',
+                'worker_connections' => 1024,
+            ]),
 
+            // Mark installation as completed
             $this->track(NginxInstallerMilestones::COMPLETE),
         ];
     }

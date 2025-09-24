@@ -68,7 +68,7 @@ class ServerProvisioningController extends Controller
 
         return Inertia::render('servers/provisioning', [
             'server' => array_merge(
-                $server->only(['id', 'vanity_name', 'public_ip', 'ssh_port', 'private_ip', 'connection', 'server_type', 'created_at', 'updated_at']),
+                $server->only(['id', 'vanity_name', 'public_ip', 'ssh_port', 'private_ip', 'connection', 'created_at', 'updated_at']),
                 [
                     'provision_status' => $server->provision_status->value,
                     'provision_status_label' => $server->provision_status->label(),

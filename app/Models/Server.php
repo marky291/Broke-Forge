@@ -4,7 +4,6 @@ namespace App\Models;
 
 use App\Packages\Credentials\TemporaryCredentialCache;
 use App\Packages\Enums\ProvisionStatus;
-use App\Packages\Enums\PackageType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -23,7 +22,6 @@ use Illuminate\Support\Facades\Auth;
  * @property string $connection
  * @property string $vanity_name
  * @property ProvisionStatus $provision_status
- * @property PackageType $server_type
  */
 class Server extends Model
 {
@@ -38,7 +36,6 @@ class Server extends Model
         'ssh_root_user',
         'ssh_app_user',
         'connection',
-        'server_type',
         'provision_status',
     ];
 
@@ -48,7 +45,6 @@ class Server extends Model
 
     protected $casts = [
         'ssh_port' => 'integer',
-        'server_type' => PackageType::class,
         'provision_status' => ProvisionStatus::class,
     ];
 

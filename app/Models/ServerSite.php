@@ -6,6 +6,7 @@ use App\Packages\Enums\GitStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Auth;
 
 /**
@@ -53,6 +54,22 @@ class ServerSite extends Model
     public function server(): BelongsTo
     {
         return $this->belongsTo(Server::class);
+    }
+
+    /**
+     * Get the packages installed on this site.
+     */
+    public function packages(): HasMany
+    {
+        return $this->hasMany(ServerSitePackage::class, 'site_id');
+    }
+
+    /**
+     * Get the package events for this site.
+     */
+    public function packageEvents(): HasMany
+    {
+        return $this->hasMany(ServerSitePackageEvent::class, 'site_id');
     }
 
     /**

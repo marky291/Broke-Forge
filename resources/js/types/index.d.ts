@@ -65,7 +65,6 @@ export interface Server {
     ssh_port: number;
     private_ip?: string | null;
     connection: 'pending' | 'connecting' | 'connected' | 'failed' | 'disconnected';
-    server_type?: string | null;
     provision_status: 'pending' | 'connecting' | 'installing' | 'completed' | 'failed';
     provision_status_label: string;
     provision_status_color: string;

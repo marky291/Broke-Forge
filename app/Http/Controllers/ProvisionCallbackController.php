@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Server;
 use App\Packages\Credentials\TemporaryCredentialCache;
 use App\Packages\Enums\Connection;
+use App\Packages\Enums\PhpVersion;
 use App\Packages\Enums\ProvisionStatus;
 use App\Packages\Services\Nginx\NginxInstallerJob;
 use Illuminate\Http\JsonResponse;
@@ -61,7 +62,7 @@ class ProvisionCallbackController extends Controller
             } else {
                 // Connection successful, update status and dispatch web service provisioning job
                 $server->provision_status = ProvisionStatus::Installing;
-                NginxInstallerJob::dispatch($server);
+                NginxInstallerJob::dispatch($server, PhpVersion::PHP83);
                 Log::info("Dispatched web service provisioning job for server #{$server->id}");
             }
 

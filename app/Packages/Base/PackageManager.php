@@ -3,9 +3,16 @@
 namespace App\Packages\Base;
 
 use App\Models\Server;
+use App\Models\ServerPackage;
 use App\Models\ServerPackageEvent;
-use App\Packages\Credentials\SshCredential;
+use App\Models\ServerSite;
+use App\Models\ServerSitePackage;
+use App\Models\ServerSitePackageEvent;
+use BackedEnum;
 use Closure;
+use Exception;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
 use Spatie\Ssh\Ssh;
 use Stringable;
@@ -18,19 +25,34 @@ abstract class PackageManager implements Package
     protected Server $server;
 
     /**
+     * Site context for site packages (optional)
+     */
+    protected ?ServerSite $site = null;
+
+    /**
      * Get the total steps that have been run
      */
     protected int $milestoneStep = 1;
 
     /**
      * Track the current event being processed
+     * Can be either ServerPackageEvent or ServerSitePackageEvent
      */
-    protected ?ServerPackageEvent $currentEvent = null;
+    protected ?Model $currentEvent = null;
 
     /**
      * Track all events created during this execution
      */
     protected array $allEvents = [];
+
+    /**
+     * Set the site context for site packages
+     */
+    public function setSite(ServerSite $site): self
+    {
+        $this->site = $site;
+        return $this;
+    }
 
     /**
      * Get the actionable name based on inherited class
@@ -42,6 +64,74 @@ abstract class PackageManager implements Package
         }
 
         return 'Installing';
+    }
+
+    protected function persist(BackedEnum $packageType, BackedEnum $packageName, BackedEnum $version, array $configuration): Closure
+    {
+        return function() use ($packageType, $packageName, $version, $configuration) {
+            try {
+                Log::debug("Persisting package to database", [
+                    'server_id' => $this->server->id,
+                    'package_type' => $packageType->value,
+                    'package_name' => $packageName->value,
+                    'version' => $version->value,
+                    'configuration' => $configuration,
+                ]);
+
+                /** @var Model $package */
+                $package = null;
+
+                if ($this instanceof SitePackage) {
+                    // For site packages, we need to ensure we have a site context
+                    if (!$this->site) {
+                        throw new Exception("Site context required for SitePackage. Class: " . get_class($this));
+                    }
+
+                    $package = $this->site->packages()->updateOrCreate([
+                        'server_id' => $this->server->id,
+                        'service_name' => $packageName->value,
+                        'service_type' => $packageType->value,
+                    ],
+                    [
+                        'version' => $version->value,
+                        'configuration' => $configuration
+                    ]);
+                } else if ($this instanceof ServerPackage) {
+                    $package = $this->server->packages()->updateOrCreate([
+                        'service_name' => $packageName->value,
+                        'service_type' => $packageType->value,
+                    ],
+                    [
+                        'version' => $version->value,
+                        'configuration' => $configuration
+                    ]);
+                } else {
+                    throw new Exception("Unknown package type. Class: " . get_class($this));
+                }
+
+                Log::info("Successfully persisted package", [
+                    'server_id' => $this->server->id,
+                    'package_id' => $package->id,
+                    'package_type' => $packageType->value,
+                    'package_name' => $packageName->value,
+                    'version' => $version->value,
+                    'was_created' => $package->wasRecentlyCreated,
+                ]);
+
+                return $package;
+            } catch (\Exception $e) {
+                Log::error("Failed to persist package", [
+                    'server_id' => $this->server->id,
+                    'package_type' => $packageType->value,
+                    'package_name' => $packageName->value,
+                    'version' => $version->value,
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                ]);
+
+                throw $e;
+            }
+        };
     }
 
     /**
@@ -61,7 +151,7 @@ abstract class PackageManager implements Package
      */
     protected function track(string $milestone): Closure
     {
-        $service = $this->serviceType();
+        $service = $this->packageType()->value;
         $milestoneStep = $this->milestoneStep++;
         $totalMileSteps = $this->countMilestones();
 
@@ -78,21 +168,47 @@ abstract class PackageManager implements Package
             }
 
             // Persist the provision event to database for frontend tracking
-            $this->currentEvent = ServerPackageEvent::create([
-                'server_id' => $this->server->id,
-                'service_type' => $service,
-                'provision_type' => $this->actionableName() == 'Installing' ? 'install' : 'uninstall',
-                'milestone' => $milestone,
-                'current_step' => $milestoneStep,
-                'total_steps' => $totalMileSteps,
-                'details' => [
-                    'server_ip' => $this->server->public_ip,
-                    'server_name' => $this->server->vanity_name,
-                    'timestamp' => now()->toISOString(),
-                ],
-                'status' => 'pending', // Start as pending
-                'error_log' => null,
-            ]);
+            if ($this instanceof SitePackage) {
+                // For site packages, we need to ensure we have a site context
+                if (!$this->site) {
+                    throw new Exception("Site context required for SitePackage. Class: " . get_class($this));
+                }
+
+                $this->currentEvent = $this->site->packageEvents()->create([
+                    'server_id' => $this->server->id,
+                    'service_type' => $service,
+                    'provision_type' => $this->actionableName() == 'Installing' ? 'install' : 'uninstall',
+                    'milestone' => $milestone,
+                    'current_step' => $milestoneStep,
+                    'total_steps' => $totalMileSteps,
+                    'details' => [
+                        'server_ip' => $this->server->public_ip,
+                        'server_name' => $this->server->vanity_name,
+                        'site_domain' => $this->site->domain,
+                        'timestamp' => now()->toISOString(),
+                    ],
+                    'status' => 'pending', // Start as pending
+                    'error_log' => null,
+                ]);
+            } else if ($this instanceof ServerPackage) {
+                $this->currentEvent = $this->server->packageEvents()->create([
+                    'server_id' => $this->server->id,
+                    'service_type' => $service,
+                    'provision_type' => $this->actionableName() == 'Installing' ? 'install' : 'uninstall',
+                    'milestone' => $milestone,
+                    'current_step' => $milestoneStep,
+                    'total_steps' => $totalMileSteps,
+                    'details' => [
+                        'server_ip' => $this->server->public_ip,
+                        'server_name' => $this->server->vanity_name,
+                        'timestamp' => now()->toISOString(),
+                    ],
+                    'status' => 'pending', // Start as pending
+                    'error_log' => null,
+                ]);
+            } else {
+                throw new Exception("Unknown package type. Class: " . get_class($this));
+            }
 
             // Track this event
             $this->allEvents[] = $this->currentEvent;
@@ -119,6 +235,7 @@ abstract class PackageManager implements Package
                             'index' => $index ?? null,
                             'exception' => $e->getMessage(),
                         ]);
+                        throw new Exception("Closure command threw an exception at index " . ($index ?? 'unknown') . ": " . $e->getMessage());
                         continue;
                     }
 
@@ -195,7 +312,7 @@ abstract class PackageManager implements Package
 
             Log::error("Package manager error: " . $errorMessage, [
                 'server' => $this->server->id,
-                'service' => $this->serviceType(),
+                'service' => $this->packageType()->value,
                 'exception' => $e,
             ]);
 

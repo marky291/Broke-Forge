@@ -8,7 +8,9 @@ use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Job for installing sites on servers
+ * Site Installation Job
+ *
+ * Handles queued site installation on remote servers
  */
 class SiteInstallerJob implements ShouldQueue
 {
@@ -29,19 +31,14 @@ class SiteInstallerJob implements ShouldQueue
      */
     public function handle(): void
     {
-        try {
-            // Create the site record
-            $site = $this->server->sites()->create([
-                'domain' => $this->domain,
-                'document_root' => "/var/www/{$this->domain}/public",
-                'nginx_config_path' => "/etc/nginx/sites-available/{$this->domain}",
-                'php_version' => $this->phpVersion,
-                'ssl_enabled' => $this->ssl,
-                'status' => 'provisioning',
-            ]);
+        Log::info("Starting site installation for domain {$this->domain} on server #{$this->server->id}", [
+            'php_version' => $this->phpVersion,
+            'ssl_enabled' => $this->ssl,
+        ]);
 
-            // Initialize the installer
-            $siteInstaller = new SiteInstaller($this->server);
+        try {
+            // Create installer instance
+            $installer = new SiteInstaller($this->server);
 
             // Configure the site
             $config = [
@@ -50,33 +47,15 @@ class SiteInstallerJob implements ShouldQueue
                 'ssl' => $this->ssl,
             ];
 
-            // Run the installation with new pattern
-            $updatedSite = $siteInstaller->execute($config);
+            // Execute installation - the installer handles all logic and database tracking
+            $installer->execute($config);
 
-            // Update site status
-            $site->update([
-                'status' => 'active',
-                'provisioned_at' => now(),
-            ]);
-
-            Log::info('Site installed successfully', [
-                'server_id' => $this->server->id,
-                'site_id' => $site->id,
-                'domain' => $this->domain,
-            ]);
-
+            Log::info("Site installation completed for domain {$this->domain} on server #{$this->server->id}");
         } catch (\Exception $e) {
-            Log::error('Site installation failed', [
-                'server_id' => $this->server->id,
-                'domain' => $this->domain,
+            Log::error("Site installation failed for domain {$this->domain} on server #{$this->server->id}", [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
-
-            // Update site status if it exists
-            if (isset($site)) {
-                $site->update(['status' => 'failed']);
-            }
 
             throw $e;
         }
