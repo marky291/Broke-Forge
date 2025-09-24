@@ -2,9 +2,10 @@ import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import { type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { BookOpen, ChevronsUpDown, Folder, LayoutGrid, Menu, X } from 'lucide-react';
+import { ChevronsUpDown, Menu, Server, X } from 'lucide-react';
 import { useState } from 'react';
 import AppLogoIcon from './app-logo-icon';
+import { CommandSearch } from './command-search';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { UserInfo } from '@/components/user-info';
 import { UserMenuContent } from '@/components/user-menu-content';
@@ -17,98 +18,72 @@ export function MainHeader() {
 
     const mainNavItems: NavItem[] = [
         {
-            title: 'Dashboard',
+            title: 'Servers',
             href: dashboard(),
-            icon: LayoutGrid,
+            icon: Server,
             isActive: path === dashboard() || path === '/',
         },
     ];
 
-    const resourceNavItems: NavItem[] = [
-        {
-            title: 'Repository',
-            href: 'https://github.com/laravel/react-starter-kit',
-            icon: Folder,
-        },
-        {
-            title: 'Documentation',
-            href: 'https://laravel.com/docs/starter-kits#react',
-            icon: BookOpen,
-        },
-    ];
-
     return (
-        <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <header className="sticky top-0 z-50 w-full border-b" style={{
+            background: 'linear-gradient(to right, #c81abf, #1e63eb)'
+        }}>
             <div className="container mx-auto max-w-7xl px-4">
-                <div className="flex h-16 items-center justify-between">
-                    {/* Left Section - Logo & Brand */}
-                    <div className="flex items-center gap-8">
+                <div className="flex h-16 items-center gap-4">
+                    {/* Left Section - Logo & Nav */}
+                    <div className="flex items-center gap-4">
                         {/* Logo and Brand Name */}
                         <Link
                             href={dashboard()}
                             prefetch
                             className="flex items-center gap-3 transition-opacity hover:opacity-80"
                         >
-                            <div className="flex aspect-square size-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
-                                <AppLogoIcon className="size-5 fill-current" />
+                            <div className="flex aspect-square size-9 items-center justify-center rounded-lg bg-white shadow-md">
+                                <AppLogoIcon className="size-5 fill-current text-primary" />
                             </div>
-                            <div className="hidden sm:block">
-                                <h1 className="text-lg font-semibold">Laravel Starter Kit</h1>
+                            <div className="hidden lg:block">
+                                <h1 className="text-lg font-semibold text-white">Laravel Starter Kit</h1>
                             </div>
                         </Link>
 
                         {/* Desktop Navigation - Main Items */}
-                        <nav className="hidden md:flex items-center gap-1">
-                            <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-muted/50">
-                                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider mr-2">Platform</span>
-                                {mainNavItems.map((item) => {
-                                    const Icon = item.icon;
-                                    return (
-                                        <Link
-                                            key={item.href}
-                                            href={item.href}
-                                            prefetch
-                                            className={cn(
-                                                'flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-all duration-200',
-                                                'hover:bg-background/80 hover:shadow-sm',
-                                                item.isActive
-                                                    ? 'bg-background text-foreground shadow-sm'
-                                                    : 'text-muted-foreground hover:text-foreground',
-                                            )}
-                                        >
-                                            {Icon && <Icon className="size-4" />}
-                                            <span>{item.title}</span>
-                                        </Link>
-                                    );
-                                })}
-                            </div>
+                        <nav className="hidden md:flex items-center">
+                            {mainNavItems.map((item) => {
+                                const Icon = item.icon;
+                                return (
+                                    <Link
+                                        key={item.href}
+                                        href={item.href}
+                                        prefetch
+                                        className={cn(
+                                            'flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-all duration-200',
+                                            'hover:bg-white/20 hover:shadow-sm',
+                                            item.isActive
+                                                ? 'bg-white text-gray-900 shadow-sm'
+                                                : 'text-white/90 hover:text-white',
+                                        )}
+                                    >
+                                        {Icon && <Icon className="size-4" />}
+                                        <span>{item.title}</span>
+                                    </Link>
+                                );
+                            })}
                         </nav>
                     </div>
 
-                    {/* Center Section - Resource Links (Desktop) */}
-                    <nav className="hidden lg:flex items-center gap-2">
-                        {resourceNavItems.map((item) => {
-                            const Icon = item.icon;
-                            return (
-                                <a
-                                    key={item.href}
-                                    href={item.href}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className={cn(
-                                        'flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-all duration-200',
-                                        'text-muted-foreground hover:text-foreground hover:bg-accent',
-                                    )}
-                                >
-                                    {Icon && <Icon className="size-4" />}
-                                    <span>{item.title}</span>
-                                </a>
-                            );
-                        })}
-                    </nav>
+                    {/* Center Section - Search (now takes up available space) */}
+                    <div className="hidden md:flex flex-1 justify-center px-8">
+                        <CommandSearch />
+                    </div>
 
                     {/* Right Section - User Menu & Mobile Toggle */}
                     <div className="flex items-center gap-3">
+                        {/* Mobile Search Button */}
+                        <div className="md:hidden">
+                            <CommandSearch />
+                        </div>
+
                         {/* User Menu (Desktop) */}
                         <div className="hidden md:block">
                             <DropdownMenu>
@@ -160,55 +135,29 @@ export function MainHeader() {
                             </div>
                         </div>
 
-                        {/* Platform Navigation */}
-                        <div>
-                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Platform</p>
-                            <nav className="space-y-1">
-                                {mainNavItems.map((item) => {
-                                    const Icon = item.icon;
-                                    return (
-                                        <Link
-                                            key={item.href}
-                                            href={item.href}
-                                            prefetch
-                                            onClick={() => setMobileMenuOpen(false)}
-                                            className={cn(
-                                                'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors',
-                                                item.isActive
-                                                    ? 'bg-primary text-primary-foreground'
-                                                    : 'hover:bg-accent hover:text-accent-foreground',
-                                            )}
-                                        >
-                                            {Icon && <Icon className="size-4" />}
-                                            <span className="font-medium">{item.title}</span>
-                                        </Link>
-                                    );
-                                })}
-                            </nav>
-                        </div>
-
-                        {/* Resources Navigation */}
-                        <div>
-                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Resources</p>
-                            <nav className="space-y-1">
-                                {resourceNavItems.map((item) => {
-                                    const Icon = item.icon;
-                                    return (
-                                        <a
-                                            key={item.href}
-                                            href={item.href}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            onClick={() => setMobileMenuOpen(false)}
-                                            className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
-                                        >
-                                            {Icon && <Icon className="size-4" />}
-                                            <span className="font-medium">{item.title}</span>
-                                        </a>
-                                    );
-                                })}
-                            </nav>
-                        </div>
+                        {/* Navigation */}
+                        <nav className="space-y-1">
+                            {mainNavItems.map((item) => {
+                                const Icon = item.icon;
+                                return (
+                                    <Link
+                                        key={item.href}
+                                        href={item.href}
+                                        prefetch
+                                        onClick={() => setMobileMenuOpen(false)}
+                                        className={cn(
+                                            'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors',
+                                            item.isActive
+                                                ? 'bg-primary text-primary-foreground'
+                                                : 'hover:bg-accent hover:text-accent-foreground',
+                                        )}
+                                    >
+                                        {Icon && <Icon className="size-4" />}
+                                        <span className="font-medium">{item.title}</span>
+                                    </Link>
+                                );
+                            })}
+                        </nav>
 
                         {/* Account Actions */}
                         <div className="pt-4 border-t">

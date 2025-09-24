@@ -1,11 +1,23 @@
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import ServerLayout from '@/layouts/server/layout';
+import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
-import { edit as editServer } from '@/routes/servers';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
-import { Loader2Icon, Trash2Icon } from 'lucide-react';
+import {
+    CheckCircle2,
+    Clock,
+    Edit,
+    Loader2,
+    RefreshCw,
+    Server,
+    Terminal,
+    Trash2,
+    Wifi,
+    XCircle
+} from 'lucide-react';
 import { useState } from 'react';
 
 type Server = {
@@ -21,18 +33,34 @@ type Server = {
 
 export default function Show({ server }: { server: Server }) {
     const [isDestroying, setIsDestroying] = useState(false);
+    const [isRestarting, setIsRestarting] = useState(false);
     const status = server.connection ?? 'pending';
-    const formattedStatus = status.charAt(0).toUpperCase() + status.slice(1);
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard().url },
         { title: `Server #${server.id}`, href: '#' },
     ];
 
-    const handleDestroyServer = () => {
-        const action = server.connection === 'pending' ? 'cancel provisioning' : 'delete';
-        const confirmed = window.confirm(`Are you sure you want to ${action} this server? This action cannot be undone.`);
+    const getStatusConfig = () => {
+        switch (status) {
+            case 'connected':
+                return { color: 'bg-green-500', badge: 'border-green-200 bg-green-50 text-green-700', icon: CheckCircle2, label: 'Connected' };
+            case 'failed':
+                return { color: 'bg-red-500', badge: 'border-red-200 bg-red-50 text-red-700', icon: XCircle, label: 'Failed' };
+            case 'disconnected':
+                return { color: 'bg-gray-500', badge: 'border-gray-200 bg-gray-50 text-gray-700', icon: XCircle, label: 'Disconnected' };
+            case 'connecting':
+                return { color: 'bg-blue-500', badge: 'border-blue-200 bg-blue-50 text-blue-700', icon: Wifi, label: 'Connecting' };
+            default:
+                return { color: 'bg-amber-500', badge: 'border-amber-200 bg-amber-50 text-amber-700', icon: Clock, label: 'Pending' };
+        }
+    };
 
+    const statusConfig = getStatusConfig();
+    const StatusIcon = statusConfig.icon;
+
+    const handleDestroyServer = () => {
+        const confirmed = window.confirm('Are you sure you want to destroy this server? This action cannot be undone.');
         if (confirmed) {
             setIsDestroying(true);
             router.delete(`/servers/${server.id}`, {
@@ -42,111 +70,146 @@ export default function Show({ server }: { server: Server }) {
         }
     };
 
+    const handleRestartServer = () => {
+        setIsRestarting(true);
+        // Simulate restart - replace with actual API call
+        setTimeout(() => setIsRestarting(false), 2000);
+    };
+
     return (
         <ServerLayout server={server} breadcrumbs={breadcrumbs}>
-            <Head title={`Server #${server.id} — ${server.vanity_name}`} />
+            <Head title={`${server.vanity_name} - Server Overview`} />
+
             <div className="space-y-6">
-                <div className="mb-2 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <h1 className="text-2xl font-semibold">{server.vanity_name}</h1>
-                        {(() => {
-                            const color =
-                                status === 'connected' ? 'green' : status === 'failed' ? 'red' : status === 'disconnected' ? 'gray' : 'amber';
-                            const dot =
-                                color === 'green'
-                                    ? 'bg-green-500'
-                                    : color === 'red'
-                                      ? 'bg-red-500'
-                                      : color === 'gray'
-                                        ? 'bg-gray-500'
-                                        : 'bg-amber-500';
-                            const ping =
-                                color === 'green'
-                                    ? 'bg-green-400'
-                                    : color === 'red'
-                                      ? 'bg-red-400'
-                                      : color === 'gray'
-                                        ? 'bg-gray-400'
-                                        : 'bg-amber-400';
-                            return (
-                                <span className="inline-flex items-center gap-2 text-xs">
-                                    <span className="relative inline-flex h-2 w-2">
-                                        <span className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-60 ${ping}`}></span>
-                                        <span className={`relative inline-flex h-2 w-2 rounded-full ${dot}`}></span>
-                                    </span>
-                                    <span className="text-muted-foreground">{formattedStatus}</span>
-                                </span>
-                            );
-                        })()}
+                {/* Header */}
+                <div className="flex items-start justify-between">
+                    <div className="space-y-1">
+                        <div className="flex items-center gap-3">
+                            <h1 className="text-2xl font-semibold">{server.vanity_name}</h1>
+                            <Badge variant="outline" className={cn("gap-1.5", statusConfig.badge)}>
+                                <StatusIcon className="size-3" />
+                                {statusConfig.label}
+                            </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                            Server #{server.id} • {server.public_ip}:{server.ssh_port}
+                        </p>
                     </div>
-                    <div className="space-x-2">
-                        <Button variant="outline" asChild>
-                            <Link href={dashboard().url}>Back</Link>
-                        </Button>
-                        <Button variant="destructive" onClick={handleDestroyServer} disabled={isDestroying}>
-                            {isDestroying ? (
-                                <>
-                                    <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />
-                                    Destroying...
-                                </>
+
+                    {/* Actions */}
+                    <div className="flex gap-2">
+                        <Button variant="outline" size="sm" onClick={handleRestartServer} disabled={isRestarting}>
+                            {isRestarting ? (
+                                <Loader2 className="size-4 animate-spin" />
                             ) : (
-                                <>
-                                    <Trash2Icon className="mr-2 h-4 w-4" />
-                                    Destroy Server
-                                </>
+                                <RefreshCw className="size-4" />
                             )}
+                            <span className="ml-2 hidden sm:inline">Restart</span>
                         </Button>
-                        <Button asChild>
-                            <Link href={editServer(server.id)}>Edit</Link>
+                        <Button variant="outline" size="sm" asChild>
+                            <Link href={`/servers/${server.id}/terminal`}>
+                                <Terminal className="size-4" />
+                                <span className="ml-2 hidden sm:inline">Terminal</span>
+                            </Link>
+                        </Button>
+                        <Button variant="outline" size="sm" asChild>
+                            <Link href={`/servers/${server.id}/edit`}>
+                                <Edit className="size-4" />
+                                <span className="ml-2 hidden sm:inline">Edit</span>
+                            </Link>
                         </Button>
                     </div>
                 </div>
 
-                {/* Server Details */}
-                <div className="grid gap-4">
-                    <div>
-                        <div className="rounded-xl border border-sidebar-border/70 bg-background shadow-sm dark:border-sidebar-border">
-                            <div className="px-4 py-3">
-                                <div className="text-sm font-medium tracking-wide text-neutral-600 uppercase dark:text-neutral-300">
-                                    Server Details
-                                </div>
+                {/* Main Content Grid */}
+                <div className="grid gap-6 lg:grid-cols-2">
+                    {/* Server Information */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-base">Server Information</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                            <div className="flex justify-between py-2 border-b">
+                                <span className="text-sm text-muted-foreground">Public IP</span>
+                                <span className="text-sm font-medium">{server.public_ip}</span>
                             </div>
-                            <Separator />
-                            <div className="px-4 py-4">
-                                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                                    <div className="space-y-4">
-                                        <div>
-                                            <div className="text-sm text-muted-foreground">Name</div>
-                                            <div className="font-medium">{server.vanity_name}</div>
-                                        </div>
-                                        <div>
-                                            <div className="text-sm text-muted-foreground">Public IP Address</div>
-                                            <div className="font-medium">{server.public_ip}</div>
-                                        </div>
-                                        <div>
-                                            <div className="text-sm text-muted-foreground">SSH Port</div>
-                                            <div className="font-medium">{server.ssh_port}</div>
-                                        </div>
-                                    </div>
-                                    <div className="space-y-4">
-                                        <div>
-                                            <div className="text-sm text-muted-foreground">Private IP</div>
-                                            <div className="font-medium">{server.private_ip ?? '-'}</div>
-                                        </div>
-                                        <div>
-                                            <div className="text-sm text-muted-foreground">Status</div>
-                                            <div className="font-medium">{formattedStatus}</div>
-                                        </div>
-                                        <div>
-                                            <div className="text-sm text-muted-foreground">Created</div>
-                                            <div className="font-medium">{new Date(server.created_at).toLocaleString()}</div>
-                                        </div>
-                                    </div>
-                                </div>
+                            <div className="flex justify-between py-2 border-b">
+                                <span className="text-sm text-muted-foreground">Private IP</span>
+                                <span className="text-sm font-medium">{server.private_ip || 'Not configured'}</span>
                             </div>
-                        </div>
-                    </div>
+                            <div className="flex justify-between py-2 border-b">
+                                <span className="text-sm text-muted-foreground">SSH Port</span>
+                                <span className="text-sm font-medium">{server.ssh_port}</span>
+                            </div>
+                            <div className="flex justify-between py-2">
+                                <span className="text-sm text-muted-foreground">Created</span>
+                                <span className="text-sm font-medium">
+                                    {new Date(server.created_at).toLocaleDateString()}
+                                </span>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Quick Links */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-base">Quick Access</CardTitle>
+                            <CardDescription>Common server management tasks</CardDescription>
+                        </CardHeader>
+                        <CardContent className="grid grid-cols-2 gap-3">
+                            <Button variant="outline" className="justify-start" asChild>
+                                <Link href={`/servers/${server.id}/sites`}>
+                                    Sites
+                                </Link>
+                            </Button>
+                            <Button variant="outline" className="justify-start" asChild>
+                                <Link href={`/servers/${server.id}/database`}>
+                                    Database
+                                </Link>
+                            </Button>
+                            <Button variant="outline" className="justify-start" asChild>
+                                <Link href={`/servers/${server.id}/php`}>
+                                    PHP
+                                </Link>
+                            </Button>
+                            <Button variant="outline" className="justify-start" asChild>
+                                <Link href={`/servers/${server.id}/explorer`}>
+                                    File Explorer
+                                </Link>
+                            </Button>
+                        </CardContent>
+                    </Card>
                 </div>
+
+                {/* Danger Zone */}
+                <Card className="border-red-200 dark:border-red-900">
+                    <CardHeader>
+                        <CardTitle className="text-base text-red-600">Danger Zone</CardTitle>
+                        <CardDescription>
+                            Irreversible and destructive actions
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={handleDestroyServer}
+                            disabled={isDestroying}
+                        >
+                            {isDestroying ? (
+                                <>
+                                    <Loader2 className="mr-2 size-4 animate-spin" />
+                                    Destroying...
+                                </>
+                            ) : (
+                                <>
+                                    <Trash2 className="mr-2 size-4" />
+                                    Destroy Server
+                                </>
+                            )}
+                        </Button>
+                    </CardContent>
+                </Card>
             </div>
         </ServerLayout>
     );

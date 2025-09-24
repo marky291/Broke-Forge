@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
-import ServerLayout from '@/layouts/server/layout';
+import SiteLayout from '@/layouts/server/site-layout';
 import { dashboard } from '@/routes';
 import { show as showServer } from '@/routes/servers';
 import { type BreadcrumbItem } from '@/types';
@@ -90,7 +90,7 @@ export default function SiteCommands({
     const resultDurationSeconds = result ? (result.durationMs / 1000).toFixed(2) : null;
 
     return (
-        <ServerLayout server={server} site={site} breadcrumbs={breadcrumbs}>
+        <SiteLayout server={server} site={site} breadcrumbs={breadcrumbs}>
             <Head title={`Commands — ${site.domain}`} />
             <div className="space-y-6">
                 <div className="space-y-1">
@@ -242,6 +242,6 @@ export default function SiteCommands({
                     </Card>
                 )}
             </div>
-        </ServerLayout>
+        </SiteLayout>
     );
 }

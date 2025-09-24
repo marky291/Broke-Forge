@@ -2,7 +2,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
-import ServerLayout from '@/layouts/server/layout';
+import SiteLayout from '@/layouts/server/site-layout';
 import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import { show as showServer } from '@/routes/servers';
@@ -216,7 +216,7 @@ export default function SiteApplication({ server, site }: { server: ServerType; 
     };
 
     return (
-        <ServerLayout server={server} site={site} breadcrumbs={breadcrumbs}>
+        <SiteLayout server={server} site={site} breadcrumbs={breadcrumbs}>
             <Head title={`Application — ${site.domain}`} />
             <div className="space-y-8">
                 <div className="space-y-2">
@@ -314,6 +314,6 @@ export default function SiteApplication({ server, site }: { server: ServerType; 
                     </Card>
                 </div>
             </div>
-        </ServerLayout>
+        </SiteLayout>
     );
 }
