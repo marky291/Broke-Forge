@@ -18,7 +18,7 @@ use LogicException;
  *
  * Handle cloning or updating a site's Git repository over SSH
  */
-class GitRepositoryInstaller extends PackageInstaller
+class GitRepositoryInstaller extends PackageInstaller implements \App\Packages\Base\ServerPackage
 {
     /**
      * Execute the Git repository installation

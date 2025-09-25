@@ -3,11 +3,8 @@
 namespace App\Packages\Base;
 
 use App\Models\Server;
-use App\Models\ServerPackage;
+use App\Models\ServerPackage as ServerPackageModel;
 use App\Models\ServerPackageEvent;
-use App\Models\ServerSite;
-use App\Models\ServerSitePackage;
-use App\Models\ServerSitePackageEvent;
 use BackedEnum;
 use Closure;
 use Exception;
@@ -24,10 +21,6 @@ abstract class PackageManager implements Package
 {
     protected Server $server;
 
-    /**
-     * Site context for site packages (optional)
-     */
-    protected ?ServerSite $site = null;
 
     /**
      * Get the total steps that have been run
@@ -45,14 +38,6 @@ abstract class PackageManager implements Package
      */
     protected array $allEvents = [];
 
-    /**
-     * Set the site context for site packages
-     */
-    public function setSite(ServerSite $site): self
-    {
-        $this->site = $site;
-        return $this;
-    }
 
     /**
      * Get the actionable name based on inherited class
@@ -81,29 +66,18 @@ abstract class PackageManager implements Package
                 /** @var Model $package */
                 $package = null;
 
-                if ($this instanceof SitePackage) {
-                    // For site packages, we need to ensure we have a site context
-                    if (!$this->site) {
-                        throw new Exception("Site context required for SitePackage. Class: " . get_class($this));
-                    }
+                if ($this instanceof \App\Packages\Base\ServerPackage) {
+                    // Include version in the configuration since there's no version column
+                    $configWithVersion = array_merge($configuration, ['version' => $version->value]);
 
-                    $package = $this->site->packages()->updateOrCreate([
-                        'server_id' => $this->server->id,
-                        'service_name' => $packageName->value,
-                        'service_type' => $packageType->value,
-                    ],
-                    [
-                        'version' => $version->value,
-                        'configuration' => $configuration
-                    ]);
-                } else if ($this instanceof ServerPackage) {
                     $package = $this->server->packages()->updateOrCreate([
                         'service_name' => $packageName->value,
                         'service_type' => $packageType->value,
                     ],
                     [
-                        'version' => $version->value,
-                        'configuration' => $configuration
+                        'configuration' => $configWithVersion,
+                        'status' => 'installed',
+                        'installed_at' => now()
                     ]);
                 } else {
                     throw new Exception("Unknown package type. Class: " . get_class($this));
@@ -118,7 +92,9 @@ abstract class PackageManager implements Package
                     'was_created' => $package->wasRecentlyCreated,
                 ]);
 
-                return $package;
+                // Return nothing - this closure is for side effects only
+                // Returning the model was causing it to be JSON-encoded and executed as SSH command
+                return;
             } catch (\Exception $e) {
                 Log::error("Failed to persist package", [
                     'server_id' => $this->server->id,
@@ -168,29 +144,7 @@ abstract class PackageManager implements Package
             }
 
             // Persist the provision event to database for frontend tracking
-            if ($this instanceof SitePackage) {
-                // For site packages, we need to ensure we have a site context
-                if (!$this->site) {
-                    throw new Exception("Site context required for SitePackage. Class: " . get_class($this));
-                }
-
-                $this->currentEvent = $this->site->packageEvents()->create([
-                    'server_id' => $this->server->id,
-                    'service_type' => $service,
-                    'provision_type' => $this->actionableName() == 'Installing' ? 'install' : 'uninstall',
-                    'milestone' => $milestone,
-                    'current_step' => $milestoneStep,
-                    'total_steps' => $totalMileSteps,
-                    'details' => [
-                        'server_ip' => $this->server->public_ip,
-                        'server_name' => $this->server->vanity_name,
-                        'site_domain' => $this->site->domain,
-                        'timestamp' => now()->toISOString(),
-                    ],
-                    'status' => 'pending', // Start as pending
-                    'error_log' => null,
-                ]);
-            } else if ($this instanceof ServerPackage) {
+            if ($this instanceof \App\Packages\Base\ServerPackage) {
                 $this->currentEvent = $this->server->packageEvents()->create([
                     'server_id' => $this->server->id,
                     'service_type' => $service,
@@ -239,46 +193,59 @@ abstract class PackageManager implements Package
                         continue;
                     }
 
-                    // Accept Stringable outputs too
-                    if ($output instanceof Stringable) {
+                    // Check if the output should be executed as SSH command
+                    // Only string outputs should be executed as SSH commands
+                    if (is_string($output)) {
+                        Log::debug('Found closure-based string command', [
+                            'index'  => $index ?? null,
+                            'output' => $output
+                        ]);
+
+                        // Replace the closure with its string output for SSH execution
+                        $command = $output;
+                    } elseif ($output instanceof Stringable) {
+                        // Convert Stringable to string for SSH execution
                         $output = (string) $output;
-                    } elseif (!is_string($output)) {
+                        Log::debug('Found closure-based stringable command', [
+                            'index'  => $index ?? null,
+                            'output' => $output
+                        ]);
+                        $command = $output;
+                    } else {
+                        // Non-string outputs (like Model instances) should not be executed as SSH commands
                         Log::debug('Skipping non-string command output', [
                             'index' => $index ?? null,
                             'type'  => get_debug_type($output),
                         ]);
                         continue;
                     }
-
-                    Log::debug('Found closure-based string command', [
-                        'index'  => $index ?? null,
-                        'output' => $output
-                    ]);
                 }
 
-                // Execute SSH commands with timeout to prevent hanging
-                $process = $this->ssh($this->sshCredential()->user(), $this->server->public_ip, $this->server->ssh_port)
-                    ->disableStrictHostKeyChecking()
-                    ->setTimeout(300)
-                    ->execute($command instanceof Closure ? $command() : $command);
+                // Only execute SSH commands for strings
+                if (is_string($command)) {
+                    // Execute SSH commands with timeout to prevent hanging
+                    $process = $this->ssh($this->sshCredential()->user(), $this->server->public_ip, $this->server->ssh_port)
+                        ->disableStrictHostKeyChecking()
+                        ->setTimeout(300)
+                        ->execute($command);
 
-                Log::debug("SSH command: {$process->getCommandLine()}");
+                    Log::debug("SSH command: {$process->getCommandLine()}");
 
-                if (! $process->isSuccessful()) {
-                    $error = "Failed to execute command: $command\nError Output: " . $process->getErrorOutput();
+                    if (! $process->isSuccessful()) {
+                        $error = "Failed to execute command: $command\nError Output: " . $process->getErrorOutput();
 
-                    // Mark current event as failed if exists
-                    if ($this->currentEvent) {
-                        $this->currentEvent->update([
-                            'status' => 'failed',
-                            'error_log' => $error,
-                        ]);
+                        // Mark current event as failed if exists
+                        if ($this->currentEvent) {
+                            $this->currentEvent->update([
+                                'status' => 'failed',
+                                'error_log' => $error,
+                            ]);
+                        }
+
+                        Log::error($error, ['credential' => $this->sshCredential(), 'server' => $this->server]);
+                        throw new \RuntimeException("Command failed: $command");
                     }
-
-                    Log::error($error, ['credential' => $this->sshCredential(), 'server' => $this->server]);
-                    throw new \RuntimeException("Command failed: $command");
                 }
-
             }
 
             // Mark the last event as success after completing all commands successfully

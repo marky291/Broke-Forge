@@ -24,6 +24,9 @@ class PhpInstallerJob implements ShouldQueue
 
     public function handle(): void
     {
+        // Set no time limit for long-running installation process
+        set_time_limit(0);
+
         Log::info("Starting PHP {$this->phpVersion->value} installation for server #{$this->server->id}");
 
         try {

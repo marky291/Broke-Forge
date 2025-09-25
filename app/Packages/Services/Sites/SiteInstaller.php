@@ -17,7 +17,7 @@ use App\Packages\Enums\PackageType;
  * Provisions a site using SSH terminal commands to a remote
  * server that has NGINX installed
  */
-class SiteInstaller extends PackageInstaller implements Package
+class SiteInstaller extends PackageInstaller implements \App\Packages\Base\ServerPackage
 {
     /**
      * Execute the site installation

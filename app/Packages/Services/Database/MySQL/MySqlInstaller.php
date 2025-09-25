@@ -15,7 +15,7 @@ use App\Packages\Enums\PackageType;
  * Handles installation of MySQL server with progress tracking
  * using ServerPackageEvent for real-time status updates
  */
-class MySqlInstaller extends PackageInstaller
+class MySqlInstaller extends PackageInstaller implements \App\Packages\Base\ServerPackage
 {
     public function milestones(): Milestones
     {

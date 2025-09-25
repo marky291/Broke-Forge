@@ -56,21 +56,6 @@ class ServerSite extends Model
         return $this->belongsTo(Server::class);
     }
 
-    /**
-     * Get the packages installed on this site.
-     */
-    public function packages(): HasMany
-    {
-        return $this->hasMany(ServerSitePackage::class, 'site_id');
-    }
-
-    /**
-     * Get the package events for this site.
-     */
-    public function packageEvents(): HasMany
-    {
-        return $this->hasMany(ServerSitePackageEvent::class, 'site_id');
-    }
 
     /**
      * Check if Git repository can be installed.

@@ -19,7 +19,7 @@ use Symfony\Component\Process\Exception\ProcessTimedOutException;
  *
  * Executes custom commands within site directories following package patterns
  */
-class SiteCommandInstaller extends PackageInstaller
+class SiteCommandInstaller extends PackageInstaller implements \App\Packages\Base\ServerPackage
 {
     protected ServerSite $site;
 

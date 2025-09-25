@@ -4,6 +4,7 @@ namespace App\Packages\Services\Firewall;
 
 use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageInstaller;
+use App\Packages\Base\ServerPackage;
 use App\Packages\Credentials\RootCredential;
 use App\Packages\Credentials\SshCredential;
 use App\Packages\Enums\PackageName;
@@ -15,7 +16,7 @@ use App\Packages\Enums\PackageVersion;
  *
  * Handles adding specific firewall rules to an existing UFW installation
  */
-class FirewallRuleInstaller extends PackageInstaller
+class FirewallRuleInstaller extends PackageInstaller implements ServerPackage
 {
     public function packageName(): PackageName
     {
@@ -90,8 +91,8 @@ class FirewallRuleInstaller extends PackageInstaller
             function() use ($rules, $context) {
                 // Get existing firewall configuration
                 $existingPackage = $this->server->packages()
-                    ->where('package_type', PackageType::Firewall)
-                    ->where('package_name', PackageName::FirewallUfw)
+                    ->where('service_type', PackageType::Firewall)
+                    ->where('service_name', PackageName::FirewallUfw)
                     ->first();
 
                 if ($existingPackage) {

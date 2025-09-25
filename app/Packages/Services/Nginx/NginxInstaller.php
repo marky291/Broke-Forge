@@ -13,6 +13,7 @@ use App\Packages\Enums\PackageType;
 use App\Packages\Enums\PackageVersion;
 use App\Packages\Enums\PhpVersion;
 use App\Packages\Services\PHP\PhpInstallerJob;
+use App\Packages\Services\Firewall\FirewallInstallerJob;
 use App\Packages\Services\Firewall\FirewallRuleInstallerJob;
 
 /**
@@ -20,7 +21,7 @@ use App\Packages\Services\Firewall\FirewallRuleInstallerJob;
  *
  * Handles installation of NGINX web server with PHP dependency
  */
-class NginxInstaller extends PackageInstaller
+class NginxInstaller extends PackageInstaller implements \App\Packages\Base\ServerPackage
 {
     public function packageName(): PackageName
     {
@@ -49,6 +50,9 @@ class NginxInstaller extends PackageInstaller
     {
         // First install PHP as a dependency using the dedicated PHP installer
         PhpInstallerJob::dispatchSync($this->server, $phpVersion);
+
+        // Ensure firewall is installed and configured first
+        FirewallInstallerJob::dispatchSync($this->server);
 
         // Configure firewall rules for HTTP and HTTPS
         $firewallRules = [
