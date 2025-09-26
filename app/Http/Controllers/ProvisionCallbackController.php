@@ -62,7 +62,7 @@ class ProvisionCallbackController extends Controller
             } else {
                 // Connection successful, update status and dispatch web service provisioning job
                 $server->provision_status = ProvisionStatus::Installing;
-                NginxInstallerJob::dispatch($server, PhpVersion::PHP83);
+                NginxInstallerJob::dispatch($server, PhpVersion::PHP83, isProvisioningServer: true);
                 Log::info("Dispatched web service provisioning job for server #{$server->id}");
             }
 

@@ -1,4 +1,6 @@
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Separator } from '@/components/ui/separator';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
@@ -6,7 +8,7 @@ import { edit as editServer, show as showServer } from '@/routes/servers';
 import { type BreadcrumbItem, type Server, type ServerPackageEvent } from '@/types';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import copyToClipboard from 'copy-to-clipboard';
-import { CheckIcon, CircleIcon, Loader2Icon, RefreshCwIcon, Trash2Icon, XCircleIcon } from 'lucide-react';
+import { CheckIcon, ChevronDownIcon, Loader2Icon, RefreshCwIcon, Trash2Icon, XCircleIcon } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 type ProvisionInfo = { command: string; root_password: string } | null;
@@ -17,6 +19,7 @@ export default function Provisioning({
     server,
     provision,
     events,
+    latestProgress = [],
     webServiceMilestones,
     packageNameLabels,
     statusLabels,
@@ -24,6 +27,7 @@ export default function Provisioning({
     server: Server;
     provision?: ProvisionInfo;
     events: ServerPackageEvent[];
+    latestProgress: ServerPackageEvent[];
     webServiceMilestones: Record<string, string>;
     packageNameLabels: Record<string, string>;
     statusLabels: Record<string, string>;
@@ -32,6 +36,7 @@ export default function Provisioning({
     const [copied, setCopied] = useState<'cmd' | 'root' | null>(null);
     const [isRetrying, setIsRetrying] = useState(false);
     const [isDestroying, setIsDestroying] = useState(false);
+    const [showDetails, setShowDetails] = useState(false);
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard().url },
@@ -39,47 +44,151 @@ export default function Provisioning({
         { title: 'Provisioning', href: '#' },
     ];
 
-    const steps = useMemo(() => {
-        const stages = [];
+    const latestSnapshots = useMemo(
+        () =>
+            latestProgress.map((progress) => {
+                const parsed = Number(progress.progress_percentage ?? 0);
+                const progressValue = Number.isFinite(parsed) ? parsed : 0;
 
-        // Check if we have any webserver events - this indicates access was successful
-        const hasWebserverEvents = events.some(e => e.service_type === 'webserver');
-        const hasFailedWebserverEvent = events.some(e => e.service_type === 'webserver' && e.status === 'failed');
+                return {
+                    ...progress,
+                    progressValue,
+                    label:
+                        packageNameLabels[progress.service_type] ??
+                        progress.label ??
+                        progress.service_type.charAt(0).toUpperCase() + progress.service_type.slice(1),
+                };
+            }),
+        [latestProgress, packageNameLabels],
+    );
 
-        // Step 1: Initial server access
-        stages.push({
-            key: 'access',
-            label: 'Configuring access on remote server',
-            state: (() => {
-                // If we have webserver events, access was successful
-                if (hasWebserverEvents) return 'complete';
-                // Otherwise use the original logic
-                if (server.provision_status === 'pending') return 'pending';
-                if (server.provision_status === 'connecting') return 'active';
-                if (server.provision_status === 'failed' && server.connection !== 'connected') return 'failed';
-                return 'complete';
-            })() as StepState,
-        });
+    const overallProgress = useMemo(() => {
+        const clamp = (value: number): number => Math.min(100, Math.max(0, value));
 
-        // Step 2: Installing web services
-        stages.push({
-            key: 'webservice',
-            label: 'Installing web server and PHP',
-            state: (() => {
-                // If we don't have webserver events yet, it's pending
-                if (!hasWebserverEvents && server.provision_status !== 'installing') return 'pending';
-                // If we have a failed webserver event, this step failed
-                if (hasFailedWebserverEvent) return 'failed';
-                // Otherwise use original logic
-                if (server.provision_status === 'installing') return 'active';
-                if (server.provision_status === 'completed') return 'complete';
-                if (server.provision_status === 'failed' && server.connection === 'connected') return 'failed';
-                return 'pending';
-            })() as StepState,
-        });
+        if (latestSnapshots.length === 0) {
+            if (server.provision_status === 'completed') {
+                return 100;
+            }
 
-        return stages;
-    }, [server.connection, server.provision_status, events]);
+            if (server.provision_status === 'failed') {
+                return 0;
+            }
+
+            const latestEvent = events.length > 0 ? events[events.length - 1] : null;
+            const fallback = latestEvent ? Number(latestEvent.progress_percentage ?? 0) : 0;
+
+            return clamp(Number.isFinite(fallback) ? fallback : 0);
+        }
+
+        const total = latestSnapshots.reduce((sum, snapshot) => sum + snapshot.progressValue, 0);
+        const average = total / latestSnapshots.length;
+
+        return clamp(Number.isFinite(average) ? average : 0);
+    }, [events, latestSnapshots, server.provision_status]);
+
+    const summary = useMemo(() => {
+        const reversed = [...events].reverse();
+        const failedEvent = reversed.find((event) => event.status === 'failed');
+        const pendingEvent = reversed.find((event) => event.status === 'pending');
+        const successfulEvent = reversed.find((event) => event.status === 'success');
+
+        if (server.provision_status === 'completed') {
+            const referenceEvent = successfulEvent ?? events[events.length - 1];
+            return {
+                tone: 'success' as const,
+                title: 'Provisioning complete',
+                description: referenceEvent?.label || 'All services installed successfully.',
+            };
+        }
+
+        if (failedEvent) {
+            return {
+                tone: 'error' as const,
+                title: 'Provisioning failed',
+                description:
+                    failedEvent.label ||
+                    statusLabels[failedEvent.milestone] ||
+                    'Review the event log below to resolve the issue.',
+            };
+        }
+
+        if (pendingEvent) {
+            return {
+                tone: 'progress' as const,
+                title: 'Installation in progress',
+                description:
+                    pendingEvent.label ||
+                    statusLabels[pendingEvent.milestone] ||
+                    'We are configuring your server.',
+            };
+        }
+
+        if (events.length === 0) {
+            return {
+                tone: 'idle' as const,
+                title: 'Waiting to start',
+                description: 'Run the provisioning command to begin installing services.',
+            };
+        }
+
+        const latestEvent = events[events.length - 1];
+
+        return {
+            tone: server.provision_status === 'failed' ? ('error' as const) : ('progress' as const),
+            title: server.provision_status_label,
+            description:
+                latestEvent.label ||
+                statusLabels[latestEvent.milestone] ||
+                'Provisioning status has been updated.',
+        };
+    }, [events, server.provision_status, server.provision_status_label, statusLabels]);
+
+    const lastUpdatedAt = useMemo(() => {
+        const latestEvent = events.length > 0 ? events[events.length - 1] : null;
+        if (!latestEvent?.created_at) {
+            return null;
+        }
+
+        const timestamp = new Date(latestEvent.created_at);
+        return Number.isNaN(timestamp.getTime()) ? null : timestamp;
+    }, [events]);
+
+    const connectionMeta = useMemo(() => {
+        switch (server.connection) {
+            case 'connected':
+                return {
+                    label: 'Connection established',
+                    dotClass: 'bg-emerald-500',
+                    animate: false,
+                };
+            case 'connecting':
+                return {
+                    label: 'Connecting to server',
+                    dotClass: 'bg-amber-500',
+                    animate: true,
+                };
+            case 'failed':
+                return {
+                    label: 'Connection failed',
+                    dotClass: 'bg-destructive',
+                    animate: false,
+                };
+            case 'disconnected':
+                return {
+                    label: 'Disconnected',
+                    dotClass: 'bg-gray-400',
+                    animate: false,
+                };
+            default:
+                return {
+                    label: 'Waiting for provisioning command',
+                    dotClass: 'bg-gray-400',
+                    animate: false,
+                };
+        }
+    }, [server.connection]);
+
+    const roundedProgress = Math.round(overallProgress);
 
     const progressByPackageName = useMemo(() => {
         const groupedProgress = events.reduce(
@@ -93,23 +202,49 @@ export default function Provisioning({
             {} as Record<string, ServerPackageEvent[]>,
         );
 
-        // Get the latest event for each package name with progress calculation
         return Object.entries(groupedProgress).map(([packageName, serviceEvents]) => {
             const latestEvent = serviceEvents[serviceEvents.length - 1];
+            const progress = Number(latestEvent.progress_percentage ?? 0) || 0;
             const isComplete = serviceEvents.some((e) => e.milestone === 'complete');
-            const isActive = server.provision_status === 'installing' && !isComplete;
+            const hasFailed = serviceEvents.some((e) => e.status === 'failed');
+            const isActive = !hasFailed && !isComplete && server.provision_status === 'installing';
 
             return {
                 packageName,
                 events: serviceEvents,
                 latestEvent,
-                progress: parseFloat(latestEvent.progress_percentage) || 0,
+                progress,
                 isComplete,
                 isActive,
+                hasFailed,
+                state: hasFailed ? ('failed' as const) : isComplete ? ('complete' as const) : isActive ? ('active' as const) : ('pending' as const),
                 label: packageNameLabels[packageName] || packageName.charAt(0).toUpperCase() + packageName.slice(1),
+                statusLabel: hasFailed ? 'Failed' : isComplete ? 'Installed' : isActive ? 'Installing' : 'Waiting',
             };
         });
     }, [events, server.provision_status, packageNameLabels]);
+
+    const packageMetrics = useMemo(() => {
+        if (progressByPackageName.length === 0) {
+            return {
+                total: 0,
+                completed: 0,
+                active: 0,
+                failed: 0,
+            };
+        }
+
+        const completed = progressByPackageName.filter((service) => service.state === 'complete').length;
+        const active = progressByPackageName.filter((service) => service.state === 'active').length;
+        const failed = progressByPackageName.filter((service) => service.state === 'failed').length;
+
+        return {
+            total: progressByPackageName.length,
+            completed,
+            active,
+            failed,
+        };
+    }, [progressByPackageName]);
 
 
     const copy = (text: string, which: 'cmd' | 'root') => {
@@ -160,14 +295,12 @@ export default function Provisioning({
             return;
         }
 
+
         // Check if we have any pending events
         const hasPendingEvents = events.some(event => event.status === 'pending');
 
         // Check if we have any failed events
         const hasFailedEvents = events.some(event => event.status === 'failed');
-
-        // Check if we have the complete milestone event
-        const hasCompleteEvent = events.some(event => event.milestone === 'complete');
 
         // Check if all events are either success or failed (no pending)
         const allEventsFinished = events.length > 0 && !hasPendingEvents;
@@ -175,23 +308,17 @@ export default function Provisioning({
         const isInitialProvision = server.provision_status === 'pending';
         const isActiveProvisioning = server.provision_status === 'connecting' || server.provision_status === 'installing';
 
-        // Continue polling if:
-        // 1. Initial provisioning state (pending)
-        // 2. Active provisioning (connecting or installing)
-        // 3. We have pending events that haven't finished
-        // 4. We haven't seen the complete event yet and have events
-        // 5. OR if no events exist yet (waiting for first event)
+        // Continue polling while provisioning is active
+        // Stop polling only when:
+        // 1. server.provision_status === 'completed' (handled above with redirect)
+        // 2. server.provision_status === 'failed' AND no pending events
         const shouldPoll = isInitialProvision ||
                          isActiveProvisioning ||
                          hasPendingEvents ||
-                         (!hasCompleteEvent && !hasFailedEvents && events.length === 0) ||
-                         (!hasCompleteEvent && events.length > 0 && !allEventsFinished);
+                         events.length === 0; // Keep polling if no events yet
 
-        // Stop polling only if:
-        // 1. Provisioning failed AND all events are finished
-        // 2. OR we have a complete event
-        // 3. OR all events have failed
-        if ((server.provision_status === 'failed' && allEventsFinished && hasFailedEvents) || hasCompleteEvent) {
+        // Stop polling if provisioning failed and all events are finished
+        if (server.provision_status === 'failed' && allEventsFinished && hasFailedEvents) {
             return;
         }
 
@@ -383,204 +510,238 @@ export default function Provisioning({
                 <div className="grid gap-4">
                     <div>
                         <div className="rounded-xl border border-sidebar-border/70 bg-background shadow-sm dark:border-sidebar-border">
-                            <div className="px-4 py-3">
+                            <div className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                                 <div className="text-sm font-medium tracking-wide text-neutral-600 uppercase dark:text-neutral-300">
                                     Provisioning Progress
                                 </div>
+                                <Badge
+                                    variant={summary.tone === 'error' ? 'destructive' : 'secondary'}
+                                    className={
+                                        summary.tone === 'success'
+                                            ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                                            : summary.tone === 'error'
+                                              ? ''
+                                              : 'border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-300'
+                                    }
+                                >
+                                    {server.provision_status_label}
+                                </Badge>
                             </div>
                             <Separator />
-                            <div className="px-4 py-4">
-                                <div className="mb-2 flex items-center gap-2">
-                                    {(() => {
-                                        const connection = server.connection;
-                                        const color =
-                                            connection === 'connected'
-                                                ? 'green'
-                                                : connection === 'failed'
-                                                  ? 'red'
-                                                  : connection === 'connecting'
-                                                    ? 'amber'
-                                                    : 'gray';
-                                        const dot =
-                                            color === 'green'
-                                                ? 'bg-green-500'
-                                                : color === 'red'
-                                                  ? 'bg-red-500'
-                                                  : color === 'amber'
-                                                    ? 'bg-amber-500'
-                                                    : 'bg-gray-500';
-                                        const ping =
-                                            color === 'green'
-                                                ? 'bg-green-400'
-                                                : color === 'red'
-                                                  ? 'bg-red-400'
-                                                  : color === 'amber'
-                                                    ? 'bg-amber-400'
-                                                    : 'bg-gray-400';
-                                        const label =
-                                            connection === 'pending'
-                                                ? 'Waiting to start'
-                                                : connection === 'connecting'
-                                                  ? 'Provisioning in progress'
-                                                  : connection === 'connected'
-                                                    ? 'Successfully provisioned'
-                                                    : connection === 'failed'
-                                                      ? 'Provisioning failed'
-                                                      : connection;
-                                        const shouldAnimate = connection === 'connecting';
-                                        return (
-                                            <span className="inline-flex items-center gap-2 text-xs">
-                                                <span className="relative inline-flex h-2 w-2">
-                                                    {shouldAnimate && (
-                                                        <span
-                                                            className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-60 ${ping}`}
-                                                        ></span>
-                                                    )}
-                                                    <span className={`relative inline-flex h-2 w-2 rounded-full ${dot}`}></span>
-                                                </span>
-                                                <span className="text-muted-foreground">{label}</span>
-                                            </span>
-                                        );
-                                    })()}
-                                </div>
-                                <div className="mb-4 text-sm text-muted-foreground">Follow along as we provision your server.</div>
-                                <ul className="space-y-3">
-                                    {steps.map((s) => (
-                                        <li key={s.key} className="flex items-center gap-3">
-                                            <span className="inline-flex items-center justify-center">
-                                                {s.state === 'complete' && <CheckIcon className="size-4 text-green-600" />}
-                                                {s.state === 'active' && <Loader2Icon className="size-4 animate-spin text-primary" />}
-                                                {s.state === 'failed' && <XCircleIcon className="size-4 text-red-600" />}
-                                                {s.state === 'pending' && <CircleIcon className="size-4 text-muted-foreground/50" />}
-                                            </span>
-                                            <div
-                                                className={
-                                                    'text-sm ' +
-                                                    (s.state === 'active' ? 'font-medium' : s.state === 'failed' ? 'text-red-600' : 'text-foreground')
-                                                }
+                            <div className="px-4 py-5 space-y-6">
+                                <div className="space-y-3">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div>
+                                            <p className="text-lg font-semibold">{summary.title}</p>
+                                            <p className="text-sm text-muted-foreground">{summary.description}</p>
+                                        </div>
+                                        <span className="text-sm font-semibold text-muted-foreground">{roundedProgress}%</span>
+                                    </div>
+                                    <div className="h-3 w-full overflow-hidden rounded-full bg-muted">
+                                        <div
+                                            className={`h-full rounded-full transition-all duration-500 ease-out ${
+                                                summary.tone === 'success'
+                                                    ? 'bg-emerald-500'
+                                                    : summary.tone === 'error'
+                                                      ? 'bg-destructive'
+                                                      : 'bg-primary'
+                                            }`}
+                                            style={{ width: `${roundedProgress}%` }}
+                                        />
+                                    </div>
+                                    {packageMetrics.total > 0 && (
+                                        <div className="flex flex-wrap gap-2 text-xs">
+                                            <Badge
+                                                variant="outline"
+                                                className="border-transparent bg-muted/70 text-foreground"
                                             >
-                                                {s.label}
-                                            </div>
-                                        </li>
-                                    ))}
-                                </ul>
+                                                {packageMetrics.completed} / {packageMetrics.total} services installed
+                                            </Badge>
+                                            {packageMetrics.active > 0 && (
+                                                <Badge
+                                                    variant="outline"
+                                                    className="border-transparent bg-blue-500/10 text-blue-600 dark:text-blue-300"
+                                                >
+                                                    {packageMetrics.active} installing
+                                                </Badge>
+                                            )}
+                                            {packageMetrics.failed > 0 && (
+                                                <Badge variant="destructive">{packageMetrics.failed} failed</Badge>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                                    <span
+                                        className={`inline-flex items-center gap-2 ${summary.tone === 'error' ? 'text-destructive' : ''}`}
+                                    >
+                                        <span
+                                            className={`h-2.5 w-2.5 rounded-full ${connectionMeta.dotClass} ${connectionMeta.animate ? 'animate-pulse' : ''}`}
+                                            aria-hidden="true"
+                                        ></span>
+                                        {connectionMeta.label}
+                                    </span>
+                                    {lastUpdatedAt && <span>Last update {lastUpdatedAt.toLocaleTimeString()}</span>}
+                                    <span className="ml-auto text-[0.7rem] uppercase tracking-wide text-muted-foreground/70">
+                                        {server.public_ip}:{server.ssh_port}
+                                    </span>
+                                </div>
                                 {progressByPackageName.length > 0 && (
-                                    <>
-                                        <Separator className="my-4" />
-                                        <div className="text-xs font-medium text-muted-foreground uppercase">Package Installation Progress</div>
-                                        <div className="mt-3 space-y-3">
-                                            {progressByPackageName.map((service) => (
-                                                <div key={service.packageName} className="space-y-2">
-                                                    <div className="flex items-center justify-between">
-                                                        <span className="text-sm font-medium">{service.label}</span>
-                                                        <span className="text-xs text-muted-foreground">
-                                                            {service.progress.toFixed(0)}%
+                                    <div className="grid gap-3 pt-2 sm:grid-cols-2 xl:grid-cols-3">
+                                        {progressByPackageName.map((service) => {
+                                            const stateStyles =
+                                                service.state === 'failed'
+                                                    ? 'border-destructive/40 bg-destructive/10 text-destructive'
+                                                    : service.state === 'complete'
+                                                        ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                                                        : 'border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-300';
+                                            const barColor =
+                                                service.state === 'failed'
+                                                    ? 'bg-destructive'
+                                                    : service.state === 'complete'
+                                                        ? 'bg-emerald-500'
+                                                        : 'bg-primary';
+
+                                            return (
+                                                <div
+                                                    key={service.packageName}
+                                                    className="rounded-xl border border-border/60 bg-muted/30 p-4 transition hover:border-border/80 hover:shadow-sm dark:border-border/40"
+                                                >
+                                                    <div className="flex items-start justify-between gap-2">
+                                                        <div>
+                                                            <p className="text-sm font-semibold text-foreground">{service.label}</p>
+                                                            {service.latestEvent.label && (
+                                                                <p className="text-xs text-muted-foreground">{service.latestEvent.label}</p>
+                                                            )}
+                                                        </div>
+                                                        <span className={`rounded-full px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide ${stateStyles}`}>
+                                                            {service.statusLabel}
                                                         </span>
                                                     </div>
-                                                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                                                    <div className="mt-4 h-2 overflow-hidden rounded-full bg-muted">
                                                         <div
-                                                            className={`h-full transition-all duration-300 ${
-                                                                service.isComplete
-                                                                    ? 'bg-green-500'
-                                                                    : service.isActive
-                                                                      ? 'bg-blue-500'
-                                                                      : 'bg-gray-400'
-                                                            }`}
-                                                            style={{ width: `${Math.max(service.progress, 0)}%` }}
+                                                            className={`h-full transition-all duration-300 ${barColor}`}
+                                                            style={{ width: `${Math.min(100, Math.max(0, service.progress))}%` }}
                                                         />
                                                     </div>
-                                                    {service.latestEvent.label && (
-                                                        <p className="text-xs text-muted-foreground">
-                                                            {service.latestEvent.label}
-                                                        </p>
-                                                    )}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </>
-                                )}
-                                {events.length > 0 && (
-                                    <>
-                                        <Separator className="my-4" />
-                                        <div className="text-xs font-medium text-muted-foreground uppercase">Provision Events</div>
-                                        <ul className="mt-3 space-y-3 text-sm">
-                                            {events.map((event) => {
-                                                // Use the label from the event (milestone label) as primary display
-                                                const displayLabel =
-                                                    event.label || webServiceMilestones[event.milestone] || statusLabels[event.milestone] || event.milestone;
-
-                                                // Determine the state based on status
-                                                let state: StepState;
-                                                if (event.status === 'success') {
-                                                    state = 'complete';
-                                                } else if (event.status === 'failed') {
-                                                    state = 'failed';
-                                                } else {
-                                                    // Check if this is the latest pending event (currently being processed)
-                                                    const pendingEvents = events.filter(e => e.status === 'pending');
-                                                    const isLatest = event === pendingEvents[pendingEvents.length - 1];
-                                                    state = isLatest && server.provision_status === 'installing' ? 'active' : 'pending';
-                                                }
-
-                                                return (
-                                                    <li key={event.id}>
-                                                        <div className="flex items-center justify-between">
-                                                            <div className="flex items-center gap-3">
-                                                                <span className="inline-flex items-center justify-center">
-                                                                    {state === 'complete' && <CheckIcon className="size-4 text-green-600" />}
-                                                                    {state === 'active' && <Loader2Icon className="size-4 animate-spin text-primary" />}
-                                                                    {state === 'failed' && <XCircleIcon className="size-4 text-red-600" />}
-                                                                    {state === 'pending' && <CircleIcon className="size-4 text-muted-foreground/50" />}
-                                                                </span>
-                                                                <div className="flex-1">
-                                                                    <span className={
-                                                                        state === 'active' ? 'font-medium' :
-                                                                        state === 'failed' ? 'text-red-600' :
-                                                                        state === 'complete' ? 'text-foreground' :
-                                                                        'text-muted-foreground'
-                                                                    }>
-                                                                        {displayLabel}
-                                                                    </span>
-                                                                    <span className="ml-2 text-xs text-muted-foreground">
-                                                                        ({event.service_type})
-                                                                    </span>
-                                                                </div>
-                                                            </div>
-                                                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                                                                {parseFloat(event.progress_percentage) > 0 && (
-                                                                    <span>{parseFloat(event.progress_percentage).toFixed(0)}%</span>
-                                                                )}
-                                                                {event.created_at && (
-                                                                    <span className="whitespace-nowrap">
-                                                                        {new Date(event.created_at).toLocaleTimeString()}
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                        {event.error_log && (
-                                                            <div className="ml-7 mt-2 rounded-md bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 p-2">
-                                                                <p className="text-xs text-red-700 dark:text-red-400 font-mono whitespace-pre-wrap break-all">
-                                                                    {event.error_log.split('\n')[0]}
-                                                                </p>
-                                                                {event.error_log.split('\n').length > 1 && (
-                                                                    <details className="mt-1">
-                                                                        <summary className="cursor-pointer text-xs text-red-600 dark:text-red-500 hover:underline">
-                                                                            Show full error ({event.error_log.split('\n').length - 1} more lines)
-                                                                        </summary>
-                                                                        <pre className="mt-1 text-xs text-red-700 dark:text-red-400 font-mono whitespace-pre-wrap break-all">
-                                                                            {event.error_log.split('\n').slice(1).join('\n')}
-                                                                        </pre>
-                                                                    </details>
-                                                                )}
-                                                            </div>
+                                                    <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
+                                                        <span>{Math.round(service.progress)}%</span>
+                                                        {service.latestEvent.created_at && (
+                                                            <span className="whitespace-nowrap">
+                                                                {new Date(service.latestEvent.created_at).toLocaleTimeString()}
+                                                            </span>
                                                         )}
-                                                    </li>
-                                                );
-                                            })}
-                                        </ul>
-                                    </>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
                                 )}
-                                <Separator className="my-4" />
+                                <Collapsible open={showDetails} onOpenChange={setShowDetails}>
+                                    <CollapsibleTrigger asChild>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            className="flex items-center gap-2 px-0 text-sm text-primary hover:text-primary"
+                                        >
+                                            <span>{showDetails ? 'Hide installation activity' : 'Show installation activity'}</span>
+                                            <ChevronDownIcon
+                                                className={`size-4 transition-transform ${showDetails ? 'rotate-180' : ''}`}
+                                            />
+                                        </Button>
+                                    </CollapsibleTrigger>
+                                    <CollapsibleContent className="space-y-6 pt-4">
+                                        {events.length > 0 && (
+                                            <div className="space-y-3">
+                                                <div className="text-xs font-medium text-muted-foreground uppercase">Provision Events</div>
+                                                <ul className="space-y-4 text-sm">
+                                                    {events.map((event) => {
+                                                        const displayLabel =
+                                                            event.label ||
+                                                            webServiceMilestones[event.milestone] ||
+                                                            statusLabels[event.milestone] ||
+                                                            event.milestone;
+
+                                                        let state: StepState;
+                                                        if (event.status === 'success') {
+                                                            state = 'complete';
+                                                        } else if (event.status === 'failed') {
+                                                            state = 'failed';
+                                                        } else {
+                                                            const pendingEvents = events.filter((e) => e.status === 'pending');
+                                                            const latestPendingEvent = pendingEvents[pendingEvents.length - 1];
+                                                            if (latestPendingEvent && latestPendingEvent.id === event.id) {
+                                                                state = 'active';
+                                                            } else {
+                                                                state = 'pending';
+                                                            }
+                                                        }
+                                                        const dotColor =
+                                                            state === 'failed'
+                                                                ? 'bg-destructive'
+                                                                : state === 'complete'
+                                                                    ? 'bg-emerald-500'
+                                                                    : state === 'active'
+                                                                        ? 'bg-primary'
+                                                                        : 'bg-muted-foreground/60';
+                                                        const isLastEvent = events[events.length - 1]?.id === event.id;
+
+                                                        return (
+                                                            <li key={event.id} className="relative pl-7">
+                                                                <span
+                                                                    className={`absolute left-0 top-1.5 flex h-3 w-3 items-center justify-center rounded-full ${dotColor} ring-4 ring-background`}
+                                                                >
+                                                                    {state === 'complete' && <CheckIcon className="size-2.5 text-white" />}
+                                                                    {state === 'failed' && <XCircleIcon className="size-2.5 text-white" />}
+                                                                    {state === 'active' && <Loader2Icon className="size-2.5 animate-spin text-white" />}
+                                                                </span>
+                                                                <div className="pb-4">
+                                                                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                                                        <div className="flex flex-col gap-1">
+                                                                            <span className="font-medium text-foreground">{displayLabel}</span>
+                                                                            <span className="text-xs text-muted-foreground">{event.service_type}</span>
+                                                                        </div>
+                                                                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                                                            {parseFloat(String(event.progress_percentage)) > 0 && (
+                                                                                <span>{parseFloat(String(event.progress_percentage)).toFixed(0)}%</span>
+                                                                            )}
+                                                                            {event.created_at && (
+                                                                                <span className="whitespace-nowrap">
+                                                                                    {new Date(event.created_at).toLocaleTimeString()}
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                    {event.error_log && (
+                                                                        <div className="mt-2 rounded-md border border-red-200 bg-red-50 p-2 dark:border-red-800 dark:bg-red-950/20">
+                                                                            <p className="font-mono text-xs text-red-700 dark:text-red-400 whitespace-pre-wrap break-all">
+                                                                                {event.error_log.split('\n')[0]}
+                                                                            </p>
+                                                                            {event.error_log.split('\n').length > 1 && (
+                                                                                <details className="mt-1">
+                                                                                    <summary className="cursor-pointer text-xs text-red-600 hover:underline dark:text-red-500">
+                                                                                        Show full error ({event.error_log.split('\n').length - 1} more lines)
+                                                                                    </summary>
+                                                                                    <pre className="mt-1 font-mono text-xs text-red-700 dark:text-red-400 whitespace-pre-wrap break-all">
+                                                                                        {event.error_log.split('\n').slice(1).join('\n')}
+                                                                                    </pre>
+                                                                                </details>
+                                                                            )}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                                {!isLastEvent && (
+                                                                    <span className="absolute left-[5px] top-4 block h-full w-px bg-border/60"></span>
+                                                                )}
+                                                            </li>
+                                                        );
+                                                    })}
+                                                </ul>
+                                            </div>
+                                        )}
+                                    </CollapsibleContent>
+                                </Collapsible>
+                                <Separator />
                                 <div className="grid grid-cols-2 gap-4 text-sm">
                                     <div>
                                         <div className="text-muted-foreground">Name</div>
