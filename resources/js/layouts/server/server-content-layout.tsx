@@ -30,6 +30,7 @@ import {
     LayoutDashboard,
     Server,
     Settings,
+    Shield,
     Terminal,
 } from 'lucide-react';
 import { PropsWithChildren, useEffect, useState } from 'react';
@@ -62,6 +63,8 @@ export default function ServerContentLayout({ children, server, breadcrumbs }: S
         currentSection = 'php';
     } else if (path.includes('/database')) {
         currentSection = 'database';
+    } else if (path.includes('/firewall')) {
+        currentSection = 'firewall';
     } else if (path.includes('/explorer')) {
         currentSection = 'explorer';
     } else if (path.includes('/settings')) {
@@ -93,6 +96,12 @@ export default function ServerContentLayout({ children, server, breadcrumbs }: S
             href: `/servers/${server.id}/database`,
             icon: DatabaseIcon,
             isActive: currentSection === 'database',
+        },
+        {
+            title: 'Firewall',
+            href: `/servers/${server.id}/firewall`,
+            icon: Shield,
+            isActive: currentSection === 'firewall',
         },
         {
             title: 'Explorer',
@@ -205,7 +214,7 @@ export default function ServerContentLayout({ children, server, breadcrumbs }: S
                         {/* Footer Actions */}
                         <div className="border-t p-3">
                             <Link
-                                href={dashboard()}
+                                href={dashboard.url()}
                                 className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm hover:bg-accent transition-colors"
                             >
                                 <LayoutDashboard className="size-4 text-muted-foreground flex-shrink-0" />

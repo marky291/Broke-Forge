@@ -12,7 +12,7 @@ type Server = { id: number; vanity_name: string; public_ip: string; ssh_port: nu
 
 export default function Edit({ server }: { server: Server }) {
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: dashboard().url },
+        { title: 'Dashboard', href: dashboard.url() },
         { title: 'Edit server', href: '#' },
     ];
 
@@ -24,7 +24,7 @@ export default function Edit({ server }: { server: Server }) {
                 <div className="mb-2 flex items-center justify-between">
                     <h1 className="text-2xl font-semibold">Edit server</h1>
                     <Button variant="outline" asChild>
-                        <Link href={dashboard().url}>Back</Link>
+                        <Link href={dashboard.url()}>Back</Link>
                     </Button>
                 </div>
 

@@ -61,7 +61,7 @@ export default function SiteCommands({
     });
 
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: dashboard().url },
+        { title: 'Dashboard', href: dashboard.url() },
         { title: `Server #${server.id}`, href: showServer(server.id).url },
         { title: 'Sites', href: `/servers/${server.id}/sites` },
         { title: site.domain, href: `/servers/${server.id}/sites/${site.id}` },

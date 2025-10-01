@@ -9,7 +9,7 @@ use App\Packages\Credentials\RootCredential;
 use App\Packages\Credentials\SshCredential;
 use App\Packages\Enums\PackageName;
 use App\Packages\Enums\PackageType;
-use App\Packages\Enums\PackageVersion;
+use App\Packages\Services\Firewall\Concerns\ManagesFirewallRules;
 
 /**
  * Firewall Rule Installation Class
@@ -18,6 +18,8 @@ use App\Packages\Enums\PackageVersion;
  */
 class FirewallRuleInstaller extends PackageInstaller implements ServerPackage
 {
+    use ManagesFirewallRules;
+
     public function packageName(): PackageName
     {
         return PackageName::FirewallUfw;
@@ -41,8 +43,8 @@ class FirewallRuleInstaller extends PackageInstaller implements ServerPackage
     /**
      * Execute firewall rule configuration
      *
-     * @param array $rules Array of firewall rules to apply
-     * @param string $context Context for these rules (e.g., 'nginx', 'mysql', 'custom')
+     * @param  array  $rules  Array of firewall rules to apply
+     * @param  string  $context  Context for these rules (e.g., 'nginx', 'mysql', 'custom')
      *
      * Example rules:
      * [
@@ -87,84 +89,12 @@ class FirewallRuleInstaller extends PackageInstaller implements ServerPackage
             // Show current status
             'ufw status numbered',
 
-            // Persist the new rules to database (append to existing rules)
-            function() use ($rules, $context) {
-                // Get existing firewall configuration
-                $existingPackage = $this->server->packages()
-                    ->where('service_type', PackageType::Firewall)
-                    ->where('service_name', PackageName::FirewallUfw)
-                    ->first();
-
-                if ($existingPackage) {
-                    $config = $existingPackage->configuration ?? [];
-                    $existingRules = $config['rules'] ?? [];
-
-                    // Add context to new rules
-                    $contextualRules = array_map(function($rule) use ($context) {
-                        $rule['context'] = $context;
-                        $rule['added_at'] = now()->toIso8601String();
-                        return $rule;
-                    }, $rules);
-
-                    // Merge with existing rules
-                    $config['rules'] = array_merge($existingRules, $contextualRules);
-
-                    // Update the package configuration
-                    $existingPackage->update(['configuration' => $config]);
-                } else {
-                    // If no existing firewall package, create one with just these rules
-                    $this->persist(
-                        PackageType::Firewall,
-                        PackageName::FirewallUfw,
-                        PackageVersion::Version1,
-                        [
-                            'rules' => array_map(function($rule) use ($context) {
-                                $rule['context'] = $context;
-                                $rule['added_at'] = now()->toIso8601String();
-                                return $rule;
-                            }, $rules)
-                        ]
-                    );
-                }
-            },
+            // Save firewall rules to database
+            $this->createFirewallRules($rules, $context),
 
             $this->track(FirewallRuleInstallerMilestones::COMPLETE),
         ]);
 
         return $commands;
-    }
-
-    /**
-     * Build UFW command from rule configuration
-     */
-    private function buildUfwCommand(array $rule): string
-    {
-        $action = $rule['action'] ?? 'allow';
-        $port = $rule['port'];
-        $protocol = $rule['protocol'] ?? 'tcp';
-
-        // Start building the command
-        $command = "ufw {$action}";
-
-        // Add source restriction if specified
-        if (!empty($rule['source'])) {
-            $command .= " from {$rule['source']}";
-        }
-
-        // Add destination restriction if specified
-        if (!empty($rule['destination'])) {
-            $command .= " to {$rule['destination']}";
-        }
-
-        // Add port and protocol
-        $command .= " {$port}/{$protocol}";
-
-        // Add comment if provided (helps identify rules later)
-        if (!empty($rule['comment'])) {
-            $comment = escapeshellarg($rule['comment']);
-            $command .= " comment {$comment}";
-        }
-
-        return $command;
     }
 }

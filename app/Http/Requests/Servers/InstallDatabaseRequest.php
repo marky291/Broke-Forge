@@ -15,10 +15,10 @@ class InstallDatabaseRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'type' => ['required', 'string', Rule::in(['mysql', 'postgresql', 'redis'])],
-            'version' => ['required', 'string'],
-            'root_password' => ['nullable', 'string', 'min:8'],
-            'password' => ['nullable', 'string', 'min:8'],
+            'name' => ['nullable', 'string', 'max:64'],
+            'type' => ['required', Rule::enum(\App\Enums\DatabaseType::class)],
+            'version' => ['required', 'string', 'max:16'],
+            'root_password' => ['required', 'string', 'min:8', 'max:128'],
             'port' => ['nullable', 'integer', 'min:1', 'max:65535'],
         ];
     }
@@ -27,10 +27,9 @@ class InstallDatabaseRequest extends FormRequest
     {
         return [
             'type.required' => 'Please select a database type.',
-            'type.in' => 'Invalid database type selected.',
             'version.required' => 'Please select a database version.',
+            'root_password.required' => 'Root password is required.',
             'root_password.min' => 'Root password must be at least 8 characters.',
-            'password.min' => 'Password must be at least 8 characters.',
             'port.min' => 'Port must be at least 1.',
             'port.max' => 'Port cannot exceed 65535.',
         ];

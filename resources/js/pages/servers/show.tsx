@@ -37,7 +37,7 @@ export default function Show({ server }: { server: Server }) {
     const status = server.connection ?? 'pending';
 
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: dashboard().url },
+        { title: 'Dashboard', href: dashboard.url() },
         { title: `Server #${server.id}`, href: '#' },
     ];
 

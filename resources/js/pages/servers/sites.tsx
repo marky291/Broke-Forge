@@ -13,7 +13,7 @@ import { show as showServer } from '@/routes/servers';
 import { show as showSite } from '@/routes/servers/sites';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/react';
-import { CheckCircle, Clock, Globe, Loader2, Lock, Plus, XCircle } from 'lucide-react';
+import { CheckCircle, Clock, FileCode2, GitBranch, Globe, Loader2, Lock, Plus, XCircle } from 'lucide-react';
 import { useState } from 'react';
 
 type ServerType = {
@@ -39,6 +39,15 @@ type ServerSite = {
     ssl_enabled: boolean;
     status: string;
     provisioned_at: string | null;
+    configuration?: {
+        git_repository?: {
+            provider?: string;
+            repository?: string;
+            branch?: string;
+        };
+        application_type?: string;
+    };
+    git_status?: string;
 };
 
 type SitesProps = {
@@ -72,7 +81,7 @@ export default function Sites({ server, sites }: SitesProps) {
     } as { domain: string; php_version: string; ssl: boolean });
 
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: dashboard().url },
+        { title: 'Dashboard', href: dashboard.url() },
         { title: `Server #${server.id}`, href: showServer(server.id).url },
         { title: 'Sites', href: '#' },
     ];
@@ -90,15 +99,35 @@ export default function Sites({ server, sites }: SitesProps) {
     const getStatusBadge = (status: string) => {
         switch (status) {
             case 'active':
-                return <Badge className="border-green-500/20 bg-green-500/10 text-green-500">Active</Badge>;
+                return (
+                    <Badge variant="outline" className="border-green-200 bg-green-50 text-green-700 font-medium text-xs px-2.5 py-0.5">
+                        Active
+                    </Badge>
+                );
             case 'provisioning':
-                return <Badge className="border-blue-500/20 bg-blue-500/10 text-blue-500">Provisioning</Badge>;
+                return (
+                    <Badge variant="outline" className="border-blue-200 bg-blue-50 text-blue-700 font-medium text-xs px-2.5 py-0.5">
+                        Provisioning
+                    </Badge>
+                );
             case 'disabled':
-                return <Badge className="border-gray-500/20 bg-gray-500/10 text-gray-500">Disabled</Badge>;
+                return (
+                    <Badge variant="outline" className="border-gray-200 bg-gray-50 text-gray-700 font-medium text-xs px-2.5 py-0.5">
+                        Disabled
+                    </Badge>
+                );
             case 'failed':
-                return <Badge className="border-red-500/20 bg-red-500/10 text-red-500">Failed</Badge>;
+                return (
+                    <Badge variant="outline" className="border-red-200 bg-red-50 text-red-700 font-medium text-xs px-2.5 py-0.5">
+                        Failed
+                    </Badge>
+                );
             default:
-                return <Badge variant="outline">{status}</Badge>;
+                return (
+                    <Badge variant="outline" className="font-medium text-xs px-2.5 py-0.5">
+                        {status}
+                    </Badge>
+                );
         }
     };
 
@@ -115,6 +144,27 @@ export default function Sites({ server, sites }: SitesProps) {
             default:
                 return <Clock className="h-4 w-4 text-gray-400" />;
         }
+    };
+
+    const getApplicationTypeBadge = (type?: string) => {
+        switch (type?.toLowerCase()) {
+            case 'laravel':
+                return <Badge variant="outline" className="text-xs font-normal border-orange-200 text-orange-700 bg-orange-50">Laravel</Badge>;
+            case 'wordpress':
+                return <Badge variant="outline" className="text-xs font-normal border-blue-200 text-blue-700 bg-blue-50">WordPress</Badge>;
+            case 'static':
+            case 'static-html':
+                return <Badge variant="outline" className="text-xs font-normal border-gray-200 text-gray-700 bg-gray-50">Static HTML</Badge>;
+            default:
+                return null;
+        }
+    };
+
+    const formatGitRepository = (git?: { provider?: string; repository?: string; branch?: string }) => {
+        if (!git?.repository) return null;
+        const parts = git.repository.split('/');
+        const repoName = parts[parts.length - 1];
+        return `${repoName}${git.branch ? ` (${git.branch})` : ''}`;
     };
 
     return (
@@ -150,21 +200,35 @@ export default function Sites({ server, sites }: SitesProps) {
                                         href={showSite({ server: server.id, site: site.id }).url}
                                         className="block transition-colors hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                                     >
-                                        <div className="p-4">
-                                            <div className="flex items-start justify-between">
-                                                <div className="space-y-1">
-                                                    <div className="flex items-center gap-2">
-                                                        {getStatusIcon(site.status)}
-                                                        <h3 className="font-medium">{site.domain}</h3>
-                                                        {site.ssl_enabled && <Lock className="h-3.5 w-3.5 text-green-500" />}
+                                        <div className="px-6 py-5">
+                                            <div className="flex items-start justify-between gap-4">
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="flex items-center gap-3 mb-3">
+                                                        <h3 className="text-[15px] font-semibold text-gray-900 truncate">{site.domain}</h3>
+                                                        {site.ssl_enabled && (
+                                                            <Badge variant="outline" className="border-green-200 bg-green-50 text-green-700 gap-1 px-2 py-0.5">
+                                                                <Lock className="h-3 w-3" />
+                                                                <span className="text-xs font-medium">SSL</span>
+                                                            </Badge>
+                                                        )}
                                                     </div>
-                                                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                                        <span>PHP {site.php_version}</span>
-                                                        <span>•</span>
-                                                        <span>{site.document_root}</span>
+                                                    <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+                                                        <div className="flex items-center gap-1.5 text-[13px] text-gray-600">
+                                                            <FileCode2 className="h-3.5 w-3.5 text-gray-400" />
+                                                            <span>PHP {site.php_version}</span>
+                                                        </div>
+                                                        {site.configuration?.git_repository?.repository && (
+                                                            <div className="flex items-center gap-1.5 text-[13px] text-gray-600">
+                                                                <GitBranch className="h-3.5 w-3.5 text-gray-400" />
+                                                                <span className="font-mono">{formatGitRepository(site.configuration.git_repository)}</span>
+                                                            </div>
+                                                        )}
+                                                        {getApplicationTypeBadge(site.configuration?.application_type)}
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center gap-2">{getStatusBadge(site.status)}</div>
+                                                <div className="flex items-center">
+                                                    {getStatusBadge(site.status)}
+                                                </div>
                                             </div>
                                         </div>
                                     </Link>

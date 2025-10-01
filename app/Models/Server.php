@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\Auth;
 
 /**
@@ -43,10 +44,13 @@ class Server extends Model
         'ssh_port' => 22,
     ];
 
-    protected $casts = [
-        'ssh_port' => 'integer',
-        'provision_status' => ProvisionStatus::class,
-    ];
+    protected function casts(): array
+    {
+        return [
+            'ssh_port' => 'integer',
+            'provision_status' => ProvisionStatus::class,
+        ];
+    }
 
     public static function register(string $user, string $publicIp): self
     {
@@ -57,11 +61,6 @@ class Server extends Model
                 'ssh_root_user' => 'root',
             ]
         );
-    }
-
-    public function packages(): HasMany
-    {
-        return $this->hasMany(ServerPackage::class);
     }
 
     /**
@@ -94,11 +93,36 @@ class Server extends Model
     }
 
     /**
-     * Get all package events for the server.
+     * Get all events for the server.
      */
-    public function packageEvents(): HasMany
+    public function events(): HasMany
     {
-        return $this->hasMany(ServerPackageEvent::class);
+        return $this->hasMany(ServerEvent::class);
+    }
+
+    public function firewall(): HasOne
+    {
+        return $this->hasOne(ServerFirewall::class);
+    }
+
+    public function databases(): HasMany
+    {
+        return $this->hasMany(ServerDatabase::class);
+    }
+
+    public function phps(): HasMany
+    {
+        return $this->hasMany(ServerPhp::class);
+    }
+
+    public function defaultPhp(): HasOne
+    {
+        return $this->hasOne(ServerPhp::class)->where('is_cli_default', true);
+    }
+
+    public function reverseProxy(): HasOne
+    {
+        return $this->hasOne(ServerReverseProxy::class);
     }
 
     /**

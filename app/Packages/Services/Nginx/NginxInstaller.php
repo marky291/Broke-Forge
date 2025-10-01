@@ -2,6 +2,9 @@
 
 namespace App\Packages\Services\Nginx;
 
+use App\Enums\ReverseProxyStatus;
+use App\Enums\ReverseProxyType;
+use App\Models\ServerReverseProxy;
 use App\Packages\Base\Milestones;
 use App\Packages\Base\Package;
 use App\Packages\Base\PackageInstaller;
@@ -10,11 +13,10 @@ use App\Packages\Credentials\SshCredential;
 use App\Packages\Credentials\UserCredential;
 use App\Packages\Enums\PackageName;
 use App\Packages\Enums\PackageType;
-use App\Packages\Enums\PackageVersion;
 use App\Packages\Enums\PhpVersion;
-use App\Packages\Services\PHP\PhpInstallerJob;
 use App\Packages\Services\Firewall\FirewallInstallerJob;
 use App\Packages\Services\Firewall\FirewallRuleInstallerJob;
+use App\Packages\Services\PHP\PhpInstallerJob;
 
 /**
  * Nginx Web Server Installation Class
@@ -56,10 +58,15 @@ class NginxInstaller extends PackageInstaller implements \App\Packages\Base\Serv
 
         // Configure firewall rules for HTTP and HTTPS
         $firewallRules = [
-            ['port' => 80, 'protocol' => 'tcp', 'action' => 'allow', 'comment' => 'HTTP'],
-            ['port' => 443, 'protocol' => 'tcp', 'action' => 'allow', 'comment' => 'HTTPS'],
+            ['port' => '80', 'name' => 'HTTP', 'rule_type' => 'allow', 'from_ip_address' => null],
+            ['port' => '443', 'name' => 'HTTPS', 'rule_type' => 'allow', 'from_ip_address' => null],
         ];
-        FirewallRuleInstallerJob::dispatchSync($this->server, $firewallRules, 'nginx');
+
+        // Create and install each firewall rule
+        foreach ($firewallRules as $ruleData) {
+            $rule = $this->server->firewall->rules()->create($ruleData);
+            FirewallRuleInstallerJob::dispatchSync($this->server, $rule->id);
+        }
 
         // Then proceed with Nginx installation
         $this->install($this->commands($phpVersion));
@@ -110,6 +117,7 @@ class NginxInstaller extends PackageInstaller implements \App\Packages\Base\Serv
             // Create default index.php file from the blade template
             function () use ($appUser) {
                 $content = view('provision.default-site')->render();
+
                 return "echo '{$content}' > /home/{$appUser}/default/public/index.php";
             },
 
@@ -161,11 +169,18 @@ class NginxInstaller extends PackageInstaller implements \App\Packages\Base\Serv
             'systemctl reload nginx',
             // Get the status of nginx
             'systemctl status nginx',
-            // Persist nginx package to database
-            $this->persist(PackageType::ReverseProxy, PackageName::Nginx, PackageVersion::Version1, [
-                'worker_processes' => 'auto',
-                'worker_connections' => 1024,
-            ]),
+
+            // Save Nginx installation to database
+            function () {
+                ServerReverseProxy::create([
+                    'server_id' => $this->server->id,
+                    'type' => ReverseProxyType::Nginx->value,
+                    'version' => null,
+                    'worker_processes' => 'auto',
+                    'worker_connections' => 1024,
+                    'status' => ReverseProxyStatus::Active->value,
+                ]);
+            },
 
             // Mark installation as completed
             $this->track(NginxInstallerMilestones::COMPLETE),

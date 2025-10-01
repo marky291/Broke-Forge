@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -15,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $status
  * @property string|null $error_log
  */
-class ServerPackageEvent extends Model
+class ServerEvent extends Model
 {
     use HasFactory;
 
@@ -64,7 +63,7 @@ class ServerPackageEvent extends Model
     public function getProgressPercentageAttribute(): string
     {
         if ($this->total_steps == 0) {
-            return "0";
+            return '0';
         }
 
         return str(($this->current_step / $this->total_steps) * 100);

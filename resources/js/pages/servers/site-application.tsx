@@ -162,7 +162,7 @@ export default function SiteApplication({ server, site }: { server: ServerType; 
     const gitRepositorySetupUrl = gitRepositoryRoute({ server: server.id, site: site.id }).url;
 
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: dashboard().url },
+        { title: 'Dashboard', href: dashboard.url() },
         { title: `Server #${server.id}`, href: showServer(server.id).url },
         { title: 'Sites', href: `/servers/${server.id}/sites` },
         { title: 'Application', href: '#' },

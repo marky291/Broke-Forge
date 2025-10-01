@@ -2,6 +2,8 @@
 
 namespace App\Packages\Services\PHP;
 
+use App\Enums\PhpStatus;
+use App\Models\ServerPhp;
 use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageInstaller;
 use App\Packages\Base\ServerPackage;
@@ -9,7 +11,6 @@ use App\Packages\Credentials\RootCredential;
 use App\Packages\Credentials\SshCredential;
 use App\Packages\Enums\PackageName;
 use App\Packages\Enums\PackageType;
-use App\Packages\Enums\PackageVersion;
 use App\Packages\Enums\PhpVersion;
 
 /**
@@ -101,25 +102,19 @@ class PhpInstaller extends PackageInstaller implements ServerPackage
             "systemctl enable php{$phpVersion->value}-fpm || systemctl enable php-fpm",
             "systemctl restart php{$phpVersion->value}-fpm || systemctl restart php-fpm",
 
-            // Persist PHP installation to database
-            $this->persist(
-                PackageType::PHP,
-                PackageName::Php83,
-                PhpVersion::PHP83,
-                [
-                    'modules' => [
-                        'fpm', 'cli', 'common', 'curl', 'mbstring',
-                        'xml', 'zip', 'intl', 'mysql', 'gd',
-                        'bcmath', 'soap', 'opcache', 'readline'
+            // Save PHP installation to database
+            function () use ($phpVersion) {
+                ServerPhp::updateOrCreate(
+                    [
+                        'server_id' => $this->server->id,
+                        'version' => $phpVersion->value,
                     ],
-                    'ini_settings' => [
-                        'upload_max_filesize' => '100M',
-                        'post_max_size' => '100M',
-                        'max_execution_time' => '300',
-                        'memory_limit' => '256M',
-                    ],
-                ]
-            ),
+                    [
+                        'status' => PhpStatus::Active->value,
+                        'is_cli_default' => true,
+                    ]
+                );
+            },
 
             $this->track(PhpInstallerMilestones::VERIFY_INSTALLATION),
 

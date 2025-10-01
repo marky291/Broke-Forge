@@ -41,7 +41,7 @@ export interface User {
     [key: string]: unknown; // This allows for additional properties...
 }
 
-export interface ServerPackageEvent {
+export interface ServerEvent {
     id: number;
     server_id: number;
     service_type: string;
@@ -68,6 +68,69 @@ export interface Server {
     provision_status: 'pending' | 'connecting' | 'installing' | 'completed' | 'failed';
     provision_status_label: string;
     provision_status_color: string;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface ServerPhpModule {
+    id: number;
+    name: string;
+    is_enabled: boolean;
+}
+
+export interface ServerPhp {
+    id: number;
+    server_id: number;
+    version: string;
+    status: string;
+    is_cli_default: boolean;
+    modules?: ServerPhpModule[];
+    created_at?: string;
+    updated_at?: string;
+}
+
+export interface ServerFirewall {
+    id: number;
+    server_id: number;
+    is_enabled: boolean;
+    rules?: ServerFirewallRule[];
+    created_at: string;
+    updated_at: string;
+}
+
+export interface ServerFirewallRule {
+    id: number;
+    server_firewall_id: number;
+    name: string;
+    port: string;
+    from_ip_address?: string | null;
+    rule_type: 'allow' | 'deny';
+    status: 'pending' | 'installing' | 'active' | 'failed' | 'removing';
+    created_at: string;
+    updated_at: string;
+}
+
+export interface ServerDatabase {
+    id: number;
+    server_id: number;
+    name: string;
+    type: 'mysql' | 'mariadb' | 'postgresql' | 'mongodb' | 'redis';
+    version: string;
+    port: number;
+    status: string;
+    root_password?: string | null;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface ServerReverseProxy {
+    id: number;
+    server_id: number;
+    type: 'nginx' | 'apache' | 'caddy';
+    version?: string | null;
+    worker_processes: string;
+    worker_connections: number;
+    status: string;
     created_at: string;
     updated_at: string;
 }

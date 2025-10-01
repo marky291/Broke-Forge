@@ -79,7 +79,7 @@ export default function SiteGitRepository({ server, site, gitRepository, flash, 
     // Memoized values
     const breadcrumbs: BreadcrumbItem[] = useMemo(
         () => [
-            { title: 'Dashboard', href: dashboard().url },
+            { title: 'Dashboard', href: dashboard.url() },
             { title: `Server #${server.id}`, href: showServer(server.id).url },
             { title: 'Sites', href: `/servers/${server.id}/sites` },
             { title: site.domain, href: `/servers/${server.id}/sites/${site.id}` },

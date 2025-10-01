@@ -9,7 +9,7 @@ use App\Packages\Credentials\RootCredential;
 use App\Packages\Credentials\SshCredential;
 use App\Packages\Enums\PackageName;
 use App\Packages\Enums\PackageType;
-use App\Packages\Enums\PackageVersion;
+use App\Packages\Services\Firewall\Concerns\ManagesFirewallRules;
 
 /**
  * Firewall Installation Class
@@ -18,6 +18,8 @@ use App\Packages\Enums\PackageVersion;
  */
 class FirewallInstaller extends PackageInstaller implements ServerPackage
 {
+    use ManagesFirewallRules;
+
     public function packageName(): PackageName
     {
         return PackageName::FirewallUfw;
@@ -66,7 +68,7 @@ class FirewallInstaller extends PackageInstaller implements ServerPackage
             'ufw default allow outgoing',
 
             // Allow SSH by default to prevent lockout
-            'ufw allow 22/tcp comment "SSH"',
+            $this->buildUfwCommand(['port' => 22, 'protocol' => 'tcp', 'action' => 'allow', 'comment' => 'SSH']),
 
             $this->track(FirewallInstallerMilestones::ENABLE_FIREWALL),
 
@@ -76,20 +78,10 @@ class FirewallInstaller extends PackageInstaller implements ServerPackage
             // Show status
             'ufw status verbose',
 
-            // Persist firewall installation to database
-            $this->persist(
-                PackageType::Firewall,
-                PackageName::FirewallUfw,
-                PackageVersion::Version1,
-                [
-                    'default_incoming' => 'deny',
-                    'default_outgoing' => 'allow',
-                    'enabled' => true,
-                    'base_rules' => [
-                        ['port' => 22, 'protocol' => 'tcp', 'action' => 'allow', 'comment' => 'SSH']
-                    ]
-                ]
-            ),
+            // Save firewall and SSH rule to database
+            $this->createFirewallRules([
+                ['port' => 22, 'protocol' => 'tcp', 'action' => 'allow', 'comment' => 'SSH'],
+            ], 'ssh'),
 
             $this->track(FirewallInstallerMilestones::COMPLETE),
         ];

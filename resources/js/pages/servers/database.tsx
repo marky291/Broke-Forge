@@ -60,14 +60,14 @@ export default function Database({
     installedDatabase,
 }: {
     server: Server;
-    availableDatabases: AvailableDatabases;
+    availableDatabases?: AvailableDatabases;
     installedDatabase: InstalledDatabase;
 }) {
     const [selectedType, setSelectedType] = useState<string>(installedDatabase?.configuration?.type || 'mysql');
 
     const { data, setData, post, processing, errors, reset } = useForm({
         type: installedDatabase?.configuration?.type || 'mysql',
-        version: installedDatabase?.configuration?.version || availableDatabases.mysql?.default_version || '8.0',
+        version: installedDatabase?.configuration?.version || availableDatabases?.mysql?.default_version || '8.0',
         root_password: '',
     });
 
@@ -112,7 +112,7 @@ export default function Database({
     }, [isInstalling, server.id]);
 
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: dashboard().url },
+        { title: 'Dashboard', href: dashboard.url() },
         { title: `Server #${server.id}`, href: showServer(server.id).url },
         { title: 'Database', href: '#' },
     ];
@@ -122,7 +122,7 @@ export default function Database({
         setData({
             ...data,
             type,
-            version: availableDatabases[type]?.default_version || '',
+            version: availableDatabases?.[type]?.default_version || '',
         });
     };
 
@@ -182,7 +182,7 @@ export default function Database({
                                 <div className="space-y-4">
                                     <h3 className="font-medium">Database Type</h3>
                                     <div className={`grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 ${processing ? 'opacity-75' : ''}`}>
-                                        {Object.entries(availableDatabases).map(([type, database]) => (
+                                        {Object.entries(availableDatabases || {}).map(([type, database]) => (
                                             <div key={type} className="relative">
                                                 <div
                                                     className={`relative cursor-pointer rounded-lg border-2 p-4 transition-all ${
@@ -223,7 +223,7 @@ export default function Database({
                                                     <SelectValue placeholder="Select version" />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    {Object.entries(availableDatabases[selectedType]?.versions || {}).map(([value, label]) => (
+                                                    {Object.entries(availableDatabases?.[selectedType]?.versions || {}).map(([value, label]) => (
                                                         <SelectItem key={value} value={value}>
                                                             {label}
                                                         </SelectItem>
@@ -285,7 +285,7 @@ export default function Database({
                                 <div>
                                     <div className="text-sm text-muted-foreground">Type</div>
                                     <div className="font-medium capitalize">
-                                        {availableDatabases[installedDatabase.configuration.type]?.name || installedDatabase.configuration.type}
+                                        {availableDatabases?.[installedDatabase.configuration.type]?.name || installedDatabase.configuration.type}
                                     </div>
                                 </div>
                                 <div>
@@ -355,7 +355,7 @@ export default function Database({
                                                 <SelectValue placeholder="Select version" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                {Object.entries(availableDatabases[selectedType]?.versions || {}).map(([value, label]) => (
+                                                {Object.entries(availableDatabases?.[selectedType]?.versions || {}).map(([value, label]) => (
                                                     <SelectItem key={value} value={value}>
                                                         {label}
                                                     </SelectItem>

@@ -2,6 +2,9 @@
 
 namespace App\Packages\Services\Database\MySQL;
 
+use App\Enums\DatabaseStatus;
+use App\Enums\DatabaseType;
+use App\Models\ServerDatabase;
 use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageInstaller;
 use App\Packages\Credentials\RootCredential;
@@ -85,6 +88,18 @@ class MySqlInstaller extends PackageInstaller implements \App\Packages\Base\Serv
             // Verify MySQL is running
             'systemctl status mysql --no-pager',
             "mysql -u root -p{$rootPassword} -e 'SELECT VERSION();'",
+
+            // Save MySQL installation to database
+            fn () => ServerDatabase::create([
+                'server_id' => $this->server->id,
+                'name' => 'mysql',
+                'type' => DatabaseType::MySQL->value,
+                'version' => '8.0',
+                'port' => 3306,
+                'status' => DatabaseStatus::Active->value,
+                'root_password' => $rootPassword,
+            ]),
+
             $this->track(MySqlInstallerMilestones::INSTALLATION_COMPLETE),
         ];
     }
@@ -96,6 +111,6 @@ class MySqlInstaller extends PackageInstaller implements \App\Packages\Base\Serv
 
     public function packageType(): PackageType
     {
-        return PackageType::Git;
+        return PackageType::Database;
     }
 }

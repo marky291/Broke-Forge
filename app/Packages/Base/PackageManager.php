@@ -3,12 +3,8 @@
 namespace App\Packages\Base;
 
 use App\Models\Server;
-use App\Models\ServerPackage as ServerPackageModel;
-use App\Models\ServerPackageEvent;
-use BackedEnum;
 use Closure;
 use Exception;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
 use Spatie\Ssh\Ssh;
@@ -21,7 +17,6 @@ abstract class PackageManager implements Package
 {
     protected Server $server;
 
-
     /**
      * Get the total steps that have been run
      */
@@ -29,7 +24,6 @@ abstract class PackageManager implements Package
 
     /**
      * Track the current event being processed
-     * Can be either ServerPackageEvent or ServerSitePackageEvent
      */
     protected ?Model $currentEvent = null;
 
@@ -37,7 +31,6 @@ abstract class PackageManager implements Package
      * Track all events created during this execution
      */
     protected array $allEvents = [];
-
 
     /**
      * Get the actionable name based on inherited class
@@ -49,65 +42,6 @@ abstract class PackageManager implements Package
         }
 
         return 'Installing';
-    }
-
-    protected function persist(BackedEnum $packageType, BackedEnum $packageName, BackedEnum $version, array $configuration): Closure
-    {
-        return function() use ($packageType, $packageName, $version, $configuration) {
-            try {
-                Log::debug("Persisting package to database", [
-                    'server_id' => $this->server->id,
-                    'package_type' => $packageType->value,
-                    'package_name' => $packageName->value,
-                    'version' => $version->value,
-                    'configuration' => $configuration,
-                ]);
-
-                /** @var Model $package */
-                $package = null;
-
-                if ($this instanceof \App\Packages\Base\ServerPackage) {
-                    // Include version in the configuration since there's no version column
-                    $configWithVersion = array_merge($configuration, ['version' => $version->value]);
-
-                    $package = $this->server->packages()->updateOrCreate([
-                        'service_name' => $packageName->value,
-                        'service_type' => $packageType->value,
-                    ],
-                    [
-                        'configuration' => $configWithVersion,
-                        'status' => 'installed',
-                        'installed_at' => now()
-                    ]);
-                } else {
-                    throw new Exception("Unknown package type. Class: " . get_class($this));
-                }
-
-                Log::info("Successfully persisted package", [
-                    'server_id' => $this->server->id,
-                    'package_id' => $package->id,
-                    'package_type' => $packageType->value,
-                    'package_name' => $packageName->value,
-                    'version' => $version->value,
-                    'was_created' => $package->wasRecentlyCreated,
-                ]);
-
-                // Return nothing - this closure is for side effects only
-                // Returning the model was causing it to be JSON-encoded and executed as SSH command
-                return;
-            } catch (\Exception $e) {
-                Log::error("Failed to persist package", [
-                    'server_id' => $this->server->id,
-                    'package_type' => $packageType->value,
-                    'package_name' => $packageName->value,
-                    'version' => $version->value,
-                    'error' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString(),
-                ]);
-
-                throw $e;
-            }
-        };
     }
 
     /**
@@ -145,7 +79,7 @@ abstract class PackageManager implements Package
 
             // Persist the provision event to database for frontend tracking
             if ($this instanceof \App\Packages\Base\ServerPackage) {
-                $this->currentEvent = $this->server->packageEvents()->create([
+                $this->currentEvent = $this->server->events()->create([
                     'server_id' => $this->server->id,
                     'service_type' => $service,
                     'provision_type' => $this->actionableName() == 'Installing' ? 'install' : 'uninstall',
@@ -161,7 +95,7 @@ abstract class PackageManager implements Package
                     'error_log' => null,
                 ]);
             } else {
-                throw new Exception("Unknown package type. Class: " . get_class($this));
+                throw new Exception('Unknown package type. Class: '.get_class($this));
             }
 
             // Track this event
@@ -189,16 +123,15 @@ abstract class PackageManager implements Package
                             'index' => $index ?? null,
                             'exception' => $e->getMessage(),
                         ]);
-                        throw new Exception("Closure command threw an exception at index " . ($index ?? 'unknown') . ": " . $e->getMessage());
-                        continue;
+                        throw new Exception('Closure command threw an exception at index '.($index ?? 'unknown').': '.$e->getMessage());
                     }
 
                     // Check if the output should be executed as SSH command
                     // Only string outputs should be executed as SSH commands
                     if (is_string($output)) {
                         Log::debug('Found closure-based string command', [
-                            'index'  => $index ?? null,
-                            'output' => $output
+                            'index' => $index ?? null,
+                            'output' => $output,
                         ]);
 
                         // Replace the closure with its string output for SSH execution
@@ -207,16 +140,17 @@ abstract class PackageManager implements Package
                         // Convert Stringable to string for SSH execution
                         $output = (string) $output;
                         Log::debug('Found closure-based stringable command', [
-                            'index'  => $index ?? null,
-                            'output' => $output
+                            'index' => $index ?? null,
+                            'output' => $output,
                         ]);
                         $command = $output;
                     } else {
                         // Non-string outputs (like Model instances) should not be executed as SSH commands
                         Log::debug('Skipping non-string command output', [
                             'index' => $index ?? null,
-                            'type'  => get_debug_type($output),
+                            'type' => get_debug_type($output),
                         ]);
+
                         continue;
                     }
                 }
@@ -232,7 +166,7 @@ abstract class PackageManager implements Package
                     Log::debug("SSH command: {$process->getCommandLine()}");
 
                     if (! $process->isSuccessful()) {
-                        $error = "Failed to execute command: $command\nError Output: " . $process->getErrorOutput();
+                        $error = "Failed to execute command: $command\nError Output: ".$process->getErrorOutput();
 
                         // Mark current event as failed if exists
                         if ($this->currentEvent) {
@@ -258,14 +192,14 @@ abstract class PackageManager implements Package
 
             // Check for timeout error
             if (str_contains($errorMessage, 'Maximum execution time') || str_contains($errorMessage, 'timeout')) {
-                $errorMessage = "Process timeout: " . $errorMessage;
+                $errorMessage = 'Process timeout: '.$errorMessage;
             }
 
             // Mark current event as failed
             if ($this->currentEvent) {
                 $this->currentEvent->update([
                     'status' => 'failed',
-                    'error_log' => $errorMessage . "\n\nStack trace:\n" . $e->getTraceAsString(),
+                    'error_log' => $errorMessage."\n\nStack trace:\n".$e->getTraceAsString(),
                 ]);
             }
 
@@ -277,7 +211,7 @@ abstract class PackageManager implements Package
                 }
             }
 
-            Log::error("Package manager error: " . $errorMessage, [
+            Log::error('Package manager error: '.$errorMessage, [
                 'server' => $this->server->id,
                 'service' => $this->packageType()->value,
                 'exception' => $e,

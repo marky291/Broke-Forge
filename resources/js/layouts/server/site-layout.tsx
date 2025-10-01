@@ -229,7 +229,7 @@ export default function SiteLayout({ children, server, site, breadcrumbs }: Site
                         {/* Server Info Footer */}
                         <div className="border-t p-3">
                             <Link
-                                href={showServer(server.id)}
+                                href={showServer(server.id).url}
                                 className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm hover:bg-accent transition-colors"
                             >
                                 <Server className="size-4 text-muted-foreground flex-shrink-0" />

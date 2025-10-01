@@ -25,7 +25,7 @@ export default function Explorer({ server }: ExplorerPageProps) {
     const { state, refresh, navigateTo, navigateUp, upload, download, dismissError } = useServerFileBrowser(server.id);
 
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: dashboard().url },
+        { title: 'Dashboard', href: dashboard.url() },
         { title: `Server #${server.id}`, href: showServer(server.id).url },
         { title: 'Explorer', href: '#' },
     ];

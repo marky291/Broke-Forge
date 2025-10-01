@@ -3,12 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Server;
-use App\Models\ServerPackageEvent;
+use App\Models\ServerEvent;
 use App\Packages\Credentials\ProvisionAccess;
 use App\Packages\Credentials\TemporaryCredentialCache;
 use App\Packages\Enums\Connection;
-use App\Packages\Enums\ProvisionStatus;
 use App\Packages\Enums\PackageType;
+use App\Packages\Enums\ProvisionStatus;
 use App\Packages\Services\Nginx\NginxInstallerMilestones;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -26,11 +26,11 @@ class ServerProvisioningController extends Controller
             return redirect()->route('servers.show', $server);
         }
 
-        // Get all package events for comprehensive progress tracking
-        $events = $server->packageEvents()
+        // Get all events for comprehensive progress tracking
+        $events = $server->events()
             ->orderBy('created_at')
             ->get()
-            ->map(function (ServerPackageEvent $event) {
+            ->map(function (ServerEvent $event) {
                 $label = null;
 
                 if (is_string($event->milestone)) {
@@ -127,25 +127,15 @@ class ServerProvisioningController extends Controller
                 ->with('error', 'Provisioning is not in a failed state.');
         }
 
-        // Clear any recorded package events so progress restarts cleanly.
-        $server->packageEvents()->delete();
+        // Clear any recorded events so progress restarts cleanly
+        $server->events()->delete();
 
-        // Reset cached root password so a new secret is generated for the next attempt.
+        // Reset cached root password so a new secret is generated for the next attempt
         TemporaryCredentialCache::forgetRootPassword($server);
 
         $server->connection = Connection::PENDING;
         $server->provision_status = ProvisionStatus::Pending;
         $server->save();
-
-        // Reset service progress indicators for web/PHP services if they exist.
-        $server->packages()
-            ->whereIn('service_name', ['web', 'php'])
-            ->update([
-                'status' => 'pending',
-                'progress_step' => null,
-                'progress_total' => null,
-                'progress_label' => null,
-            ]);
 
         return redirect()
             ->route('servers.provisioning', $server)
@@ -159,10 +149,10 @@ class ServerProvisioningController extends Controller
      */
     public function events(Server $server): JsonResponse
     {
-        $events = $server->packageEvents()
+        $events = $server->events()
             ->orderBy('created_at', 'desc')
             ->get()
-            ->map(function (ServerPackageEvent $event) {
+            ->map(function (ServerEvent $event) {
                 return [
                     'id' => $event->id,
                     'service_type' => $event->service_type,

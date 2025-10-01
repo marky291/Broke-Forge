@@ -7,20 +7,9 @@ import { Separator } from '@/components/ui/separator';
 import ServerLayout from '@/layouts/server/layout';
 import { dashboard } from '@/routes';
 import { show as showServer } from '@/routes/servers';
-import { type BreadcrumbItem } from '@/types';
+import { type BreadcrumbItem, type Server, type ServerPhp, type ServerPhpModule } from '@/types';
 import { Head, useForm } from '@inertiajs/react';
 import { CheckIcon, CodeIcon, Download } from 'lucide-react';
-
-type Server = {
-    id: number;
-    vanity_name: string;
-    public_ip: string;
-    ssh_port: number;
-    private_ip?: string | null;
-    connection: string;
-    created_at: string;
-    updated_at: string;
-};
 
 type AvailablePhpVersions = {
     [key: string]: string;
@@ -30,41 +19,31 @@ type PhpExtensions = {
     [key: string]: string;
 };
 
-type InstalledPhp = {
-    id: number;
-    service_name: string;
-    configuration: {
-        version: string;
-        extensions: string[];
-        memory_limit?: string;
-        max_execution_time?: number;
-        upload_max_filesize?: string;
-    };
-    status: string;
-    installed_at?: string;
-} | null;
-
 export default function Php({
     server,
     availablePhpVersions,
     phpExtensions,
-    installedPhp,
+    installedPhpVersions,
 }: {
     server: Server;
     availablePhpVersions: AvailablePhpVersions;
     phpExtensions: PhpExtensions;
-    installedPhp: InstalledPhp;
+    installedPhpVersions: ServerPhp[];
 }) {
+    // Get the default PHP version or first installed version
+    const defaultPhp = installedPhpVersions.find(php => php.is_cli_default) || installedPhpVersions[0];
+    const installedModules = defaultPhp?.modules?.map(m => m.name) || [];
+
     const { data, setData, post, processing, errors } = useForm({
-        version: installedPhp?.configuration?.version || '8.3',
-        extensions: installedPhp?.configuration?.extensions || [],
-        memory_limit: installedPhp?.configuration?.memory_limit || '256M',
-        max_execution_time: installedPhp?.configuration?.max_execution_time || 30,
-        upload_max_filesize: installedPhp?.configuration?.upload_max_filesize || '2M',
+        version: defaultPhp?.version || '8.3',
+        extensions: installedModules,
+        memory_limit: '256M',
+        max_execution_time: 30,
+        upload_max_filesize: '2M',
     });
 
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: dashboard().url },
+        { title: 'Dashboard', href: dashboard.url() },
         { title: `Server #${server.id}`, href: showServer(server.id).url },
         { title: 'PHP', href: '#' },
     ];
@@ -90,15 +69,15 @@ export default function Php({
             <Head title={`PHP — ${server.vanity_name}`} />
             <div className="space-y-6">
                 <div>
-                    <h2 className="text-2xl font-semibold">{installedPhp ? 'PHP Configuration' : 'PHP Installation'}</h2>
+                    <h2 className="text-2xl font-semibold">{installedPhpVersions.length > 0 ? 'PHP Configuration' : 'PHP Installation'}</h2>
                     <p className="mt-1 text-sm text-muted-foreground">
-                        {installedPhp
+                        {installedPhpVersions.length > 0
                             ? 'Configure PHP version, extensions, and settings for your server.'
                             : 'Install and configure PHP for your server.'}
                     </p>
                 </div>
 
-                {!installedPhp && (
+                {installedPhpVersions.length === 0 && (
                     <div className="rounded-xl border border-sidebar-border/70 bg-background shadow-sm dark:border-sidebar-border">
                         <div className="px-4 py-3">
                             <div className="flex items-center gap-2">
@@ -210,56 +189,65 @@ export default function Php({
                     </div>
                 )}
 
-                {installedPhp && (
+                {installedPhpVersions.length > 0 && (
                     <div className="rounded-xl border border-sidebar-border/70 bg-background shadow-sm dark:border-sidebar-border">
                         <div className="px-4 py-3">
                             <div className="flex items-center gap-2">
                                 <CheckIcon className="h-5 w-5 text-green-600" />
                                 <div className="text-sm font-medium tracking-wide text-neutral-600 uppercase dark:text-neutral-300">
-                                    Current PHP Installation
+                                    Installed PHP Versions
                                 </div>
                             </div>
                         </div>
                         <Separator />
                         <div className="px-4 py-4">
-                            <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-                                <div>
-                                    <div className="text-sm text-muted-foreground">Version</div>
-                                    <div className="font-medium">{installedPhp.configuration.version}</div>
-                                </div>
-                                <div>
-                                    <div className="text-sm text-muted-foreground">Memory Limit</div>
-                                    <div className="font-medium">{installedPhp.configuration.memory_limit}</div>
-                                </div>
-                                <div>
-                                    <div className="text-sm text-muted-foreground">Max Execution Time</div>
-                                    <div className="font-medium">{installedPhp.configuration.max_execution_time}s</div>
-                                </div>
-                                <div>
-                                    <div className="text-sm text-muted-foreground">Status</div>
-                                    <div className="font-medium capitalize">{installedPhp.status}</div>
-                                </div>
-                            </div>
-                            {installedPhp.configuration.extensions && installedPhp.configuration.extensions.length > 0 && (
-                                <div className="mt-4">
-                                    <div className="mb-2 text-sm text-muted-foreground">Installed Extensions</div>
-                                    <div className="flex flex-wrap gap-2">
-                                        {installedPhp.configuration.extensions.map((ext) => (
-                                            <span
-                                                key={ext}
-                                                className="inline-flex items-center rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary"
-                                            >
-                                                {ext}
-                                            </span>
-                                        ))}
+                            {installedPhpVersions.map((php) => (
+                                <div key={php.id} className="mb-4 last:mb-0">
+                                    <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+                                        <div>
+                                            <div className="text-sm text-muted-foreground">Version</div>
+                                            <div className="font-medium">
+                                                PHP {php.version}
+                                                {php.is_cli_default && (
+                                                    <span className="ml-2 text-xs text-muted-foreground">(CLI Default)</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div className="text-sm text-muted-foreground">Memory Limit</div>
+                                            <div className="font-medium">256M</div>
+                                        </div>
+                                        <div>
+                                            <div className="text-sm text-muted-foreground">Max Execution Time</div>
+                                            <div className="font-medium">30s</div>
+                                        </div>
+                                        <div>
+                                            <div className="text-sm text-muted-foreground">Status</div>
+                                            <div className="font-medium capitalize">{php.status}</div>
+                                        </div>
                                     </div>
+                                    {php.modules && php.modules.length > 0 && (
+                                        <div className="mt-4">
+                                            <div className="mb-2 text-sm text-muted-foreground">Installed Extensions</div>
+                                            <div className="flex flex-wrap gap-2">
+                                                {php.modules.filter(m => m.is_enabled).map((module) => (
+                                                    <span
+                                                        key={module.name}
+                                                        className="inline-flex items-center rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary"
+                                                    >
+                                                        {module.name}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
-                            )}
+                            ))}
                         </div>
                     </div>
                 )}
 
-                {installedPhp && (
+                {defaultPhp && (
                     <form onSubmit={handleSubmit} className="space-y-6">
                         {/* PHP Version */}
                         <div className="rounded-xl border border-sidebar-border/70 bg-background shadow-sm dark:border-sidebar-border">

@@ -3,15 +3,15 @@
 namespace Database\Factories;
 
 use App\Models\Server;
-use App\Models\ServerPackageEvent;
+use App\Models\ServerEvent;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<ServerPackageEvent>
+ * @extends Factory<ServerEvent>
  */
-class ServerPackageEventFactory extends Factory
+class ServerEventFactory extends Factory
 {
-    protected $model = ServerPackageEvent::class;
+    protected $model = ServerEvent::class;
 
     public function definition(): array
     {
@@ -118,7 +118,7 @@ class ServerPackageEventFactory extends Factory
     /**
      * Indicate that the event failed with an error.
      */
-    public function failed(string $errorLog = null): static
+    public function failed(?string $errorLog = null): static
     {
         return $this->state(fn (array $attributes) => [
             'status' => 'failed',

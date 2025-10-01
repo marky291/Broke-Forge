@@ -3,7 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Server;
-use App\Models\ServerPackage;
+use App\Models\ServerPhp;
+use App\Packages\Services\PHP\Services\PhpConfigurationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -13,81 +14,68 @@ class ServerPhpController extends Controller
 {
     public function index(Server $server): Response
     {
-        $availablePhpVersions = [
-            '7.4' => 'PHP 7.4',
-            '8.0' => 'PHP 8.0',
-            '8.1' => 'PHP 8.1',
-            '8.2' => 'PHP 8.2',
-            '8.3' => 'PHP 8.3',
-            '8.4' => 'PHP 8.4',
-        ];
-
-        $phpExtensions = [
-            'bcmath' => 'BCMath - Arbitrary precision mathematics',
-            'curl' => 'cURL - Client URL Library',
-            'gd' => 'GD - Image processing',
-            'intl' => 'Intl - Internationalization',
-            'mbstring' => 'Multibyte String - String handling',
-            'mysql' => 'MySQL - Database connectivity',
-            'opcache' => 'OPcache - Bytecode cache',
-            'pdo' => 'PDO - PHP Data Objects',
-            'redis' => 'Redis - In-memory data structure store',
-            'xml' => 'XML - XML parsing',
-            'zip' => 'Zip - Archive handling',
-        ];
-
-        // Get installed PHP service
-        $installedPhp = $server->packages()
-            ->where('service_name', 'php')
-            ->first();
+        // Get installed PHP versions with eager loaded modules
+        $installedPhp = $server->phps()->with('modules')->get();
 
         return Inertia::render('servers/php', [
             'server' => $server->only(['id', 'vanity_name', 'public_ip', 'ssh_port', 'private_ip', 'connection', 'created_at', 'updated_at']),
-            'availablePhpVersions' => $availablePhpVersions,
-            'phpExtensions' => $phpExtensions,
-            'installedPhp' => $installedPhp,
+            'availablePhpVersions' => PhpConfigurationService::getAvailableVersions(),
+            'phpExtensions' => PhpConfigurationService::getAvailableExtensions(),
+            'installedPhpVersions' => $installedPhp,
+            'defaultSettings' => PhpConfigurationService::getDefaultSettings(),
         ]);
     }
 
     public function store(Request $request, Server $server): RedirectResponse
     {
-        $validated = $request->validate([
-            'version' => 'required|in:7.4,8.0,8.1,8.2,8.3,8.4',
-            'extensions' => 'array',
-            'extensions.*' => 'string',
-            'memory_limit' => 'nullable|string',
-            'max_execution_time' => 'nullable|integer|min:1',
-            'upload_max_filesize' => 'nullable|string',
-        ]);
+        $validated = $request->validate(PhpConfigurationService::getValidationRules());
 
-        // Check if PHP service already exists
-        $existingService = $server->packages()
-            ->where('service_name', 'php')
+        // Check if this PHP version already exists
+        $existingPhp = $server->phps()
+            ->where('version', $validated['version'])
             ->first();
 
-        $configuration = [
-            'version' => $validated['version'],
-            'extensions' => $validated['extensions'] ?? [],
-            'memory_limit' => $validated['memory_limit'] ?? '256M',
-            'max_execution_time' => $validated['max_execution_time'] ?? 30,
-            'upload_max_filesize' => $validated['upload_max_filesize'] ?? '2M',
-        ];
+        if ($existingPhp) {
+            // Update existing PHP version
+            $existingPhp->update([
+                'status' => \App\Enums\PhpStatus::Installing,
+                'is_cli_default' => $validated['is_cli_default'] ?? $existingPhp->is_cli_default,
+            ]);
 
-        if ($existingService) {
-            // Update existing service
-            $existingService->update([
-                'configuration' => $configuration,
-                'status' => 'pending',
-            ]);
+            // Update modules
+            if (isset($validated['extensions'])) {
+                // Remove modules not in the list
+                $existingPhp->modules()->whereNotIn('name', $validated['extensions'])->delete();
+
+                // Add or update modules
+                foreach ($validated['extensions'] as $extension) {
+                    $existingPhp->modules()->updateOrCreate(
+                        ['name' => $extension],
+                        ['is_enabled' => true]
+                    );
+                }
+            }
         } else {
-            // Create new service
-            ServerPackage::create([
+            // Create new PHP version
+            $php = ServerPhp::create([
                 'server_id' => $server->id,
-                'service_name' => 'php',
-                'configuration' => $configuration,
-                'status' => 'pending',
+                'version' => $validated['version'],
+                'status' => \App\Enums\PhpStatus::Installing,
+                'is_cli_default' => $validated['is_cli_default'] ?? false,
             ]);
+
+            // Add modules
+            if (isset($validated['extensions'])) {
+                foreach ($validated['extensions'] as $extension) {
+                    $php->modules()->create([
+                        'name' => $extension,
+                        'is_enabled' => true,
+                    ]);
+                }
+            }
         }
+
+        // TODO: Dispatch job to actually install PHP on the server
 
         return redirect()
             ->route('servers.php', $server)

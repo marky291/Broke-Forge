@@ -5,6 +5,7 @@ use App\Http\Controllers\ProvisionCallbackController;
 use App\Http\Controllers\ServerController;
 use App\Http\Controllers\ServerDatabaseController;
 use App\Http\Controllers\ServerFileExplorerController;
+use App\Http\Controllers\ServerFirewallController;
 use App\Http\Controllers\ServerPhpController;
 use App\Http\Controllers\ServerProvisioningController;
 use App\Http\Controllers\ServerSettingsController;
@@ -115,6 +116,18 @@ Route::middleware('auth')->group(function () {
                 ->name('sites.show');
             Route::post('/', [ServerSitesController::class, 'store'])
                 ->name('sites.store');
+        });
+
+        // Firewall management
+        Route::prefix('firewall')->group(function () {
+            Route::get('/', [ServerFirewallController::class, 'index'])
+                ->name('firewall');
+            Route::get('/status', [ServerFirewallController::class, 'status'])
+                ->name('firewall.status');
+            Route::post('/', [ServerFirewallController::class, 'store'])
+                ->name('firewall.store');
+            Route::delete('/{rule}', [ServerFirewallController::class, 'destroy'])
+                ->name('firewall.destroy');
         });
 
         Route::get('explorer', [ServerFileExplorerController::class, 'show'])

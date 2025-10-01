@@ -5,7 +5,7 @@ import { Separator } from '@/components/ui/separator';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import { edit as editServer, show as showServer } from '@/routes/servers';
-import { type BreadcrumbItem, type Server, type ServerPackageEvent } from '@/types';
+import { type BreadcrumbItem, type Server, type ServerEvent } from '@/types';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import copyToClipboard from 'copy-to-clipboard';
 import { CheckIcon, ChevronDownIcon, Loader2Icon, RefreshCwIcon, Trash2Icon, XCircleIcon } from 'lucide-react';
@@ -26,8 +26,8 @@ export default function Provisioning({
 }: {
     server: Server;
     provision?: ProvisionInfo;
-    events: ServerPackageEvent[];
-    latestProgress: ServerPackageEvent[];
+    events: ServerEvent[];
+    latestProgress: ServerEvent[];
     webServiceMilestones: Record<string, string>;
     packageNameLabels: Record<string, string>;
     statusLabels: Record<string, string>;
@@ -39,7 +39,7 @@ export default function Provisioning({
     const [showDetails, setShowDetails] = useState(false);
 
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: dashboard().url },
+        { title: 'Dashboard', href: dashboard.url() },
         { title: `Server #${server.id}`, href: showServer(server.id).url },
         { title: 'Provisioning', href: '#' },
     ];
@@ -199,7 +199,7 @@ export default function Provisioning({
                 acc[event.service_type].push(event);
                 return acc;
             },
-            {} as Record<string, ServerPackageEvent[]>,
+            {} as Record<string, ServerEvent[]>,
         );
 
         return Object.entries(groupedProgress).map(([packageName, serviceEvents]) => {
@@ -388,7 +388,7 @@ export default function Provisioning({
                     </div>
                     <div className="space-x-2">
                         <Button variant="outline" asChild>
-                            <Link href={dashboard().url}>Back to Dashboard</Link>
+                            <Link href={dashboard.url()}>Back to Dashboard</Link>
                         </Button>
                         {server.provision_status === 'failed' && (
                             <Button variant="outline" onClick={handleRetryProvisioning} disabled={isRetrying}>

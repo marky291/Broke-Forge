@@ -21,7 +21,7 @@ type Server = {
 
 export default function Settings({ server }: { server: Server }) {
     const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'Dashboard', href: dashboard().url },
+        { title: 'Dashboard', href: dashboard.url() },
         { title: `Server #${server.id}`, href: `/servers/${server.id}` },
         { title: 'Settings', href: '#' },
     ];

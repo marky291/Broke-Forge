@@ -15,13 +15,23 @@ class ServerSitesController extends Controller
     public function index(Server $server): Response
     {
         $sites = $server->sites()
-            ->select(['id', 'domain', 'document_root', 'php_version', 'ssl_enabled', 'status', 'provisioned_at'])
+            ->select(['id', 'domain', 'document_root', 'php_version', 'ssl_enabled', 'status', 'configuration', 'git_status', 'provisioned_at'])
             ->latest()
             ->paginate(10)
             ->withQueryString();
 
         return Inertia::render('servers/sites', [
-            'server' => $server->only(['id', 'vanity_name', 'public_ip', 'ssh_port', 'private_ip', 'connection', 'created_at', 'updated_at']),
+            'server' => $server->only([
+                'id',
+                'vanity_name',
+                'public_ip',
+                'private_ip',
+                'ssh_port',
+                'connection',
+                'provision_status',
+                'created_at',
+                'updated_at',
+            ]),
             'sites' => $sites,
         ]);
     }
@@ -29,7 +39,17 @@ class ServerSitesController extends Controller
     public function show(Server $server, ServerSite $site): Response
     {
         return Inertia::render('servers/site-application', [
-            'server' => $server->only(['id', 'vanity_name', 'public_ip', 'ssh_port', 'private_ip', 'connection', 'created_at', 'updated_at']),
+            'server' => $server->only([
+                'id',
+                'vanity_name',
+                'public_ip',
+                'private_ip',
+                'ssh_port',
+                'connection',
+                'provision_status',
+                'created_at',
+                'updated_at',
+            ]),
             'site' => $site->only([
                 'id',
                 'domain',
@@ -56,8 +76,6 @@ class ServerSitesController extends Controller
             $validated['ssl']
         );
 
-        return redirect()
-            ->route('servers.sites', $server)
-            ->with('success', 'Site provisioning started. This process may take a few minutes.');
+        return back()->with('success', 'Site provisioning started.');
     }
 }
