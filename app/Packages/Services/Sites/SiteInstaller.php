@@ -6,8 +6,6 @@ use App\Models\ServerSite;
 use App\Packages\Base\Milestones;
 use App\Packages\Base\Package;
 use App\Packages\Base\PackageInstaller;
-use App\Packages\Credentials\SshCredential;
-use App\Packages\Credentials\UserCredential;
 use App\Packages\Enums\PackageName;
 use App\Packages\Enums\PackageType;
 
@@ -136,7 +134,7 @@ class SiteInstaller extends PackageInstaller implements \App\Packages\Base\Serve
         // TODO: Implement milestones() method.
     }
 
-    public function sshCredential(): SshCredential
+    public function credentialType(): string
     {
         // TODO: Implement sshCredential() method.
     }

@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Http\Requests\Servers\StoreServerRequest;
 use App\Http\Requests\Servers\UpdateServerRequest;
 use App\Models\Server;
-use App\Packages\Credentials\TemporaryCredentialCache;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -38,14 +37,13 @@ class ServerController extends Controller
 
         $server = Server::create($data);
 
-        $rootPassword = TemporaryCredentialCache::rootPassword($server);
         $provisionCommand = $this->buildProvisionCommand($server);
 
         return redirect()
             ->route('servers.provisioning', $server)
             ->with('provision', [
                 'command' => $provisionCommand,
-                'root_password' => $rootPassword,
+                'root_password' => $server->ssh_root_password,
             ])
             ->with('success', 'Server created');
     }

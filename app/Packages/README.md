@@ -1197,13 +1197,11 @@ protected function sshCredential(): SshCredential
 {
     return new UserCredential;
 }
-
-// Background tasks or limited operations
-protected function sshCredential(): SshCredential
-{
-    return new WorkerCredential;
-}
 ```
+
+**Note:** For Git repository operations, use the `ServerCredential` model instead of SshCredential classes. Each server has unique SSH keys stored encrypted in the database via `$server->credential('worker')`.
+
+```php
 
 ### Custom Credentials
 

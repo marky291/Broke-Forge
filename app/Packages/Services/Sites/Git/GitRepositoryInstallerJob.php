@@ -4,6 +4,7 @@ namespace App\Packages\Services\Sites\Git;
 
 use App\Models\Server;
 use App\Models\ServerSite;
+use App\Packages\Enums\GitStatus;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
@@ -63,8 +64,19 @@ class GitRepositoryInstallerJob implements ShouldQueue
             // Execute installation - the installer handles all logic, validation, and database tracking
             $installer->execute($this->site, $this->configuration);
 
+            // Update git status to installed on success
+            $this->site->update([
+                'git_status' => GitStatus::Installed,
+                'git_installed_at' => now(),
+            ]);
+
             Log::info("Git repository installation completed for site #{$this->site->id} on server #{$this->server->id}");
         } catch (\Exception $e) {
+            // Update git status to failed on error
+            $this->site->update([
+                'git_status' => GitStatus::Failed,
+            ]);
+
             Log::error("Git repository installation failed for site #{$this->site->id} on server #{$this->server->id}", [
                 'repository' => $this->configuration['repository'] ?? 'unknown',
                 'error' => $e->getMessage(),

@@ -1,8 +1,9 @@
 <?php
 
-namespace App\Packages\Credentials;
+namespace App\Packages;
 
 use App\Models\Server;
+use App\Models\ServerCredential;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 
@@ -21,8 +22,19 @@ class ProvisionAccess
         $sshUser = $server->ssh_root_user ?: 'root';
         // App user from server model or default to slugified app name
         $appUser = $server->ssh_app_user ?: Str::slug(config('app.name'));
-        $sshKeyPath = __DIR__.'/Keys/ssh_key.pub';
-        $pubKeyContent = trim(file_get_contents($sshKeyPath));
+
+        // Generate unique SSH credentials for this server (one per credential type)
+        // These replace the old shared Keys/ssh_key with per-server encrypted keys
+
+        $rootCredential = $server->credential('root')
+            ?? ServerCredential::generateKeyPair($server, 'root');
+
+        $userCredential = $server->credential('user')
+            ?? ServerCredential::generateKeyPair($server, 'user');
+
+        $workerCredential = $server->credential('worker')
+            ?? ServerCredential::generateKeyPair($server, 'worker');
+
         $appName = config('app.name');
 
         $callbackUrls = $this->buildCallbackUrls($server);
@@ -30,7 +42,12 @@ class ProvisionAccess
         return view('scripts.provision_setup_x64', [
             'sshUser' => $sshUser,
             'appUser' => $appUser,
-            'pubKeyContent' => $pubKeyContent,
+            'rootPrivateKeyContent' => $rootCredential->private_key,
+            'rootPublicKeyContent' => $rootCredential->public_key,
+            'userPrivateKeyContent' => $userCredential->private_key,
+            'userPublicKeyContent' => $userCredential->public_key,
+            'workerPrivateKeyContent' => $workerCredential->private_key,
+            'workerPublicKeyContent' => $workerCredential->public_key,
             'appName' => $appName,
             'sshPort' => $server->ssh_port,
             'callbackUrls' => $callbackUrls,

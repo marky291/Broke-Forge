@@ -5,8 +5,6 @@ namespace App\Packages\Services\Sites\Git;
 use App\Models\ServerSite;
 use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageInstaller;
-use App\Packages\Credentials\SshCredential;
-use App\Packages\Credentials\UserCredential;
 use App\Packages\Enums\PackageName;
 use App\Packages\Enums\PackageType;
 use Illuminate\Support\Arr;
@@ -18,7 +16,7 @@ use LogicException;
  *
  * Handle cloning or updating a site's Git repository over SSH
  */
-class GitRepositoryInstaller extends PackageInstaller implements \App\Packages\Base\ServerPackage
+class GitRepositoryInstaller extends PackageInstaller implements \App\Packages\Base\SitePackage
 {
     /**
      * Execute the Git repository installation
@@ -85,11 +83,6 @@ class GitRepositoryInstaller extends PackageInstaller implements \App\Packages\B
         $this->install($this->commands($resolvedDocumentRoot, $repositorySshUrl, $branch, $site, $repositoryConfiguration));
     }
 
-    public function sshCredential(): SshCredential
-    {
-        return new UserCredential;
-    }
-
     /**
      * Compile the command list executed on the remote host.
      */
@@ -97,48 +90,54 @@ class GitRepositoryInstaller extends PackageInstaller implements \App\Packages\B
     {
         $documentRoot = rtrim($documentRoot, '/');
 
+        // Configure Git SSH command to use worker's private key
+        $sshKeyPath = '/home/worker/.ssh/id_rsa';
+        $gitSshCommand = sprintf(
+            'GIT_SSH_COMMAND="ssh -i %s -o StrictHostKeyChecking=accept-new -o IdentitiesOnly=yes -o UserKnownHostsFile=/home/worker/.ssh/known_hosts"',
+            $sshKeyPath
+        );
+
         return [
             $this->track(GitRepositoryInstallerMilestones::ENSURE_REPOSITORY_DIRECTORY),
-            sprintf('mkdir -p %s', escapeshellarg($documentRoot)),
+            sprintf('sudo -u worker mkdir -p %s', escapeshellarg($documentRoot)),
 
             $this->track(GitRepositoryInstallerMilestones::CLONE_OR_FETCH_REPOSITORY),
             sprintf(
-                'REPO_DIR=%1$s; if [ -d "$REPO_DIR/.git" ]; then cd "$REPO_DIR" && git fetch --all --prune; else git clone %2$s "$REPO_DIR"; fi',
+                'REPO_DIR=%1$s; if [ -d "$REPO_DIR/.git" ]; then cd "$REPO_DIR" && sudo -u worker %2$s git fetch --all --prune; else sudo -u worker %3$s git clone %4$s "$REPO_DIR"; fi',
                 escapeshellarg($documentRoot),
+                $gitSshCommand,
+                $gitSshCommand,
                 escapeshellarg($repositorySshUrl)
             ),
 
             $this->track(GitRepositoryInstallerMilestones::CHECKOUT_TARGET_BRANCH),
             sprintf(
-                'REPO_DIR=%1$s; cd "$REPO_DIR" && git checkout %2$s',
+                'REPO_DIR=%1$s; cd "$REPO_DIR" && sudo -u worker git checkout %2$s',
                 escapeshellarg($documentRoot),
                 escapeshellarg($branch)
             ),
 
             $this->track(GitRepositoryInstallerMilestones::SYNC_WORKTREE),
             sprintf(
-                'REPO_DIR=%1$s; cd "$REPO_DIR" && git reset --hard origin/%2$s && git pull origin %3$s',
+                'REPO_DIR=%1$s; cd "$REPO_DIR" && sudo -u worker git reset --hard origin/%2$s && sudo -u worker %3$s git pull origin %4$s',
                 escapeshellarg($documentRoot),
                 $branch,
+                $gitSshCommand,
                 escapeshellarg($branch)
             ),
 
             $this->track(GitRepositoryInstallerMilestones::COMPLETE),
             function () use ($site, $repositoryConfiguration) {
-                // Persist repository configuration inline (avoid helper methods)
+                // Persist repository configuration with server-specific deploy key
                 if (! $site instanceof ServerSite || ! $site->exists) {
                     return;
                 }
 
                 $configuration = $site->configuration ?? [];
 
-                // Resolve deploy key inline (avoid helper methods)
-                $sshAccess = $this->sshCredential();
-                $publicKeyPath = $sshAccess->publicKey();
-                $deployKey = null;
-                if (is_string($publicKeyPath) && is_readable($publicKeyPath)) {
-                    $deployKey = trim((string) file_get_contents($publicKeyPath));
-                }
+                // Get server-specific worker credential from database
+                $workerCredential = $this->server->credential('worker');
+                $deployKey = $workerCredential?->public_key;
 
                 $configuration['git_repository'] = array_filter([
                     'provider' => Arr::get($repositoryConfiguration, 'provider'),
@@ -159,11 +158,11 @@ class GitRepositoryInstaller extends PackageInstaller implements \App\Packages\B
 
     public function packageType(): PackageType
     {
-        // TODO: Implement packageType() method.
+        return PackageType::Git;
     }
 
     public function milestones(): Milestones
     {
-        // TODO: Implement milestones() method.
+        return new GitRepositoryInstallerMilestones;
     }
 }

@@ -4,11 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Server;
 use App\Models\ServerEvent;
-use App\Packages\Credentials\ProvisionAccess;
-use App\Packages\Credentials\TemporaryCredentialCache;
 use App\Packages\Enums\Connection;
 use App\Packages\Enums\PackageType;
 use App\Packages\Enums\ProvisionStatus;
+use App\Packages\ProvisionAccess;
 use App\Packages\Services\Nginx\NginxInstallerMilestones;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -92,8 +91,7 @@ class ServerProvisioningController extends Controller
 
     public function provision(Server $server): HttpResponse
     {
-        $rootPassword = TemporaryCredentialCache::rootPassword($server);
-        $script = (new ProvisionAccess)->makeScriptFor($server, $rootPassword);
+        $script = (new ProvisionAccess)->makeScriptFor($server, $server->ssh_root_password);
 
         return response($script, 200, [
             'Content-Type' => 'text/x-shellscript; charset=utf-8',
@@ -130,8 +128,8 @@ class ServerProvisioningController extends Controller
         // Clear any recorded events so progress restarts cleanly
         $server->events()->delete();
 
-        // Reset cached root password so a new secret is generated for the next attempt
-        TemporaryCredentialCache::forgetRootPassword($server);
+        // Reset root password so a new secret is generated for the next attempt
+        $server->ssh_root_password = null;
 
         $server->connection = Connection::PENDING;
         $server->provision_status = ProvisionStatus::Pending;
@@ -183,7 +181,7 @@ class ServerProvisioningController extends Controller
 
         return [
             'command' => $this->buildProvisionCommand($server),
-            'root_password' => TemporaryCredentialCache::rootPassword($server),
+            'root_password' => $server->ssh_root_password,
         ];
     }
 

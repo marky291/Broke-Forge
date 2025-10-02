@@ -5,8 +5,6 @@ namespace App\Packages\Services\Firewall;
 use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageInstaller;
 use App\Packages\Base\ServerPackage;
-use App\Packages\Credentials\RootCredential;
-use App\Packages\Credentials\SshCredential;
 use App\Packages\Enums\PackageName;
 use App\Packages\Enums\PackageType;
 use App\Packages\Services\Firewall\Concerns\ManagesFirewallRules;
@@ -35,9 +33,9 @@ class FirewallInstaller extends PackageInstaller implements ServerPackage
         return new FirewallInstallerMilestones;
     }
 
-    public function sshCredential(): SshCredential
+    public function credentialType(): string
     {
-        return new RootCredential;
+        return 'root';
     }
 
     /**

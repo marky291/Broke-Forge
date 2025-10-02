@@ -376,15 +376,20 @@ export default function SiteGitRepository({ server, site, gitRepository, flash, 
                         <CardHeader className="space-y-1">
                             <CardTitle>SSH Deploy Key</CardTitle>
                             <CardDescription>
-                                Add this key to your repository with read access. BrokeForge uses it to fetch your code.
+                                Add this key to your repository with read access. BrokeForge uses it to fetch your code securely.
                             </CardDescription>
                         </CardHeader>
                         <Separator />
                         <CardContent className="space-y-4 py-6">
+                            <div className="rounded-md bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 p-3 mb-4">
+                                <p className="text-xs text-blue-800 dark:text-blue-200">
+                                    <strong>Security:</strong> This SSH key is unique to this server. If this server is compromised, only this key needs to be revoked—your other servers remain secure.
+                                </p>
+                            </div>
                             <ol className="space-y-2 text-sm text-muted-foreground">
                                 <li>1. Go to your GitHub repository&apos;s deploy key settings.</li>
                                 <li>
-                                    2. Add a new key with a descriptive title, e.g. <span className="font-medium">BrokeForge Deploy</span>.
+                                    2. Add a new key with a descriptive title, e.g. <span className="font-medium">BrokeForge Server #{server.id}</span>.
                                 </li>
                                 <li>3. Paste the key below and grant read-only access.</li>
                             </ol>

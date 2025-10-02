@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\Servers\InstallSiteGitRepositoryRequest;
 use App\Models\Server;
 use App\Models\ServerSite;
-use App\Packages\Credentials\WorkerCredential;
+use App\Models\ServerCredential;
 use App\Packages\Enums\GitStatus;
 use App\Packages\Services\Sites\Git\GitRepositoryInstallerJob;
 use Illuminate\Http\RedirectResponse;
@@ -103,7 +103,7 @@ class ServerSiteGitRepositoryController extends Controller
             'provider' => $config['provider'],
             'repository' => $config['repository'],
             'branch' => $config['branch'],
-            'deployKey' => $config['deploy_key'] ?? $this->resolveDeployKey(),
+            'deployKey' => $config['deploy_key'] ?? $this->resolveDeployKey($site->server),
             'lastDeployedSha' => $site->last_deployment_sha,
             'lastDeployedAt' => $site->last_deployed_at?->toISOString(),
         ];
@@ -152,18 +152,17 @@ class ServerSiteGitRepositoryController extends Controller
 
     /**
      * Resolve the worker deploy key for SSH access.
+     * Returns the server-specific worker SSH public key.
+     *
+     * This key is unique to this server and should be added as a deploy key
+     * to the Git repository with read-only access.
      */
-    protected function resolveDeployKey(): ?string
+    protected function resolveDeployKey(Server $server): ?string
     {
-        $credential = new WorkerCredential;
-        $publicKeyPath = $credential->publicKey();
+        // Get or generate worker credential for this specific server
+        $workerCredential = $server->credential('worker')
+            ?? ServerCredential::generateKeyPair($server, 'worker');
 
-        if (! is_string($publicKeyPath) || ! is_file($publicKeyPath) || ! is_readable($publicKeyPath)) {
-            return null;
-        }
-
-        $content = file_get_contents($publicKeyPath);
-
-        return $content === false ? null : trim($content);
+        return $workerCredential->public_key;
     }
 }

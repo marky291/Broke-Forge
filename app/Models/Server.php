@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Packages\Credentials\TemporaryCredentialCache;
 use App\Packages\Enums\ProvisionStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -38,6 +37,7 @@ class Server extends Model
         'ssh_app_user',
         'connection',
         'provision_status',
+        'ssh_root_password',
     ];
 
     protected $attributes = [
@@ -49,6 +49,7 @@ class Server extends Model
         return [
             'ssh_port' => 'integer',
             'provision_status' => ProvisionStatus::class,
+            'ssh_root_password' => 'encrypted',
         ];
     }
 
@@ -90,6 +91,22 @@ class Server extends Model
     public function sites(): HasMany
     {
         return $this->hasMany(ServerSite::class);
+    }
+
+    /**
+     * Get all SSH credentials for this server.
+     */
+    public function credentials(): HasMany
+    {
+        return $this->hasMany(ServerCredential::class);
+    }
+
+    /**
+     * Get a specific credential type for this server.
+     */
+    public function credential(string $type): ?ServerCredential
+    {
+        return $this->credentials()->where('credential_type', $type)->first();
     }
 
     /**
@@ -135,6 +152,12 @@ class Server extends Model
 
     protected static function booted(): void
     {
+        static::creating(function (self $server): void {
+            if (empty($server->ssh_root_password)) {
+                $server->ssh_root_password = self::generatePassword();
+            }
+        });
+
         static::created(function (self $server): void {
             Activity::create([
                 'type' => 'server.created',
@@ -149,9 +172,20 @@ class Server extends Model
                 ],
             ]);
         });
+    }
 
-        static::deleted(function (self $server): void {
-            TemporaryCredentialCache::forgetRootPassword($server);
-        });
+    protected static function generatePassword(int $length = 24): string
+    {
+        // Limit to URL-safe characters to make display and copy simple.
+        $alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+        $alphabetLength = strlen($alphabet) - 1;
+
+        $password = '';
+
+        for ($i = 0; $i < $length; $i++) {
+            $password .= $alphabet[random_int(0, $alphabetLength)];
+        }
+
+        return $password;
     }
 }

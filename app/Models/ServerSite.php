@@ -38,6 +38,10 @@ class ServerSite extends Model
         'deprovisioned_at',
     ];
 
+    protected $appends = [
+        'provisioned_at_human',
+    ];
+
     protected function casts(): array
     {
         return [
@@ -49,6 +53,14 @@ class ServerSite extends Model
             'last_deployed_at' => 'datetime',
             'deprovisioned_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Get human-readable provisioned at timestamp.
+     */
+    public function getProvisionedAtHumanAttribute(): ?string
+    {
+        return $this->provisioned_at?->diffForHumans();
     }
 
     public function server(): BelongsTo

@@ -6,8 +6,6 @@ use App\Models\Server;
 use App\Models\ServerSite;
 use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageInstaller;
-use App\Packages\Credentials\SshCredential;
-use App\Packages\Credentials\UserCredential;
 use App\Packages\Enums\PackageName;
 use App\Packages\Enums\PackageType;
 use Illuminate\Support\Facades\Log;
@@ -147,8 +145,8 @@ class SiteCommandInstaller extends PackageInstaller implements \App\Packages\Bas
         return new SiteCommandInstallerMilestones;
     }
 
-    public function sshCredential(): SshCredential
+    public function credentialType(): string
     {
-        return new UserCredential;
+        return 'user';
     }
 }

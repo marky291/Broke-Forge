@@ -7,8 +7,6 @@ use App\Enums\DatabaseType;
 use App\Models\ServerDatabase;
 use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageInstaller;
-use App\Packages\Credentials\RootCredential;
-use App\Packages\Credentials\SshCredential;
 use App\Packages\Enums\PackageName;
 use App\Packages\Enums\PackageType;
 
@@ -25,9 +23,9 @@ class MySqlInstaller extends PackageInstaller implements \App\Packages\Base\Serv
         return new MySqlInstallerMilestones;
     }
 
-    public function sshCredential(): SshCredential
+    public function credentialType(): string
     {
-        return new RootCredential;
+        return 'root';
     }
 
     /**

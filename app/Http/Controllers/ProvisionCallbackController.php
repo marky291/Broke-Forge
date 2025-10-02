@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Server;
-use App\Packages\Credentials\TemporaryCredentialCache;
 use App\Packages\Enums\Connection;
 use App\Packages\Enums\PhpVersion;
 use App\Packages\Enums\ProvisionStatus;
@@ -66,7 +65,6 @@ class ProvisionCallbackController extends Controller
                 Log::info("Dispatched web service provisioning job for server #{$server->id}");
             }
 
-            TemporaryCredentialCache::forgetRootPassword($server);
             $server->save();
         }
 

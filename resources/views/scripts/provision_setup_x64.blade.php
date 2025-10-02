@@ -32,34 +32,42 @@ notify_callback "$CALLBACK_STARTED_URL"
 
 ROOT_PASSWORD='{{ $rootPassword }}'
 
-PUB_KEY_CONTENT=$(cat <<'EOF'
-{{ $pubKeyContent }}
-EOF
-)
-
 echo "[+] Starting provisioning for users: {{ $sshUser }} (root) and {{ $appUser }} (app)"
 
-# Setup SSH for root user ({{ $sshUser }})
+# Setup SSH for root user ({{ $sshUser }}) with server-specific keys
 if [ "{{ $sshUser }}" = "root" ]; then
-  # Ensure root SSH is set up and key is present
+  # Ensure root SSH directory exists
   if [ ! -d /root/.ssh ]; then
     mkdir -p /root/.ssh
     chmod 700 /root/.ssh
   fi
+
+  # Deploy root private key (for outgoing connections from BrokeForge to this server)
+  cat > /root/.ssh/id_rsa <<'ROOT_PRIVATE_KEY_EOF'
+{{ $rootPrivateKeyContent }}
+ROOT_PRIVATE_KEY_EOF
+  chmod 600 /root/.ssh/id_rsa
+
+  # Deploy root public key
+  cat > /root/.ssh/id_rsa.pub <<'ROOT_PUBLIC_KEY_EOF'
+{{ $rootPublicKeyContent }}
+ROOT_PUBLIC_KEY_EOF
+  chmod 644 /root/.ssh/id_rsa.pub
+
+  # Add public key to authorized_keys for incoming BrokeForge connections
   if [ ! -f /root/.ssh/authorized_keys ]; then
     touch /root/.ssh/authorized_keys
     chmod 600 /root/.ssh/authorized_keys
   fi
+  if ! grep -Fq "{{ trim($rootPublicKeyContent) }}" /root/.ssh/authorized_keys; then
+    echo "{{ trim($rootPublicKeyContent) }}" >> /root/.ssh/authorized_keys
+  fi
 
-  # Ensure strict ownership for SSH to accept keys
+  # Ensure strict ownership
   chown root:root /root
   chown -R root:root /root/.ssh
 
-  if ! grep -Fq "${PUB_KEY_CONTENT}" /root/.ssh/authorized_keys; then
-    echo "${PUB_KEY_CONTENT}" >> /root/.ssh/authorized_keys
-  fi
-
-  echo "[+] Root user SSH authorized_keys configured"
+  echo "[+] Root user SSH keys configured (server-specific)"
 else
   # Setup SSH for non-root ssh user if different
   if ! id -u "{{ $sshUser }}" >/dev/null 2>&1; then
@@ -67,40 +75,97 @@ else
   fi
 
   mkdir -p "/home/{{ $sshUser }}/.ssh"
+
+  # Deploy root private key
+  cat > "/home/{{ $sshUser }}/.ssh/id_rsa" <<'ROOT_PRIVATE_KEY_EOF'
+{{ $rootPrivateKeyContent }}
+ROOT_PRIVATE_KEY_EOF
+  chmod 600 "/home/{{ $sshUser }}/.ssh/id_rsa"
+
+  # Deploy root public key
+  cat > "/home/{{ $sshUser }}/.ssh/id_rsa.pub" <<'ROOT_PUBLIC_KEY_EOF'
+{{ $rootPublicKeyContent }}
+ROOT_PUBLIC_KEY_EOF
+  chmod 644 "/home/{{ $sshUser }}/.ssh/id_rsa.pub"
+
+  # Add to authorized_keys
   if [ ! -f "/home/{{ $sshUser }}/.ssh/authorized_keys" ]; then
     touch "/home/{{ $sshUser }}/.ssh/authorized_keys"
   fi
-
-  if ! grep -Fq "${PUB_KEY_CONTENT}" "/home/{{ $sshUser }}/.ssh/authorized_keys"; then
-    echo "${PUB_KEY_CONTENT}" >> "/home/{{ $sshUser }}/.ssh/authorized_keys"
+  if ! grep -Fq "{{ trim($rootPublicKeyContent) }}" "/home/{{ $sshUser }}/.ssh/authorized_keys"; then
+    echo "{{ trim($rootPublicKeyContent) }}" >> "/home/{{ $sshUser }}/.ssh/authorized_keys"
   fi
 
   chown -R "{{ $sshUser }}":"{{ $sshUser }}" "/home/{{ $sshUser }}/.ssh"
   chmod 700 "/home/{{ $sshUser }}/.ssh"
   chmod 600 "/home/{{ $sshUser }}/.ssh/authorized_keys"
 
-  echo "[+] SSH user '{{ $sshUser }}' SSH authorized_keys configured"
+  echo "[+] SSH user '{{ $sshUser }}' SSH keys configured (server-specific)"
 fi
 
-# Setup SSH for application user ({{ $appUser }})
+# Setup SSH for application user ({{ $appUser }}) with server-specific keys
 if ! id -u "{{ $appUser }}" >/dev/null 2>&1; then
   useradd -m -s /bin/bash "{{ $appUser }}" || adduser --disabled-password --gecos "" "{{ $appUser }}"
 fi
 
 mkdir -p "/home/{{ $appUser }}/.ssh"
+
+# Deploy user private key
+cat > "/home/{{ $appUser }}/.ssh/id_rsa" <<'USER_PRIVATE_KEY_EOF'
+{{ $userPrivateKeyContent }}
+USER_PRIVATE_KEY_EOF
+chmod 600 "/home/{{ $appUser }}/.ssh/id_rsa"
+
+# Deploy user public key
+cat > "/home/{{ $appUser }}/.ssh/id_rsa.pub" <<'USER_PUBLIC_KEY_EOF'
+{{ $userPublicKeyContent }}
+USER_PUBLIC_KEY_EOF
+chmod 644 "/home/{{ $appUser }}/.ssh/id_rsa.pub"
+
+# Add to authorized_keys
 if [ ! -f "/home/{{ $appUser }}/.ssh/authorized_keys" ]; then
   touch "/home/{{ $appUser }}/.ssh/authorized_keys"
 fi
-
-if ! grep -Fq "${PUB_KEY_CONTENT}" "/home/{{ $appUser }}/.ssh/authorized_keys"; then
-  echo "${PUB_KEY_CONTENT}" >> "/home/{{ $appUser }}/.ssh/authorized_keys"
+if ! grep -Fq "{{ trim($userPublicKeyContent) }}" "/home/{{ $appUser }}/.ssh/authorized_keys"; then
+  echo "{{ trim($userPublicKeyContent) }}" >> "/home/{{ $appUser }}/.ssh/authorized_keys"
 fi
 
 chown -R "{{ $appUser }}":"{{ $appUser }}" "/home/{{ $appUser }}/.ssh"
 chmod 700 "/home/{{ $appUser }}/.ssh"
 chmod 600 "/home/{{ $appUser }}/.ssh/authorized_keys"
 
-echo "[+] App user '{{ $appUser }}' SSH authorized_keys configured"
+echo "[+] App user '{{ $appUser }}' SSH keys configured (server-specific)"
+
+# Setup worker user for Git operations
+if ! id -u "worker" >/dev/null 2>&1; then
+  useradd -m -s /bin/bash worker || adduser --disabled-password --gecos "" worker
+fi
+
+mkdir -p /home/worker/.ssh
+chmod 700 /home/worker/.ssh
+
+# Install worker private key for outgoing Git SSH connections
+cat > /home/worker/.ssh/id_rsa <<'WORKER_PRIVATE_KEY_EOF'
+{{ $workerPrivateKeyContent }}
+WORKER_PRIVATE_KEY_EOF
+
+chmod 600 /home/worker/.ssh/id_rsa
+
+# Install worker public key for reference
+cat > /home/worker/.ssh/id_rsa.pub <<'WORKER_PUBLIC_KEY_EOF'
+{{ $workerPublicKeyContent }}
+WORKER_PUBLIC_KEY_EOF
+
+chmod 644 /home/worker/.ssh/id_rsa.pub
+
+# Set proper ownership
+chown -R worker:worker /home/worker/.ssh
+
+# Configure Git for worker user
+sudo -u worker git config --global user.name '{{ $appName }} Worker'
+sudo -u worker git config --global user.email 'worker@{{ str_replace(' ', '', strtolower($appName)) }}.local'
+
+echo "[+] Worker user 'worker' configured for Git operations with deployed SSH keys"
 
 # Set passwords for all configured users
 echo "root:${ROOT_PASSWORD}" | chpasswd
@@ -147,7 +212,7 @@ EOF
   SERVER_IP=$(ip route get 1 | awk '{print $7;exit}' 2>/dev/null || hostname -I | awk '{print $1}')
 
   # Add localhost entries to known_hosts for all users to prevent SSH prompts
-  for user_home in /root /home/{{ $sshUser }} /home/{{ $appUser }}; do
+  for user_home in /root /home/{{ $sshUser }} /home/{{ $appUser }} /home/worker; do
     if [ -d "$user_home" ]; then
       mkdir -p "$user_home/.ssh"
       touch "$user_home/.ssh/known_hosts"
@@ -163,12 +228,23 @@ EOF
         chown {{ $sshUser }}:{{ $sshUser }} "$user_home/.ssh/known_hosts"
       elif [ "$user_home" = "/home/{{ $appUser }}" ]; then
         chown {{ $appUser }}:{{ $appUser }} "$user_home/.ssh/known_hosts"
+      elif [ "$user_home" = "/home/worker" ]; then
+        chown worker:worker "$user_home/.ssh/known_hosts"
       fi
       chmod 644 "$user_home/.ssh/known_hosts"
     fi
   done
 
-  echo "[+] SSH known_hosts configured"
+  # Add GitHub to known_hosts for worker user (for Git operations)
+  if [ -d /home/worker/.ssh ]; then
+    ssh-keyscan -H github.com 2>/dev/null >> /home/worker/.ssh/known_hosts || true
+    ssh-keyscan -H gitlab.com 2>/dev/null >> /home/worker/.ssh/known_hosts || true
+    ssh-keyscan -H bitbucket.org 2>/dev/null >> /home/worker/.ssh/known_hosts || true
+    chown worker:worker /home/worker/.ssh/known_hosts
+    chmod 644 /home/worker/.ssh/known_hosts
+  fi
+
+  echo "[+] SSH known_hosts configured (including Git providers for worker)"
 
   if command -v ufw >/dev/null 2>&1; then
     ufw allow {{ $sshPort ?? 22 }}/tcp || true

@@ -39,6 +39,7 @@ type ServerSite = {
     ssl_enabled: boolean;
     status: string;
     provisioned_at: string | null;
+    provisioned_at_human?: string | null;
     configuration?: {
         git_repository?: {
             provider?: string;
@@ -171,68 +172,87 @@ export default function Sites({ server, sites }: SitesProps) {
         <ServerLayout server={server} breadcrumbs={breadcrumbs}>
             <Head title={`Sites — ${server.vanity_name}`} />
             <div className="space-y-6">
-                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div>
-                        <h2 className="text-2xl font-semibold">Sites Management</h2>
-                        <p className="mt-1 text-sm text-muted-foreground">Manage websites, domains, and applications hosted on your server.</p>
+                        <h2 className="text-2xl font-semibold tracking-tight">Sites Management</h2>
+                        <p className="mt-1.5 text-sm text-muted-foreground">Manage websites, domains, and applications hosted on your server.</p>
                     </div>
-                    <Button asChild variant="outline">
+                    <Button asChild variant="outline" size="sm">
                         <Link href={`/servers/${server.id}/explorer`}>Open File Explorer</Link>
                     </Button>
                 </div>
 
                 {/* Sites List */}
                 <Card>
-                    <CardHeader className="flex flex-row items-center justify-between">
-                        <CardTitle className="text-base font-medium">Configured Sites</CardTitle>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+                        <CardTitle className="text-base font-semibold">Configured Sites</CardTitle>
                         <Button onClick={() => setShowAddSiteDialog(true)} size="sm">
                             <Plus className="mr-2 h-4 w-4" />
                             Add Site
                         </Button>
                     </CardHeader>
                     <Separator />
-                    <CardContent className="p-0">
+                    <CardContent>
                         {sites.data.length > 0 ? (
-                            <div className="divide-y">
-                                {sites.data.map((site) => (
+                            <div className="space-y-2">
+                                {/* Table Headers */}
+                                <div className="grid grid-cols-[2fr_3rem_3rem_4rem_7rem] gap-4 px-4 py-2 text-sm font-medium text-muted-foreground border-b">
+                                    <div>Site</div>
+                                    <div className="text-center">
+                                        <GitBranch className="h-3.5 w-3.5 mx-auto" />
+                                    </div>
+                                    <div className="text-center">
+                                        <Lock className="h-3.5 w-3.5 mx-auto" />
+                                    </div>
+                                    <div className="text-center">PHP</div>
+                                    <div className="text-right">Deployed</div>
+                                </div>
+
+                                {/* Table Rows */}
+                                <div className="divide-y">
+                                    {sites.data.map((site) => (
                                     <Link
                                         key={site.id}
                                         href={showSite({ server: server.id, site: site.id }).url}
-                                        className="block transition-colors hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                                        className="block"
                                     >
-                                        <div className="px-6 py-5">
-                                            <div className="flex items-start justify-between gap-4">
-                                                <div className="min-w-0 flex-1">
-                                                    <div className="flex items-center gap-3 mb-3">
-                                                        <h3 className="text-[15px] font-semibold text-gray-900 truncate">{site.domain}</h3>
-                                                        {site.ssl_enabled && (
-                                                            <Badge variant="outline" className="border-green-200 bg-green-50 text-green-700 gap-1 px-2 py-0.5">
-                                                                <Lock className="h-3 w-3" />
-                                                                <span className="text-xs font-medium">SSL</span>
-                                                            </Badge>
-                                                        )}
-                                                    </div>
-                                                    <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-                                                        <div className="flex items-center gap-1.5 text-[13px] text-gray-600">
-                                                            <FileCode2 className="h-3.5 w-3.5 text-gray-400" />
-                                                            <span>PHP {site.php_version}</span>
-                                                        </div>
-                                                        {site.configuration?.git_repository?.repository && (
-                                                            <div className="flex items-center gap-1.5 text-[13px] text-gray-600">
-                                                                <GitBranch className="h-3.5 w-3.5 text-gray-400" />
-                                                                <span className="font-mono">{formatGitRepository(site.configuration.git_repository)}</span>
-                                                            </div>
-                                                        )}
-                                                        {getApplicationTypeBadge(site.configuration?.application_type)}
-                                                    </div>
-                                                </div>
-                                                <div className="flex items-center">
-                                                    {getStatusBadge(site.status)}
-                                                </div>
+                                        <div className="grid grid-cols-[2fr_3rem_3rem_4rem_7rem] gap-4 px-4 py-3 items-center hover:bg-muted/50 transition-all">
+                                            {/* Site Name & Git Info Column */}
+                                            <div className="min-w-0">
+                                                <h3 className="text-sm truncate">{site.domain}</h3>
+                                                {site.configuration?.git_repository?.repository ? (
+                                                    <p className="text-xs text-muted-foreground mt-0.5">
+                                                        • {site.configuration.git_repository.repository}
+                                                        {site.configuration.git_repository.branch && `:${site.configuration.git_repository.branch}`}
+                                                    </p>
+                                                ) : (
+                                                    <p className="text-xs text-muted-foreground mt-0.5">No App Installed</p>
+                                                )}
+                                            </div>
+
+                                            {/* Auto Deploy Column */}
+                                            <div className="flex items-center justify-center">
+                                                <GitBranch className={`h-4 w-4 ${site.configuration?.git_repository?.repository ? 'text-blue-600' : 'text-muted-foreground/20'}`} />
+                                            </div>
+
+                                            {/* SSL Column */}
+                                            <div className="flex items-center justify-center">
+                                                <Lock className={`h-4 w-4 ${site.ssl_enabled ? 'text-green-600' : 'text-muted-foreground/20'}`} />
+                                            </div>
+
+                                            {/* PHP Version Column */}
+                                            <div className="text-sm text-center">
+                                                {site.php_version}
+                                            </div>
+
+                                            {/* Deployed Column */}
+                                            <div className="text-sm text-right">
+                                                {site.provisioned_at_human || 'Never Deployed'}
                                             </div>
                                         </div>
                                     </Link>
                                 ))}
+                                </div>
                             </div>
                         ) : (
                             <div className="p-8 text-center">

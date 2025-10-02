@@ -5,8 +5,6 @@ namespace App\Packages\Services\Sites;
 use App\Models\ServerSite;
 use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageRemover;
-use App\Packages\Credentials\SshCredential;
-use App\Packages\Credentials\UserCredential;
 use App\Packages\Enums\PackageName;
 use App\Packages\Enums\PackageType;
 
@@ -81,9 +79,9 @@ class SiteRemover extends PackageRemover
         return new SiteRemoverMilestones;
     }
 
-    public function sshCredential(): SshCredential
+    public function credentialType(): string
     {
-        return new UserCredential;
+        return 'user';
     }
 
     public function packageName(): PackageName

@@ -157,8 +157,27 @@ abstract class PackageManager implements Package
 
                 // Only execute SSH commands for strings
                 if (is_string($command)) {
+                    // Get server-specific credential for this package's operations
+                    $credentialType = $this->credentialType();
+                    $credential = $this->server->credential($credentialType);
+
+                    if (!$credential) {
+                        throw new \RuntimeException(
+                            "No {$credentialType} credential found for server #{$this->server->id}. " .
+                            "Ensure provisioning completed successfully."
+                        );
+                    }
+
+                    // Determine SSH user based on credential type
+                    $sshUser = match($credentialType) {
+                        'root' => 'root',
+                        'user' => config('app.ssh_user', str_replace(' ', '', strtolower(config('app.name')))),
+                        'worker' => 'worker',
+                        default => throw new \RuntimeException("Unknown credential type: {$credentialType}")
+                    };
+
                     // Execute SSH commands with timeout to prevent hanging
-                    $process = $this->ssh($this->sshCredential()->user(), $this->server->public_ip, $this->server->ssh_port)
+                    $process = $this->ssh($sshUser, $this->server->public_ip, $this->server->ssh_port)
                         ->disableStrictHostKeyChecking()
                         ->setTimeout(300)
                         ->execute($command);
@@ -176,7 +195,7 @@ abstract class PackageManager implements Package
                             ]);
                         }
 
-                        Log::error($error, ['credential' => $this->sshCredential(), 'server' => $this->server]);
+                        Log::error($error, ['credential_type' => $credentialType, 'server' => $this->server]);
                         throw new \RuntimeException("Command failed: $command");
                     }
                 }

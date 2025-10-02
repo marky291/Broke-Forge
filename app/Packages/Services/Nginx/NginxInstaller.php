@@ -8,9 +8,6 @@ use App\Models\ServerReverseProxy;
 use App\Packages\Base\Milestones;
 use App\Packages\Base\Package;
 use App\Packages\Base\PackageInstaller;
-use App\Packages\Credentials\RootCredential;
-use App\Packages\Credentials\SshCredential;
-use App\Packages\Credentials\UserCredential;
 use App\Packages\Enums\PackageName;
 use App\Packages\Enums\PackageType;
 use App\Packages\Enums\PhpVersion;
@@ -40,9 +37,9 @@ class NginxInstaller extends PackageInstaller implements \App\Packages\Base\Serv
         return new NginxInstallerMilestones;
     }
 
-    public function sshCredential(): SshCredential
+    public function credentialType(): string
     {
-        return new RootCredential;
+        return 'root';
     }
 
     /**
@@ -75,8 +72,7 @@ class NginxInstaller extends PackageInstaller implements \App\Packages\Base\Serv
     protected function commands(PhpVersion $phpVersion): array
     {
         // Get the app user that will own site directories
-        $userCredential = new UserCredential;
-        $appUser = $userCredential->user();
+        $appUser = config('app.ssh_user', str_replace(' ', '', strtolower(config('app.name'))));
 
         return [
 

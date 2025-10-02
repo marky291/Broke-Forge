@@ -5,8 +5,6 @@ namespace App\Packages\Services\Firewall;
 use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageRemover;
 use App\Packages\Base\ServerPackage;
-use App\Packages\Credentials\RootCredential;
-use App\Packages\Credentials\SshCredential;
 use App\Packages\Enums\PackageName;
 use App\Packages\Enums\PackageType;
 
@@ -53,9 +51,9 @@ class FirewallRuleUninstaller extends PackageRemover implements ServerPackage
     /**
      * SSH credential type for remote execution
      */
-    public function sshCredential(): SshCredential
+    public function credentialType(): string
     {
-        return new RootCredential;
+        return 'root';
     }
 
     /**
