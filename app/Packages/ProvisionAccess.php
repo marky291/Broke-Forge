@@ -4,8 +4,8 @@ namespace App\Packages;
 
 use App\Models\Server;
 use App\Models\ServerCredential;
+use App\Packages\Enums\CredentialType;
 use Illuminate\Support\Facades\URL;
-use Illuminate\Support\Str;
 
 class ProvisionAccess
 {
@@ -18,36 +18,28 @@ class ProvisionAccess
      */
     public function makeScriptFor(Server $server, string $rootPassword): string
     {
-        // SSH root user is always 'root' based on the error logs
-        $sshUser = $server->ssh_root_user ?: 'root';
-        // App user from server model or default to slugified app name
-        $appUser = $server->ssh_app_user ?: Str::slug(config('app.name'));
+        // Generate unique SSH credentials for this server
+        // Two credential types:
+        // - Root: for system-level operations (package installs, service management)
+        // - BrokeForge: for site-level operations (Git, deployments, app code)
 
-        // Generate unique SSH credentials for this server (one per credential type)
-        // These replace the old shared Keys/ssh_key with per-server encrypted keys
+        $rootCredential = $server->credential(CredentialType::Root)
+            ?? ServerCredential::generateKeyPair($server, CredentialType::Root);
 
-        $rootCredential = $server->credential('root')
-            ?? ServerCredential::generateKeyPair($server, 'root');
-
-        $userCredential = $server->credential('user')
-            ?? ServerCredential::generateKeyPair($server, 'user');
-
-        $workerCredential = $server->credential('worker')
-            ?? ServerCredential::generateKeyPair($server, 'worker');
+        $brokeforgeCredential = $server->credential(CredentialType::BrokeForge)
+            ?? ServerCredential::generateKeyPair($server, CredentialType::BrokeForge);
 
         $appName = config('app.name');
 
         $callbackUrls = $this->buildCallbackUrls($server);
 
         return view('scripts.provision_setup_x64', [
-            'sshUser' => $sshUser,
-            'appUser' => $appUser,
+            'sshUser' => $rootCredential->getUsername(),
+            'appUser' => $brokeforgeCredential->getUsername(),
             'rootPrivateKeyContent' => $rootCredential->private_key,
             'rootPublicKeyContent' => $rootCredential->public_key,
-            'userPrivateKeyContent' => $userCredential->private_key,
-            'userPublicKeyContent' => $userCredential->public_key,
-            'workerPrivateKeyContent' => $workerCredential->private_key,
-            'workerPublicKeyContent' => $workerCredential->public_key,
+            'userPrivateKeyContent' => $brokeforgeCredential->private_key,
+            'userPublicKeyContent' => $brokeforgeCredential->public_key,
             'appName' => $appName,
             'sshPort' => $server->ssh_port,
             'callbackUrls' => $callbackUrls,

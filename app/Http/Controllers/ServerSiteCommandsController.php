@@ -19,7 +19,6 @@ class ServerSiteCommandsController extends Controller
             'id',
             'vanity_name',
             'connection',
-            'ssh_app_user',
         ]);
 
         $siteDetails = $site->only([
@@ -27,6 +26,7 @@ class ServerSiteCommandsController extends Controller
             'domain',
             'document_root',
             'status',
+            'git_status',
         ]);
 
         $siteIdentifier = $site->domain
@@ -40,7 +40,7 @@ class ServerSiteCommandsController extends Controller
             'site' => $siteDetails,
             'executionContext' => [
                 'workingDirectory' => $workingDirectory,
-                'user' => $server->ssh_app_user,
+                'user' => $server->credential('brokeforge')?->getUsername() ?: 'brokeforge',
                 'timeout' => 120,
             ],
             'commandResult' => session('commandResult'),

@@ -11,4 +11,5 @@ enum PackageName: string
     case Command = 'command';
     case Php83 = 'php83';
     case FirewallUfw = 'firewall-ufw';
+    case Deployment = 'deployment';
 }

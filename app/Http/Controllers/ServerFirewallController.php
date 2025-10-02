@@ -27,7 +27,7 @@ class ServerFirewallController extends Controller
         // Check if firewall is actually installed on the server
         $isFirewallInstalled = $firewall !== null;
 
-        if (!$isFirewallInstalled) {
+        if (! $isFirewallInstalled) {
             return Inertia::render('servers/firewall', [
                 'server' => $server->only([
                     'id',
@@ -59,7 +59,7 @@ class ServerFirewallController extends Controller
                 'created_at',
                 'updated_at',
             ]),
-            'rules' => $firewall->rules()->latest()->get()->map(fn($rule) => [
+            'rules' => $firewall->rules()->latest()->get()->map(fn ($rule) => [
                 'id' => $rule->id,
                 'name' => $rule->name,
                 'port' => $rule->port,
@@ -75,7 +75,7 @@ class ServerFirewallController extends Controller
                 ->latest()
                 ->take(5)
                 ->get()
-                ->map(fn($event) => [
+                ->map(fn ($event) => [
                     'id' => $event->id,
                     'milestone' => $event->milestone,
                     'status' => $event->status,
@@ -153,7 +153,7 @@ class ServerFirewallController extends Controller
     {
         $firewall = $server->firewall;
 
-        if (!$firewall) {
+        if (! $firewall) {
             return response()->json([
                 'rules' => [],
                 'firewallStatus' => 'not_installed',
@@ -167,7 +167,7 @@ class ServerFirewallController extends Controller
             ->first();
 
         return response()->json([
-            'rules' => $firewall->rules()->latest()->get()->map(fn($rule) => [
+            'rules' => $firewall->rules()->latest()->get()->map(fn ($rule) => [
                 'id' => $rule->id,
                 'name' => $rule->name,
                 'port' => $rule->port,

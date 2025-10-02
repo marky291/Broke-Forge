@@ -7,6 +7,7 @@ use App\Models\ServerPhp;
 use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageInstaller;
 use App\Packages\Base\ServerPackage;
+use App\Packages\Enums\CredentialType;
 use App\Packages\Enums\PackageName;
 use App\Packages\Enums\PackageType;
 use App\Packages\Enums\PhpVersion;
@@ -33,9 +34,9 @@ class PhpInstaller extends PackageInstaller implements ServerPackage
         return new PhpInstallerMilestones;
     }
 
-    public function credentialType(): string
+    public function credentialType(): CredentialType
     {
-        return 'root';
+        return CredentialType::Root;
     }
 
     /**

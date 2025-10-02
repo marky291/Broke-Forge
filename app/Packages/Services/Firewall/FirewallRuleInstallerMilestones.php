@@ -12,8 +12,11 @@ use App\Packages\Base\Milestones;
 class FirewallRuleInstallerMilestones extends Milestones
 {
     public const VERIFY_FIREWALL = 'verify_firewall';
+
     public const APPLY_RULES = 'apply_rules';
+
     public const RELOAD_FIREWALL = 'reload_firewall';
+
     public const COMPLETE = 'complete';
 
     private const LABELS = [

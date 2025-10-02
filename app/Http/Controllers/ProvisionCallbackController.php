@@ -4,13 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\Server;
 use App\Packages\Enums\Connection;
+use App\Packages\Enums\CredentialType;
 use App\Packages\Enums\PhpVersion;
 use App\Packages\Enums\ProvisionStatus;
 use App\Packages\Services\Nginx\NginxInstallerJob;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Spatie\Ssh\Ssh;
 
 class ProvisionCallbackController extends Controller
 {
@@ -33,29 +33,37 @@ class ProvisionCallbackController extends Controller
         if ($status === 'completed') {
 
             $rootUserSuccess = true;
-            $appUserSuccess = true;
+            $brokeforgeUserSuccess = true;
             $server->connection = Connection::CONNECTED;
 
-            // check the user of the ssh commands.
-            $rootUser = trim(Ssh::create($server->ssh_root_user, $server->public_ip)
-                ->disableStrictHostKeyChecking()
-                ->execute('whoami')->getOutput());
-            $appUser = trim(Ssh::create($server->ssh_app_user, $server->public_ip)
-                ->disableStrictHostKeyChecking()
-                ->execute('whoami')->getOutput());
+            // Verify SSH access for both credential types (root and brokeforge)
+            foreach (CredentialType::cases() as $credentialType) {
+                try {
+                    $credential = $server->credential($credentialType);
+                    $expectedUsername = $credential?->getUsername();
 
-            if ($rootUser != $server->ssh_root_user) {
-                Log::error("Root SSH access failed, Found '{$rootUser}' expected '{$server->ssh_root_user}'", ['server' => $server]);
-                $rootUserSuccess = false;
+                    if (! $credential || ! $expectedUsername) {
+                        Log::error("Missing {$credentialType->value} credential for server", ['server' => $server]);
+                        ${$credentialType->value.'UserSuccess'} = false;
+
+                        continue;
+                    }
+
+                    $actualUsername = trim($server->createSshConnection($credentialType)
+                        ->execute('whoami')->getOutput());
+
+                    if ($actualUsername !== $expectedUsername) {
+                        Log::error("{$credentialType->value} SSH access failed, Found '{$actualUsername}' expected '{$expectedUsername}'", ['server' => $server]);
+                        ${$credentialType->value.'UserSuccess'} = false;
+                    }
+                } catch (\Exception $e) {
+                    Log::error("{$credentialType->value} SSH connection failed: {$e->getMessage()}", ['server' => $server]);
+                    ${$credentialType->value.'UserSuccess'} = false;
+                }
             }
 
-            if ($appUser != $server->ssh_app_user) {
-                Log::error("App SSH access failed, Found '{$appUser}' expected '{$server->ssh_app_user}'", ['server' => $server]);
-                $appUserSuccess = false;
-            }
-
-            // connection failed if we cannot connect with SSH :(
-            if (! $rootUserSuccess || ! $appUserSuccess) {
+            // Connection failed if we cannot connect with SSH for either user
+            if (! $rootUserSuccess || ! $brokeforgeUserSuccess) {
                 $server->connection = Connection::FAILED;
                 $server->provision_status = ProvisionStatus::Failed;
             } else {

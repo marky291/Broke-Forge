@@ -8,6 +8,7 @@ use App\Models\ServerReverseProxy;
 use App\Packages\Base\Milestones;
 use App\Packages\Base\Package;
 use App\Packages\Base\PackageInstaller;
+use App\Packages\Enums\CredentialType;
 use App\Packages\Enums\PackageName;
 use App\Packages\Enums\PackageType;
 use App\Packages\Enums\PhpVersion;
@@ -37,9 +38,9 @@ class NginxInstaller extends PackageInstaller implements \App\Packages\Base\Serv
         return new NginxInstallerMilestones;
     }
 
-    public function credentialType(): string
+    public function credentialType(): CredentialType
     {
-        return 'root';
+        return CredentialType::Root;
     }
 
     /**

@@ -31,7 +31,7 @@ return new class extends Migration
                 $columnsToRemove[] = 'provision_run_id';
             }
 
-            if (!empty($columnsToRemove)) {
+            if (! empty($columnsToRemove)) {
                 $table->dropColumn($columnsToRemove);
             }
         });

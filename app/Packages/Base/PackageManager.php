@@ -78,7 +78,7 @@ abstract class PackageManager implements Package
             }
 
             // Persist the provision event to database for frontend tracking
-            if ($this instanceof \App\Packages\Base\ServerPackage) {
+            if ($this instanceof \App\Packages\Base\ServerPackage || $this instanceof \App\Packages\Base\SitePackage) {
                 $this->currentEvent = $this->server->events()->create([
                     'server_id' => $this->server->id,
                     'service_type' => $service,
@@ -101,11 +101,6 @@ abstract class PackageManager implements Package
             // Track this event
             $this->allEvents[] = $this->currentEvent;
         };
-    }
-
-    public function ssh(string $user, string $public_ip, int $port): Ssh
-    {
-        return Ssh::create($user, $public_ip, $port);
     }
 
     protected function sendCommandsToRemote(array $commandList): void
@@ -159,26 +154,9 @@ abstract class PackageManager implements Package
                 if (is_string($command)) {
                     // Get server-specific credential for this package's operations
                     $credentialType = $this->credentialType();
-                    $credential = $this->server->credential($credentialType);
-
-                    if (!$credential) {
-                        throw new \RuntimeException(
-                            "No {$credentialType} credential found for server #{$this->server->id}. " .
-                            "Ensure provisioning completed successfully."
-                        );
-                    }
-
-                    // Determine SSH user based on credential type
-                    $sshUser = match($credentialType) {
-                        'root' => 'root',
-                        'user' => config('app.ssh_user', str_replace(' ', '', strtolower(config('app.name')))),
-                        'worker' => 'worker',
-                        default => throw new \RuntimeException("Unknown credential type: {$credentialType}")
-                    };
 
                     // Execute SSH commands with timeout to prevent hanging
-                    $process = $this->ssh($sshUser, $this->server->public_ip, $this->server->ssh_port)
-                        ->disableStrictHostKeyChecking()
+                    $process = $this->server->createSshConnection($credentialType)
                         ->setTimeout(300)
                         ->execute($command);
 

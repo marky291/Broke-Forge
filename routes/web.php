@@ -10,6 +10,7 @@ use App\Http\Controllers\ServerPhpController;
 use App\Http\Controllers\ServerProvisioningController;
 use App\Http\Controllers\ServerSettingsController;
 use App\Http\Controllers\ServerSiteCommandsController;
+use App\Http\Controllers\ServerSiteDeploymentsController;
 use App\Http\Controllers\ServerSiteGitRepositoryController;
 use App\Http\Controllers\ServerSitesController;
 use Illuminate\Support\Facades\Route;
@@ -101,17 +102,35 @@ Route::middleware('auth')->group(function () {
             ->name('php.store');
 
         // Sites management
-        Route::prefix('sites')->group(function () {
+        Route::prefix('sites')->scopeBindings()->group(function () {
             Route::get('/', [ServerSitesController::class, 'index'])
                 ->name('sites');
             Route::get('{site}/commands', ServerSiteCommandsController::class)
                 ->name('sites.commands');
             Route::post('{site}/commands', [ServerSiteCommandsController::class, 'store'])
                 ->name('sites.commands.execute');
-            Route::get('{site}/application/git-repository', [ServerSiteGitRepositoryController::class, 'show'])
-                ->name('sites.git-repository');
-            Route::post('{site}/application/git-repository', [ServerSiteGitRepositoryController::class, 'store'])
-                ->name('sites.git-repository.install');
+            Route::get('{site}/deployments', [ServerSiteDeploymentsController::class, 'show'])
+                ->name('sites.deployments');
+            Route::put('{site}/deployments', [ServerSiteDeploymentsController::class, 'update'])
+                ->name('sites.deployments.update');
+            Route::post('{site}/deployments', [ServerSiteDeploymentsController::class, 'deploy'])
+                ->name('sites.deployments.deploy');
+            Route::get('{site}/deployments/{deployment}/status', [ServerSiteDeploymentsController::class, 'status'])
+                ->name('sites.deployments.status');
+            Route::get('{site}/application', [ServerSiteGitRepositoryController::class, 'show'])
+                ->name('sites.application');
+            Route::post('{site}/application', [ServerSiteGitRepositoryController::class, 'store'])
+                ->name('sites.application.store');
+            Route::get('{site}/explorer', [ServerFileExplorerController::class, 'show'])
+                ->name('sites.explorer');
+            Route::prefix('{site}/files')->name('sites.files.')->group(function () {
+                Route::get('/', [ServerFileExplorerController::class, 'index'])
+                    ->name('index');
+                Route::post('upload', [ServerFileExplorerController::class, 'store'])
+                    ->name('upload');
+                Route::get('download', [ServerFileExplorerController::class, 'download'])
+                    ->name('download');
+            });
             Route::get('{site}', [ServerSitesController::class, 'show'])
                 ->name('sites.show');
             Route::post('/', [ServerSitesController::class, 'store'])
@@ -128,19 +147,6 @@ Route::middleware('auth')->group(function () {
                 ->name('firewall.store');
             Route::delete('/{rule}', [ServerFirewallController::class, 'destroy'])
                 ->name('firewall.destroy');
-        });
-
-        Route::get('explorer', [ServerFileExplorerController::class, 'show'])
-            ->name('explorer');
-
-        // File explorer APIs
-        Route::prefix('files')->name('files.')->group(function () {
-            Route::get('/', [ServerFileExplorerController::class, 'index'])
-                ->name('index');
-            Route::post('upload', [ServerFileExplorerController::class, 'store'])
-                ->name('upload');
-            Route::get('download', [ServerFileExplorerController::class, 'download'])
-                ->name('download');
         });
 
         // Settings management

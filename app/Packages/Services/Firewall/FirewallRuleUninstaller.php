@@ -5,6 +5,7 @@ namespace App\Packages\Services\Firewall;
 use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageRemover;
 use App\Packages\Base\ServerPackage;
+use App\Packages\Enums\CredentialType;
 use App\Packages\Enums\PackageName;
 use App\Packages\Enums\PackageType;
 
@@ -33,6 +34,7 @@ class FirewallRuleUninstaller extends PackageRemover implements ServerPackage
 
     /**
      * Service type identifier for milestone tracking
+     *
      * @deprecated Use packageName() instead
      */
     protected function serviceType(): string
@@ -51,15 +53,15 @@ class FirewallRuleUninstaller extends PackageRemover implements ServerPackage
     /**
      * SSH credential type for remote execution
      */
-    public function credentialType(): string
+    public function credentialType(): CredentialType
     {
-        return 'root';
+        return CredentialType::Root;
     }
 
     /**
      * Execute the removal process
      *
-     * @param array $ruleConfig Configuration array with port, from_ip_address, rule_type
+     * @param  array  $ruleConfig  Configuration array with port, from_ip_address, rule_type
      */
     public function execute(array $ruleConfig): void
     {
@@ -69,7 +71,7 @@ class FirewallRuleUninstaller extends PackageRemover implements ServerPackage
     /**
      * Generate SSH commands for removal
      *
-     * @param array $ruleConfig Configuration array with port, from_ip_address, rule_type
+     * @param  array  $ruleConfig  Configuration array with port, from_ip_address, rule_type
      */
     protected function commands(array $ruleConfig): array
     {
@@ -80,16 +82,16 @@ class FirewallRuleUninstaller extends PackageRemover implements ServerPackage
         $ruleSpec = $ruleConfig['rule_type']; // 'allow' or 'deny'
 
         // Add source IP if specified
-        if (!empty($ruleConfig['from_ip_address'])) {
+        if (! empty($ruleConfig['from_ip_address'])) {
             $ruleSpec .= " from {$ruleConfig['from_ip_address']}";
         }
 
         // Add port if specified
-        if (!empty($ruleConfig['port'])) {
+        if (! empty($ruleConfig['port'])) {
             $ruleSpec .= " to any port {$ruleConfig['port']}";
         }
 
-        $deleteCommand = $ufwCommand . $ruleSpec;
+        $deleteCommand = $ufwCommand.$ruleSpec;
 
         return [
             $this->track(FirewallRuleUninstallerMilestones::PREPARE_REMOVAL),

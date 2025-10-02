@@ -4,8 +4,8 @@ namespace App\Packages\Services\Sites;
 
 use App\Models\ServerSite;
 use App\Packages\Base\Milestones;
-use App\Packages\Base\Package;
 use App\Packages\Base\PackageInstaller;
+use App\Packages\Enums\CredentialType;
 use App\Packages\Enums\PackageName;
 use App\Packages\Enums\PackageType;
 
@@ -23,13 +23,13 @@ class SiteInstaller extends PackageInstaller implements \App\Packages\Base\Serve
     public function execute(array $config): ServerSite
     {
         // Validate required domain parameter
-        if (!isset($config['domain']) || empty($config['domain'])) {
+        if (! isset($config['domain']) || empty($config['domain'])) {
             throw new \InvalidArgumentException('Domain is required for site installation.');
         }
 
         // Get the app user that will own site directories
-        $userCredential = new UserCredential;
-        $appUser = $userCredential->user();
+        $appUser = $this->server->credential('brokeforge')?->getUsername()
+            ?: 'brokeforge';
 
         $domain = $config['domain'];
         $documentRoot = $config['document_root'] ?? "/home/{$appUser}/{$config['domain']}/public";
@@ -85,7 +85,8 @@ class SiteInstaller extends PackageInstaller implements \App\Packages\Base\Serve
         ])->render();
 
         // Get the app user for ownership
-        $appUser = $this->sshCredential()->user();
+        $appUser = $this->server->credential('brokeforge')?->getUsername()
+            ?: 'brokeforge';
 
         return [
             $this->track(SiteInstallerMilestones::PREPARE_DIRECTORIES),
@@ -106,7 +107,7 @@ class SiteInstaller extends PackageInstaller implements \App\Packages\Base\Serve
 
             $this->track(SiteInstallerMilestones::SET_PERMISSIONS),
             "chown -R {$appUser}:{$appUser} {$documentRoot}",
-            "chmod -R 755 {$documentRoot}",
+            "chmod -R 775 {$documentRoot}",
             "echo '<?php phpinfo();' > {$documentRoot}/index.php",
 
             $this->track(SiteInstallerMilestones::COMPLETE),
@@ -131,11 +132,11 @@ class SiteInstaller extends PackageInstaller implements \App\Packages\Base\Serve
 
     public function milestones(): Milestones
     {
-        // TODO: Implement milestones() method.
+        return new SiteInstallerMilestones;
     }
 
-    public function credentialType(): string
+    public function credentialType(): CredentialType
     {
-        // TODO: Implement sshCredential() method.
+        return CredentialType::Root;
     }
 }

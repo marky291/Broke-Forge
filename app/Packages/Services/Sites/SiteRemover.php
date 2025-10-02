@@ -5,6 +5,7 @@ namespace App\Packages\Services\Sites;
 use App\Models\ServerSite;
 use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageRemover;
+use App\Packages\Enums\CredentialType;
 use App\Packages\Enums\PackageName;
 use App\Packages\Enums\PackageType;
 
@@ -79,9 +80,9 @@ class SiteRemover extends PackageRemover
         return new SiteRemoverMilestones;
     }
 
-    public function credentialType(): string
+    public function credentialType(): CredentialType
     {
-        return 'user';
+        return CredentialType::BrokeForge;
     }
 
     public function packageName(): PackageName

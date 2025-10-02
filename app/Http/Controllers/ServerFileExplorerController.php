@@ -7,6 +7,7 @@ use App\Http\Requests\Servers\ServerFileDownloadRequest;
 use App\Http\Requests\Servers\ServerFileIndexRequest;
 use App\Http\Requests\Servers\ServerFileUploadRequest;
 use App\Models\Server;
+use App\Models\ServerSite;
 use App\Packages\Services\Sites\Explorer\SiteFileExplorer;
 use Illuminate\Http\JsonResponse;
 use Inertia\Inertia;
@@ -15,7 +16,7 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class ServerFileExplorerController extends Controller
 {
-    public function show(Server $server): Response
+    public function show(Server $server, ServerSite $site): Response
     {
         return Inertia::render('servers/explorer', [
             'server' => $server->only([
@@ -28,12 +29,19 @@ class ServerFileExplorerController extends Controller
                 'created_at',
                 'updated_at',
             ]),
+            'site' => $site->only([
+                'id',
+                'domain',
+                'document_root',
+                'status',
+                'git_status',
+            ]),
         ]);
     }
 
-    public function index(ServerFileIndexRequest $request, Server $server): JsonResponse
+    public function index(ServerFileIndexRequest $request, Server $server, ServerSite $site): JsonResponse
     {
-        $explorer = new SiteFileExplorer($server);
+        $explorer = new SiteFileExplorer($site);
 
         try {
             $listing = $explorer->list($request->input('path', ''));
@@ -46,9 +54,9 @@ class ServerFileExplorerController extends Controller
         return response()->json($listing);
     }
 
-    public function store(ServerFileUploadRequest $request, Server $server): JsonResponse
+    public function store(ServerFileUploadRequest $request, Server $server, ServerSite $site): JsonResponse
     {
-        $explorer = new SiteFileExplorer($server);
+        $explorer = new SiteFileExplorer($site);
 
         try {
             $explorer->upload($request->input('path', ''), $request->file('file'));
@@ -63,9 +71,9 @@ class ServerFileExplorerController extends Controller
         ]);
     }
 
-    public function download(ServerFileDownloadRequest $request, Server $server): BinaryFileResponse|JsonResponse
+    public function download(ServerFileDownloadRequest $request, Server $server, ServerSite $site): BinaryFileResponse|JsonResponse
     {
-        $explorer = new SiteFileExplorer($server);
+        $explorer = new SiteFileExplorer($site);
 
         try {
             $result = $explorer->download($request->input('path'));

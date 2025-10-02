@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Packages\Enums\CredentialType;
 use App\Packages\Enums\ProvisionStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -17,8 +18,6 @@ use Illuminate\Support\Facades\Auth;
  * @property string $public_ip
  * @property int $ssh_port
  * @property string|null $private_ip
- * @property string|null $ssh_root_user
- * @property string|null $ssh_app_user
  * @property string $connection
  * @property string $vanity_name
  * @property ProvisionStatus $provision_status
@@ -33,8 +32,6 @@ class Server extends Model
         'public_ip',
         'private_ip',
         'ssh_port',
-        'ssh_root_user',
-        'ssh_app_user',
         'connection',
         'provision_status',
         'ssh_root_password',
@@ -53,14 +50,10 @@ class Server extends Model
         ];
     }
 
-    public static function register(string $user, string $publicIp): self
+    public static function register(string $publicIp): self
     {
         return static::firstOrCreate(
-            ['public_ip' => $publicIp],
-            [
-                'ssh_app_user' => $user,
-                'ssh_root_user' => 'root',
-            ]
+            ['public_ip' => $publicIp]
         );
     }
 
@@ -103,10 +96,45 @@ class Server extends Model
 
     /**
      * Get a specific credential type for this server.
+     *
+     * @param  CredentialType|string  $type  The credential type
+     * @return ServerCredential|null The credential or null if not found
      */
-    public function credential(string $type): ?ServerCredential
+    public function credential(CredentialType|string $type): ?ServerCredential
     {
-        return $this->credentials()->where('credential_type', $type)->first();
+        $credentialType = is_string($type) ? $type : $type->value;
+
+        return $this->credentials()->where('credential_type', $credentialType)->first();
+    }
+
+    /**
+     * Get the SSH username for a specific credential type.
+     *
+     * @param  CredentialType  $type  The credential type
+     * @return string The SSH username
+     */
+    public function getUsernameFor(CredentialType $type): string
+    {
+        return $type->username();
+    }
+
+    /**
+     * Create an authenticated SSH connection using server-specific credentials.
+     *
+     * @param  CredentialType|string  $credentialType  The credential type
+     * @return \Spatie\Ssh\Ssh Configured SSH connection
+     *
+     * @throws \RuntimeException If credential not found or connection cannot be created
+     */
+    public function createSshConnection(CredentialType|string $credentialType): \Spatie\Ssh\Ssh
+    {
+        // Convert string to enum if necessary
+        $type = is_string($credentialType) ? CredentialType::fromString($credentialType) : $credentialType;
+
+        // Use the connection builder service
+        $builder = new \App\Packages\Services\Credential\SshConnectionBuilder;
+
+        return $builder->build($this, $type);
     }
 
     /**

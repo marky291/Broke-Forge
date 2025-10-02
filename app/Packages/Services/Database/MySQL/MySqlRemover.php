@@ -4,6 +4,7 @@ namespace App\Packages\Services\Database\MySQL;
 
 use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageRemover;
+use App\Packages\Enums\CredentialType;
 use App\Packages\Enums\PackageName;
 use App\Packages\Enums\PackageType;
 
@@ -14,9 +15,9 @@ use App\Packages\Enums\PackageType;
  */
 class MySqlRemover extends PackageRemover
 {
-    public function credentialType(): string
+    public function credentialType(): CredentialType
     {
-        return 'root';
+        return CredentialType::Root;
     }
 
     /**

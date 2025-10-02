@@ -35,13 +35,14 @@ class FirewallRuleRequest extends FormRequest
                 'string',
                 function (string $attribute, mixed $value, Closure $fail) use ($server) {
                     // Skip validation if no port provided
-                    if (!$value) {
+                    if (! $value) {
                         return;
                     }
 
                     // Validate port format (single port or range)
-                    if (!preg_match('/^\d{1,5}(-\d{1,5})?$/', $value)) {
+                    if (! preg_match('/^\d{1,5}(-\d{1,5})?$/', $value)) {
                         $fail('The port must be a valid port number (1-65535) or range (e.g., 3000-3005).');
+
                         return;
                     }
 
@@ -51,16 +52,19 @@ class FirewallRuleRequest extends FormRequest
 
                         if ((int) $start >= (int) $end) {
                             $fail('Port range start must be less than end.');
+
                             return;
                         }
 
                         if ((int) $start < 1 || (int) $end > 65535) {
                             $fail('Port numbers must be between 1 and 65535.');
+
                             return;
                         }
                     } else {
                         if ((int) $value < 1 || (int) $value > 65535) {
                             $fail('Port number must be between 1 and 65535.');
+
                             return;
                         }
                     }

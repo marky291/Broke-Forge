@@ -6,7 +6,7 @@ import SiteLayout from '@/layouts/server/site-layout';
 import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import { show as showServer } from '@/routes/servers';
-import { gitRepository as gitRepositoryRoute } from '@/routes/servers/sites';
+import { application as applicationRoute } from '@/routes/servers/sites';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router } from '@inertiajs/react';
 import type { LucideIcon } from 'lucide-react';
@@ -159,7 +159,7 @@ export default function SiteApplication({ server, site }: { server: ServerType; 
     const initialOptionKey = installationOptions[0]?.key ?? 'install-application';
     const [selectedOption, setSelectedOption] = useState<InstallationOption['key'] | ''>(initialOptionKey);
     const [searchQuery, setSearchQuery] = useState('');
-    const gitRepositorySetupUrl = gitRepositoryRoute({ server: server.id, site: site.id }).url;
+    const gitRepositorySetupUrl = applicationRoute({ server: server.id, site: site.id }).url;
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard.url() },

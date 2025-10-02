@@ -19,24 +19,6 @@ class GitRepositoryInstallerJob implements ShouldQueue
     use Queueable;
 
     /**
-     * Maximum time the job may run (10 minutes).
-     */
-    public int $timeout = 600;
-
-    /**
-     * Number of times the job may be attempted.
-     */
-    public int $tries = 3;
-
-    /**
-     * Time to wait before retrying (exponential backoff).
-     */
-    public function backoff(): array
-    {
-        return [30, 60, 120]; // 30s, 1m, 2m
-    }
-
-    /**
      * Create a new job instance.
      */
     public function __construct(
@@ -44,7 +26,7 @@ class GitRepositoryInstallerJob implements ShouldQueue
         protected ServerSite $site,
         protected array $configuration
     ) {
-        $this->onQueue('provisioning');
+        //
     }
 
     /**

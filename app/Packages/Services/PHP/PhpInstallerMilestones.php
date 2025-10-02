@@ -12,11 +12,17 @@ use App\Packages\Base\Milestones;
 class PhpInstallerMilestones extends Milestones
 {
     public const PREPARE_SYSTEM = 'prepare_system';
+
     public const SETUP_REPOSITORY = 'setup_repository';
+
     public const INSTALL_PHP = 'install_php';
+
     public const CONFIGURE_PHP = 'configure_php';
+
     public const ENABLE_SERVICE = 'enable_service';
+
     public const VERIFY_INSTALLATION = 'verify_installation';
+
     public const COMPLETE = 'complete';
 
     private const LABELS = [

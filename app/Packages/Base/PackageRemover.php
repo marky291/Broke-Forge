@@ -15,7 +15,6 @@ abstract class PackageRemover extends PackageManager implements Remover
         $this->server = $server;
     }
 
-
     /**
      * Send removal commands to the remote server
      */

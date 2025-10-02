@@ -12,9 +12,13 @@ use App\Packages\Base\Milestones;
 class FirewallInstallerMilestones extends Milestones
 {
     public const PREPARE_SYSTEM = 'prepare_system';
+
     public const INSTALL_FIREWALL = 'install_firewall';
+
     public const CONFIGURE_DEFAULTS = 'configure_defaults';
+
     public const ENABLE_FIREWALL = 'enable_firewall';
+
     public const COMPLETE = 'complete';
 
     private const LABELS = [

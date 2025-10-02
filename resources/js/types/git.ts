@@ -21,6 +21,11 @@ export interface GitRepositoryConfig {
     deployKey: string | null;
     lastDeployedSha?: string | null;
     lastDeployedAt?: string | null;
+    latestEvent?: {
+        status: string;
+        error_log: string | null;
+        milestone: string;
+    } | null;
 }
 
 export interface GitFormData {

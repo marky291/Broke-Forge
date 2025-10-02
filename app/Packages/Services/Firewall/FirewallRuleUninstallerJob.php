@@ -27,8 +27,9 @@ class FirewallRuleUninstallerJob implements ShouldQueue
         // Get the rule that needs to be removed
         $rule = ServerFirewallRule::find($this->ruleId);
 
-        if (!$rule) {
+        if (! $rule) {
             Log::warning('No firewall rule found for removal', ['rule_id' => $this->ruleId]);
+
             return;
         }
 

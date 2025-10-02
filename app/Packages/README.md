@@ -19,11 +19,8 @@ app/Packages/
 ├── Contracts/               # Interfaces
 │   ├── Installer.php           # Installation contract
 │   └── Remover.php             # Removal contract
-├── Credentials/             # SSH credential types
-│   ├── RootCredential.php      # Root user access
-│   ├── UserCredential.php      # App user access
-│   ├── WorkerCredential.php    # Worker user access
-│   └── SshCredential.php       # Interface for all credentials
+├── Enums/                   # SSH credential types
+│   └── CredentialType.php      # Root and BrokeForge credential types
 ├── Enums/                   # Type definitions
 │   ├── PackageName.php         # Service categories
 │   ├── PackageType.php         # Package type categories
@@ -121,7 +118,7 @@ All class names must use PascalCase and match their filename exactly.
 
 1. **Examine Similar Packages**: Look at `WebServiceInstaller`, `MySqlInstaller`, `SiteInstaller`, etc.
 2. **Check Base Classes**: Review `PackageInstaller`, `PackageRemover`, `PackageManager` capabilities
-3. **Review Existing Credentials**: Use `RootCredential`, `UserCredential`, `WorkerCredential` before creating new ones
+3. **Review Credential Types**: Use `CredentialType::Root` for system operations, `CredentialType::BrokeForge` for site operations
 4. **Examine Milestone Patterns**: Look at existing milestone classes for consistent naming and structure
 5. **Check Service Types**: Use existing `PackageName` constants before adding new ones
 
@@ -1179,27 +1176,26 @@ $this->track({ServiceName}InstallerMilestones::INSTALL_SOFTWARE),
 
 ### Available Credential Types
 
-1. **RootCredential**: Full system access for system-level operations
-2. **UserCredential**: App user access for site and user-level operations
-3. **WorkerCredential**: Limited access for specific worker tasks
+1. **CredentialType::Root**: Full system access for system-level operations (package installs, service management)
+2. **CredentialType::BrokeForge**: Site-level access for application operations (Git, deployments, site management)
 
 ### Credential Selection Guidelines
 
 ```php
-// System services (MySQL, NGINX, etc.)
-protected function sshCredential(): SshCredential
+// System services (MySQL, NGINX, PHP, etc.)
+public function credentialType(): CredentialType
 {
-    return new RootCredential;
+    return CredentialType::Root;
 }
 
-// Site operations (creating sites, managing files)
-protected function sshCredential(): SshCredential
+// Site operations (Git, deployments, site commands)
+public function credentialType(): CredentialType
 {
-    return new UserCredential;
+    return CredentialType::BrokeForge;
 }
 ```
 
-**Note:** For Git repository operations, use the `ServerCredential` model instead of SshCredential classes. Each server has unique SSH keys stored encrypted in the database via `$server->credential('worker')`.
+**Note:** Each server has unique SSH keys stored encrypted in the database. Access credentials via `$server->credential(CredentialType::BrokeForge)` or `$server->credential('brokeforge')`.
 
 ```php
 

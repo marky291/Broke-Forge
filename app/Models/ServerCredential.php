@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Packages\Enums\CredentialType;
+use App\Packages\Services\Credential\SshKeyGenerator;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -11,7 +13,7 @@ use Illuminate\Support\Facades\Crypt;
  * Server Credential Model
  *
  * Stores encrypted SSH credentials per server for different access types.
- * Each server can have multiple credential types (root, user, worker).
+ * Each server can have multiple credential types (root, brokeforge).
  */
 class ServerCredential extends Model
 {
@@ -42,45 +44,46 @@ class ServerCredential extends Model
     }
 
     /**
-     * Generate a new SSH key pair for this credential.
+     * Get the credential type as an enum.
      */
-    public static function generateKeyPair(Server $server, string $credentialType): self
+    public function type(): CredentialType
     {
-        $tempDir = sys_get_temp_dir();
-        $keyName = sprintf('server_%d_%s_%d', $server->id, $credentialType, time());
-        $keyPath = $tempDir . '/' . $keyName;
+        return CredentialType::from($this->credential_type);
+    }
 
-        // Generate RSA 4096-bit key pair
-        $command = sprintf(
-            'ssh-keygen -t rsa -b 4096 -f %s -N "" -C "%s@server-%d"',
-            escapeshellarg($keyPath),
-            $credentialType,
-            $server->id
-        );
+    /**
+     * Get the SSH username for this credential type.
+     */
+    public function getUsername(): string
+    {
+        return $this->type()->username();
+    }
 
-        exec($command, $output, $resultCode);
+    /**
+     * Generate a new SSH key pair for this credential.
+     *
+     * @param  Server  $server  The server to generate keys for
+     * @param  CredentialType|string  $credentialType  The credential type
+     * @return self The created/updated credential
+     */
+    public static function generateKeyPair(Server $server, CredentialType|string $credentialType): self
+    {
+        // Convert string to enum if necessary
+        $type = is_string($credentialType) ? CredentialType::fromString($credentialType) : $credentialType;
 
-        if ($resultCode !== 0) {
-            throw new \RuntimeException("Failed to generate SSH key pair for {$credentialType} credential");
-        }
-
-        // Read generated keys
-        $privateKey = file_get_contents($keyPath);
-        $publicKey = file_get_contents($keyPath . '.pub');
-
-        // Clean up temporary files
-        @unlink($keyPath);
-        @unlink($keyPath . '.pub');
+        // Generate key pair using the service
+        $generator = new SshKeyGenerator;
+        $keys = $generator->generate($server->id, $type);
 
         // Create or update credential
         return self::updateOrCreate(
             [
                 'server_id' => $server->id,
-                'credential_type' => $credentialType,
+                'credential_type' => $type->value,
             ],
             [
-                'private_key' => trim($privateKey),
-                'public_key' => trim($publicKey),
+                'private_key' => $keys['private_key'],
+                'public_key' => $keys['public_key'],
             ]
         );
     }

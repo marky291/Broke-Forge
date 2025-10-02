@@ -5,6 +5,7 @@ namespace App\Packages\Services\Sites\Git;
 use App\Models\ServerSite;
 use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageInstaller;
+use App\Packages\Enums\CredentialType;
 use App\Packages\Enums\PackageName;
 use App\Packages\Enums\PackageType;
 use Illuminate\Support\Arr;
@@ -90,20 +91,20 @@ class GitRepositoryInstaller extends PackageInstaller implements \App\Packages\B
     {
         $documentRoot = rtrim($documentRoot, '/');
 
-        // Configure Git SSH command to use worker's private key
-        $sshKeyPath = '/home/worker/.ssh/id_rsa';
+        // Configure Git SSH command to use brokeforge's private key
+        $sshKeyPath = '/home/brokeforge/.ssh/id_rsa';
         $gitSshCommand = sprintf(
-            'GIT_SSH_COMMAND="ssh -i %s -o StrictHostKeyChecking=accept-new -o IdentitiesOnly=yes -o UserKnownHostsFile=/home/worker/.ssh/known_hosts"',
+            'GIT_SSH_COMMAND="ssh -i %s -o StrictHostKeyChecking=accept-new -o IdentitiesOnly=yes -o UserKnownHostsFile=/home/brokeforge/.ssh/known_hosts"',
             $sshKeyPath
         );
 
         return [
             $this->track(GitRepositoryInstallerMilestones::ENSURE_REPOSITORY_DIRECTORY),
-            sprintf('sudo -u worker mkdir -p %s', escapeshellarg($documentRoot)),
+            sprintf('rm -rf %1$s && mkdir -p %1$s && chmod -R 775 %1$s', escapeshellarg($documentRoot)),
 
             $this->track(GitRepositoryInstallerMilestones::CLONE_OR_FETCH_REPOSITORY),
             sprintf(
-                'REPO_DIR=%1$s; if [ -d "$REPO_DIR/.git" ]; then cd "$REPO_DIR" && sudo -u worker %2$s git fetch --all --prune; else sudo -u worker %3$s git clone %4$s "$REPO_DIR"; fi',
+                'git config --global --add safe.directory %1$s; REPO_DIR=%1$s; if [ -d "$REPO_DIR/.git" ]; then cd "$REPO_DIR" && %2$s git fetch --all --prune; else %3$s git clone %4$s "$REPO_DIR"; fi',
                 escapeshellarg($documentRoot),
                 $gitSshCommand,
                 $gitSshCommand,
@@ -112,14 +113,14 @@ class GitRepositoryInstaller extends PackageInstaller implements \App\Packages\B
 
             $this->track(GitRepositoryInstallerMilestones::CHECKOUT_TARGET_BRANCH),
             sprintf(
-                'REPO_DIR=%1$s; cd "$REPO_DIR" && sudo -u worker git checkout %2$s',
+                'REPO_DIR=%1$s; cd "$REPO_DIR" && git checkout %2$s',
                 escapeshellarg($documentRoot),
                 escapeshellarg($branch)
             ),
 
             $this->track(GitRepositoryInstallerMilestones::SYNC_WORKTREE),
             sprintf(
-                'REPO_DIR=%1$s; cd "$REPO_DIR" && sudo -u worker git reset --hard origin/%2$s && sudo -u worker %3$s git pull origin %4$s',
+                'REPO_DIR=%1$s; cd "$REPO_DIR" && git reset --hard origin/%2$s && %3$s git pull origin %4$s',
                 escapeshellarg($documentRoot),
                 $branch,
                 $gitSshCommand,
@@ -135,9 +136,9 @@ class GitRepositoryInstaller extends PackageInstaller implements \App\Packages\B
 
                 $configuration = $site->configuration ?? [];
 
-                // Get server-specific worker credential from database
-                $workerCredential = $this->server->credential('worker');
-                $deployKey = $workerCredential?->public_key;
+                // Get server-specific brokeforge credential from database
+                $brokeforgeCredential = $this->server->credential('brokeforge');
+                $deployKey = $brokeforgeCredential?->public_key;
 
                 $configuration['git_repository'] = array_filter([
                     'provider' => Arr::get($repositoryConfiguration, 'provider'),
@@ -164,5 +165,10 @@ class GitRepositoryInstaller extends PackageInstaller implements \App\Packages\B
     public function milestones(): Milestones
     {
         return new GitRepositoryInstallerMilestones;
+    }
+
+    public function credentialType(): CredentialType
+    {
+        return CredentialType::BrokeForge;
     }
 }

@@ -7,6 +7,7 @@ use App\Enums\DatabaseType;
 use App\Models\ServerDatabase;
 use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageInstaller;
+use App\Packages\Enums\CredentialType;
 use App\Packages\Enums\PackageName;
 use App\Packages\Enums\PackageType;
 
@@ -23,9 +24,9 @@ class MySqlInstaller extends PackageInstaller implements \App\Packages\Base\Serv
         return new MySqlInstallerMilestones;
     }
 
-    public function credentialType(): string
+    public function credentialType(): CredentialType
     {
-        return 'root';
+        return CredentialType::Root;
     }
 
     /**

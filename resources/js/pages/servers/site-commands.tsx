@@ -15,7 +15,6 @@ type Server = {
     id: number;
     vanity_name: string;
     connection: string;
-    ssh_app_user?: string | null;
 };
 
 /**
@@ -105,7 +104,7 @@ export default function SiteCommands({
                     <AlertTitle>Shell access, simplified</AlertTitle>
                     <AlertDescription>
                         BrokeForge allows you to execute arbitrary commands inside the site root. Commands run as
-                        <code className="mx-1 rounded bg-muted px-1.5 py-0.5 text-xs font-medium">{executionContext.user ?? 'ssh_app_user'}</code>
+                        <code className="mx-1 rounded bg-muted px-1.5 py-0.5 text-xs font-medium">{executionContext.user ?? 'app user'}</code>
                         from
                         <code className="mx-1 rounded bg-muted px-1.5 py-0.5 text-xs font-medium">{executionContext.workingDirectory}</code>
                         and timeout after {formattedTimeout}. Use with caution—these commands have full access to your site files.

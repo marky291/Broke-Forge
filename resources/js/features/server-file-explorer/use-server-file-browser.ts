@@ -10,7 +10,7 @@ const initialState: FileBrowserState = {
     error: null,
 };
 
-export const useServerFileBrowser = (serverId: number) => {
+export const useServerFileBrowser = (serverId: number, siteId: number) => {
     const [state, setState] = useState<FileBrowserState>(initialState);
     const abortController = useRef<AbortController | null>(null);
 
@@ -28,7 +28,7 @@ export const useServerFileBrowser = (serverId: number) => {
             const query = targetPath ? `?path=${encodeURIComponent(targetPath)}` : '';
 
             try {
-                const response = await fetch(`/servers/${serverId}/files${query}`, {
+                const response = await fetch(`/servers/${serverId}/sites/${siteId}/files${query}`, {
                     credentials: 'same-origin',
                     signal: controller.signal,
                     headers: {
@@ -72,7 +72,7 @@ export const useServerFileBrowser = (serverId: number) => {
                 }
             }
         },
-        [serverId],
+        [serverId, siteId],
     );
 
     const refresh = useCallback(() => {
@@ -121,7 +121,7 @@ export const useServerFileBrowser = (serverId: number) => {
             }
 
             try {
-                const response = await fetch(`/servers/${serverId}/files/upload`, {
+                const response = await fetch(`/servers/${serverId}/sites/${siteId}/files/upload`, {
                     method: 'POST',
                     credentials: 'same-origin',
                     headers: {
@@ -148,15 +148,15 @@ export const useServerFileBrowser = (serverId: number) => {
                 setState((prev) => ({ ...prev, uploading: false }));
             }
         },
-        [loadDirectory, serverId, state.currentPath],
+        [loadDirectory, serverId, siteId, state.currentPath],
     );
 
     const download = useCallback(
         (file: FileItem) => {
-            const url = `/servers/${serverId}/files/download?path=${encodeURIComponent(file.path)}`;
+            const url = `/servers/${serverId}/sites/${siteId}/files/download?path=${encodeURIComponent(file.path)}`;
             window.open(url, '_blank', 'noopener');
         },
-        [serverId],
+        [serverId, siteId],
     );
 
     const dismissError = useCallback(() => {

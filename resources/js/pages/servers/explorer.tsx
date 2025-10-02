@@ -1,8 +1,9 @@
 import ServerFileBrowser from '@/features/server-file-explorer/file-browser';
 import { useServerFileBrowser } from '@/features/server-file-explorer/use-server-file-browser';
-import ServerLayout from '@/layouts/server/layout';
+import SiteLayout from '@/layouts/server/site-layout';
 import { dashboard } from '@/routes';
 import { show as showServer } from '@/routes/servers';
+import { show as showSite } from '@/routes/servers/sites';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/react';
 
@@ -17,22 +18,32 @@ type ServerProps = {
     updated_at: string;
 };
 
-type ExplorerPageProps = {
-    server: ServerProps;
+type SiteProps = {
+    id: number;
+    domain?: string | null;
+    document_root: string;
+    status: string;
+    git_status?: string | null;
 };
 
-export default function Explorer({ server }: ExplorerPageProps) {
-    const { state, refresh, navigateTo, navigateUp, upload, download, dismissError } = useServerFileBrowser(server.id);
+type ExplorerPageProps = {
+    server: ServerProps;
+    site: SiteProps;
+};
+
+export default function Explorer({ server, site }: ExplorerPageProps) {
+    const { state, refresh, navigateTo, navigateUp, upload, download, dismissError } = useServerFileBrowser(server.id, site.id);
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard.url() },
         { title: `Server #${server.id}`, href: showServer(server.id).url },
+        { title: site.domain || 'Site', href: showSite([server.id, site.id]).url },
         { title: 'Explorer', href: '#' },
     ];
 
     return (
-        <ServerLayout server={server} breadcrumbs={breadcrumbs}>
-            <Head title={`Explorer — ${server.vanity_name}`} />
+        <SiteLayout server={server} site={site} breadcrumbs={breadcrumbs}>
+            <Head title={`Explorer — ${site.domain || 'Site'}`} />
             <ServerFileBrowser
                 state={state}
                 onNavigate={navigateTo}
@@ -42,6 +53,6 @@ export default function Explorer({ server }: ExplorerPageProps) {
                 onDownload={download}
                 onDismissError={dismissError}
             />
-        </ServerLayout>
+        </SiteLayout>
     );
 }

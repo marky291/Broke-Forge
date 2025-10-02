@@ -15,7 +15,7 @@ import {
     POLLING_INTERVAL,
     type GitProvider,
 } from '@/constants/git';
-import ServerLayout from '@/layouts/server/layout';
+import SiteLayout from '@/layouts/server/site-layout';
 import { dashboard } from '@/routes';
 import { show as showServer } from '@/routes/servers';
 import { type BreadcrumbItem } from '@/types';
@@ -64,6 +64,7 @@ export default function SiteGitRepository({ server, site, gitRepository, flash, 
     });
 
     const [copied, setCopied] = useState(false);
+    const [retrying, setRetrying] = useState(false);
 
     // Poll for status updates when installing
     useEffect(() => {
@@ -105,7 +106,7 @@ export default function SiteGitRepository({ server, site, gitRepository, flash, 
     const handleSubmit = useCallback(
         (event: React.FormEvent<HTMLFormElement>) => {
             event.preventDefault();
-            post(`/servers/${server.id}/sites/${site.id}/application/git-repository`, {
+            post(`/servers/${server.id}/sites/${site.id}/application`, {
                 onSuccess: () => {
                     // Force reload to get updated status
                     router.reload();
@@ -125,7 +126,7 @@ export default function SiteGitRepository({ server, site, gitRepository, flash, 
     // Render installation in progress state
     if (site.git_status === GitStatus.Installing) {
         return (
-            <ServerLayout server={server} site={site} breadcrumbs={breadcrumbs}>
+            <SiteLayout server={server} site={site} breadcrumbs={breadcrumbs}>
                 <Head title={`Git Repository — ${site.domain}`} />
 
                 <div className="space-y-8">
@@ -145,14 +146,14 @@ export default function SiteGitRepository({ server, site, gitRepository, flash, 
                         </CardContent>
                     </Card>
                 </div>
-            </ServerLayout>
+            </SiteLayout>
         );
     }
 
     // Render installed or failed state with application info
     if ((site.git_status === GitStatus.Installed || site.git_status === GitStatus.Failed) && gitRepository?.repository) {
         return (
-            <ServerLayout server={server} site={site} breadcrumbs={breadcrumbs}>
+            <SiteLayout server={server} site={site} breadcrumbs={breadcrumbs}>
                 <Head title={`Git Repository — ${site.domain}`} />
 
                 <div className="space-y-8">
@@ -176,7 +177,19 @@ export default function SiteGitRepository({ server, site, gitRepository, flash, 
                         <Alert variant="destructive">
                             <XCircle className="h-4 w-4" />
                             <AlertDescription>
-                                Repository installation failed. Please check your repository settings and SSH deploy key configuration, then try again.
+                                <div className="space-y-2">
+                                    <p className="font-medium">Repository installation failed</p>
+                                    {gitRepository?.latestEvent?.error_log ? (
+                                        <details className="mt-2">
+                                            <summary className="cursor-pointer text-sm hover:underline">View error details</summary>
+                                            <pre className="mt-2 max-h-48 overflow-y-auto rounded bg-destructive/10 p-3 text-xs font-mono whitespace-pre-wrap">
+                                                {gitRepository.latestEvent.error_log}
+                                            </pre>
+                                        </details>
+                                    ) : (
+                                        <p className="text-sm">Please check your repository settings and SSH deploy key configuration, then try again.</p>
+                                    )}
+                                </div>
                             </AlertDescription>
                         </Alert>
                     )}
@@ -244,24 +257,44 @@ export default function SiteGitRepository({ server, site, gitRepository, flash, 
                                     <>
                                         <Button
                                             variant="default"
-                                            onClick={() => router.visit(`/servers/${server.id}/sites/${site.id}/application/git-repository`)}
+                                            onClick={() => {
+                                                setRetrying(true);
+                                                router.post(
+                                                    `/servers/${server.id}/sites/${site.id}/application`,
+                                                    {
+                                                        provider: gitRepository?.provider ?? DEFAULT_PROVIDER,
+                                                        repository: gitRepository?.repository ?? '',
+                                                        branch: gitRepository?.branch ?? DEFAULT_BRANCH,
+                                                    },
+                                                    {
+                                                        onSuccess: () => router.reload(),
+                                                        onFinish: () => setRetrying(false),
+                                                    }
+                                                );
+                                            }}
+                                            disabled={retrying}
                                         >
-                                            Retry Installation
+                                            {retrying ? 'Retrying...' : 'Retry Installation'}
                                         </Button>
-                                        <Button variant="outline">Edit Configuration</Button>
+                                        <Button
+                                            variant="outline"
+                                            onClick={() => router.visit(`/servers/${server.id}/sites/${site.id}/application`)}
+                                        >
+                                            Edit Configuration
+                                        </Button>
                                     </>
                                 )}
                             </div>
                         </CardContent>
                     </Card>
                 </div>
-            </ServerLayout>
+            </SiteLayout>
         );
     }
 
     // Render installation form (default state or failed state)
     return (
-        <ServerLayout server={server} site={site} breadcrumbs={breadcrumbs}>
+        <SiteLayout server={server} site={site} breadcrumbs={breadcrumbs}>
             <Head title={`Git Repository — ${site.domain}`} />
 
             <div className="space-y-8">
@@ -406,6 +439,6 @@ export default function SiteGitRepository({ server, site, gitRepository, flash, 
                     </Card>
                 </div>
             </div>
-        </ServerLayout>
+        </SiteLayout>
     );
 }

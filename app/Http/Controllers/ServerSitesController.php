@@ -36,8 +36,13 @@ class ServerSitesController extends Controller
         ]);
     }
 
-    public function show(Server $server, ServerSite $site): Response
+    public function show(Server $server, ServerSite $site): Response|RedirectResponse
     {
+        // Redirect to application page if site is already initialized
+        if ($site->status === 'active') {
+            return redirect()->route('servers.sites.application', [$server, $site]);
+        }
+
         return Inertia::render('servers/site-application', [
             'server' => $server->only([
                 'id',
@@ -57,6 +62,7 @@ class ServerSitesController extends Controller
                 'php_version',
                 'ssl_enabled',
                 'status',
+                'git_status',
                 'configuration',
                 'provisioned_at',
                 'created_at',

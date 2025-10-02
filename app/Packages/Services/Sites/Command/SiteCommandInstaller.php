@@ -6,6 +6,7 @@ use App\Models\Server;
 use App\Models\ServerSite;
 use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageInstaller;
+use App\Packages\Enums\CredentialType;
 use App\Packages\Enums\PackageName;
 use App\Packages\Enums\PackageType;
 use Illuminate\Support\Facades\Log;
@@ -91,11 +92,15 @@ class SiteCommandInstaller extends PackageInstaller implements \App\Packages\Bas
      */
     protected function commands(string $command, int $timeout): array
     {
+        // Get app user for working directory resolution
+        $appUser = $this->server->credential('user')?->getUsername()
+            ?: str_replace(' ', '', strtolower(config('app.name')));
+
         // Resolve working directory inline (avoid helper methods)
         $workingDirectory = $this->site->document_root
             ?: ($this->site->domain
-                ? "/home/{$this->sshCredential()->user()}/{$this->site->domain}"
-                : "/home/{$this->sshCredential()->user()}/site-{$this->site->id}");
+                ? "/home/{$appUser}/{$this->site->domain}"
+                : "/home/{$appUser}/site-{$this->site->id}");
 
         return [
             $this->track(SiteCommandInstallerMilestones::PREPARE_EXECUTION),
@@ -104,8 +109,7 @@ class SiteCommandInstaller extends PackageInstaller implements \App\Packages\Bas
             function () use ($command, $workingDirectory, $timeout) {
                 $remoteCommand = sprintf('cd %s && %s', escapeshellarg($workingDirectory), $command);
 
-                $process = $this->ssh($this->sshCredential()->user(), $this->server->public_ip, $this->server->ssh_port)
-                    ->disableStrictHostKeyChecking()
+                $process = $this->server->createSshConnection('brokeforge')
                     ->setTimeout($timeout)
                     ->execute($remoteCommand);
 
@@ -145,8 +149,8 @@ class SiteCommandInstaller extends PackageInstaller implements \App\Packages\Bas
         return new SiteCommandInstallerMilestones;
     }
 
-    public function credentialType(): string
+    public function credentialType(): CredentialType
     {
-        return 'user';
+        return CredentialType::User;
     }
 }

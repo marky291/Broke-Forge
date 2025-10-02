@@ -21,6 +21,7 @@ import {
     ExternalLink,
     Folder,
     Globe,
+    Rocket,
     Server,
     Settings,
     Terminal
@@ -37,6 +38,7 @@ interface SiteLayoutProps extends PropsWithChildren {
         id: number;
         domain?: string | null;
         status?: string;
+        git_status?: string | null;
     };
     breadcrumbs?: BreadcrumbItem[];
 }
@@ -53,6 +55,8 @@ export default function SiteLayout({ children, server, site, breadcrumbs }: Site
 
     if (path.includes('/commands')) {
         currentSection = 'site-commands';
+    } else if (path.includes('/deployments')) {
+        currentSection = 'site-deployments';
     } else if (path.includes('/explorer')) {
         currentSection = 'explorer';
     } else if (path.includes('/database')) {
@@ -69,7 +73,7 @@ export default function SiteLayout({ children, server, site, breadcrumbs }: Site
     const siteNavItems: NavItem[] = [
         {
             title: 'Application',
-            href: `/servers/${server.id}/sites/${site.id}`,
+            href: `/servers/${server.id}/sites/${site.id}/application`,
             icon: AppWindow,
             isActive: currentSection === 'site-application',
         },
@@ -79,7 +83,23 @@ export default function SiteLayout({ children, server, site, breadcrumbs }: Site
             icon: Terminal,
             isActive: currentSection === 'site-commands',
         },
+        {
+            title: 'Explorer',
+            href: `/servers/${server.id}/sites/${site.id}/explorer`,
+            icon: Folder,
+            isActive: currentSection === 'explorer',
+        },
     ];
+
+    // Conditionally add Deployments if Git is installed
+    if (site.git_status === 'installed') {
+        siteNavItems.push({
+            title: 'Deployments',
+            href: `/servers/${server.id}/sites/${site.id}/deployments`,
+            icon: Rocket,
+            isActive: currentSection === 'site-deployments',
+        });
+    }
 
     // Server navigation items
     const serverNavItems: NavItem[] = [
@@ -100,12 +120,6 @@ export default function SiteLayout({ children, server, site, breadcrumbs }: Site
             href: `/servers/${server.id}/database`,
             icon: DatabaseIcon,
             isActive: currentSection === 'database',
-        },
-        {
-            title: 'Explorer',
-            href: `/servers/${server.id}/explorer`,
-            icon: Folder,
-            isActive: currentSection === 'explorer',
         },
         {
             title: 'Settings',
@@ -160,9 +174,18 @@ export default function SiteLayout({ children, server, site, breadcrumbs }: Site
                                         Visit
                                     </a>
                                 </Button>
-                                <Button variant="outline" size="sm" className="flex-1">
-                                    Deploy
-                                </Button>
+                                {site.git_status === 'installed' ? (
+                                    <Button variant="outline" size="sm" className="flex-1" asChild>
+                                        <Link href={`/servers/${server.id}/sites/${site.id}/deployments`}>
+                                            <Rocket className="mr-1.5 size-3" />
+                                            Deploy
+                                        </Link>
+                                    </Button>
+                                ) : (
+                                    <Button variant="outline" size="sm" className="flex-1" disabled>
+                                        Deploy
+                                    </Button>
+                                )}
                             </div>
                         </div>
 

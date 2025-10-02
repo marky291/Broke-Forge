@@ -4,8 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\Servers\InstallSiteGitRepositoryRequest;
 use App\Models\Server;
-use App\Models\ServerSite;
 use App\Models\ServerCredential;
+use App\Models\ServerSite;
+use App\Packages\Enums\CredentialType;
 use App\Packages\Enums\GitStatus;
 use App\Packages\Services\Sites\Git\GitRepositoryInstallerJob;
 use Illuminate\Http\RedirectResponse;
@@ -66,7 +67,7 @@ class ServerSiteGitRepositoryController extends Controller
         $this->logInstallationStart($server, $site, $configuration);
 
         return redirect()
-            ->route('servers.sites.git-repository', [$server, $site])
+            ->route('servers.sites.application', [$server, $site])
             ->with('info', 'Repository installation started. This may take a few minutes.');
     }
 
@@ -99,6 +100,12 @@ class ServerSiteGitRepositoryController extends Controller
     {
         $config = $site->getGitConfiguration();
 
+        // Get the latest Git installation event for error tracking
+        $latestGitEvent = $site->server->events()
+            ->where('service_type', 'git')
+            ->latest()
+            ->first();
+
         return [
             'provider' => $config['provider'],
             'repository' => $config['repository'],
@@ -106,6 +113,11 @@ class ServerSiteGitRepositoryController extends Controller
             'deployKey' => $config['deploy_key'] ?? $this->resolveDeployKey($site->server),
             'lastDeployedSha' => $site->last_deployment_sha,
             'lastDeployedAt' => $site->last_deployed_at?->toISOString(),
+            'latestEvent' => $latestGitEvent ? [
+                'status' => $latestGitEvent->status,
+                'error_log' => $latestGitEvent->error_log,
+                'milestone' => $latestGitEvent->milestone,
+            ] : null,
         ];
     }
 
@@ -133,7 +145,7 @@ class ServerSiteGitRepositoryController extends Controller
     protected function redirectWithError(Server $server, ServerSite $site, string $message): RedirectResponse
     {
         return redirect()
-            ->route('servers.sites.git-repository', [$server, $site])
+            ->route('servers.sites.application', [$server, $site])
             ->withErrors(['repository' => $message]);
     }
 
@@ -151,18 +163,18 @@ class ServerSiteGitRepositoryController extends Controller
     }
 
     /**
-     * Resolve the worker deploy key for SSH access.
-     * Returns the server-specific worker SSH public key.
+     * Resolve the brokeforge deploy key for SSH access.
+     * Returns the server-specific brokeforge SSH public key.
      *
      * This key is unique to this server and should be added as a deploy key
      * to the Git repository with read-only access.
      */
     protected function resolveDeployKey(Server $server): ?string
     {
-        // Get or generate worker credential for this specific server
-        $workerCredential = $server->credential('worker')
-            ?? ServerCredential::generateKeyPair($server, 'worker');
+        // Get or generate brokeforge credential for this specific server
+        $brokeforgeCredential = $server->credential(CredentialType::BrokeForge)
+            ?? ServerCredential::generateKeyPair($server, CredentialType::BrokeForge);
 
-        return $workerCredential->public_key;
+        return $brokeforgeCredential->public_key;
     }
 }

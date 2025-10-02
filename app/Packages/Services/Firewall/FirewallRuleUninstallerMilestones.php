@@ -7,6 +7,7 @@ use App\Packages\Base\Milestones;
 class FirewallRuleUninstallerMilestones extends Milestones
 {
     public const PREPARE_REMOVAL = 'prepare_removal';
+
     public const REMOVAL_COMPLETE = 'removal_complete';
 
     private const LABELS = [

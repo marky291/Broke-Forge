@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\Auth;
 
 /**
@@ -68,6 +69,21 @@ class ServerSite extends Model
         return $this->belongsTo(Server::class);
     }
 
+    /**
+     * Get all deployments for this site.
+     */
+    public function deployments(): HasMany
+    {
+        return $this->hasMany(ServerDeployment::class, 'server_site_id');
+    }
+
+    /**
+     * Get the latest deployment for this site.
+     */
+    public function latestDeployment(): HasOne
+    {
+        return $this->hasOne(ServerDeployment::class, 'server_site_id')->latestOfMany();
+    }
 
     /**
      * Check if Git repository can be installed.
@@ -98,6 +114,32 @@ class ServerSite extends Model
             'branch' => $config['branch'] ?? null,
             'deploy_key' => $config['deploy_key'] ?? $config['deployKey'] ?? null,
         ];
+    }
+
+    /**
+     * Get deployment script from configuration.
+     */
+    public function getDeploymentScript(): string
+    {
+        return $this->configuration['deployment']['script'] ?? 'git fetch && git pull';
+    }
+
+    /**
+     * Update deployment script in configuration.
+     */
+    public function updateDeploymentScript(string $script): void
+    {
+        $config = $this->configuration ?? [];
+        $config['deployment']['script'] = $script;
+        $this->update(['configuration' => $config]);
+    }
+
+    /**
+     * Check if site has Git repository installed.
+     */
+    public function hasGitRepository(): bool
+    {
+        return $this->git_status === GitStatus::Installed;
     }
 
     protected static function booted(): void

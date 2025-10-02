@@ -3,7 +3,8 @@
 namespace App\Packages\Services\Sites\Explorer;
 
 use App\Exceptions\ServerFileExplorerException;
-use App\Models\Server;
+use App\Models\ServerSite;
+use App\Packages\Enums\CredentialType;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Str;
 use Spatie\Ssh\Ssh;
@@ -12,18 +13,22 @@ use Symfony\Component\Process\Process;
 class SiteFileExplorer
 {
     protected const LIST_EXIT_INVALID_BASE = 3;
+
     protected const LIST_EXIT_INVALID_PATH = 4;
+
     protected const LIST_EXIT_NOT_DIRECTORY = 5;
+
     protected const LIST_EXIT_READ_FAILED = 6;
 
     protected const RESOLVE_EXIT_INVALID_BASE = 3;
+
     protected const RESOLVE_EXIT_INVALID_PATH = 4;
+
     protected const RESOLVE_EXIT_NOT_DIRECTORY = 5;
+
     protected const RESOLVE_EXIT_NOT_FILE = 6;
 
-    public function __construct(protected Server $server)
-    {
-    }
+    public function __construct(protected ServerSite $site) {}
 
     /**
      * Fetch the items within the given directory relative to the server base path.
@@ -153,16 +158,7 @@ class SiteFileExplorer
 
     protected function makeSsh(): Ssh
     {
-        $user = $this->server->ssh_app_user;
-
-        if (! $user) {
-            throw new ServerFileExplorerException('The server does not have an SSH application user configured.', 422);
-        }
-
-        $ssh = Ssh::create($user, $this->server->public_ip, $this->server->ssh_port);
-        $ssh->disableStrictHostKeyChecking();
-
-        return $ssh;
+        return $this->site->server->createSshConnection(CredentialType::BrokeForge);
     }
 
     protected function runCommand(string $command, int $timeout): Process
@@ -219,13 +215,7 @@ class SiteFileExplorer
 
     protected function basePath(): string
     {
-        $user = $this->server->ssh_app_user;
-
-        if (! $user) {
-            throw new ServerFileExplorerException('The server does not have an SSH application user configured.', 422);
-        }
-
-        return '/home/'.$user;
+        return $this->site->document_root;
     }
 
     protected function buildListCommand(string $relativePath): string

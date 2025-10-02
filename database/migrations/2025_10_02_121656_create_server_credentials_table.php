@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('server_credentials', function (Blueprint $table) {
             $table->id();
             $table->foreignId('server_id')->constrained()->onDelete('cascade');
-            $table->string('credential_type'); // 'root', 'user', 'worker'
+            $table->string('credential_type'); // 'root', 'brokeforge'
             $table->text('private_key'); // Encrypted
             $table->text('public_key');
             $table->timestamps();

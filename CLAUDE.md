@@ -108,7 +108,7 @@ BrokeForge uses a **Package System** for all server provisioning operations. Thi
 - `packageName()`: Returns `PackageName` enum
 - `packageType()`: Returns `PackageType` enum
 - `milestones()`: Returns milestone tracker for progress
-- `sshCredential()`: Returns SSH credential type (RootCredential, UserCredential, or WorkerCredential)
+- `credentialType()`: Returns `CredentialType` enum (Root or BrokeForge)
 - `execute()`: Entry point for package execution (can accept custom parameters)
 - `commands()`: Returns array of SSH commands and closures to execute
 
@@ -122,6 +122,10 @@ app/Packages/
 │   ├── PackageRemover.php   # Base for removers
 │   └── Milestones.php       # Progress tracking
 ├── Services/
+│   ├── Credential/         # SSH credential management services
+│   │   ├── SshConnectionBuilder.php  # Creates authenticated SSH connections
+│   │   ├── SshKeyGenerator.php       # Generates SSH key pairs
+│   │   └── TempKeyFile.php           # Manages temp key file lifecycle
 │   ├── Nginx/              # Server-level (ServerPackage)
 │   ├── PHP/                # Server-level (ServerPackage)
 │   ├── Database/           # Server-level (ServerPackage)
@@ -131,6 +135,9 @@ app/Packages/
 │       ├── Git/
 │       └── Command/
 └── Enums/                  # Type definitions
+    ├── CredentialType.php  # Root, BrokeForge enum with username resolution
+    ├── PackageName.php
+    └── PackageType.php
 ```
 
 **Example Package Structure:**
@@ -139,7 +146,7 @@ class NginxInstaller extends PackageInstaller implements ServerPackage
 {
     public function packageName(): PackageName { return PackageName::Nginx; }
     public function packageType(): PackageType { return PackageType::ReverseProxy; }
-    public function sshCredential(): SshCredential { return new RootCredential; }
+    public function credentialType(): CredentialType { return CredentialType::Root; }
     public function milestones(): Milestones { return new NginxInstallerMilestones; }
 
     public function execute(): void {
@@ -167,12 +174,32 @@ class NginxInstaller extends PackageInstaller implements ServerPackage
 
 **Per-Server Encrypted Credentials:**
 - Each server has unique SSH key pairs stored encrypted in `server_credentials` table
-- Three credential types per server:
-  - **root**: Server-level operations (ServerPackage implementations)
-  - **user**: Site-level operations (SitePackage implementations)
-  - **worker**: Git operations
-- Generated during provisioning via `ProvisionAccess` class
-- Retrieved via `$server->credential('root'|'user'|'worker')`
+- Two credential types per server (defined by `CredentialType` enum):
+  - **CredentialType::Root**: System-level operations (package installs, service management) - username: `root`
+  - **CredentialType::BrokeForge**: Site-level operations (Git, deployments, site management) - username: `brokeforge`
+- Generated during provisioning via `SshKeyGenerator` service
+- Retrieved via `$server->credential(CredentialType::BrokeForge)` or `$server->credential('brokeforge')` (both supported)
+- Username resolution centralized in `CredentialType::username()` method
+
+**File Permissions & Ownership:**
+- All files in `/home/brokeforge/` are owned by `brokeforge:brokeforge` with 775 permissions
+- BrokeForge user has full permissions only within `/home/brokeforge/` directory
+- Git repositories must add safe.directory config: `git config --global --add safe.directory <path>` to allow brokeforge user Git operations
+
+**Credential Services** (`app/Packages/Services/Credential/`):
+- `SshKeyGenerator`: Generates SSH key pairs for server credentials
+- `SshConnectionBuilder`: Creates authenticated SSH connections using credentials
+- `TempKeyFile`: Value object managing temporary key file lifecycle (auto-cleanup via destructor)
+
+**SSH Connection Creation:**
+```php
+// Create authenticated SSH connection
+$ssh = $server->createSshConnection(CredentialType::Root);
+$result = $ssh->execute('whoami');
+
+// Or using string (backward compatibility)
+$ssh = $server->createSshConnection('brokeforge');
+```
 
 **Root Password:**
 - Stored encrypted on `Server` model as `ssh_root_password`
@@ -222,13 +249,125 @@ class NginxInstallerMilestones extends Milestones
 
 ### Provisioning Flow
 
+**High-Level Overview:**
+
 1. User creates server via `ServerController@store`
 2. Server model generates encrypted root password automatically
-3. `ProvisionAccess` generates unique SSH keys (root/user/worker)
-4. Provision script (`resources/views/scripts/provision_setup_x64.blade.php`) runs on remote server
+3. `ProvisionAccess` generates unique SSH keys (root/brokeforge) via `SshKeyGenerator`
+4. User manually runs provision script on remote server
 5. Script deploys SSH keys and calls back to `ProvisionCallbackController`
-6. Callback dispatches package installation jobs (Nginx, PHP, Firewall)
+6. Callback verifies SSH access and dispatches package installation jobs (Nginx, PHP, Firewall)
 7. Each job tracks progress via `ServerEvent` records
+
+**Detailed Provisioning Process:**
+
+**Step 1: Server Creation & Key Generation**
+```php
+// ServerController creates server
+$server = Server::create([...]);
+
+// ProvisionAccess generates script with embedded keys
+$provisionAccess = new ProvisionAccess();
+$script = $provisionAccess->makeScriptFor($server, $rootPassword);
+
+// SshKeyGenerator creates unique RSA 4096-bit keys for each credential type
+foreach ([CredentialType::Root, CredentialType::BrokeForge] as $type) {
+    ServerCredential::generateKeyPair($server, $type);
+}
+```
+
+**Step 2: Remote Script Execution** (`resources/views/scripts/provision_setup_x64.blade.php`)
+
+User manually executes on remote server:
+```bash
+wget -O script.sh "https://brokeforge.app/servers/{id}/provision"
+bash script.sh
+```
+
+Script performs these operations:
+1. **Sends "started" callback** to `ProvisionCallbackController`
+2. **Creates users**: root and brokeforge
+3. **Configures Git**: Sets up Git for brokeforge user
+4. **Deploys SSH keys** to each user's `~/.ssh/` directory:
+   - Private key: `~/.ssh/id_rsa` (0600 permissions)
+   - Public key: `~/.ssh/id_rsa.pub` (0644 permissions)
+   - Authorized keys: `~/.ssh/authorized_keys` (0600 permissions, overwritten not appended)
+5. **Configures SSH**: Disables password auth, enables pubkey auth, restarts sshd
+6. **Sets directory permissions**: Home directories set to 755 (SSH requires non-group-writable)
+7. **Verifies SSH locally**: Tests `ssh user@localhost whoami` for both users
+8. **Sends "completed" callback** with debugging output:
+   ```
+   ================================================
+     BrokeForge Provision Summary
+   ================================================
+   Server IP:   192.168.2.27
+   Root user:   root
+   App user:    brokeforge
+   SSH Port:    22
+   Callback:    Sending completion notification...
+   ================================================
+   ```
+
+**Step 3: Callback Verification** (`ProvisionCallbackController`)
+
+Upon receiving "completed" callback:
+```php
+// Verify SSH access from BrokeForge to remote server
+foreach (CredentialType::cases() as $credentialType) {
+    $ssh = $server->createSshConnection($credentialType);
+    $result = $ssh->execute('whoami');
+
+    // Must match expected username
+    if (trim($result->getOutput()) !== $credentialType->username()) {
+        // Mark provision as failed
+    }
+}
+
+// If all verifications pass, dispatch installation jobs
+NginxInstallerJob::dispatch($server, PhpVersion::PHP83);
+```
+
+**Step 4: Package Installation via SSH**
+
+BrokeForge connects to remote server and executes package installations:
+```php
+// PackageManager uses SshConnectionBuilder to create authenticated connections
+$ssh = $server->createSshConnection($this->credentialType());
+
+// Executes commands array sequentially
+foreach ($this->commands() as $command) {
+    if (is_string($command)) {
+        $ssh->execute($command); // Remote SSH command
+    } else {
+        $command(); // Local closure (DB operations, tracking)
+    }
+}
+```
+
+**Critical SSH Key Requirements:**
+- **MUST preserve trailing newline** in private keys - SSH will reject keys without it
+- `SshKeyGenerator` does NOT trim private keys (only public keys)
+- `TempKeyFile` writes keys to temp files with 0600 permissions
+- `SshConnectionBuilder` keeps temp files alive via static array until script ends
+
+**Common Provisioning Issues:**
+
+1. **SSH Verification Failures**: Home directory must be 755, not 775 - SSH rejects group-writable home directories
+2. **Git "dubious ownership" errors**: BrokeForge user operating on repositories requires `git config --global --add safe.directory <path>`
+3. **Permission denied on git operations**: Ensure directories are `brokeforge:brokeforge` with 775 permissions
+4. **Authorized_keys accumulation**: Script overwrites (not appends) to prevent old keys from previous provisions
+
+**Debugging Failed Provisions:**
+
+Check provision script output for:
+- `[✓] All SSH users verified successfully` - Local verification passed
+- `[✓] started callback sent successfully` - BrokeForge received notification
+- `[✓] completed callback sent successfully` - BrokeForge notified completion
+
+Check Laravel logs for:
+- SSH connection errors (invalid key format, permission denied)
+- Callback verification failures (whoami returning empty/wrong username)
+- Package installation progress and errors
 
 ### Frontend Architecture
 
@@ -255,7 +394,7 @@ const progress = server.events.latest;
 
 **Core Models:**
 - `Server`: Server instances with encrypted credentials
-- `ServerCredential`: Per-server SSH keys (root/user/worker)
+- `ServerCredential`: Per-server SSH keys (root/brokeforge)
 - `ServerEvent`: Package installation/removal progress tracking
 - `ServerSite`: Sites hosted on servers
 - `ServerPhp`: PHP versions installed
@@ -272,7 +411,13 @@ const progress = server.events.latest;
 - `app/Packages/README.md`: Comprehensive package development guide
 - `app/Packages/Base/PackageManager.php`: Core SSH execution and milestone tracking
 - `app/Packages/Services/Nginx/NginxInstaller.php`: Reference implementation
-- `app/Models/Server.php`: Server model with credential relationships
+- `app/Packages/Services/Credential/`: SSH credential management services
+  - `SshConnectionBuilder.php`: Creates authenticated SSH connections
+  - `SshKeyGenerator.php`: Generates SSH key pairs
+  - `TempKeyFile.php`: Temp file lifecycle management
+- `app/Packages/Enums/CredentialType.php`: Credential type enum with username resolution
+- `app/Models/Server.php`: Server model with credential relationships and `createSshConnection()` method
+- `app/Models/ServerCredential.php`: Credential model with key generation and username methods
 - `app/Packages/ProvisionAccess.php`: Provision script generation
 - `resources/views/scripts/provision_setup_x64.blade.php`: Remote server provisioning script
 

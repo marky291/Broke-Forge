@@ -11,4 +11,5 @@ enum PackageType: string
     case Command = 'command';
     case PHP = 'php';
     case Firewall = 'firewall';
+    case Deployment = 'deployment';
 }

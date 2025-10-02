@@ -27,7 +27,7 @@ class FirewallRuleInstallerJob implements ShouldQueue
         // Get the rule that needs to be installed
         $rule = ServerFirewallRule::find($this->ruleId);
 
-        if (!$rule) {
+        if (! $rule) {
             Log::warning('No firewall rule found for ID', ['rule_id' => $this->ruleId]);
 
             return;
