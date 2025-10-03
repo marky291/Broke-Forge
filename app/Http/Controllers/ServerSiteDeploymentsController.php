@@ -7,6 +7,7 @@ use App\Models\ServerDeployment;
 use App\Models\ServerSite;
 use App\Packages\Enums\GitStatus;
 use App\Packages\Services\Sites\Deployment\SiteGitDeploymentJob;
+use App\Packages\Services\SourceProvider\Github\GitHubWebhookManager;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -40,6 +41,7 @@ class ServerSiteDeploymentsController extends Controller
             'git_status',
             'last_deployment_sha',
             'last_deployed_at',
+            'auto_deploy_enabled',
         ]);
 
         // Get deployment script from configuration
@@ -158,5 +160,51 @@ class ServerSiteDeploymentsController extends Controller
             'is_success' => $deployment->isSuccess(),
             'is_failed' => $deployment->isFailed(),
         ]);
+    }
+
+    /**
+     * Toggle auto-deploy for a site.
+     */
+    public function toggleAutoDeploy(Request $request, Server $server, ServerSite $site): RedirectResponse
+    {
+        $validated = $request->validate([
+            'enabled' => ['required', 'boolean'],
+        ]);
+
+        $webhookManager = GitHubWebhookManager::forSite($site);
+
+        if (! $webhookManager) {
+            return redirect()
+                ->route('servers.sites.deployments', [$server, $site])
+                ->with('error', 'GitHub must be connected to enable auto-deploy. Please connect GitHub in server settings.');
+        }
+
+        if ($validated['enabled']) {
+            // Enable auto-deploy by creating webhook
+            $result = $webhookManager->createWebhook($site);
+
+            if (! $result['success']) {
+                return redirect()
+                    ->route('servers.sites.deployments', [$server, $site])
+                    ->with('error', 'Failed to enable auto-deploy: '.$result['error']);
+            }
+
+            return redirect()
+                ->route('servers.sites.deployments', [$server, $site])
+                ->with('success', 'Auto-deploy enabled successfully.');
+        } else {
+            // Disable auto-deploy by deleting webhook
+            $result = $webhookManager->deleteWebhook($site);
+
+            if (! $result['success']) {
+                return redirect()
+                    ->route('servers.sites.deployments', [$server, $site])
+                    ->with('error', 'Failed to disable auto-deploy: '.$result['error']);
+            }
+
+            return redirect()
+                ->route('servers.sites.deployments', [$server, $site])
+                ->with('success', 'Auto-deploy disabled successfully.');
+        }
     }
 }

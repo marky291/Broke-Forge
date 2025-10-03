@@ -18,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->validateCsrfTokens(except: [
             'servers/*/provision/callback/*',
+            'webhooks/github/*',
         ]);
 
         $middleware->web(append: [

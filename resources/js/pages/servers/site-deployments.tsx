@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CardContainer } from '@/components/ui/card-container';
 import { PageHeader } from '@/components/ui/page-header';
 import { Separator } from '@/components/ui/separator';
+import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import SiteLayout from '@/layouts/server/site-layout';
 import { cn } from '@/lib/utils';
@@ -12,7 +13,7 @@ import { dashboard } from '@/routes';
 import { show as showServer } from '@/routes/servers';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router, useForm } from '@inertiajs/react';
-import { AlertCircle, CheckCircle2, Clock, GitBranch, Loader2, Rocket, XCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Clock, GitBranch, GitCommitHorizontal, Loader2, Rocket, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 type Server = {
@@ -29,6 +30,7 @@ type ServerSite = {
     git_status: string;
     last_deployment_sha?: string | null;
     last_deployed_at?: string | null;
+    auto_deploy_enabled?: boolean;
 };
 
 type GitConfig = {
@@ -103,6 +105,16 @@ export default function SiteDeployments({
                     router.reload({ only: ['latestDeployment', 'deployments'] });
                 },
                 onFinish: () => setDeploying(false),
+            }
+        );
+    };
+
+    const handleToggleAutoDeploy = (enabled: boolean) => {
+        router.post(
+            `/servers/${server.id}/sites/${site.id}/deployments/auto-deploy`,
+            { enabled },
+            {
+                preserveScroll: true,
             }
         );
     };
@@ -201,6 +213,29 @@ export default function SiteDeployments({
                         </div>
                     </div>
                 </div>
+
+                {/* Auto-Deploy Settings */}
+                <CardContainer title="Auto-Deploy" description="Automatically deploy when code is pushed to your repository">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                                <GitCommitHorizontal className="h-5 w-5 text-primary" />
+                            </div>
+                            <div>
+                                <div className="font-medium">Auto-Deploy on Push</div>
+                                <div className="text-sm text-muted-foreground">
+                                    {site.auto_deploy_enabled
+                                        ? 'Deployments triggered automatically on git push'
+                                        : 'Connect GitHub in server settings to enable auto-deploy'}
+                                </div>
+                            </div>
+                        </div>
+                        <Switch
+                            checked={site.auto_deploy_enabled ?? false}
+                            onCheckedChange={handleToggleAutoDeploy}
+                        />
+                    </div>
+                </CardContainer>
 
                 {/* Latest Deployment Status - Prominent Card */}
                 {latestDeployment && (

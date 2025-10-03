@@ -8,10 +8,11 @@ use Inertia\Inertia;
 
 class ServerSettingsController extends Controller
 {
-    public function index(Server $server): \Inertia\Response
+    public function index(Request $request, Server $server): \Inertia\Response
     {
         return Inertia::render('servers/settings', [
             'server' => $server,
+            'githubProvider' => $request->user()->githubProvider(),
         ]);
     }
 

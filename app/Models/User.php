@@ -54,4 +54,30 @@ class User extends Authenticatable
     {
         return $this->hasMany(Server::class);
     }
+
+    /**
+     * Get all source providers connected by the user.
+     */
+    public function sourceProviders(): HasMany
+    {
+        return $this->hasMany(SourceProvider::class);
+    }
+
+    /**
+     * Get the user's GitHub provider if connected.
+     */
+    public function githubProvider(): ?SourceProvider
+    {
+        return $this->sourceProviders()
+            ->where('provider', 'github')
+            ->first();
+    }
+
+    /**
+     * Check if user has GitHub connected.
+     */
+    public function hasGitHubConnected(): bool
+    {
+        return $this->githubProvider() !== null;
+    }
 }

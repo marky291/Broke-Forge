@@ -7,7 +7,8 @@ import { PageHeader } from '@/components/ui/page-header';
 import ServerLayout from '@/layouts/server/layout';
 import { dashboard } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
-import { Form, Head } from '@inertiajs/react';
+import { Form, Head, router } from '@inertiajs/react';
+import { GithubIcon } from 'lucide-react';
 
 type Server = {
     id: number;
@@ -20,7 +21,15 @@ type Server = {
     updated_at: string;
 };
 
-export default function Settings({ server }: { server: Server }) {
+type SourceProvider = {
+    id: number;
+    provider: string;
+    username: string;
+    email?: string | null;
+    created_at: string;
+} | null;
+
+export default function Settings({ server, githubProvider }: { server: Server; githubProvider: SourceProvider }) {
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard.url() },
         { title: `Server #${server.id}`, href: `/servers/${server.id}` },
@@ -115,6 +124,57 @@ export default function Settings({ server }: { server: Server }) {
                             <div className="text-sm text-muted-foreground">Last Updated</div>
                             <div className="font-medium">{new Date(server.updated_at).toLocaleString()}</div>
                         </div>
+                    </div>
+                </CardContainer>
+
+                <CardContainer title="Source Providers" description="Connect your Git hosting providers to enable auto-deploy">
+                    <div className="space-y-4">
+                        {githubProvider ? (
+                            <div className="flex items-center justify-between rounded-lg border p-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="rounded-full bg-neutral-100 p-2 dark:bg-neutral-800">
+                                        <GithubIcon className="size-5" />
+                                    </div>
+                                    <div>
+                                        <div className="font-medium">GitHub</div>
+                                        <div className="text-sm text-muted-foreground">
+                                            Connected as {githubProvider.username}
+                                        </div>
+                                    </div>
+                                </div>
+                                <Button
+                                    variant="outline"
+                                    onClick={() => {
+                                        if (confirm('Are you sure you want to disconnect GitHub?')) {
+                                            router.delete(`/servers/${server.id}/source-providers/github`);
+                                        }
+                                    }}
+                                >
+                                    Disconnect
+                                </Button>
+                            </div>
+                        ) : (
+                            <div className="flex items-center justify-between rounded-lg border border-dashed p-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="rounded-full bg-neutral-100 p-2 dark:bg-neutral-800">
+                                        <GithubIcon className="size-5" />
+                                    </div>
+                                    <div>
+                                        <div className="font-medium">GitHub</div>
+                                        <div className="text-sm text-muted-foreground">
+                                            Connect GitHub to enable auto-deploy for your sites
+                                        </div>
+                                    </div>
+                                </div>
+                                <Button
+                                    onClick={() => {
+                                        window.location.href = `/servers/${server.id}/source-providers/github/connect`;
+                                    }}
+                                >
+                                    Connect GitHub
+                                </Button>
+                            </div>
+                        )}
                     </div>
                 </CardContainer>
             </PageHeader>

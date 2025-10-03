@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\GitHubWebhookController;
 use App\Http\Controllers\ProvisionCallbackController;
 use App\Http\Controllers\ServerController;
 use App\Http\Controllers\ServerDatabaseController;
@@ -13,6 +14,7 @@ use App\Http\Controllers\ServerSiteCommandsController;
 use App\Http\Controllers\ServerSiteDeploymentsController;
 use App\Http\Controllers\ServerSiteGitRepositoryController;
 use App\Http\Controllers\ServerSitesController;
+use App\Http\Controllers\SourceProviderController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -43,6 +45,17 @@ Route::post('servers/{server}/provision/callback/{status}', ProvisionCallbackCon
 
 /*
 |--------------------------------------------------------------------------
+| Webhook Routes (Public)
+|--------------------------------------------------------------------------
+*/
+
+// GitHub webhook endpoint for auto-deploy (eager load server to avoid N+1)
+Route::post('webhooks/github/{site}', GitHubWebhookController::class)
+    ->name('webhooks.github')
+    ->scopeBindings();
+
+/*
+|--------------------------------------------------------------------------
 | Authenticated Routes
 |--------------------------------------------------------------------------
 */
@@ -59,6 +72,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
 */
 
 Route::middleware('auth')->group(function () {
+    // Source Provider OAuth Routes
+    Route::prefix('source-providers')->name('source-providers.')->group(function () {
+        Route::get('github/callback', [SourceProviderController::class, 'callbackGitHub'])
+            ->name('github.callback');
+    });
+
     // Server CRUD (except index and create - modal-based creation)
     Route::resource('servers', ServerController::class)
         ->except(['index', 'create'])
@@ -66,6 +85,13 @@ Route::middleware('auth')->group(function () {
 
     // Server-specific routes grouped by prefix with scoped bindings
     Route::prefix('servers/{server}')->name('servers.')->scopeBindings()->group(function () {
+        // Source Provider Management
+        Route::prefix('source-providers')->name('source-providers.')->group(function () {
+            Route::get('github/connect', [SourceProviderController::class, 'connectGitHub'])
+                ->name('github.connect');
+            Route::delete('github', [SourceProviderController::class, 'disconnectGitHub'])
+                ->name('github.disconnect');
+        });
 
         // Provisioning workflow
         Route::get('provisioning/setup', [ServerProvisioningController::class, 'show'])
@@ -115,6 +141,8 @@ Route::middleware('auth')->group(function () {
                 ->name('sites.deployments.update');
             Route::post('{site}/deployments', [ServerSiteDeploymentsController::class, 'deploy'])
                 ->name('sites.deployments.deploy');
+            Route::post('{site}/deployments/auto-deploy', [ServerSiteDeploymentsController::class, 'toggleAutoDeploy'])
+                ->name('sites.deployments.auto-deploy');
             Route::get('{site}/deployments/{deployment}/status', [ServerSiteDeploymentsController::class, 'status'])
                 ->name('sites.deployments.status');
             Route::get('{site}/application', [ServerSiteGitRepositoryController::class, 'show'])

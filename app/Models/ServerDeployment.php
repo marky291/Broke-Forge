@@ -20,6 +20,7 @@ class ServerDeployment extends Model
         'server_site_id',
         'status',
         'deployment_script',
+        'triggered_by',
         'output',
         'error_output',
         'exit_code',

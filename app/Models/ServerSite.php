@@ -36,6 +36,9 @@ class ServerSite extends Model
         'git_installed_at',
         'last_deployment_sha',
         'last_deployed_at',
+        'auto_deploy_enabled',
+        'webhook_id',
+        'webhook_secret',
         'deprovisioned_at',
     ];
 
@@ -47,6 +50,8 @@ class ServerSite extends Model
     {
         return [
             'ssl_enabled' => 'boolean',
+            'auto_deploy_enabled' => 'boolean',
+            'webhook_secret' => 'encrypted',
             'configuration' => 'array',
             'git_status' => GitStatus::class,
             'provisioned_at' => 'datetime',
