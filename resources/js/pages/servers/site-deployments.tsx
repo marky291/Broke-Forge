@@ -2,6 +2,8 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { CardContainer } from '@/components/ui/card-container';
+import { PageHeader } from '@/components/ui/page-header';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import SiteLayout from '@/layouts/server/site-layout';
@@ -159,20 +161,14 @@ export default function SiteDeployments({
     return (
         <SiteLayout server={server} site={site} breadcrumbs={breadcrumbs}>
             <Head title={`Deployments — ${site.domain}`} />
-            <div className="space-y-6">
-                {/* Header Section */}
-                <div className="flex items-start justify-between">
-                    <div className="space-y-1">
-                        <h1 className="text-2xl font-semibold tracking-tight">Deployments</h1>
-                        <p className="text-sm text-muted-foreground">
-                            Manage deployments for <span className="font-medium text-foreground">{site.domain}</span>
-                        </p>
-                    </div>
+            <PageHeader
+                title="Deployments"
+                description={`Deploy and manage application updates for ${site.domain}`}
+                action={
                     <Button
                         onClick={handleDeploy}
                         disabled={deploying || liveDeployment?.status === 'running'}
-                        size="default"
-                        className="min-w-[140px]"
+                        size="sm"
                     >
                         {deploying || liveDeployment?.status === 'running' ? (
                             <>
@@ -186,8 +182,8 @@ export default function SiteDeployments({
                             </>
                         )}
                     </Button>
-                </div>
-
+                }
+            >
                 {/* Git Repository Info */}
                 <div className="rounded-lg border bg-card">
                     <div className="flex items-center gap-3 p-4">
@@ -242,46 +238,60 @@ export default function SiteDeployments({
                 )}
 
                 {/* Deployment Script Section */}
-                <Card>
-                    <CardHeader>
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <CardTitle>Deployment Script</CardTitle>
-                                <p className="mt-1 text-sm text-muted-foreground">Commands executed on the remote server</p>
+                <CardContainer title="Deployment Script" description="Commands executed on the remote server">
+                    <form onSubmit={handleUpdateScript} className="space-y-4">
+                            {/* Code Editor */}
+                            <div className="relative rounded-lg overflow-hidden border border-neutral-200 bg-neutral-50 dark:border-white/8 dark:bg-neutral-900">
+                                <div className="flex">
+                                    {/* Line Numbers */}
+                                    <div className="flex-shrink-0 py-4 px-4 bg-neutral-100 text-neutral-400 dark:bg-neutral-950 dark:text-neutral-600 text-sm font-mono leading-relaxed select-none border-r border-neutral-200 dark:border-white/8">
+                                        {data.deployment_script.split('\n').map((_, index) => (
+                                            <div key={index} className="text-right">
+                                                {index + 1}
+                                            </div>
+                                        ))}
+                                    </div>
+                                    {/* Text Area */}
+                                    <Textarea
+                                        id="deployment_script"
+                                        value={data.deployment_script}
+                                        onChange={(event: React.ChangeEvent<HTMLTextAreaElement>) => setData('deployment_script', event.target.value)}
+                                        placeholder="git pull origin main"
+                                        className="flex-1 bg-transparent border-0 text-foreground placeholder:text-muted-foreground font-mono text-sm leading-relaxed resize-none focus-visible:ring-0 focus-visible:ring-offset-0 rounded-none p-4"
+                                        rows={12}
+                                        spellCheck={false}
+                                    />
+                                </div>
                             </div>
-                        </div>
-                    </CardHeader>
-                    <Separator />
-                    <CardContent className="space-y-4">
-                        <form onSubmit={handleUpdateScript} className="space-y-4">
-                            <div className="space-y-2">
-                                <Textarea
-                                    id="deployment_script"
-                                    value={data.deployment_script}
-                                    onChange={(event: React.ChangeEvent<HTMLTextAreaElement>) => setData('deployment_script', event.target.value)}
-                                    placeholder="git fetch && git pull"
-                                    className="font-mono text-sm min-h-[120px]"
-                                    rows={6}
+
+                            {/* Checkbox for .env variables */}
+                            <div className="flex items-center space-x-2">
+                                <input
+                                    type="checkbox"
+                                    id="env_variables"
+                                    className="h-4 w-4 rounded border-neutral-300 dark:border-neutral-700 text-primary focus:ring-primary cursor-pointer"
                                 />
-                                <p className="text-xs text-muted-foreground">
-                                    Commands run in <code className="rounded bg-muted px-1 py-0.5">/home/brokeforge/{site.domain}</code> as the brokeforge user
-                                </p>
+                                <label htmlFor="env_variables" className="text-sm text-muted-foreground cursor-pointer">
+                                    Make <code className="rounded bg-orange-100 dark:bg-orange-950/30 px-1.5 py-0.5 text-orange-600 dark:text-orange-500 font-mono text-xs">.env</code> variables available to deploy script
+                                </label>
                             </div>
-                            <div className="flex items-center justify-between gap-4">
-                                <Alert variant="destructive" className="flex-1">
-                                    <AlertCircle className="h-4 w-4" />
-                                    <AlertTitle>Production Environment</AlertTitle>
-                                    <AlertDescription>
-                                        Commands execute directly on your production server
-                                    </AlertDescription>
-                                </Alert>
-                                <Button type="submit" variant="outline" disabled={updating} className="min-w-[100px]">
-                                    {updating ? 'Saving...' : 'Save Script'}
+
+                            <p className="text-xs text-muted-foreground">
+                                Commands run in <code className="rounded bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 font-mono">/home/brokeforge/{site.domain}</code> as the brokeforge user
+                            </p>
+
+                            {/* Update Button */}
+                            <div className="flex justify-end">
+                                <Button
+                                    type="submit"
+                                    disabled={updating}
+                                    size="sm"
+                                >
+                                    {updating ? 'Updating...' : 'Update'}
                                 </Button>
                             </div>
-                        </form>
-                    </CardContent>
-                </Card>
+                    </form>
+                </CardContainer>
 
                 {/* Live Deployment Output */}
                 {liveDeployment && liveDeployment.status === 'running' && (
@@ -311,16 +321,11 @@ export default function SiteDeployments({
 
                 {/* Last Deployment Output */}
                 {latestDeployment && latestDeployment.status !== 'running' && latestDeployment.output && (
-                    <Card>
-                        <CardHeader>
-                            <div className="flex items-center justify-between">
-                                <CardTitle>Deployment Output</CardTitle>
-                                {getStatusBadge(latestDeployment.status)}
-                            </div>
-                        </CardHeader>
-                        <Separator />
-                        <CardContent className="p-0">
-                            <div className="space-y-0">
+                    <CardContainer title="Deployment Output">
+                        <div className="flex justify-end mb-4">
+                            {getStatusBadge(latestDeployment.status)}
+                        </div>
+                        <div className="space-y-0">
                                 {latestDeployment.output && (
                                     <div>
                                         <div className="px-4 py-2 bg-muted/50 border-b">
@@ -341,25 +346,20 @@ export default function SiteDeployments({
                                         </pre>
                                     </div>
                                 )}
-                            </div>
-                        </CardContent>
-                    </Card>
+                        </div>
+                    </CardContainer>
                 )}
 
                 {/* Deployment History */}
-                <Card>
-                    <CardHeader>
-                        <div className="flex items-center justify-between">
-                            <CardTitle>Deployment History</CardTitle>
-                            {deployments.data.length > 0 && (
-                                <span className="text-sm text-muted-foreground">
-                                    {deployments.data.length} deployment{deployments.data.length !== 1 ? 's' : ''}
-                                </span>
-                            )}
+                <CardContainer title="Deployment History">
+                    {deployments.data.length > 0 && (
+                        <div className="flex justify-end mb-4">
+                            <span className="text-sm text-muted-foreground">
+                                {deployments.data.length} deployment{deployments.data.length !== 1 ? 's' : ''}
+                            </span>
                         </div>
-                    </CardHeader>
-                    <Separator />
-                    <CardContent className="p-0">
+                    )}
+                    <div>
                         {deployments.data.length > 0 ? (
                             <div className="divide-y">
                                 {deployments.data.map((deployment, index) => (
@@ -410,9 +410,9 @@ export default function SiteDeployments({
                                 </p>
                             </div>
                         )}
-                    </CardContent>
-                </Card>
-            </div>
+                    </div>
+                </CardContainer>
+            </PageHeader>
         </SiteLayout>
     );
 }

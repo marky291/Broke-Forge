@@ -1,9 +1,10 @@
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { CardContainer } from '@/components/ui/card-container';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PageHeader } from '@/components/ui/page-header';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
 import ServerLayout from '@/layouts/server/layout';
 import { dashboard } from '@/routes';
 import { show as showServer } from '@/routes/servers';
@@ -145,33 +146,18 @@ export default function Database({
     return (
         <ServerLayout server={server} breadcrumbs={breadcrumbs}>
             <Head title={`Database — ${server.vanity_name}`} />
-            <div className="space-y-6">
-                <div>
-                    <h2 className="text-2xl font-semibold">{installedDatabase ? 'Database Configuration' : 'Database Installation'}</h2>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                        {installedDatabase
-                            ? 'Configure and manage database services for your server.'
-                            : 'Install and configure a database service for your server.'}
-                    </p>
-                </div>
-
+            <PageHeader
+                title={installedDatabase ? 'Database Configuration' : 'Database Installation'}
+                description={installedDatabase
+                    ? 'Configure and manage database services for your server.'
+                    : 'Install and configure a database service for your server.'}
+            >
                 {!installedDatabase && (
-                    <div className="rounded-xl border border-sidebar-border/70 bg-background shadow-sm dark:border-sidebar-border">
-                        <div className="px-4 py-3">
-                            <div className="flex items-center gap-2">
-                                <Download className="h-5 w-5 text-blue-600" />
-                                <div className="text-sm font-medium tracking-wide text-neutral-600 uppercase dark:text-neutral-300">
-                                    Install Database Service
-                                </div>
-                            </div>
-                        </div>
-                        <Separator />
-                        <div className="px-4 py-4">
-                            <div className="mb-6 text-sm text-muted-foreground">
-                                No database service is currently installed on this server. Choose a database type and configuration to get started.
-                            </div>
-
-                            <form onSubmit={handleSubmit} className="space-y-6">
+                    <CardContainer
+                        title="Install Database Service"
+                        description="No database service is currently installed on this server. Choose a database type and configuration to get started."
+                    >
+                        <form onSubmit={handleSubmit} className="space-y-6">
                                 {submitError && (
                                     <Alert variant="destructive">
                                         <AlertTitle>Installation failed</AlertTitle>
@@ -251,135 +237,111 @@ export default function Database({
                                     </div>
                                 </div>
 
-                                {/* Install Button */}
-                                <div className="flex justify-end">
-                                    <Button type="submit" disabled={processing}>
-                                        {processing ? (
-                                            <span className="inline-flex items-center gap-2">
-                                                <Loader2 className="h-4 w-4 animate-spin" />
-                                                Installing...
-                                            </span>
-                                        ) : (
-                                            'Install Database'
-                                        )}
-                                    </Button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
+                            {/* Install Button */}
+                            <div className="flex justify-end">
+                                <Button type="submit" disabled={processing}>
+                                    {processing ? (
+                                        <span className="inline-flex items-center gap-2">
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                            Installing...
+                                        </span>
+                                    ) : (
+                                        'Install Database'
+                                    )}
+                                </Button>
+                            </div>
+                        </form>
+                    </CardContainer>
                 )}
 
                 {installedDatabase && (
-                    <div className="rounded-xl border border-sidebar-border/70 bg-background shadow-sm dark:border-sidebar-border">
-                        <div className="px-4 py-3">
-                            <div className="flex items-center gap-2">
-                                <CheckIcon className="h-5 w-5 text-green-600" />
-                                <div className="text-sm font-medium tracking-wide text-neutral-600 uppercase dark:text-neutral-300">
-                                    Current Database
+                    <CardContainer title="Current Database">
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                            <div>
+                                <div className="text-sm text-muted-foreground">Type</div>
+                                <div className="font-medium capitalize">
+                                    {availableDatabases?.[installedDatabase.configuration.type]?.name || installedDatabase.configuration.type}
+                                </div>
+                            </div>
+                            <div>
+                                <div className="text-sm text-muted-foreground">Version</div>
+                                <div className="font-medium">{installedDatabase.configuration.version}</div>
+                            </div>
+                            <div>
+                                <div className="text-sm text-muted-foreground">Status</div>
+                                <div className="font-medium capitalize">
+                                    {installedDatabase.status}
+                                    {isInstalling && progress?.total ? (
+                                        <span className="ml-2 text-xs text-muted-foreground">
+                                            ({progress.step}/{progress.total})
+                                        </span>
+                                    ) : null}
                                 </div>
                             </div>
                         </div>
-                        <Separator />
-                        <div className="px-4 py-4">
-                            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                                <div>
-                                    <div className="text-sm text-muted-foreground">Type</div>
-                                    <div className="font-medium capitalize">
-                                        {availableDatabases?.[installedDatabase.configuration.type]?.name || installedDatabase.configuration.type}
-                                    </div>
+                        {isInstalling && (
+                            <div className="mt-4">
+                                <div className="mb-1 flex items-center justify-between">
+                                    <div className="text-sm text-muted-foreground">{progress?.label || 'Running installation steps...'}</div>
+                                    {progress?.total ? (
+                                        <div className="text-xs text-muted-foreground">
+                                            {Math.floor(((progress.step ?? 0) / (progress.total ?? 1)) * 100)}%
+                                        </div>
+                                    ) : null}
                                 </div>
-                                <div>
-                                    <div className="text-sm text-muted-foreground">Version</div>
-                                    <div className="font-medium">{installedDatabase.configuration.version}</div>
+                                <div className="h-2 w-full overflow-hidden rounded bg-muted">
+                                    <div
+                                        className="h-full bg-primary transition-all"
+                                        style={{
+                                            width: progress?.total
+                                                ? `${Math.floor(((progress.step ?? 0) / (progress.total ?? 1)) * 100)}%`
+                                                : '25%',
+                                        }}
+                                    />
                                 </div>
-                                <div>
-                                    <div className="text-sm text-muted-foreground">Status</div>
-                                    <div className="font-medium capitalize">
-                                        {installedDatabase.status}
-                                        {isInstalling && progress?.total ? (
-                                            <span className="ml-2 text-xs text-muted-foreground">
-                                                ({progress.step}/{progress.total})
-                                            </span>
-                                        ) : null}
-                                    </div>
+                                <div className="mt-2 text-xs text-muted-foreground">
+                                    Do not close this page — we're installing the database over SSH.
                                 </div>
                             </div>
-                            {isInstalling && (
-                                <div className="mt-4">
-                                    <div className="mb-1 flex items-center justify-between">
-                                        <div className="text-sm text-muted-foreground">{progress?.label || 'Running installation steps...'}</div>
-                                        {progress?.total ? (
-                                            <div className="text-xs text-muted-foreground">
-                                                {Math.floor(((progress.step ?? 0) / (progress.total ?? 1)) * 100)}%
-                                            </div>
-                                        ) : null}
-                                    </div>
-                                    <div className="h-2 w-full overflow-hidden rounded bg-muted">
-                                        <div
-                                            className="h-full bg-primary transition-all"
-                                            style={{
-                                                width: progress?.total
-                                                    ? `${Math.floor(((progress.step ?? 0) / (progress.total ?? 1)) * 100)}%`
-                                                    : '25%',
-                                            }}
-                                        />
-                                    </div>
-                                    <div className="mt-2 text-xs text-muted-foreground">
-                                        Do not close this page — we’re installing the database over SSH.
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </div>
+                        )}
+                    </CardContainer>
                 )}
 
                 {installedDatabase && !isInstalling && (
                     <form onSubmit={handleSubmit} className="space-y-6">
-                        {/* Configuration */}
-                        <div className="rounded-xl border border-sidebar-border/70 bg-background shadow-sm dark:border-sidebar-border">
-                            <div className="px-4 py-3">
-                                <div className="flex items-center gap-2">
-                                    <DatabaseIcon className="h-5 w-5" />
-                                    <div className="text-sm font-medium tracking-wide text-neutral-600 uppercase dark:text-neutral-300">
-                                        Update Configuration
-                                    </div>
+                        <CardContainer title="Update Configuration">
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                <div className="space-y-2">
+                                    <Label htmlFor="version">Version</Label>
+                                    <Select value={data.version} onValueChange={(value) => setData('version', value)}>
+                                        <SelectTrigger disabled={processing}>
+                                            <SelectValue placeholder="Select version" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {Object.entries(availableDatabases?.[selectedType]?.versions || {}).map(([value, label]) => (
+                                                <SelectItem key={value} value={value}>
+                                                    {label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    {errors.version && <div className="text-sm text-red-600">{errors.version}</div>}
                                 </div>
-                            </div>
-                            <Separator />
-                            <div className="px-4 py-4">
-                                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="version">Version</Label>
-                                        <Select value={data.version} onValueChange={(value) => setData('version', value)}>
-                                            <SelectTrigger disabled={processing}>
-                                                <SelectValue placeholder="Select version" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {Object.entries(availableDatabases?.[selectedType]?.versions || {}).map(([value, label]) => (
-                                                    <SelectItem key={value} value={value}>
-                                                        {label}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        {errors.version && <div className="text-sm text-red-600">{errors.version}</div>}
-                                    </div>
 
-                                    <div className="space-y-2">
-                                        <Label htmlFor="root_password">Root Password</Label>
-                                        <Input
-                                            id="root_password"
-                                            type="password"
-                                            value={data.root_password}
-                                            onChange={(e) => setData('root_password', e.target.value)}
-                                            placeholder="Enter new password (optional)"
-                                            disabled={processing}
-                                        />
-                                        {errors.root_password && <div className="text-sm text-red-600">{errors.root_password}</div>}
-                                    </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="root_password">Root Password</Label>
+                                    <Input
+                                        id="root_password"
+                                        type="password"
+                                        value={data.root_password}
+                                        onChange={(e) => setData('root_password', e.target.value)}
+                                        placeholder="Enter new password (optional)"
+                                        disabled={processing}
+                                    />
+                                    {errors.root_password && <div className="text-sm text-red-600">{errors.root_password}</div>}
                                 </div>
                             </div>
-                        </div>
+                        </CardContainer>
 
                         {/* Submit */}
                         <div className="flex justify-end">
@@ -396,7 +358,7 @@ export default function Database({
                         </div>
                     </form>
                 )}
-            </div>
+            </PageHeader>
         </ServerLayout>
     );
 }

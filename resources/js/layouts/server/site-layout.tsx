@@ -1,24 +1,14 @@
-import {
-    Breadcrumb,
-    BreadcrumbItem as BreadcrumbComponent,
-    BreadcrumbLink,
-    BreadcrumbList,
-    BreadcrumbPage,
-    BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { NavigationCard, NavigationSidebar } from '@/components/navigation-card';
 import AppLayout from '@/layouts/app-layout';
 import { cn } from '@/lib/utils';
 import { show as showServer } from '@/routes/servers';
-import { show as showSite } from '@/routes/servers/sites';
 import { type BreadcrumbItem, type NavItem } from '@/types';
-import { Link, usePage } from '@inertiajs/react';
+import { usePage } from '@inertiajs/react';
 import {
     AppWindow,
     CodeIcon,
     DatabaseIcon,
-    ExternalLink,
     Folder,
     Globe,
     Rocket,
@@ -33,6 +23,8 @@ interface SiteLayoutProps extends PropsWithChildren {
         id: number;
         vanity_name: string;
         connection: string;
+        public_ip?: string;
+        private_ip?: string;
     };
     site: {
         id: number;
@@ -145,125 +137,60 @@ export default function SiteLayout({ children, server, site, breadcrumbs }: Site
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <div className="flex h-full">
-                {/* Content Area Sidebar */}
-                <aside className="w-64 border-r bg-muted/30">
-                    <div className="flex h-full flex-col">
-                        {/* Site Header */}
-                        <div className="border-b bg-card p-4">
-                            <div className="flex items-center gap-3">
-                                <div className="flex aspect-square size-9 items-center justify-center rounded-lg bg-primary/10">
-                                    <Globe className="size-5 text-primary" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <h3 className="font-semibold text-sm truncate">{site.domain || 'Site'}</h3>
-                                    <div className="flex items-center gap-2">
-                                        <span className={cn("size-2 rounded-full", getStatusColor(site.status))} />
-                                        <span className="text-xs text-muted-foreground capitalize">
-                                            {site.status || 'pending'}
-                                        </span>
-                                    </div>
-                                </div>
+            {/* Site Header */}
+            <div className="bg-card px-8 py-6">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-xl font-semibold text-foreground mb-4">{site.domain || 'Site'}</h1>
+                        <div className="flex items-center gap-6 text-sm">
+                            <div className="flex items-center gap-2">
+                                <span className="text-muted-foreground">Public IP</span>
+                                <span className="font-medium">{server.public_ip || 'N/A'}</span>
                             </div>
-
-                            {/* Site Quick Actions */}
-                            <div className="mt-4 flex gap-2">
-                                <Button variant="outline" size="sm" className="flex-1" asChild>
-                                    <a href={`https://${site.domain}`} target="_blank" rel="noopener noreferrer">
-                                        <ExternalLink className="mr-1.5 size-3" />
-                                        Visit
-                                    </a>
-                                </Button>
-                                {site.git_status === 'installed' ? (
-                                    <Button variant="outline" size="sm" className="flex-1" asChild>
-                                        <Link href={`/servers/${server.id}/sites/${site.id}/deployments`}>
-                                            <Rocket className="mr-1.5 size-3" />
-                                            Deploy
-                                        </Link>
-                                    </Button>
-                                ) : (
-                                    <Button variant="outline" size="sm" className="flex-1" disabled>
-                                        Deploy
-                                    </Button>
-                                )}
+                            <div className="flex items-center gap-2">
+                                <span className="text-muted-foreground">Private IP</span>
+                                <span className="font-medium">{server.private_ip || 'N/A'}</span>
                             </div>
-                        </div>
-
-                        {/* Navigation Sections */}
-                        <nav className="flex-1 overflow-y-auto p-3 space-y-6">
-                            {/* Site Navigation */}
-                            <div>
-                                <h4 className="mb-2 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                                    Current Site
-                                </h4>
-                                <div className="space-y-1">
-                                    {siteNavItems.map((item) => {
-                                        const Icon = item.icon;
-                                        return (
-                                            <Link
-                                                key={item.href}
-                                                href={item.href}
-                                                className={cn(
-                                                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all",
-                                                    item.isActive
-                                                        ? "bg-primary text-primary-foreground shadow-sm"
-                                                        : "hover:bg-accent hover:text-accent-foreground"
-                                                )}
-                                            >
-                                                {Icon && <Icon className="size-4 flex-shrink-0" />}
-                                                <span>{item.title}</span>
-                                            </Link>
-                                        );
-                                    })}
-                                </div>
+                            <div className="flex items-center gap-2">
+                                <span className="text-muted-foreground">Region</span>
+                                <span className="font-medium">Frankfurt</span>
                             </div>
-
-                            {/* Divider */}
-                            <div className="border-t" />
-
-                            {/* Server Navigation */}
-                            <div>
-                                <h4 className="mb-2 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                                    Server
-                                </h4>
-                                <div className="space-y-1">
-                                    {serverNavItems.map((item) => {
-                                        const Icon = item.icon;
-                                        return (
-                                            <Link
-                                                key={item.href}
-                                                href={item.href}
-                                                className={cn(
-                                                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all",
-                                                    item.isActive
-                                                        ? "bg-accent text-accent-foreground"
-                                                        : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                                                )}
-                                            >
-                                                {Icon && <Icon className="size-4 flex-shrink-0" />}
-                                                <span>{item.title}</span>
-                                            </Link>
-                                        );
-                                    })}
-                                </div>
+                            <div className="flex items-center gap-2">
+                                <span className="text-muted-foreground">OS</span>
+                                <span className="font-medium">Ubuntu 24.04</span>
                             </div>
-                        </nav>
-
-                        {/* Server Info Footer */}
-                        <div className="border-t p-3">
-                            <Link
-                                href={showServer(server.id).url}
-                                className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm hover:bg-accent transition-colors"
-                            >
-                                <Server className="size-4 text-muted-foreground flex-shrink-0" />
-                                <div className="flex-1 min-w-0">
-                                    <p className="font-medium truncate">{server.vanity_name}</p>
-                                    <p className="text-xs text-muted-foreground">Server #{server.id}</p>
-                                </div>
-                            </Link>
                         </div>
                     </div>
-                </aside>
+                    <div className="flex items-center gap-2">
+                        <Button variant="outline" size="default">
+                            Self Help
+                        </Button>
+                        <Button variant="outline" size="default">
+                            Edit Files
+                        </Button>
+                        <Button size="default" className="bg-emerald-600 hover:bg-emerald-700">
+                            Deploy Now
+                        </Button>
+                    </div>
+                </div>
+            </div>
+
+            <div className="flex h-full">
+                <NavigationSidebar>
+                    <div className="space-y-4">
+                        <NavigationCard items={siteNavItems} />
+                        <NavigationCard
+                            items={[
+                                {
+                                    title: 'Back to Server',
+                                    href: showServer(server.id).url,
+                                    icon: Server,
+                                    isActive: false,
+                                },
+                            ]}
+                        />
+                    </div>
+                </NavigationSidebar>
 
                 {/* Main Content */}
                 <main className="flex-1 overflow-auto">

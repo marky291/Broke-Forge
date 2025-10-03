@@ -1,6 +1,7 @@
+import { CardContainerAddButton } from '@/components/card-container-add-button';
 import DeployServerModal from '@/components/deploy-server-modal';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { CardContainer } from '@/components/ui/card-container';
 import { cn } from '@/lib/utils';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
@@ -14,13 +15,11 @@ import {
     FileText,
     Globe,
     Plus,
-    Rocket,
     Server as ServerIcon,
-    Settings,
-    TrendingUp,
     Users,
     Zap
 } from 'lucide-react';
+import { useState } from 'react';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -43,19 +42,7 @@ type Server = {
 
 export default function Dashboard({ activities, servers }: { activities: Activity[]; servers: Server[] }) {
     const { auth } = usePage<SharedData>().props;
-
-    // Calculate statistics
-    const stats = {
-        totalServers: servers.length,
-        activeServers: servers.filter(s => s.connection === 'connected').length,
-        pendingServers: servers.filter(s => s.provision_status === 'pending' || s.provision_status === 'installing').length,
-        recentActivity: activities.filter(a => {
-            const date = new Date(a.created_at);
-            const dayAgo = new Date();
-            dayAgo.setDate(dayAgo.getDate() - 1);
-            return date > dayAgo;
-        }).length
-    };
+    const [showDeployModal, setShowDeployModal] = useState(false);
 
     const getTimeAgo = (dateString: string) => {
         const date = new Date(dateString);
@@ -72,108 +59,25 @@ export default function Dashboard({ activities, servers }: { activities: Activit
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Dashboard" />
-            <div className="space-y-8">
-                {/* Welcome Section */}
-                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-background border">
-                    <div className="absolute inset-0 bg-grid-white/10 [mask-image:linear-gradient(0deg,transparent,rgba(255,255,255,0.5))]" />
-                    <div className="relative px-6 py-8 sm:px-8 sm:py-10">
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
-                            <div>
-                                <h1 className="text-3xl font-bold tracking-tight">
-                                    Welcome back, {auth.user.name.split(' ')[0]}!
-                                </h1>
-                                <p className="mt-2 text-muted-foreground">
-                                    Here's an overview of your infrastructure and recent activity
-                                </p>
-                            </div>
-                            <DeployServerModal
-                                trigger={
-                                    <Button size="lg" className="shadow-lg">
-                                        <Plus className="mr-2 size-5" />
-                                        Deploy New Server
-                                    </Button>
-                                }
-                            />
-                        </div>
-                    </div>
-                </div>
-
-                {/* Statistics Cards */}
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Total Servers</CardTitle>
-                            <ServerIcon className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{stats.totalServers}</div>
-                            <p className="text-xs text-muted-foreground mt-1">
-                                {stats.activeServers} active, {stats.totalServers - stats.activeServers} inactive
-                            </p>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Active Servers</CardTitle>
-                            <Activity className="h-4 w-4 text-green-600" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{stats.activeServers}</div>
-                            <p className="text-xs text-muted-foreground mt-1">
-                                {stats.totalServers > 0 ? Math.round((stats.activeServers / stats.totalServers) * 100) : 0}% online
-                            </p>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Pending Setup</CardTitle>
-                            <Clock className="h-4 w-4 text-amber-600" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{stats.pendingServers}</div>
-                            <p className="text-xs text-muted-foreground mt-1">
-                                {stats.pendingServers === 1 ? 'Server' : 'Servers'} being provisioned
-                            </p>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Recent Activity</CardTitle>
-                            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{stats.recentActivity}</div>
-                            <p className="text-xs text-muted-foreground mt-1">
-                                Events in last 24 hours
-                            </p>
-                        </CardContent>
-                    </Card>
-                </div>
-
-                {/* Main Content Grid */}
-                <div className="grid gap-6 lg:grid-cols-3">
-                    {/* Servers Section - 2 columns wide */}
-                    <div className="lg:col-span-2 space-y-6">
-                        <Card>
-                            <CardHeader>
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <CardTitle>Your Servers</CardTitle>
-                                        <CardDescription>Manage and monitor your server infrastructure</CardDescription>
-                                    </div>
-                                    <Button variant="outline" size="sm" asChild>
-                                        <Link href="/servers">
-                                            View All
-                                            <ArrowRight className="ml-2 size-4" />
-                                        </Link>
-                                    </Button>
-                                </div>
-                            </CardHeader>
-                            <CardContent>
-                                {servers && servers.length > 0 ? (
+            <div className="space-y-6">
+                {/* Servers Section */}
+                <CardContainer
+                    title="Servers"
+                    action={
+                        <DeployServerModal
+                            open={showDeployModal}
+                            onOpenChange={setShowDeployModal}
+                            trigger={
+                                <CardContainerAddButton
+                                    label="Add Server"
+                                    onClick={() => setShowDeployModal(true)}
+                                    aria-label="Deploy Server"
+                                />
+                            }
+                        />
+                    }
+                >
+                    {servers && servers.length > 0 ? (
                                     <div className="space-y-4">
                                         {servers.slice(0, 3).map((s) => {
                                             const status = s.connection ?? 'pending';
@@ -189,7 +93,7 @@ export default function Dashboard({ activities, servers }: { activities: Activit
 
                                             return (
                                                 <Link key={s.id} href={serverUrl} className="block group">
-                                                    <div className="relative overflow-hidden rounded-lg border bg-card p-6 transition-all hover:shadow-md hover:border-primary/50">
+                                                    <div className="">
                                                         <div className="flex items-start justify-between">
                                                             <div className="flex-1">
                                                                 <div className="flex items-center gap-3 mb-2">
@@ -245,62 +149,20 @@ export default function Dashboard({ activities, servers }: { activities: Activit
                                         />
                                     </div>
                                 )}
-                            </CardContent>
-                        </Card>
+                </CardContainer>
 
-                        {/* Quick Actions */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Quick Actions</CardTitle>
-                                <CardDescription>Common tasks and shortcuts</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <Button variant="outline" className="justify-start" asChild>
-                                        <Link href="/sites">
-                                            <Globe className="mr-2 size-4" />
-                                            Manage Sites
-                                        </Link>
-                                    </Button>
-                                    <Button variant="outline" className="justify-start" asChild>
-                                        <Link href="/database">
-                                            <FileText className="mr-2 size-4" />
-                                            Databases
-                                        </Link>
-                                    </Button>
-                                    <Button variant="outline" className="justify-start" asChild>
-                                        <Link href="/settings">
-                                            <Settings className="mr-2 size-4" />
-                                            Settings
-                                        </Link>
-                                    </Button>
-                                    <Button variant="outline" className="justify-start" asChild>
-                                        <Link href="/docs">
-                                            <Rocket className="mr-2 size-4" />
-                                            Docs
-                                        </Link>
-                                    </Button>
-                                </div>
-                            </CardContent>
-                        </Card>
+                {/* Sites Section */}
+                <CardContainer title="Sites">
+                    <div className="text-center py-12">
+                        <Globe className="mx-auto size-12 text-muted-foreground/30" />
+                        <h3 className="mt-4 text-sm font-medium">No sites configured</h3>
+                        <p className="mt-1 text-sm text-muted-foreground">Sites will appear here once you add them to your servers</p>
                     </div>
+                </CardContainer>
 
-                    {/* Right Column - Activity Feed */}
-                    <div className="space-y-6">
-                        <Card className="h-fit">
-                            <CardHeader>
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <CardTitle>Recent Activity</CardTitle>
-                                        <CardDescription>Latest events and changes</CardDescription>
-                                    </div>
-                                    <Button variant="ghost" size="sm">
-                                        <Clock className="size-4" />
-                                    </Button>
-                                </div>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="space-y-4 max-h-[500px] overflow-y-auto">
+                {/* Recent Activity Section */}
+                <CardContainer title="Recent Activity">
+                    <div className="space-y-4">
                                     {activities && activities.length > 0 ? (
                                         activities.slice(0, 10).map((activity) => {
                                             const activityIcons: Record<string, any> = {
@@ -342,11 +204,8 @@ export default function Dashboard({ activities, servers }: { activities: Activit
                                             <p className="text-xs text-muted-foreground mt-1">Activity will appear here as you use the platform</p>
                                         </div>
                                     )}
-                                </div>
-                            </CardContent>
-                        </Card>
                     </div>
-                </div>
+                </CardContainer>
             </div>
         </AppLayout>
     );

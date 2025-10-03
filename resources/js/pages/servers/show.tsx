@@ -1,6 +1,6 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { CardContainer } from '@/components/ui/card-container';
 import ServerLayout from '@/layouts/server/layout';
 import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
@@ -124,11 +124,8 @@ export default function Show({ server }: { server: Server }) {
                 {/* Main Content Grid */}
                 <div className="grid gap-6 lg:grid-cols-2">
                     {/* Server Information */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-base">Server Information</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
+                    <CardContainer title="Server Information">
+                        <div className="space-y-3">
                             <div className="flex justify-between py-2 border-b">
                                 <span className="text-sm text-muted-foreground">Public IP</span>
                                 <span className="text-sm font-medium">{server.public_ip}</span>
@@ -147,16 +144,12 @@ export default function Show({ server }: { server: Server }) {
                                     {new Date(server.created_at).toLocaleDateString()}
                                 </span>
                             </div>
-                        </CardContent>
-                    </Card>
+                        </div>
+                    </CardContainer>
 
                     {/* Quick Links */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-base">Quick Access</CardTitle>
-                            <CardDescription>Common server management tasks</CardDescription>
-                        </CardHeader>
-                        <CardContent className="grid grid-cols-2 gap-3">
+                    <CardContainer title="Quick Access" description="Common server management tasks">
+                        <div className="grid grid-cols-2 gap-3">
                             <Button variant="outline" className="justify-start" asChild>
                                 <Link href={`/servers/${server.id}/sites`}>
                                     Sites
@@ -177,39 +170,31 @@ export default function Show({ server }: { server: Server }) {
                                     File Explorer
                                 </Link>
                             </Button>
-                        </CardContent>
-                    </Card>
+                        </div>
+                    </CardContainer>
                 </div>
 
                 {/* Danger Zone */}
-                <Card className="border-red-200 dark:border-red-900">
-                    <CardHeader>
-                        <CardTitle className="text-base text-red-600">Danger Zone</CardTitle>
-                        <CardDescription>
-                            Irreversible and destructive actions
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={handleDestroyServer}
-                            disabled={isDestroying}
-                        >
-                            {isDestroying ? (
-                                <>
-                                    <Loader2 className="mr-2 size-4 animate-spin" />
-                                    Destroying...
-                                </>
-                            ) : (
-                                <>
-                                    <Trash2 className="mr-2 size-4" />
-                                    Destroy Server
-                                </>
-                            )}
-                        </Button>
-                    </CardContent>
-                </Card>
+                <CardContainer title="Danger Zone" description="Irreversible and destructive actions" className="border-red-200 dark:border-red-900">
+                    <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={handleDestroyServer}
+                        disabled={isDestroying}
+                    >
+                        {isDestroying ? (
+                            <>
+                                <Loader2 className="mr-2 size-4 animate-spin" />
+                                Destroying...
+                            </>
+                        ) : (
+                            <>
+                                <Trash2 className="mr-2 size-4" />
+                                Destroy Server
+                            </>
+                        )}
+                    </Button>
+                </CardContainer>
             </div>
         </ServerLayout>
     );

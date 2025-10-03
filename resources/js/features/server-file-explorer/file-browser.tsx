@@ -1,8 +1,8 @@
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
+import { CardContainer } from '@/components/ui/card-container';
+import { PageHeader } from '@/components/ui/page-header';
 import { cn } from '@/lib/utils';
 import { Download, FileText, Folder, FolderOpen, Loader2, RefreshCw, Upload } from 'lucide-react';
 import { useMemo, useRef, type ChangeEvent } from 'react';
@@ -77,14 +77,10 @@ export const ServerFileBrowser = ({ state, onNavigate, onNavigateUp, onRefresh, 
     };
 
     return (
-        <div className="space-y-4">
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <div>
-                    <h2 className="text-2xl font-semibold">File Explorer</h2>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                        Browse the server&rsquo;s application directory, upload assets, or download existing files.
-                    </p>
-                </div>
+        <PageHeader
+            title="File Explorer"
+            description="Browse the server's application directory, upload assets, or download existing files."
+            action={
                 <div className="flex items-center gap-2">
                     <Button variant="outline" size="sm" onClick={onNavigateUp} disabled={!state.currentPath || state.loading}>
                         Up
@@ -98,8 +94,8 @@ export const ServerFileBrowser = ({ state, onNavigate, onNavigateUp, onRefresh, 
                         Upload
                     </Button>
                 </div>
-            </div>
-
+            }
+        >
             <Breadcrumb>
                 <BreadcrumbList>
                     <BreadcrumbItem>
@@ -150,13 +146,8 @@ export const ServerFileBrowser = ({ state, onNavigate, onNavigateUp, onRefresh, 
                 </Alert>
             )}
 
-            <Card>
-                <CardHeader className="flex items-center justify-between">
-                    <CardTitle className="text-base font-medium">{state.currentPath || 'Home'}</CardTitle>
-                </CardHeader>
-                <Separator />
-                <CardContent className="p-0">
-                    <div className="relative">
+            <CardContainer title={state.currentPath || 'Home'}>
+                <div className="relative">
                         {state.loading && (
                             <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/70">
                                 <Loader2 className="h-6 w-6 animate-spin" />
@@ -215,10 +206,9 @@ export const ServerFileBrowser = ({ state, onNavigate, onNavigateUp, onRefresh, 
                                 ))}
                             </div>
                         )}
-                    </div>
-                </CardContent>
-            </Card>
-        </div>
+                </div>
+            </CardContainer>
+        </PageHeader>
     );
 };
 

@@ -1,6 +1,7 @@
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { CardContainer } from '@/components/ui/card-container';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -156,16 +157,7 @@ export default function SiteGitRepository({ server, site, gitRepository, flash, 
             <SiteLayout server={server} site={site} breadcrumbs={breadcrumbs}>
                 <Head title={`Git Repository — ${site.domain}`} />
 
-                <div className="space-y-8">
-                    <div className="space-y-2">
-                        <h1 className="text-2xl font-semibold">Git Repository</h1>
-                        <p className="text-sm text-muted-foreground">
-                            {site.git_status === GitStatus.Installed
-                                ? 'Your repository is connected and ready for deployments.'
-                                : 'Repository configuration details. Installation failed - please retry.'}
-                        </p>
-                    </div>
-
+                <div className="space-y-6">
                     {flash?.success && (
                         <Alert>
                             <CheckCircle className="h-4 w-4" />
@@ -194,99 +186,107 @@ export default function SiteGitRepository({ server, site, gitRepository, flash, 
                         </Alert>
                     )}
 
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <GitBranch className="h-5 w-5" />
-                                Application Information
-                            </CardTitle>
-                            <CardDescription>Repository details and deployment status</CardDescription>
-                        </CardHeader>
-                        <Separator />
-                        <CardContent className="py-6">
-                            <dl className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
-                                <div>
-                                    <dt className="text-sm font-medium text-muted-foreground">Application</dt>
-                                    <dd className="mt-1 text-sm">{gitRepository.repository}</dd>
-                                </div>
-                                <div>
-                                    <dt className="text-sm font-medium text-muted-foreground">Branch</dt>
-                                    <dd className="mt-1 text-sm">{gitRepository.branch}</dd>
-                                </div>
-                                <div>
-                                    <dt className="text-sm font-medium text-muted-foreground">HTTPS</dt>
-                                    <dd className="mt-1 text-sm">{site.status === 'active' ? 'Enabled' : 'Disabled'}</dd>
-                                </div>
-                                <div>
-                                    <dt className="text-sm font-medium text-muted-foreground">PHP Version</dt>
-                                    <dd className="mt-1 text-sm">PHP 8.3</dd>
-                                </div>
-                                <div>
-                                    <dt className="text-sm font-medium text-muted-foreground">Quick Deploy</dt>
-                                    <dd className="mt-1 text-sm">Enabled</dd>
-                                </div>
-                                <div>
-                                    <dt className="text-sm font-medium text-muted-foreground">Envoyer Integration</dt>
-                                    <dd className="mt-1 text-sm">Disabled</dd>
-                                </div>
-                                <div>
-                                    <dt className="text-sm font-medium text-muted-foreground">Web Directory</dt>
-                                    <dd className="mt-1 font-mono text-sm text-xs">{getWebDirectory(gitRepository.repository)}</dd>
-                                </div>
-                                <div>
-                                    <dt className="text-sm font-medium text-muted-foreground">Last Deployed</dt>
-                                    <dd className="mt-1 text-sm">
-                                        {formatDate(gitRepository.lastDeployedAt)}
-                                        {gitRepository.lastDeployedSha && (
-                                            <>
-                                                {' '}
-                                                • <span className="font-mono">{gitRepository.lastDeployedSha.substring(0, 7)}</span>
-                                            </>
-                                        )}
-                                    </dd>
-                                </div>
-                            </dl>
-                            <div className="mt-6 flex gap-3">
-                                {site.git_status === GitStatus.Installed ? (
-                                    <>
-                                        <Button variant="default">Deploy Now</Button>
-                                        <Button variant="outline">View Deployment History</Button>
-                                        <Button variant="outline">Update Repository</Button>
-                                    </>
-                                ) : (
-                                    <>
-                                        <Button
-                                            variant="default"
-                                            onClick={() => {
-                                                setRetrying(true);
-                                                router.post(
-                                                    `/servers/${server.id}/sites/${site.id}/application`,
-                                                    {
-                                                        provider: gitRepository?.provider ?? DEFAULT_PROVIDER,
-                                                        repository: gitRepository?.repository ?? '',
-                                                        branch: gitRepository?.branch ?? DEFAULT_BRANCH,
-                                                    },
-                                                    {
-                                                        onSuccess: () => router.reload(),
-                                                        onFinish: () => setRetrying(false),
-                                                    }
-                                                );
-                                            }}
-                                            disabled={retrying}
-                                        >
-                                            {retrying ? 'Retrying...' : 'Retry Installation'}
-                                        </Button>
-                                        <Button
-                                            variant="outline"
-                                            onClick={() => router.visit(`/servers/${server.id}/sites/${site.id}/application`)}
-                                        >
-                                            Edit Configuration
-                                        </Button>
-                                    </>
-                                )}
+                    {/* Application Section */}
+                    <CardContainer title="Application">
+                        <div className="flex items-center gap-2.5 mb-6">
+                            <GitBranch className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm font-medium">{gitRepository.repository}</span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-6">
+                            <div>
+                                <div className="text-xs text-muted-foreground mb-1.5">HTTPS</div>
+                                <div className="text-sm">{site.status === 'active' ? 'Disabled' : 'Disabled'}</div>
                             </div>
-                        </CardContent>
-                    </Card>
+                            <div>
+                                <div className="text-xs text-muted-foreground mb-1.5">PHP Version</div>
+                                <div className="text-sm">PHP 8.3</div>
+                            </div>
+                            <div>
+                                <div className="text-xs text-muted-foreground mb-1.5">Quick Deploy</div>
+                                <div className="text-sm">Enabled</div>
+                            </div>
+                            <div>
+                                <div className="text-xs text-muted-foreground mb-1.5">Envoyer Integration</div>
+                                <div className="text-sm">Disabled</div>
+                            </div>
+                            <div>
+                                <div className="text-xs text-muted-foreground mb-1.5">Web Directory</div>
+                                <div className="text-sm font-mono text-xs">{getWebDirectory(gitRepository.repository)}</div>
+                            </div>
+                            <div>
+                                <div className="text-xs text-muted-foreground mb-1.5">Last Deployed</div>
+                                <div className="text-sm">
+                                    {formatDate(gitRepository.lastDeployedAt)}
+                                    {gitRepository.lastDeployedSha && (
+                                        <> • <span className="font-mono text-xs text-muted-foreground">{gitRepository.lastDeployedSha.substring(0, 7)}</span></>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </CardContainer>
+
+                    {/* Laravel Section */}
+                    <CardContainer title="Laravel">
+                        <Alert className="border-muted-foreground/20 bg-muted/30">
+                            <AlertCircle className="h-4 w-4" />
+                            <AlertDescription className="text-sm leading-relaxed">
+                                Forge can manage your application's Laravel scheduler, Horizon, Octane, Pulse, Reverb and Inertia integrations. To get started, your
+                                project must have Laravel, Horizon, Octane, Pulse, Reverb, or Inertia 0.5.6 or above installed.
+                            </AlertDescription>
+                        </Alert>
+                    </CardContainer>
+
+                    {/* Update Git Remote Section */}
+                    <CardContainer title="Update Git Remote">
+                        <Alert className="mb-6 border-muted-foreground/20 bg-muted/30">
+                            <AlertCircle className="h-4 w-4" />
+                            <AlertDescription className="text-sm leading-relaxed">
+                                This setting determines the Git remote URL on your server; however, the site will not be removed or become unavailable during the process.
+                                The updated Git remote must contain the same repository / Git history as the currently installed repository.{' '}
+                                <strong>You should not use this function to install an entirely different project onto this site.</strong> If you would like to install
+                                an entirely different project, you should completely uninstall the existing repository using the "Uninstall Repository" button below.
+                            </AlertDescription>
+                        </Alert>
+
+                        <div className="space-y-4">
+                            <div>
+                                <Label className="text-sm mb-2 block">Provider</Label>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <button
+                                        type="button"
+                                        className="flex items-center justify-center gap-2 rounded-md border-2 border-primary bg-transparent px-4 py-2.5 text-sm font-medium transition-colors hover:bg-accent"
+                                    >
+                                        <GitBranch className="h-4 w-4" />
+                                        <span>GitHub</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="flex items-center justify-center gap-2 rounded-md border-2 border-muted bg-transparent px-4 py-2.5 text-sm font-medium transition-colors hover:bg-accent"
+                                    >
+                                        <GitBranch className="h-4 w-4" />
+                                        <span>Custom</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <Label htmlFor="update-repository" className="text-sm mb-2 block">
+                                    Repository
+                                </Label>
+                                <Input
+                                    id="update-repository"
+                                    type="text"
+                                    placeholder="e.g. organisation/project"
+                                    className="w-full"
+                                />
+                            </div>
+
+                            <div className="flex justify-end pt-2">
+                                <Button>Update Git Remote</Button>
+                            </div>
+                        </div>
+                    </CardContainer>
                 </div>
             </SiteLayout>
         );
