@@ -9,6 +9,7 @@ interface ServerLayoutProps extends PropsWithChildren {
         vanity_name: string;
         connection: string;
         public_ip?: string;
+        private_ip?: string;
     };
     breadcrumbs?: BreadcrumbItem[];
     site?: {

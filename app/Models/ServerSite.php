@@ -30,6 +30,7 @@ class ServerSite extends Model
         'ssl_key_path',
         'nginx_config_path',
         'status',
+        'health',
         'git_status',
         'configuration',
         'provisioned_at',

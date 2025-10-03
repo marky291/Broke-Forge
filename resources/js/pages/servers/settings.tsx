@@ -8,7 +8,8 @@ import ServerLayout from '@/layouts/server/layout';
 import { dashboard } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Form, Head, router } from '@inertiajs/react';
-import { GithubIcon } from 'lucide-react';
+import { GithubIcon, Loader2, Trash2 } from 'lucide-react';
+import { useState } from 'react';
 
 type Server = {
     id: number;
@@ -30,11 +31,24 @@ type SourceProvider = {
 } | null;
 
 export default function Settings({ server, githubProvider }: { server: Server; githubProvider: SourceProvider }) {
+    const [isDestroying, setIsDestroying] = useState(false);
+
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard.url() },
         { title: `Server #${server.id}`, href: `/servers/${server.id}` },
         { title: 'Settings', href: '#' },
     ];
+
+    const handleDestroyServer = () => {
+        const confirmed = window.confirm('Are you sure you want to destroy this server? This action cannot be undone.');
+        if (confirmed) {
+            setIsDestroying(true);
+            router.delete(`/servers/${server.id}`, {
+                onFinish: () => setIsDestroying(false),
+                onError: () => setIsDestroying(false),
+            });
+        }
+    };
 
     return (
         <ServerLayout server={server} breadcrumbs={breadcrumbs}>
@@ -176,6 +190,28 @@ export default function Settings({ server, githubProvider }: { server: Server; g
                             </div>
                         )}
                     </div>
+                </CardContainer>
+
+                {/* Danger Zone */}
+                <CardContainer title="Danger Zone" description="Irreversible and destructive actions" className="border-red-200 dark:border-red-900">
+                    <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={handleDestroyServer}
+                        disabled={isDestroying}
+                    >
+                        {isDestroying ? (
+                            <>
+                                <Loader2 className="mr-2 size-4 animate-spin" />
+                                Destroying...
+                            </>
+                        ) : (
+                            <>
+                                <Trash2 className="mr-2 size-4" />
+                                Destroy Server
+                            </>
+                        )}
+                    </Button>
                 </CardContainer>
             </PageHeader>
         </ServerLayout>

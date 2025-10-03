@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Exceptions\ServerFileExplorerException;
+use App\Http\Controllers\Concerns\PreparesSiteData;
 use App\Http\Requests\Servers\ServerFileDownloadRequest;
 use App\Http\Requests\Servers\ServerFileIndexRequest;
 use App\Http\Requests\Servers\ServerFileUploadRequest;
@@ -16,26 +17,13 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class ServerFileExplorerController extends Controller
 {
+    use PreparesSiteData;
+
     public function show(Server $server, ServerSite $site): Response
     {
         return Inertia::render('servers/explorer', [
-            'server' => $server->only([
-                'id',
-                'vanity_name',
-                'public_ip',
-                'ssh_port',
-                'private_ip',
-                'connection',
-                'created_at',
-                'updated_at',
-            ]),
-            'site' => $site->only([
-                'id',
-                'domain',
-                'document_root',
-                'status',
-                'git_status',
-            ]),
+            'server' => $this->prepareServerData($server, ['ssh_port']),
+            'site' => $this->prepareSiteData($site, ['document_root']),
         ]);
     }
 

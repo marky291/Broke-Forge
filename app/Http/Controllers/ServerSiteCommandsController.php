@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\PreparesSiteData;
 use App\Http\Requests\Servers\ExecuteSiteCommandRequest;
 use App\Models\Server;
 use App\Models\ServerSite;
@@ -13,31 +14,16 @@ use Inertia\Response;
 
 class ServerSiteCommandsController extends Controller
 {
+    use PreparesSiteData;
+
     public function __invoke(Server $server, ServerSite $site): Response
     {
-        $serverDetails = $server->only([
-            'id',
-            'vanity_name',
-            'connection',
-        ]);
-
-        $siteDetails = $site->only([
-            'id',
-            'domain',
-            'document_root',
-            'status',
-            'git_status',
-        ]);
-
-        $siteIdentifier = $site->domain
-            ?: (string) $site->id;
-
-        $workingDirectory = $site->document_root
-            ?: sprintf('/home/brokeforge/%s', $siteIdentifier);
+        $siteIdentifier = $site->domain ?: (string) $site->id;
+        $workingDirectory = $site->document_root ?: sprintf('/home/brokeforge/%s', $siteIdentifier);
 
         return Inertia::render('servers/site-commands', [
-            'server' => $serverDetails,
-            'site' => $siteDetails,
+            'server' => $this->prepareServerData($server),
+            'site' => $this->prepareSiteData($site, ['document_root']),
             'executionContext' => [
                 'workingDirectory' => $workingDirectory,
                 'user' => $server->credential('brokeforge')?->getUsername() ?: 'brokeforge',

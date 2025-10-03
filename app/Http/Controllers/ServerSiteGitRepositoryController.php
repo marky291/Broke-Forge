@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\PreparesSiteData;
 use App\Http\Requests\Servers\InstallSiteGitRepositoryRequest;
 use App\Models\Server;
 use App\Models\ServerCredential;
@@ -16,6 +17,8 @@ use Inertia\Response;
 
 class ServerSiteGitRepositoryController extends Controller
 {
+    use PreparesSiteData;
+
     /**
      * Display the Git repository setup workflow.
      */
@@ -28,8 +31,8 @@ class ServerSiteGitRepositoryController extends Controller
         }
 
         return Inertia::render('servers/site-git-repository', [
-            'server' => $this->getServerData($server),
-            'site' => $this->getSiteData($site),
+            'server' => $this->prepareServerData($server),
+            'site' => $this->prepareSiteData($site, ['git_installed_at']),
             'gitRepository' => $this->getGitRepositoryData($site),
             'flash' => $flash,
         ]);
@@ -69,28 +72,6 @@ class ServerSiteGitRepositoryController extends Controller
         return redirect()
             ->route('servers.sites.application', [$server, $site])
             ->with('info', 'Repository installation started. This may take a few minutes.');
-    }
-
-    /**
-     * Get server data for the view.
-     */
-    protected function getServerData(Server $server): array
-    {
-        return $server->only(['id', 'vanity_name', 'connection']);
-    }
-
-    /**
-     * Get site data for the view.
-     */
-    protected function getSiteData(ServerSite $site): array
-    {
-        return array_merge(
-            $site->only(['id', 'domain', 'status']),
-            [
-                'git_status' => $site->git_status?->value,
-                'git_installed_at' => $site->git_installed_at?->toISOString(),
-            ]
-        );
     }
 
     /**

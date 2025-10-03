@@ -3,11 +3,12 @@ import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type NavItem } from '@/types';
 import { usePage } from '@inertiajs/react';
 import {
+    ArrowLeft,
     CodeIcon,
     DatabaseIcon,
-    Folder,
     Globe,
     Home,
+    Server,
     Settings,
     Shield,
 } from 'lucide-react';
@@ -19,6 +20,7 @@ interface ServerContentLayoutProps extends PropsWithChildren {
         vanity_name: string;
         connection?: string;
         public_ip?: string;
+        private_ip?: string;
     };
     breadcrumbs?: BreadcrumbItem[];
 }
@@ -31,37 +33,35 @@ export default function ServerContentLayout({ children, server, breadcrumbs }: S
     const [path = ''] = url.split('?');
 
     // Determine current active section
-    let currentSection: string = 'overview';
+    let currentSection: string = 'server';
 
-    if (path.endsWith(`/servers/${server.id}`) || path.endsWith(`/servers/${server.id}/`)) {
-        currentSection = 'overview';
-    } else if (path.includes('/sites')) {
-        currentSection = 'sites';
+    if (path.endsWith(`/servers/${server.id}`) || path.endsWith(`/servers/${server.id}/`) || path.includes('/sites')) {
+        currentSection = 'server';
     } else if (path.includes('/php')) {
         currentSection = 'php';
     } else if (path.includes('/database')) {
         currentSection = 'database';
     } else if (path.includes('/firewall')) {
         currentSection = 'firewall';
-    } else if (path.includes('/explorer')) {
-        currentSection = 'explorer';
     } else if (path.includes('/settings')) {
         currentSection = 'settings';
     }
 
+    // Back to dashboard navigation
+    const backToDashboardNav: NavItem = {
+        title: 'Back to Dashboard',
+        href: '/dashboard',
+        icon: ArrowLeft,
+        isActive: false,
+    };
+
     // Server navigation items
     const serverNavItems: NavItem[] = [
         {
-            title: 'Overview',
+            title: 'Manage Sites',
             href: `/servers/${server.id}`,
-            icon: Home,
-            isActive: currentSection === 'overview',
-        },
-        {
-            title: 'Sites',
-            href: `/servers/${server.id}/sites`,
             icon: Globe,
-            isActive: currentSection === 'sites',
+            isActive: currentSection === 'server',
         },
         {
             title: 'PHP',
@@ -80,12 +80,6 @@ export default function ServerContentLayout({ children, server, breadcrumbs }: S
             href: `/servers/${server.id}/firewall`,
             icon: Shield,
             isActive: currentSection === 'firewall',
-        },
-        {
-            title: 'Explorer',
-            href: `/servers/${server.id}/explorer`,
-            icon: Folder,
-            isActive: currentSection === 'explorer',
         },
         {
             title: 'Settings',
@@ -113,9 +107,47 @@ export default function ServerContentLayout({ children, server, breadcrumbs }: S
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <div className="flex h-full">
+            {/* Server Header */}
+            <div className="bg-card px-8 py-4 border-b">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-8">
+                        {/* Title */}
+                        <div className="flex items-center gap-3">
+                            <div className="flex items-center justify-center w-8 h-8 rounded-md bg-secondary/50">
+                                <Server className="h-4 w-4 text-muted-foreground" />
+                            </div>
+                            <h1 className="text-xl font-semibold text-foreground">{server.vanity_name}</h1>
+                        </div>
+
+                        {/* Server Info */}
+                        <div className="flex items-center gap-8 text-sm border-l pl-8">
+                            <div>
+                                <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Public IP</div>
+                                <div className="font-medium">{server.public_ip || 'N/A'}</div>
+                            </div>
+                            <div>
+                                <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Private IP</div>
+                                <div className="font-medium">{server.private_ip || 'N/A'}</div>
+                            </div>
+                            <div>
+                                <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Region</div>
+                                <div className="font-medium">Frankfurt</div>
+                            </div>
+                            <div>
+                                <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">OS</div>
+                                <div className="font-medium">Ubuntu 24.04</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="flex h-full mt-6">
                 <NavigationSidebar>
-                    <NavigationCard items={serverNavItems} />
+                    <div className="space-y-6">
+                        <NavigationCard items={[backToDashboardNav]} />
+                        <NavigationCard title="Server" items={serverNavItems} />
+                    </div>
                 </NavigationSidebar>
 
                 {/* Main Content */}

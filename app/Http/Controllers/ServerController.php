@@ -50,8 +50,18 @@ class ServerController extends Controller
 
     public function show(Server $server): Response
     {
+        $sites = $server->sites()
+            ->select(['id', 'domain', 'document_root', 'php_version', 'ssl_enabled', 'status', 'configuration', 'git_status', 'provisioned_at'])
+            ->latest()
+            ->get()
+            ->map(fn ($site) => array_merge(
+                $site->only(['id', 'domain', 'document_root', 'php_version', 'ssl_enabled', 'status', 'configuration', 'git_status', 'provisioned_at']),
+                ['provisioned_at_human' => $site->provisioned_at?->diffForHumans()]
+            ));
+
         return Inertia::render('servers/show', [
             'server' => $server->only(['id', 'vanity_name', 'public_ip', 'ssh_port', 'private_ip', 'connection', 'created_at', 'updated_at']),
+            'sites' => ['data' => $sites],
         ]);
     }
 

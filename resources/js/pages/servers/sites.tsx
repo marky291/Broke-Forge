@@ -14,7 +14,7 @@ import { show as showServer } from '@/routes/servers';
 import { show as showSite } from '@/routes/servers/sites';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/react';
-import { CheckCircle, Clock, FileCode2, GitBranch, Globe, Loader2, Lock, Plus, XCircle } from 'lucide-react';
+import { CheckCircle, ChevronRight, Clock, FileCode2, GitBranch, Globe, Loader2, Lock, Plus, XCircle } from 'lucide-react';
 import { useState } from 'react';
 
 type ServerType = {
@@ -193,67 +193,70 @@ export default function Sites({ server, sites }: SitesProps) {
                     }
                 >
                     {sites.data.length > 0 ? (
-                        <div className="space-y-2">
-                                {/* Table Headers */}
-                                <div className="grid grid-cols-[2fr_3rem_3rem_4rem_7rem] gap-4 px-4 py-2 text-sm font-medium text-muted-foreground border-b">
-                                    <div>Site</div>
-                                    <div className="text-center">
-                                        <GitBranch className="h-3.5 w-3.5 mx-auto" />
-                                    </div>
-                                    <div className="text-center">
-                                        <Lock className="h-3.5 w-3.5 mx-auto" />
-                                    </div>
-                                    <div className="text-center">PHP</div>
-                                    <div className="text-right">Deployed</div>
-                                </div>
+                        <div className="divide-y divide-border/50">
+                            {sites.data.map((site) => (
+                                <Link
+                                    key={site.id}
+                                    href={showSite({ server: server.id, site: site.id }).url}
+                                    className="block group"
+                                >
+                                    <div className="px-6 py-5 hover:bg-muted/30 transition-colors">
+                                        <div className="flex items-center gap-6">
+                                            {/* Icon */}
+                                            <div className="flex items-center justify-center w-11 h-11 rounded-lg bg-primary/10 flex-shrink-0">
+                                                <Globe className="h-5 w-5 text-primary" />
+                                            </div>
 
-                                {/* Table Rows */}
-                                <div className="divide-y">
-                                    {sites.data.map((site) => (
-                                    <Link
-                                        key={site.id}
-                                        href={showSite({ server: server.id, site: site.id }).url}
-                                        className="block"
-                                    >
-                                        <div className="grid grid-cols-[2fr_3rem_3rem_4rem_7rem] gap-4 px-4 py-3 items-center hover:bg-muted/50 transition-all">
-                                            {/* Site Name & Git Info Column */}
-                                            <div className="min-w-0">
-                                                <h3 className="text-sm truncate">{site.domain}</h3>
+                                            {/* Site Info */}
+                                            <div className="flex-1 min-w-0">
+                                                <h3 className="text-base font-semibold text-foreground truncate group-hover:text-primary transition-colors mb-1">
+                                                    {site.domain}
+                                                </h3>
                                                 {site.configuration?.git_repository?.repository ? (
-                                                    <p className="text-xs text-muted-foreground mt-0.5">
-                                                        • {site.configuration.git_repository.repository}
-                                                        {site.configuration.git_repository.branch && `:${site.configuration.git_repository.branch}`}
-                                                    </p>
+                                                    <div className="flex items-center gap-2">
+                                                        <GitBranch className="h-3.5 w-3.5 text-muted-foreground/60 flex-shrink-0" />
+                                                        <p className="text-sm text-muted-foreground truncate">
+                                                            {site.configuration.git_repository.repository}
+                                                            {site.configuration.git_repository.branch && (
+                                                                <span className="text-muted-foreground/60"> • {site.configuration.git_repository.branch}</span>
+                                                            )}
+                                                        </p>
+                                                    </div>
                                                 ) : (
-                                                    <p className="text-xs text-muted-foreground mt-0.5">No App Installed</p>
+                                                    <p className="text-sm text-muted-foreground/60">No repository configured</p>
                                                 )}
                                             </div>
 
-                                            {/* Auto Deploy Column */}
-                                            <div className="flex items-center justify-center">
-                                                <GitBranch className={`h-4 w-4 ${site.configuration?.git_repository?.repository ? 'text-blue-600' : 'text-muted-foreground/20'}`} />
-                                            </div>
+                                            {/* Metadata */}
+                                            <div className="flex items-center gap-6 flex-shrink-0">
+                                                {/* SSL */}
+                                                <div className="flex items-center gap-2 min-w-[80px]">
+                                                    <Lock className={`h-4 w-4 flex-shrink-0 ${site.ssl_enabled ? 'text-green-600' : 'text-muted-foreground/30'}`} />
+                                                    <span className="text-sm text-muted-foreground">
+                                                        {site.ssl_enabled ? 'SSL' : 'No SSL'}
+                                                    </span>
+                                                </div>
 
-                                            {/* SSL Column */}
-                                            <div className="flex items-center justify-center">
-                                                <Lock className={`h-4 w-4 ${site.ssl_enabled ? 'text-green-600' : 'text-muted-foreground/20'}`} />
-                                            </div>
+                                                {/* PHP Version */}
+                                                <div className="text-sm min-w-[70px]">
+                                                    <span className="text-muted-foreground">PHP </span>
+                                                    <span className="font-medium text-foreground">{site.php_version}</span>
+                                                </div>
 
-                                            {/* PHP Version Column */}
-                                            <div className="text-sm text-center">
-                                                {site.php_version}
-                                            </div>
+                                                {/* Deployed Time */}
+                                                <div className="text-sm text-muted-foreground min-w-[110px] text-right">
+                                                    {site.provisioned_at_human || 'Not deployed'}
+                                                </div>
 
-                                            {/* Deployed Column */}
-                                            <div className="text-sm text-right">
-                                                {site.provisioned_at_human || 'Never Deployed'}
+                                                {/* Arrow */}
+                                                <ChevronRight className="h-5 w-5 text-muted-foreground/40 group-hover:text-primary group-hover:translate-x-0.5 transition-all flex-shrink-0" />
                                             </div>
                                         </div>
-                                    </Link>
-                                ))}
-                                </div>
-                            </div>
-                        ) : (
+                                    </div>
+                                </Link>
+                            ))}
+                        </div>
+                    ) : (
                             <div className="p-8 text-center">
                                 <Globe className="mx-auto h-12 w-12 text-muted-foreground/50" />
                                 <h3 className="mt-4 text-lg font-semibold">No sites configured</h3>

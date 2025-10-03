@@ -1,19 +1,17 @@
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { NavigationCard, NavigationSidebar } from '@/components/navigation-card';
 import AppLayout from '@/layouts/app-layout';
-import { cn } from '@/lib/utils';
-import { show as showServer } from '@/routes/servers';
+import { cn, formatRelativeTime } from '@/lib/utils';
 import { type BreadcrumbItem, type NavItem } from '@/types';
 import { usePage } from '@inertiajs/react';
 import {
     AppWindow,
-    CodeIcon,
-    DatabaseIcon,
+    ArrowLeft,
     Folder,
+    GitBranch,
     Globe,
     Rocket,
-    Server,
-    Settings,
     Terminal
 } from 'lucide-react';
 import { PropsWithChildren } from 'react';
@@ -30,7 +28,12 @@ interface SiteLayoutProps extends PropsWithChildren {
         id: number;
         domain?: string | null;
         status?: string;
+        health?: string;
         git_status?: string | null;
+        git_provider?: string | null;
+        git_repository?: string | null;
+        git_branch?: string | null;
+        last_deployed_at?: string | null;
     };
     breadcrumbs?: BreadcrumbItem[];
 }
@@ -51,15 +54,15 @@ export default function SiteLayout({ children, server, site, breadcrumbs }: Site
         currentSection = 'site-deployments';
     } else if (path.includes('/explorer')) {
         currentSection = 'explorer';
-    } else if (path.includes('/database')) {
-        currentSection = 'database';
-    } else if (path.includes('/php')) {
-        currentSection = 'php';
-    } else if (path.includes('/sites') && !path.includes(`/sites/${site.id}`)) {
-        currentSection = 'sites';
-    } else if (path.includes('/settings')) {
-        currentSection = 'settings';
     }
+
+    // Back to server navigation
+    const backToServerNav: NavItem = {
+        title: 'Back to Server',
+        href: `/servers/${server.id}`,
+        icon: ArrowLeft,
+        isActive: false,
+    };
 
     // Site-specific navigation items
     const siteNavItems: NavItem[] = [
@@ -93,34 +96,6 @@ export default function SiteLayout({ children, server, site, breadcrumbs }: Site
         });
     }
 
-    // Server navigation items
-    const serverNavItems: NavItem[] = [
-        {
-            title: 'Sites',
-            href: `/servers/${server.id}/sites`,
-            icon: Globe,
-            isActive: currentSection === 'sites',
-        },
-        {
-            title: 'PHP',
-            href: `/servers/${server.id}/php`,
-            icon: CodeIcon,
-            isActive: currentSection === 'php',
-        },
-        {
-            title: 'Database',
-            href: `/servers/${server.id}/database`,
-            icon: DatabaseIcon,
-            isActive: currentSection === 'database',
-        },
-        {
-            title: 'Settings',
-            href: `/servers/${server.id}/settings`,
-            icon: Settings,
-            isActive: currentSection === 'settings',
-        },
-    ];
-
     // Site status indicator
     const getStatusColor = (status?: string) => {
         switch (status) {
@@ -135,60 +110,95 @@ export default function SiteLayout({ children, server, site, breadcrumbs }: Site
         }
     };
 
+    // Site health indicator
+    const getHealthConfig = (health?: string) => {
+        switch (health) {
+            case 'healthy':
+                return { color: 'text-green-600', label: 'Healthy' };
+            case 'unhealthy':
+                return { color: 'text-red-600', label: 'Unhealthy' };
+            default:
+                return { color: 'text-gray-600', label: 'Unknown' };
+        }
+    };
+
+    const healthConfig = getHealthConfig(site.health);
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             {/* Site Header */}
-            <div className="bg-card px-8 py-6">
+            <div className="bg-card px-8 py-4 border-b">
                 <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-xl font-semibold text-foreground mb-4">{site.domain || 'Site'}</h1>
-                        <div className="flex items-center gap-6 text-sm">
-                            <div className="flex items-center gap-2">
-                                <span className="text-muted-foreground">Public IP</span>
-                                <span className="font-medium">{server.public_ip || 'N/A'}</span>
+                    <div className="flex items-center gap-8 flex-1">
+                        {/* Title */}
+                        <div className="flex items-center gap-3">
+                            <div className="flex items-center justify-center w-8 h-8 rounded-md bg-primary/10">
+                                <Globe className="h-4 w-4 text-primary" />
                             </div>
-                            <div className="flex items-center gap-2">
-                                <span className="text-muted-foreground">Private IP</span>
-                                <span className="font-medium">{server.private_ip || 'N/A'}</span>
+                            <h1 className="text-xl font-semibold text-foreground">{site.domain || 'Site'}</h1>
+                        </div>
+
+                        {/* Server Info */}
+                        <div className="flex items-center gap-8 text-sm border-l pl-8">
+                            <div>
+                                <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Public IP</div>
+                                <div className="font-medium">{server.public_ip || 'N/A'}</div>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <span className="text-muted-foreground">Region</span>
-                                <span className="font-medium">Frankfurt</span>
+                            <div>
+                                <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Private IP</div>
+                                <div className="font-medium">{server.private_ip || 'N/A'}</div>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <span className="text-muted-foreground">OS</span>
-                                <span className="font-medium">Ubuntu 24.04</span>
+                            <div>
+                                <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Region</div>
+                                <div className="font-medium">Frankfurt</div>
+                            </div>
+                            <div>
+                                <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">OS</div>
+                                <div className="font-medium">Ubuntu 24.04</div>
                             </div>
                         </div>
+
+                        {/* Git Info */}
+                        {site.git_status === 'installed' && site.git_repository && (
+                            <div className="flex items-center gap-8 text-sm border-l pl-8">
+                                <div>
+                                    <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Repository</div>
+                                    <div className="font-medium">{site.git_repository}</div>
+                                </div>
+                                {site.git_branch && (
+                                    <div>
+                                        <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Branch</div>
+                                        <div className="flex items-center gap-1.5 font-medium">
+                                            <GitBranch className="h-3.5 w-3.5 text-muted-foreground" />
+                                            {site.git_branch}
+                                        </div>
+                                    </div>
+                                )}
+                                <div>
+                                    <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Last Deployment</div>
+                                    <div className="font-medium">
+                                        {site.last_deployed_at ? formatRelativeTime(site.last_deployed_at) : 'Never'}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
-                    <div className="flex items-center gap-2">
-                        <Button variant="outline" size="default">
-                            Self Help
-                        </Button>
-                        <Button variant="outline" size="default">
-                            Edit Files
-                        </Button>
-                        <Button size="default" className="bg-emerald-600 hover:bg-emerald-700">
-                            Deploy Now
-                        </Button>
+
+                    {/* Health Indicator */}
+                    <div>
+                        <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Health</div>
+                        <div className={cn("font-medium", healthConfig.color)}>
+                            {healthConfig.label}
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div className="flex h-full">
+            <div className="flex h-full mt-6">
                 <NavigationSidebar>
-                    <div className="space-y-4">
-                        <NavigationCard items={siteNavItems} />
-                        <NavigationCard
-                            items={[
-                                {
-                                    title: 'Back to Server',
-                                    href: showServer(server.id).url,
-                                    icon: Server,
-                                    isActive: false,
-                                },
-                            ]}
-                        />
+                    <div className="space-y-6">
+                        <NavigationCard items={[backToServerNav]} />
+                        <NavigationCard title="Site" items={siteNavItems} />
                     </div>
                 </NavigationSidebar>
 

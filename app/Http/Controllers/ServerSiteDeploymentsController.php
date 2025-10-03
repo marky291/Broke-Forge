@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\PreparesSiteData;
 use App\Models\Server;
 use App\Models\ServerDeployment;
 use App\Models\ServerSite;
@@ -16,6 +17,8 @@ use Inertia\Response;
 
 class ServerSiteDeploymentsController extends Controller
 {
+    use PreparesSiteData;
+
     /**
      * Display the deployments page for a site.
      */
@@ -27,28 +30,10 @@ class ServerSiteDeploymentsController extends Controller
                 ->with('error', 'Git repository must be installed before deploying.');
         }
 
-        $serverDetails = $server->only([
-            'id',
-            'vanity_name',
-            'connection',
-        ]);
-
-        $siteDetails = $site->only([
-            'id',
-            'domain',
-            'document_root',
-            'status',
-            'git_status',
-            'last_deployment_sha',
-            'last_deployed_at',
-            'auto_deploy_enabled',
-        ]);
+        $gitConfig = $site->getGitConfiguration();
 
         // Get deployment script from configuration
         $deploymentScript = $site->getDeploymentScript();
-
-        // Get Git configuration
-        $gitConfig = $site->getGitConfiguration();
 
         // Get deployment history
         $deployments = $site->deployments()
@@ -74,8 +59,13 @@ class ServerSiteDeploymentsController extends Controller
         $latestDeployment = $site->latestDeployment;
 
         return Inertia::render('servers/site-deployments', [
-            'server' => $serverDetails,
-            'site' => $siteDetails,
+            'server' => $this->prepareServerData($server),
+            'site' => $this->prepareSiteData($site, [
+                'document_root',
+                'last_deployment_sha',
+                'last_deployed_at',
+                'auto_deploy_enabled',
+            ]),
             'deploymentScript' => $deploymentScript,
             'gitConfig' => $gitConfig,
             'deployments' => $deployments,

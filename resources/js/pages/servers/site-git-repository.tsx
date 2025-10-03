@@ -207,10 +207,6 @@ export default function SiteGitRepository({ server, site, gitRepository, flash, 
                                 <div className="text-sm">Enabled</div>
                             </div>
                             <div>
-                                <div className="text-xs text-muted-foreground mb-1.5">Envoyer Integration</div>
-                                <div className="text-sm">Disabled</div>
-                            </div>
-                            <div>
                                 <div className="text-xs text-muted-foreground mb-1.5">Web Directory</div>
                                 <div className="text-sm font-mono text-xs">{getWebDirectory(gitRepository.repository)}</div>
                             </div>
@@ -224,17 +220,6 @@ export default function SiteGitRepository({ server, site, gitRepository, flash, 
                                 </div>
                             </div>
                         </div>
-                    </CardContainer>
-
-                    {/* Laravel Section */}
-                    <CardContainer title="Laravel">
-                        <Alert className="border-muted-foreground/20 bg-muted/30">
-                            <AlertCircle className="h-4 w-4" />
-                            <AlertDescription className="text-sm leading-relaxed">
-                                Forge can manage your application's Laravel scheduler, Horizon, Octane, Pulse, Reverb and Inertia integrations. To get started, your
-                                project must have Laravel, Horizon, Octane, Pulse, Reverb, or Inertia 0.5.6 or above installed.
-                            </AlertDescription>
-                        </Alert>
                     </CardContainer>
 
                     {/* Update Git Remote Section */}

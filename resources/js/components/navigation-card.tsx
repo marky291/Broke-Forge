@@ -56,10 +56,10 @@ export function NavigationCard({ items, title, className }: NavigationCardProps)
         <div className={cn("", className)}>
             <nav className="">
                 {title && (
-                    <div className="pb-3">
-                        <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 select-none">
+                    <div className="px-3 mb-2">
+                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                             {title}
-                        </div>
+                        </span>
                     </div>
                 )}
                 {items.map((item) => (
