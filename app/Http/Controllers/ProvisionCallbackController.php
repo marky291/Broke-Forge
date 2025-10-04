@@ -25,6 +25,10 @@ class ProvisionCallbackController extends Controller
 
         // Update connection and provision status based on callback
         if ($status === 'started') {
+            // Clear any old events from previous failed provision attempts
+            // This ensures the UI shows fresh progress for the new attempt
+            $server->events()->delete();
+
             $server->connection = Connection::CONNECTING;
             $server->provision_status = ProvisionStatus::Connecting;
             $server->save();

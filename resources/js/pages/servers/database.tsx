@@ -146,8 +146,8 @@ export default function Database({
                 }
                 if (json.status === 'installed' || json.status === 'failed' || json.status === 'uninstalled') {
                     window.clearInterval(id);
-                    // Reload just the installedDatabase prop to update UI quickly
-                    router.reload({ only: ['installedDatabase'] });
+                    // Reload both installedDatabase and databases to show completion state
+                    router.reload({ only: ['installedDatabase', 'databases'] });
                 }
             } catch {
                 // ignore transient errors

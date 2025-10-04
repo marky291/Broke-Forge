@@ -28,10 +28,11 @@ class WindowsCompatibleSsh extends Ssh
             $extraOptions = implode(' ', $this->getExtraOptions());
             $target = $this->getTargetForSsh();
 
-            // Escape the command for SSH
-            $escapedCommand = addcslashes($commandString, '"$`\\');
+            // Escape the command for SSH on Windows using base64 encoding to avoid all escaping issues
+            // This is the most reliable way to pass complex bash commands through Windows -> SSH -> Linux
+            $base64Command = base64_encode($commandString);
 
-            return "{$passwordCommand}ssh {$extraOptions} {$target} \"{$escapedCommand}\"";
+            return "{$passwordCommand}ssh {$extraOptions} {$target} \"echo {$base64Command} | base64 -d | bash\"";
         }
 
         // On Unix, use parent's heredoc implementation

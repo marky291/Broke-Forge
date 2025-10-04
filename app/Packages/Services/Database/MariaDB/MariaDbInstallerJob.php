@@ -35,6 +35,11 @@ class MariaDbInstallerJob implements ShouldQueue
                 'trace' => $e->getTraceAsString(),
             ]);
 
+            // Update database status to failed so UI can show error state
+            $this->server->databases()->latest()->first()?->update([
+                'status' => \App\Enums\DatabaseStatus::Failed->value,
+            ]);
+
             throw $e;
         }
     }

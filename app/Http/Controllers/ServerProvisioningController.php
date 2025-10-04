@@ -128,7 +128,7 @@ class ServerProvisioningController extends Controller
         // Clear any recorded events so progress restarts cleanly
         $server->events()->delete();
 
-        // Reset root password so a new secret is generated for the next attempt
+        // Generate new root password for the next attempt
         $server->ssh_root_password = null;
 
         $server->connection = Connection::PENDING;

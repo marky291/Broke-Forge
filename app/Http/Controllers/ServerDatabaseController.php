@@ -150,8 +150,20 @@ class ServerDatabaseController extends Controller
     {
         $database = $server->databases()->latest()->first();
 
+        // If no database exists, it was uninstalled
+        if (! $database) {
+            return response()->json([
+                'status' => 'uninstalled',
+                'database' => null,
+            ]);
+        }
+
         return response()->json([
-            'database' => $database ? [
+            'status' => $database->status,
+            'progress_step' => $database->current_step,
+            'progress_total' => $database->total_steps,
+            'progress_label' => $database->progress_label ?? null,
+            'database' => [
                 'id' => $database->id,
                 'name' => $database->name,
                 'type' => $database->type,
@@ -163,7 +175,7 @@ class ServerDatabaseController extends Controller
                 'progress_label' => $database->progress_label ?? null,
                 'created_at' => $database->created_at->toISOString(),
                 'updated_at' => $database->updated_at->toISOString(),
-            ] : null,
+            ],
         ]);
     }
 }

@@ -307,7 +307,7 @@ class Server extends Model
         });
     }
 
-    protected static function generatePassword(int $length = 24): string
+    public static function generatePassword(int $length = 24): string
     {
         // Limit to URL-safe characters to make display and copy simple.
         $alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
