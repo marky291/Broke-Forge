@@ -3,8 +3,6 @@
 namespace App\Packages\Services\Database\MySQL;
 
 use App\Enums\DatabaseStatus;
-use App\Enums\DatabaseType;
-use App\Models\ServerDatabase;
 use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageInstaller;
 use App\Packages\Enums\CredentialType;
@@ -34,12 +32,14 @@ class MySqlInstaller extends PackageInstaller implements \App\Packages\Base\Serv
      */
     public function execute(): void
     {
-        $rootPassword = bin2hex(random_bytes(16));
+        $database = $this->server->databases()->latest()->first();
+        $version = $database?->version ?? '8.0';
+        $rootPassword = $database?->root_password ?? bin2hex(random_bytes(16));
 
-        $this->install($this->commands($rootPassword));
+        $this->install($this->commands($version, $rootPassword));
     }
 
-    protected function commands(string $rootPassword): array
+    protected function commands(string $version, string $rootPassword): array
     {
         return [
             // Update package lists
@@ -88,14 +88,11 @@ class MySqlInstaller extends PackageInstaller implements \App\Packages\Base\Serv
             'systemctl status mysql --no-pager',
             "mysql -u root -p{$rootPassword} -e 'SELECT VERSION();'",
 
-            // Save MySQL installation to database
-            fn () => ServerDatabase::create([
-                'server_id' => $this->server->id,
-                'name' => 'mysql',
-                'type' => DatabaseType::MySQL->value,
-                'version' => '8.0',
-                'port' => 3306,
+            // Update database record with installation details
+            fn () => $this->server->databases()->latest()->first()?->update([
                 'status' => DatabaseStatus::Active->value,
+                'version' => $version,
+                'port' => 3306,
                 'root_password' => $rootPassword,
             ]),
 

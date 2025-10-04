@@ -9,6 +9,15 @@ class DatabaseConfigurationService
     public function getAvailableTypes(): array
     {
         return [
+            DatabaseType::MySQL->value => [
+                'name' => 'MySQL',
+                'description' => 'Widely adopted relational database trusted for PHP applications.',
+                'versions' => [
+                    '8.0' => 'MySQL 8.0 (Recommended)',
+                ],
+                'default_version' => '8.0',
+                'default_port' => 3306,
+            ],
             DatabaseType::MariaDB->value => [
                 'name' => 'MariaDB',
                 'description' => 'High-performance MySQL-compatible database',
@@ -19,6 +28,16 @@ class DatabaseConfigurationService
                 ],
                 'default_version' => '11.4',
                 'default_port' => 3306,
+            ],
+            DatabaseType::PostgreSQL->value => [
+                'name' => 'PostgreSQL',
+                'description' => 'Advanced open-source relational database with strong SQL compliance.',
+                'versions' => [
+                    '16' => 'PostgreSQL 16 (Recommended)',
+                    '15' => 'PostgreSQL 15',
+                ],
+                'default_version' => '16',
+                'default_port' => 5432,
             ],
         ];
     }

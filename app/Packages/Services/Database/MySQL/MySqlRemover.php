@@ -13,7 +13,7 @@ use App\Packages\Enums\PackageType;
  *
  * Handles safe removal of MySQL server with progress tracking
  */
-class MySqlRemover extends PackageRemover
+class MySqlRemover extends PackageRemover implements \App\Packages\Base\ServerPackage
 {
     public function credentialType(): CredentialType
     {
@@ -60,6 +60,9 @@ class MySqlRemover extends PackageRemover
             // Close MySQL port in firewall
             'ufw delete allow 3306/tcp >/dev/null 2>&1 || true',
             $this->track(MySqlRemoverMilestones::UPDATE_FIREWALL),
+
+            // Remove database record
+            fn () => $this->server->databases()->delete(),
 
             // Clean up package cache
             'apt-get clean',

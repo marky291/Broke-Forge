@@ -12,7 +12,7 @@ import { show as showServer } from '@/routes/servers';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router, useForm } from '@inertiajs/react';
 import { CheckIcon, DatabaseIcon, Download, Loader2, Plus } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 type Server = {
     id: number;
@@ -35,6 +35,7 @@ type AvailableDatabase = {
     icon: string;
     versions: DatabaseVersion;
     default_version: string;
+    default_port: number;
 };
 
 type AvailableDatabases = {
@@ -77,12 +78,43 @@ export default function Database({
     installedDatabase: InstalledDatabase;
     databases: DatabaseItem[];
 }) {
-    const [selectedType, setSelectedType] = useState<string>(installedDatabase?.configuration?.type || 'mariadb');
+    const fallbackDefaults: Record<string, { version: string; port: number }> = useMemo(
+        () => ({
+            mysql: { version: '8.0', port: 3306 },
+            mariadb: { version: '11.4', port: 3306 },
+            postgresql: { version: '16', port: 5432 },
+        }),
+        [],
+    );
+
+    const availableTypeKeys = useMemo(() => Object.keys(availableDatabases || {}), [availableDatabases]);
+
+    const resolveDefaults = useCallback(
+        (type: string | undefined) => {
+            if (!type) {
+                return { version: '', port: 3306 };
+            }
+
+            const config = availableDatabases?.[type];
+
+            if (config) {
+                return { version: config.default_version, port: config.default_port };
+            }
+
+            return fallbackDefaults[type] ?? { version: '', port: 3306 };
+        },
+        [availableDatabases, fallbackDefaults],
+    );
+
+    const initialType = installedDatabase?.configuration?.type || availableTypeKeys[0] || 'mariadb';
+    const initialDefaults = resolveDefaults(initialType);
+
+    const [selectedType, setSelectedType] = useState<string>(initialType);
 
     const { data, setData, post, processing, errors, reset } = useForm({
-        type: installedDatabase?.configuration?.type || 'mariadb',
-        version: installedDatabase?.configuration?.version || availableDatabases?.mariadb?.default_version || '11.4',
-        port: availableDatabases?.mariadb?.default_port || 3306,
+        type: installedDatabase?.configuration?.type || initialType,
+        version: installedDatabase?.configuration?.version || initialDefaults.version,
+        port: installedDatabase?.port ?? initialDefaults.port,
         root_password: '',
     });
 
@@ -135,13 +167,38 @@ export default function Database({
 
     const handleTypeChange = (type: string) => {
         setSelectedType(type);
-        setData({
-            ...data,
-            type,
-            version: availableDatabases?.[type]?.default_version || '',
-            port: availableDatabases?.[type]?.default_port || 3306,
-        });
+        const defaults = resolveDefaults(type);
+
+        setData('type', type);
+        setData('version', defaults.version);
+        setData('port', defaults.port);
     };
+
+    useEffect(() => {
+        if (installedDatabase) {
+            return;
+        }
+
+        if (!availableTypeKeys.length) {
+            return;
+        }
+
+        const [firstType] = availableTypeKeys;
+
+        if (!firstType) {
+            return;
+        }
+
+        if (data.type && availableDatabases?.[data.type]) {
+            return;
+        }
+
+        const defaults = resolveDefaults(firstType);
+        setSelectedType(firstType);
+        setData('type', firstType);
+        setData('version', defaults.version);
+        setData('port', defaults.port);
+    }, [availableDatabases, availableTypeKeys, data.type, installedDatabase, resolveDefaults, setData]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();

@@ -7,6 +7,7 @@ enum PackageName: string
     case Nginx = 'nginx';
     case MySql80 = 'mysql80';
     case MariaDb = 'mariadb';
+    case PostgreSql = 'postgresql';
     case Git = 'git';
     case Site = 'site';
     case Command = 'command';

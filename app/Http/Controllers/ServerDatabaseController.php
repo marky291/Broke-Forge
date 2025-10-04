@@ -9,6 +9,10 @@ use App\Http\Requests\Servers\InstallDatabaseRequest;
 use App\Models\Server;
 use App\Packages\Services\Database\MariaDB\MariaDbInstallerJob;
 use App\Packages\Services\Database\MariaDB\MariaDbRemoverJob;
+use App\Packages\Services\Database\MySQL\MySqlInstallerJob;
+use App\Packages\Services\Database\MySQL\MySqlRemoverJob;
+use App\Packages\Services\Database\PostgreSQL\PostgreSqlInstallerJob;
+use App\Packages\Services\Database\PostgreSQL\PostgreSqlRemoverJob;
 use App\Services\DatabaseConfigurationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -86,12 +90,25 @@ class ServerDatabaseController extends Controller
             'type' => $validated['type'],
             'version' => $validated['version'],
             'port' => $validated['port'] ?? $this->databaseConfig->getDefaultPort($databaseType),
-            'status' => 'installing',
+            'status' => DatabaseStatus::Installing->value,
             'root_password' => $validated['root_password'],
         ]);
 
-        // Dispatch MariaDB installation job
-        MariaDbInstallerJob::dispatch($server);
+        switch ($databaseType) {
+            case DatabaseType::MariaDB:
+                MariaDbInstallerJob::dispatch($server);
+                break;
+            case DatabaseType::MySQL:
+                MySqlInstallerJob::dispatch($server);
+                break;
+            case DatabaseType::PostgreSQL:
+                PostgreSqlInstallerJob::dispatch($server);
+                break;
+            default:
+                $database->update(['status' => DatabaseStatus::Failed->value]);
+
+                return back()->with('error', 'Selected database type is not supported yet.');
+        }
 
         return back()->with('success', 'Database installation started.');
     }
@@ -104,10 +121,27 @@ class ServerDatabaseController extends Controller
             return back()->with('error', 'No database found to uninstall.');
         }
 
-        $database->update(['status' => DatabaseStatus::Uninstalling]);
+        $database->update(['status' => DatabaseStatus::Uninstalling->value]);
 
-        // Dispatch MariaDB removal job
-        MariaDbRemoverJob::dispatch($server);
+        $databaseType = $database->type instanceof DatabaseType
+            ? $database->type
+            : DatabaseType::from($database->type);
+
+        switch ($databaseType) {
+            case DatabaseType::MariaDB:
+                MariaDbRemoverJob::dispatch($server);
+                break;
+            case DatabaseType::MySQL:
+                MySqlRemoverJob::dispatch($server);
+                break;
+            case DatabaseType::PostgreSQL:
+                PostgreSqlRemoverJob::dispatch($server);
+                break;
+            default:
+                $database->update(['status' => DatabaseStatus::Failed->value]);
+
+                return back()->with('error', 'Selected database type cannot be uninstalled automatically yet.');
+        }
 
         return back()->with('success', 'Database uninstallation started.');
     }
