@@ -27,8 +27,9 @@ class TempKeyFile
     {
         $tempDir = sys_get_temp_dir();
         $this->path = sprintf(
-            '%s/ssh_key_%d_%s_%s',
+            '%s%sssh_key_%d_%s_%s',
             $tempDir,
+            DIRECTORY_SEPARATOR,
             $serverId,
             $credentialType,
             uniqid()
