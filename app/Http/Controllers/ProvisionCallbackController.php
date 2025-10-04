@@ -49,11 +49,20 @@ class ProvisionCallbackController extends Controller
                         continue;
                     }
 
-                    $actualUsername = trim($server->createSshConnection($credentialType)
-                        ->execute('whoami')->getOutput());
+                    $result = $server->createSshConnection($credentialType)
+                        ->execute('whoami');
+
+                    $actualUsername = trim($result->getOutput());
+                    $errorOutput = trim($result->getErrorOutput());
+                    $exitCode = $result->getExitCode();
 
                     if ($actualUsername !== $expectedUsername) {
-                        Log::error("{$credentialType->value} SSH access failed, Found '{$actualUsername}' expected '{$expectedUsername}'", ['server' => $server]);
+                        Log::error("{$credentialType->value} SSH access failed, Found '{$actualUsername}' expected '{$expectedUsername}'", [
+                            'server' => $server,
+                            'exit_code' => $exitCode,
+                            'error_output' => $errorOutput,
+                            'stdout' => $actualUsername,
+                        ]);
                         ${$credentialType->value.'UserSuccess'} = false;
                     }
                 } catch (\Exception $e) {
