@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\PreparesSiteData;
 use App\Http\Requests\Servers\StoreServerRequest;
 use App\Http\Requests\Servers\UpdateServerRequest;
 use App\Models\Server;
@@ -12,6 +13,7 @@ use Inertia\Response;
 
 class ServerController extends Controller
 {
+    use PreparesSiteData;
     public function index(): Response
     {
         $servers = Server::query()
@@ -60,8 +62,9 @@ class ServerController extends Controller
             ));
 
         return Inertia::render('servers/show', [
-            'server' => $server->only(['id', 'vanity_name', 'public_ip', 'ssh_port', 'private_ip', 'connection', 'created_at', 'updated_at']),
+            'server' => $server->only(['id', 'vanity_name', 'public_ip', 'ssh_port', 'private_ip', 'connection', 'monitoring_status', 'created_at', 'updated_at']),
             'sites' => ['data' => $sites],
+            'latestMetrics' => $this->getLatestMetrics($server),
         ]);
     }
 

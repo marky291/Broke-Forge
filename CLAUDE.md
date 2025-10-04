@@ -459,6 +459,59 @@ protected function commands(): array {
 - Test milestone tracking creates `ServerEvent` records
 - Test job dispatching and completion
 
+### Debugging Remote Servers
+
+**Using Tinker for Remote Debugging:**
+
+When debugging issues on remote servers, use `php artisan tinker` to execute commands directly on the remote host via SSH:
+
+```php
+$server = \App\Models\Server::find(1);
+$ssh = $server->createSshConnection(\App\Packages\Enums\CredentialType::Root);
+
+// Execute commands and inspect output
+$result = $ssh->execute('systemctl status some-service');
+echo $result->getOutput();
+echo $result->getErrorOutput();
+echo $result->getExitCode();
+
+// Check logs
+$result = $ssh->execute('journalctl -u some-service -n 50 --no-pager');
+echo $result->getOutput();
+
+// Verify file contents
+$result = $ssh->execute('cat /path/to/file');
+echo $result->getOutput();
+
+// Fix issues directly
+$ssh->execute('systemctl restart some-service');
+```
+
+**Common Debugging Patterns:**
+
+```php
+// Check if service is running
+$ssh->execute('systemctl is-active service-name');
+
+// View recent logs
+$ssh->execute('journalctl -u service-name --since "10 minutes ago" --no-pager');
+
+// Test script execution
+$result = $ssh->execute('/path/to/script.sh 2>&1');
+echo "Exit code: " . $result->getExitCode();
+
+// Recreate files from Blade templates
+$content = view('monitoring.metrics-collector', [...])->render();
+$command = "cat > /path/to/file << 'EOF'\n{$content}\nEOF";
+$ssh->execute($command);
+```
+
+This approach is especially useful for:
+- Diagnosing why systemd services are failing
+- Verifying file permissions and ownership
+- Testing scripts before package deployment
+- Hot-fixing issues without full reinstallation
+
 ## Configuration Notes
 
 - Development server runs on `192.168.2.1` (configured in composer.json)

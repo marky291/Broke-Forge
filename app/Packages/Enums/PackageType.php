@@ -12,4 +12,6 @@ enum PackageType: string
     case PHP = 'php';
     case Firewall = 'firewall';
     case Deployment = 'deployment';
+    case Monitoring = 'monitoring';
+    case Scheduler = 'scheduler';
 }

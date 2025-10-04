@@ -19,8 +19,7 @@ class GitHubApiClient
 
     public function __construct(
         private readonly SourceProvider $sourceProvider
-    ) {
-    }
+    ) {}
 
     /**
      * Get authenticated HTTP client with GitHub API headers.

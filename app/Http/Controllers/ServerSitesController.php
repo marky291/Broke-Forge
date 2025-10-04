@@ -32,10 +32,12 @@ class ServerSitesController extends Controller
                 'ssh_port',
                 'connection',
                 'provision_status',
+                'monitoring_status',
                 'created_at',
                 'updated_at',
             ]),
             'sites' => $sites,
+            'latestMetrics' => $this->getLatestMetrics($server),
         ]);
     }
 

@@ -1,6 +1,6 @@
 import ServerContentLayout from './server-content-layout';
 import SiteLayout from './site-layout';
-import { type BreadcrumbItem } from '@/types';
+import { type BreadcrumbItem, type ServerMetric } from '@/types';
 import { PropsWithChildren } from 'react';
 
 interface ServerLayoutProps extends PropsWithChildren {
@@ -10,6 +10,7 @@ interface ServerLayoutProps extends PropsWithChildren {
         connection: string;
         public_ip?: string;
         private_ip?: string;
+        monitoring_status?: 'installing' | 'active' | 'failed' | 'uninstalling' | 'uninstalled' | null;
     };
     breadcrumbs?: BreadcrumbItem[];
     site?: {
@@ -17,12 +18,13 @@ interface ServerLayoutProps extends PropsWithChildren {
         domain?: string | null;
         status?: string;
     };
+    latestMetrics?: ServerMetric | null;
 }
 
 /**
  * Layout wrapper that decides whether to use ServerContentLayout or SiteLayout
  */
-export default function ServerLayout({ children, server, breadcrumbs, site }: ServerLayoutProps) {
+export default function ServerLayout({ children, server, breadcrumbs, site, latestMetrics }: ServerLayoutProps) {
     // If we have a site, use the SiteLayout
     if (site) {
         return (
@@ -33,7 +35,7 @@ export default function ServerLayout({ children, server, breadcrumbs, site }: Se
     }
     // Otherwise, use the ServerContentLayout
     return (
-        <ServerContentLayout server={server} breadcrumbs={breadcrumbs}>
+        <ServerContentLayout server={server} breadcrumbs={breadcrumbs} latestMetrics={latestMetrics}>
             {children}
         </ServerContentLayout>
     );

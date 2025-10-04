@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\MonitoringStatus;
+use App\Enums\SchedulerStatus;
 use App\Packages\Enums\CredentialType;
 use App\Packages\Enums\ProvisionStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -35,6 +37,15 @@ class Server extends Model
         'connection',
         'provision_status',
         'ssh_root_password',
+        'monitoring_token',
+        'monitoring_status',
+        'monitoring_collection_interval',
+        'monitoring_installed_at',
+        'monitoring_uninstalled_at',
+        'scheduler_token',
+        'scheduler_status',
+        'scheduler_installed_at',
+        'scheduler_uninstalled_at',
     ];
 
     protected $attributes = [
@@ -47,7 +58,38 @@ class Server extends Model
             'ssh_port' => 'integer',
             'provision_status' => ProvisionStatus::class,
             'ssh_root_password' => 'encrypted',
+            'monitoring_token' => 'encrypted',
+            'monitoring_status' => MonitoringStatus::class,
+            'monitoring_collection_interval' => 'integer',
+            'monitoring_installed_at' => 'datetime',
+            'monitoring_uninstalled_at' => 'datetime',
+            'scheduler_token' => 'encrypted',
+            'scheduler_status' => SchedulerStatus::class,
+            'scheduler_installed_at' => 'datetime',
+            'scheduler_uninstalled_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Generate a unique monitoring token for API authentication
+     */
+    public function generateMonitoringToken(): string
+    {
+        $token = bin2hex(random_bytes(config('monitoring.token_length')));
+        $this->update(['monitoring_token' => $token]);
+
+        return $token;
+    }
+
+    /**
+     * Generate a unique scheduler token for API authentication
+     */
+    public function generateSchedulerToken(): string
+    {
+        $token = bin2hex(random_bytes(config('scheduler.token_length')));
+        $this->update(['scheduler_token' => $token]);
+
+        return $token;
     }
 
     public static function register(string $publicIp): self
@@ -150,6 +192,21 @@ class Server extends Model
         return $this->hasOne(ServerFirewall::class);
     }
 
+    public function metrics(): HasMany
+    {
+        return $this->hasMany(ServerMetric::class);
+    }
+
+    public function scheduledTasks(): HasMany
+    {
+        return $this->hasMany(ServerScheduledTask::class);
+    }
+
+    public function scheduledTaskRuns(): HasMany
+    {
+        return $this->hasMany(ServerScheduledTaskRun::class);
+    }
+
     public function databases(): HasMany
     {
         return $this->hasMany(ServerDatabase::class);
@@ -176,6 +233,54 @@ class Server extends Model
     public function isProvisioned(): bool
     {
         return $this->provision_status === ProvisionStatus::Completed;
+    }
+
+    /**
+     * Check if scheduler is active
+     */
+    public function schedulerIsActive(): bool
+    {
+        return $this->scheduler_status === SchedulerStatus::Active;
+    }
+
+    /**
+     * Check if scheduler is installing
+     */
+    public function schedulerIsInstalling(): bool
+    {
+        return $this->scheduler_status === SchedulerStatus::Installing;
+    }
+
+    /**
+     * Check if scheduler failed
+     */
+    public function schedulerIsFailed(): bool
+    {
+        return $this->scheduler_status === SchedulerStatus::Failed;
+    }
+
+    /**
+     * Check if monitoring is active
+     */
+    public function monitoringIsActive(): bool
+    {
+        return $this->monitoring_status === MonitoringStatus::Active;
+    }
+
+    /**
+     * Check if monitoring is installing
+     */
+    public function monitoringIsInstalling(): bool
+    {
+        return $this->monitoring_status === MonitoringStatus::Installing;
+    }
+
+    /**
+     * Check if monitoring failed
+     */
+    public function monitoringIsFailed(): bool
+    {
+        return $this->monitoring_status === MonitoringStatus::Failed;
     }
 
     protected static function booted(): void

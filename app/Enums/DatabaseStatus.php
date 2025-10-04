@@ -8,4 +8,5 @@ enum DatabaseStatus: string
     case Active = 'active';
     case Failed = 'failed';
     case Stopped = 'stopped';
+    case Uninstalling = 'uninstalling';
 }

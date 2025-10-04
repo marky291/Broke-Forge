@@ -68,6 +68,13 @@ export interface Server {
     provision_status: 'pending' | 'connecting' | 'installing' | 'completed' | 'failed';
     provision_status_label: string;
     provision_status_color: string;
+    scheduler_status?: 'installing' | 'active' | 'failed' | 'uninstalling' | 'uninstalled' | null;
+    scheduler_installed_at?: string | null;
+    scheduler_uninstalled_at?: string | null;
+    monitoring_status?: 'installing' | 'active' | 'failed' | 'uninstalling' | 'uninstalled' | null;
+    monitoring_collection_interval?: number | null;
+    monitoring_installed_at?: string | null;
+    monitoring_uninstalled_at?: string | null;
     created_at: string;
     updated_at: string;
 }
@@ -133,4 +140,50 @@ export interface ServerReverseProxy {
     status: string;
     created_at: string;
     updated_at: string;
+}
+
+export interface ServerMetric {
+    id: number;
+    server_id: number;
+    cpu_usage: number;
+    memory_total_mb: number;
+    memory_used_mb: number;
+    memory_usage_percentage: number;
+    storage_total_gb: number;
+    storage_used_gb: number;
+    storage_usage_percentage: number;
+    collected_at: string;
+    created_at: string;
+}
+
+export interface ServerScheduledTask {
+    id: number;
+    server_id: number;
+    name: string;
+    command: string;
+    frequency: 'minutely' | 'hourly' | 'daily' | 'weekly' | 'monthly' | 'custom';
+    cron_expression: string | null;
+    status: 'active' | 'paused' | 'failed';
+    last_run_at: string | null;
+    next_run_at: string | null;
+    send_notifications: boolean;
+    timeout: number;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface ServerScheduledTaskRun {
+    id: number;
+    server_id: number;
+    server_scheduled_task_id: number;
+    started_at: string;
+    completed_at: string | null;
+    exit_code: number | null;
+    output: string | null;
+    error_output: string | null;
+    duration_ms: number | null;
+    was_successful: boolean;
+    created_at: string;
+    updated_at: string;
+    task?: ServerScheduledTask;
 }

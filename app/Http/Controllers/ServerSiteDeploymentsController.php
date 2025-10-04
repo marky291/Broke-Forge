@@ -6,7 +6,6 @@ use App\Http\Controllers\Concerns\PreparesSiteData;
 use App\Models\Server;
 use App\Models\ServerDeployment;
 use App\Models\ServerSite;
-use App\Packages\Enums\GitStatus;
 use App\Packages\Services\Sites\Deployment\SiteGitDeploymentJob;
 use App\Packages\Services\SourceProvider\Github\GitHubWebhookManager;
 use Illuminate\Http\JsonResponse;

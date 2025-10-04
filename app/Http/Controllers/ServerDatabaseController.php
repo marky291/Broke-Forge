@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\DatabaseStatus;
+use App\Enums\DatabaseType;
+use App\Http\Controllers\Concerns\PreparesSiteData;
 use App\Http\Requests\Servers\InstallDatabaseRequest;
 use App\Models\Server;
-use App\Packages\Services\Database\MySQL\MySqlInstallerJob;
-use App\Packages\Services\Database\MySQL\MySqlRemoverJob;
+use App\Packages\Services\Database\MariaDB\MariaDbInstallerJob;
+use App\Packages\Services\Database\MariaDB\MariaDbRemoverJob;
 use App\Services\DatabaseConfigurationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -14,6 +17,8 @@ use Inertia\Response;
 
 class ServerDatabaseController extends Controller
 {
+    use PreparesSiteData;
+
     public function __construct(
         private readonly DatabaseConfigurationService $databaseConfig
     ) {}
@@ -21,6 +26,7 @@ class ServerDatabaseController extends Controller
     public function index(Server $server): Response
     {
         $database = $server->databases()->latest()->first();
+        $databases = $server->databases()->latest()->get();
 
         return Inertia::render('servers/database', [
             'server' => $server->only([
@@ -29,7 +35,7 @@ class ServerDatabaseController extends Controller
                 'public_ip',
                 'private_ip',
                 'ssh_port',
-                'connection',
+                'connection', 'monitoring_status',
                 'provision_status',
                 'created_at',
                 'updated_at',
@@ -51,6 +57,16 @@ class ServerDatabaseController extends Controller
                 'progress_label' => $database->progress_label ?? null,
                 'installed_at' => $database->created_at?->toISOString(),
             ] : null,
+            'databases' => $databases->map(fn ($db) => [
+                'id' => $db->id,
+                'name' => $db->name,
+                'type' => $db->type,
+                'version' => $db->version,
+                'port' => $db->port,
+                'status' => $db->status,
+                'created_at' => $db->created_at?->toISOString(),
+            ]),
+            'latestMetrics' => $this->getLatestMetrics($server),
         ]);
     }
 
@@ -63,17 +79,19 @@ class ServerDatabaseController extends Controller
             return back()->with('error', 'A database is already installed on this server.');
         }
 
+        $databaseType = DatabaseType::from($validated['type']);
+
         $database = $server->databases()->create([
             'name' => $validated['name'] ?? $validated['type'],
             'type' => $validated['type'],
             'version' => $validated['version'],
-            'port' => $validated['port'] ?? $this->databaseConfig->getDefaultPort($validated['type']),
+            'port' => $validated['port'] ?? $this->databaseConfig->getDefaultPort($databaseType),
             'status' => 'installing',
             'root_password' => $validated['root_password'],
         ]);
 
-        // Dispatch MySQL installation job following existing pattern
-        MySqlInstallerJob::dispatch($server);
+        // Dispatch MariaDB installation job
+        MariaDbInstallerJob::dispatch($server);
 
         return back()->with('success', 'Database installation started.');
     }
@@ -86,10 +104,10 @@ class ServerDatabaseController extends Controller
             return back()->with('error', 'No database found to uninstall.');
         }
 
-        $database->update(['status' => 'uninstalling']);
+        $database->update(['status' => DatabaseStatus::Uninstalling]);
 
-        // Use existing MySqlRemover job architecture
-        MySqlRemoverJob::dispatch($server);
+        // Dispatch MariaDB removal job
+        MariaDbRemoverJob::dispatch($server);
 
         return back()->with('success', 'Database uninstallation started.');
     }

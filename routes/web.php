@@ -7,8 +7,10 @@ use App\Http\Controllers\ServerController;
 use App\Http\Controllers\ServerDatabaseController;
 use App\Http\Controllers\ServerFileExplorerController;
 use App\Http\Controllers\ServerFirewallController;
+use App\Http\Controllers\ServerMonitoringController;
 use App\Http\Controllers\ServerPhpController;
 use App\Http\Controllers\ServerProvisioningController;
+use App\Http\Controllers\ServerSchedulerController;
 use App\Http\Controllers\ServerSettingsController;
 use App\Http\Controllers\ServerSiteCommandsController;
 use App\Http\Controllers\ServerSiteDeploymentsController;
@@ -53,6 +55,28 @@ Route::post('servers/{server}/provision/callback/{status}', ProvisionCallbackCon
 Route::post('webhooks/github/{site}', GitHubWebhookController::class)
     ->name('webhooks.github')
     ->scopeBindings();
+
+/*
+|--------------------------------------------------------------------------
+| API Routes (Public)
+|--------------------------------------------------------------------------
+*/
+
+// Server monitoring metrics submission from remote servers
+Route::post('api/servers/{server}/metrics', [ServerMonitoringController::class, 'storeMetrics'])
+    ->middleware([
+        \App\Http\Middleware\ValidateMonitoringToken::class,
+        'throttle:'.config('monitoring.rate_limit').',1',
+    ])
+    ->name('api.servers.metrics.store');
+
+// Server scheduler task run submission from remote servers
+Route::post('api/servers/{server}/scheduler/runs', [ServerSchedulerController::class, 'storeTaskRun'])
+    ->middleware([
+        \App\Http\Middleware\ValidateSchedulerToken::class,
+        'throttle:'.config('scheduler.rate_limit').',1',
+    ])
+    ->name('api.servers.scheduler.runs.store');
 
 /*
 |--------------------------------------------------------------------------
@@ -175,6 +199,57 @@ Route::middleware('auth')->group(function () {
                 ->name('firewall.store');
             Route::delete('/{rule}', [ServerFirewallController::class, 'destroy'])
                 ->name('firewall.destroy');
+        });
+
+        // Monitoring management
+        Route::prefix('monitoring')->group(function () {
+            Route::get('/', [ServerMonitoringController::class, 'index'])
+                ->name('monitoring');
+            Route::post('install', [ServerMonitoringController::class, 'install'])
+                ->name('monitoring.install');
+            Route::post('uninstall', [ServerMonitoringController::class, 'uninstall'])
+                ->name('monitoring.uninstall');
+            Route::get('metrics', [ServerMonitoringController::class, 'getMetrics'])
+                ->name('monitoring.metrics');
+        });
+
+        // Scheduler management
+        Route::prefix('scheduler')->middleware('throttle:60,1')->group(function () {
+            Route::get('/', [ServerSchedulerController::class, 'index'])
+                ->name('scheduler')
+                ->withoutMiddleware('throttle:60,1');
+
+            Route::post('install', [ServerSchedulerController::class, 'install'])
+                ->name('scheduler.install')
+                ->middleware('throttle:5,1'); // Max 5 installs per minute
+
+            Route::post('uninstall', [ServerSchedulerController::class, 'uninstall'])
+                ->name('scheduler.uninstall')
+                ->middleware('throttle:5,1'); // Max 5 uninstalls per minute
+
+            // Task management - scoped to ensure task belongs to server
+            Route::prefix('tasks')->scopeBindings()->group(function () {
+                Route::post('/', [ServerSchedulerController::class, 'storeTask'])
+                    ->name('scheduler.tasks.store')
+                    ->middleware('throttle:20,1'); // Max 20 task creations per minute
+
+                Route::put('{scheduledTask}', [ServerSchedulerController::class, 'updateTask'])
+                    ->name('scheduler.tasks.update');
+
+                Route::delete('{scheduledTask}', [ServerSchedulerController::class, 'destroyTask'])
+                    ->name('scheduler.tasks.destroy');
+
+                Route::post('{scheduledTask}/toggle', [ServerSchedulerController::class, 'toggleTask'])
+                    ->name('scheduler.tasks.toggle');
+
+                Route::post('{scheduledTask}/run', [ServerSchedulerController::class, 'runTask'])
+                    ->name('scheduler.tasks.run')
+                    ->middleware('throttle:10,1'); // Max 10 manual runs per minute
+
+                Route::get('{scheduledTask}/runs', [ServerSchedulerController::class, 'getTaskRuns'])
+                    ->name('scheduler.tasks.runs')
+                    ->withoutMiddleware('throttle:60,1');
+            });
         });
 
         // Settings management

@@ -9,36 +9,16 @@ class DatabaseConfigurationService
     public function getAvailableTypes(): array
     {
         return [
-            DatabaseType::MySQL->value => [
-                'name' => 'MySQL',
-                'description' => 'Popular open-source relational database',
+            DatabaseType::MariaDB->value => [
+                'name' => 'MariaDB',
+                'description' => 'High-performance MySQL-compatible database',
                 'versions' => [
-                    '8.0' => 'MySQL 8.0 (Recommended)',
-                    '5.7' => 'MySQL 5.7 (Legacy)',
+                    '11.4' => 'MariaDB 11.4 LTS (Recommended)',
+                    '10.11' => 'MariaDB 10.11 LTS',
+                    '10.6' => 'MariaDB 10.6 LTS',
                 ],
-                'default_version' => '8.0',
+                'default_version' => '11.4',
                 'default_port' => 3306,
-            ],
-            DatabaseType::PostgreSQL->value => [
-                'name' => 'PostgreSQL',
-                'description' => 'Advanced open-source relational database',
-                'versions' => [
-                    '16' => 'PostgreSQL 16 (Latest)',
-                    '15' => 'PostgreSQL 15',
-                    '14' => 'PostgreSQL 14',
-                ],
-                'default_version' => '16',
-                'default_port' => 5432,
-            ],
-            DatabaseType::Redis->value => [
-                'name' => 'Redis',
-                'description' => 'In-memory data structure store',
-                'versions' => [
-                    '7.2' => 'Redis 7.2 (Latest)',
-                    '7.0' => 'Redis 7.0',
-                ],
-                'default_version' => '7.2',
-                'default_port' => 6379,
             ],
         ];
     }

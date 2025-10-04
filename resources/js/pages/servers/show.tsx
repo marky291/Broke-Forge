@@ -9,7 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import ServerLayout from '@/layouts/server/layout';
 import { dashboard } from '@/routes';
 import { show as showSite } from '@/routes/servers/sites';
-import { type BreadcrumbItem } from '@/types';
+import { type BreadcrumbItem, type ServerMetric } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/react';
 import {
     ChevronRight,
@@ -52,7 +52,7 @@ type ServerSite = {
     git_status?: string;
 };
 
-export default function Show({ server, sites }: { server: Server; sites: { data: ServerSite[] } }) {
+export default function Show({ server, sites, latestMetrics }: { server: Server; sites: { data: ServerSite[] }; latestMetrics?: ServerMetric | null }) {
     const [showAddSiteDialog, setShowAddSiteDialog] = useState(false);
 
     const form = useForm({
@@ -77,7 +77,7 @@ export default function Show({ server, sites }: { server: Server; sites: { data:
     };
 
     return (
-        <ServerLayout server={server} breadcrumbs={breadcrumbs}>
+        <ServerLayout server={server} breadcrumbs={breadcrumbs} latestMetrics={latestMetrics}>
             <Head title={`${server.vanity_name} - Server Overview`} />
 
             <div className="space-y-6">

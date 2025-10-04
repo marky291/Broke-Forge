@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\PreparesSiteData;
 use App\Models\Server;
 use App\Models\ServerPhp;
 use App\Packages\Services\PHP\Services\PhpConfigurationService;
@@ -12,17 +13,20 @@ use Inertia\Response;
 
 class ServerPhpController extends Controller
 {
+    use PreparesSiteData;
+
     public function index(Server $server): Response
     {
         // Get installed PHP versions with eager loaded modules
         $installedPhp = $server->phps()->with('modules')->get();
 
         return Inertia::render('servers/php', [
-            'server' => $server->only(['id', 'vanity_name', 'public_ip', 'ssh_port', 'private_ip', 'connection', 'created_at', 'updated_at']),
+            'server' => $server->only(['id', 'vanity_name', 'public_ip', 'ssh_port', 'private_ip', 'connection', 'monitoring_status', 'created_at', 'updated_at']),
             'availablePhpVersions' => PhpConfigurationService::getAvailableVersions(),
             'phpExtensions' => PhpConfigurationService::getAvailableExtensions(),
             'installedPhpVersions' => $installedPhp,
             'defaultSettings' => PhpConfigurationService::getDefaultSettings(),
+            'latestMetrics' => $this->getLatestMetrics($server),
         ]);
     }
 

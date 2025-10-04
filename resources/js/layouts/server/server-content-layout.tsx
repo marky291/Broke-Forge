@@ -1,18 +1,23 @@
 import { NavigationCard, NavigationSidebar } from '@/components/navigation-card';
 import AppLayout from '@/layouts/app-layout';
-import { type BreadcrumbItem, type NavItem } from '@/types';
+import { type BreadcrumbItem, type NavItem, type ServerMetric } from '@/types';
 import { usePage } from '@inertiajs/react';
 import {
+    Activity,
     ArrowLeft,
+    Clock,
     CodeIcon,
+    Cpu,
     DatabaseIcon,
     Globe,
+    HardDrive,
     Home,
+    MemoryStick,
     Server,
     Settings,
     Shield,
 } from 'lucide-react';
-import { PropsWithChildren } from 'react';
+import { PropsWithChildren, useEffect, useState } from 'react';
 
 interface ServerContentLayoutProps extends PropsWithChildren {
     server: {
@@ -21,16 +26,65 @@ interface ServerContentLayoutProps extends PropsWithChildren {
         connection?: string;
         public_ip?: string;
         private_ip?: string;
+        monitoring_status?: 'installing' | 'active' | 'failed' | 'uninstalling' | 'uninstalled' | null;
     };
     breadcrumbs?: BreadcrumbItem[];
+    latestMetrics?: ServerMetric | null;
 }
 
 /**
  * Layout for server pages with integrated sidebar navigation in content area
  */
-export default function ServerContentLayout({ children, server, breadcrumbs }: ServerContentLayoutProps) {
+export default function ServerContentLayout({ children, server, breadcrumbs, latestMetrics }: ServerContentLayoutProps) {
     const { url } = usePage();
     const [path = ''] = url.split('?');
+    const [metrics, setMetrics] = useState<ServerMetric | null>(latestMetrics ?? null);
+
+    // Update metrics when we receive latestMetrics from server
+    useEffect(() => {
+        if (latestMetrics) {
+            setMetrics(latestMetrics);
+        }
+    }, [latestMetrics]);
+
+    // Fetch metrics on mount if monitoring is active but no metrics provided
+    useEffect(() => {
+        if (server.monitoring_status === 'active' && !latestMetrics) {
+            fetch(`/servers/${server.id}/monitoring/metrics?hours=1`, {
+                headers: { Accept: 'application/json' },
+            })
+                .then((res) => res.json())
+                .then((json) => {
+                    if (json.success && json.data && json.data.length > 0) {
+                        setMetrics(json.data[json.data.length - 1]);
+                    }
+                })
+                .catch(() => {});
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // Run only on mount
+
+    // Poll for metrics when monitoring is active
+    useEffect(() => {
+        if (server.monitoring_status !== 'active') return;
+
+        const interval = setInterval(async () => {
+            try {
+                const res = await fetch(`/servers/${server.id}/monitoring/metrics?hours=1`, {
+                    headers: { Accept: 'application/json' },
+                });
+                if (!res.ok) return;
+                const json = await res.json();
+                if (json.success && json.data && json.data.length > 0) {
+                    setMetrics(json.data[json.data.length - 1]);
+                }
+            } catch (error) {
+                console.error('Failed to fetch metrics:', error);
+            }
+        }, 30000); // Poll every 30 seconds
+
+        return () => clearInterval(interval);
+    }, [server.monitoring_status, server.id]);
 
     // Determine current active section
     let currentSection: string = 'server';
@@ -43,6 +97,10 @@ export default function ServerContentLayout({ children, server, breadcrumbs }: S
         currentSection = 'database';
     } else if (path.includes('/firewall')) {
         currentSection = 'firewall';
+    } else if (path.includes('/monitoring')) {
+        currentSection = 'monitoring';
+    } else if (path.includes('/scheduler')) {
+        currentSection = 'scheduler';
     } else if (path.includes('/settings')) {
         currentSection = 'settings';
     }
@@ -80,6 +138,18 @@ export default function ServerContentLayout({ children, server, breadcrumbs }: S
             href: `/servers/${server.id}/firewall`,
             icon: Shield,
             isActive: currentSection === 'firewall',
+        },
+        {
+            title: 'Monitor',
+            href: `/servers/${server.id}/monitoring`,
+            icon: Activity,
+            isActive: currentSection === 'monitoring',
+        },
+        {
+            title: 'Scheduler',
+            href: `/servers/${server.id}/scheduler`,
+            icon: Clock,
+            isActive: currentSection === 'scheduler',
         },
         {
             title: 'Settings',
@@ -139,6 +209,33 @@ export default function ServerContentLayout({ children, server, breadcrumbs }: S
                             </div>
                         </div>
                     </div>
+
+                    {/* Monitoring Metrics - Far Right */}
+                    {server.monitoring_status === 'active' && metrics && (
+                        <div className="flex items-center gap-4 text-sm border-l pl-8">
+                            <div className="flex items-center gap-2">
+                                <Cpu className="h-3.5 w-3.5 text-blue-600" />
+                                <div>
+                                    <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">CPU</div>
+                                    <div className="font-medium">{Number(metrics.cpu_usage).toFixed(1)}%</div>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <MemoryStick className="h-3.5 w-3.5 text-purple-600" />
+                                <div>
+                                    <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Memory</div>
+                                    <div className="font-medium">{Number(metrics.memory_usage_percentage).toFixed(1)}%</div>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <HardDrive className="h-3.5 w-3.5 text-orange-600" />
+                                <div>
+                                    <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Storage</div>
+                                    <div className="font-medium">{Number(metrics.storage_usage_percentage).toFixed(1)}%</div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
 

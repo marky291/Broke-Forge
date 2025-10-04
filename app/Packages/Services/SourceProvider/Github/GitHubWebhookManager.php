@@ -18,8 +18,7 @@ class GitHubWebhookManager
     public function __construct(
         private readonly SourceProvider $sourceProvider,
         private readonly GitHubApiClient $apiClient
-    ) {
-    }
+    ) {}
 
     /**
      * Create a new instance for a server site.

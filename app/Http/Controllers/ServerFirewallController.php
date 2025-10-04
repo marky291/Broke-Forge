@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\PreparesSiteData;
+
 use App\Http\Requests\Servers\FirewallRuleRequest;
 use App\Models\Server;
 use App\Models\ServerFirewallRule;
@@ -16,6 +18,8 @@ use Inertia\Response;
 
 class ServerFirewallController extends Controller
 {
+    use PreparesSiteData;
+
     public function __construct(
         private readonly FirewallConfigurationService $firewallConfig
     ) {}
@@ -35,7 +39,7 @@ class ServerFirewallController extends Controller
                     'public_ip',
                     'private_ip',
                     'ssh_port',
-                    'connection',
+                    'connection', 'monitoring_status',
                     'provision_status',
                     'created_at',
                     'updated_at',
@@ -44,7 +48,8 @@ class ServerFirewallController extends Controller
                 'isFirewallInstalled' => false,
                 'firewallStatus' => 'not_installed',
                 'recentEvents' => [],
-            ]);
+                'latestMetrics' => $this->getLatestMetrics($server),
+        ]);
         }
 
         return Inertia::render('servers/firewall', [
@@ -54,7 +59,7 @@ class ServerFirewallController extends Controller
                 'public_ip',
                 'private_ip',
                 'ssh_port',
-                'connection',
+                'connection', 'monitoring_status',
                 'provision_status',
                 'created_at',
                 'updated_at',
@@ -85,6 +90,7 @@ class ServerFirewallController extends Controller
                     'details' => $event->details,
                     'created_at' => $event->created_at->toISOString(),
                 ]),
+            'latestMetrics' => $this->getLatestMetrics($server),
         ]);
     }
 

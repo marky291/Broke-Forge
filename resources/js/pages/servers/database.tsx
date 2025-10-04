@@ -1,6 +1,7 @@
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { CardContainer } from '@/components/ui/card-container';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PageHeader } from '@/components/ui/page-header';
@@ -10,7 +11,7 @@ import { dashboard } from '@/routes';
 import { show as showServer } from '@/routes/servers';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router, useForm } from '@inertiajs/react';
-import { CheckIcon, DatabaseIcon, Download, Loader2 } from 'lucide-react';
+import { CheckIcon, DatabaseIcon, Download, Loader2, Plus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 type Server = {
@@ -55,24 +56,38 @@ type InstalledDatabase = {
     installed_at?: string;
 } | null;
 
+type DatabaseItem = {
+    id: number;
+    name: string;
+    type: string;
+    version: string;
+    port: number;
+    status: string;
+    created_at: string;
+};
+
 export default function Database({
     server,
     availableDatabases,
     installedDatabase,
+    databases,
 }: {
     server: Server;
     availableDatabases?: AvailableDatabases;
     installedDatabase: InstalledDatabase;
+    databases: DatabaseItem[];
 }) {
-    const [selectedType, setSelectedType] = useState<string>(installedDatabase?.configuration?.type || 'mysql');
+    const [selectedType, setSelectedType] = useState<string>(installedDatabase?.configuration?.type || 'mariadb');
 
     const { data, setData, post, processing, errors, reset } = useForm({
-        type: installedDatabase?.configuration?.type || 'mysql',
-        version: installedDatabase?.configuration?.version || availableDatabases?.mysql?.default_version || '8.0',
+        type: installedDatabase?.configuration?.type || 'mariadb',
+        version: installedDatabase?.configuration?.version || availableDatabases?.mariadb?.default_version || '11.4',
+        port: availableDatabases?.mariadb?.default_port || 3306,
         root_password: '',
     });
 
     const [submitError, setSubmitError] = useState<string | null>(null);
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [progress, setProgress] = useState<{ step: number; total: number; label?: string } | null>(
         installedDatabase?.status === 'installing' && installedDatabase?.progress_total
             ? {
@@ -124,6 +139,7 @@ export default function Database({
             ...data,
             type,
             version: availableDatabases?.[type]?.default_version || '',
+            port: availableDatabases?.[type]?.default_port || 3306,
         });
     };
 
@@ -139,6 +155,7 @@ export default function Database({
             },
             onSuccess: () => {
                 reset('root_password');
+                setIsDialogOpen(false);
             },
         });
     };
@@ -152,107 +169,183 @@ export default function Database({
                     ? 'Configure and manage database services for your server.'
                     : 'Install and configure a database service for your server.'}
             >
-                {!installedDatabase && (
-                    <CardContainer
-                        title="Install Database Service"
-                        description="No database service is currently installed on this server. Choose a database type and configuration to get started."
-                    >
-                        <form onSubmit={handleSubmit} className="space-y-6">
-                                {submitError && (
-                                    <Alert variant="destructive">
-                                        <AlertTitle>Installation failed</AlertTitle>
-                                        <AlertDescription>{submitError}</AlertDescription>
-                                    </Alert>
-                                )}
-                                {/* Database Type Selection */}
-                                <div className="space-y-4">
-                                    <h3 className="font-medium">Database Type</h3>
-                                    <div className={`grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 ${processing ? 'opacity-75' : ''}`}>
-                                        {Object.entries(availableDatabases || {}).map(([type, database]) => (
-                                            <div key={type} className="relative">
-                                                <div
-                                                    className={`relative cursor-pointer rounded-lg border-2 p-4 transition-all ${
-                                                        selectedType === type
-                                                            ? 'border-primary bg-primary/5'
-                                                            : 'border-sidebar-border/70 bg-background hover:border-primary/50'
-                                                    }`}
-                                                    onClick={() => !processing && handleTypeChange(type)}
-                                                >
-                                                    <div className="flex items-start gap-3">
-                                                        <div
-                                                            className={`flex-shrink-0 rounded-md p-2 ${
-                                                                selectedType === type ? 'bg-primary text-primary-foreground' : 'bg-muted'
-                                                            }`}
-                                                        >
-                                                            <DatabaseIcon className="h-6 w-6" />
-                                                        </div>
-                                                        <div className="min-w-0 flex-1">
-                                                            <h3 className="font-medium">{database.name}</h3>
-                                                            <p className="mt-1 text-sm text-muted-foreground">{database.description}</p>
+                {/* Databases List */}
+                <CardContainer
+                    title="Databases"
+                    description="Database services installed on this server."
+                    action={
+                        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                            <DialogTrigger asChild>
+                                <Button size="sm" disabled={installedDatabase !== null}>
+                                    <Plus className="h-4 w-4 mr-1" />
+                                    Add Database
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                                <DialogHeader>
+                                    <DialogTitle>Install Database Service</DialogTitle>
+                                    <DialogDescription>
+                                        Choose a database type and configuration to install on your server.
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <form onSubmit={handleSubmit} className="space-y-6">
+                                    {submitError && (
+                                        <Alert variant="destructive">
+                                            <AlertTitle>Installation failed</AlertTitle>
+                                            <AlertDescription>{submitError}</AlertDescription>
+                                        </Alert>
+                                    )}
+                                    {/* Database Type Selection */}
+                                    <div className="space-y-4">
+                                        <h3 className="font-medium">Database Type</h3>
+                                        <div className={`grid grid-cols-1 gap-4 ${processing ? 'opacity-75' : ''}`}>
+                                            {Object.entries(availableDatabases || {}).map(([type, database]) => (
+                                                <div key={type} className="relative">
+                                                    <div
+                                                        className={`relative cursor-pointer rounded-lg border-2 p-4 transition-all ${
+                                                            selectedType === type
+                                                                ? 'border-primary bg-primary/5'
+                                                                : 'border-sidebar-border/70 bg-background hover:border-primary/50'
+                                                        }`}
+                                                        onClick={() => !processing && handleTypeChange(type)}
+                                                    >
+                                                        <div className="flex items-start gap-3">
+                                                            <div
+                                                                className={`flex-shrink-0 rounded-md p-2 ${
+                                                                    selectedType === type ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                                                                }`}
+                                                            >
+                                                                <DatabaseIcon className="h-6 w-6" />
+                                                            </div>
+                                                            <div className="min-w-0 flex-1">
+                                                                <h3 className="font-medium">{database.name}</h3>
+                                                                <p className="mt-1 text-sm text-muted-foreground">{database.description}</p>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>
+                                            ))}
+                                        </div>
+                                        {errors.type && <div className="text-sm text-red-600">{errors.type}</div>}
+                                    </div>
+
+                                    {/* Configuration */}
+                                    <div className="space-y-4">
+                                        <h3 className="font-medium">Configuration</h3>
+                                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                            <div className="space-y-2">
+                                                <Label htmlFor="version">Version</Label>
+                                                <Select value={data.version} onValueChange={(value) => setData('version', value)}>
+                                                    <SelectTrigger disabled={processing}>
+                                                        <SelectValue placeholder="Select version" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {Object.entries(availableDatabases?.[selectedType]?.versions || {}).map(([value, label]) => (
+                                                            <SelectItem key={value} value={value}>
+                                                                {label}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                                {errors.version && <div className="text-sm text-red-600">{errors.version}</div>}
                                             </div>
-                                        ))}
-                                    </div>
-                                    {errors.type && <div className="text-sm text-red-600">{errors.type}</div>}
-                                </div>
 
-                                {/* Configuration */}
-                                <div className="space-y-4">
-                                    <h3 className="font-medium">Configuration</h3>
-                                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="version">Version</Label>
-                                            <Select value={data.version} onValueChange={(value) => setData('version', value)}>
-                                                <SelectTrigger disabled={processing}>
-                                                    <SelectValue placeholder="Select version" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {Object.entries(availableDatabases?.[selectedType]?.versions || {}).map(([value, label]) => (
-                                                        <SelectItem key={value} value={value}>
-                                                            {label}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                            {errors.version && <div className="text-sm text-red-600">{errors.version}</div>}
-                                        </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="port">Port</Label>
+                                                <Input
+                                                    id="port"
+                                                    type="number"
+                                                    value={data.port}
+                                                    onChange={(e) => setData('port', parseInt(e.target.value))}
+                                                    placeholder="3306"
+                                                    disabled={processing}
+                                                />
+                                                {errors.port && <div className="text-sm text-red-600">{errors.port}</div>}
+                                            </div>
 
-                                        <div className="space-y-2">
-                                            <Label htmlFor="root_password">
-                                                Root Password <span className="text-red-500">*</span>
-                                            </Label>
-                                            <Input
-                                                id="root_password"
-                                                type="password"
-                                                value={data.root_password}
-                                                onChange={(e) => setData('root_password', e.target.value)}
-                                                required
-                                                placeholder="Enter root password"
-                                                disabled={processing}
-                                            />
-                                            {errors.root_password && <div className="text-sm text-red-600">{errors.root_password}</div>}
+                                            <div className="space-y-2 md:col-span-2">
+                                                <Label htmlFor="root_password">
+                                                    Root Password <span className="text-red-500">*</span>
+                                                </Label>
+                                                <Input
+                                                    id="root_password"
+                                                    type="password"
+                                                    value={data.root_password}
+                                                    onChange={(e) => setData('root_password', e.target.value)}
+                                                    required
+                                                    placeholder="Enter root password"
+                                                    disabled={processing}
+                                                />
+                                                {errors.root_password && <div className="text-sm text-red-600">{errors.root_password}</div>}
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
 
-                            {/* Install Button */}
-                            <div className="flex justify-end">
-                                <Button type="submit" disabled={processing}>
-                                    {processing ? (
-                                        <span className="inline-flex items-center gap-2">
-                                            <Loader2 className="h-4 w-4 animate-spin" />
-                                            Installing...
-                                        </span>
-                                    ) : (
-                                        'Install Database'
-                                    )}
-                                </Button>
+                                    {/* Install Button */}
+                                    <div className="flex justify-end gap-3">
+                                        <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} disabled={processing}>
+                                            Cancel
+                                        </Button>
+                                        <Button type="submit" disabled={processing}>
+                                            {processing ? (
+                                                <span className="inline-flex items-center gap-2">
+                                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                                    Installing...
+                                                </span>
+                                            ) : (
+                                                'Install Database'
+                                            )}
+                                        </Button>
+                                    </div>
+                                </form>
+                            </DialogContent>
+                        </Dialog>
+                    }
+                >
+                    {databases.length > 0 ? (
+                        <div className="divide-y divide-sidebar-border/70">
+                            {databases.map((db) => (
+                                <div key={db.id} className="flex items-center justify-between py-3 first:pt-0 last:pb-0">
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex-shrink-0 rounded-md bg-muted p-2">
+                                            <DatabaseIcon className="h-5 w-5" />
+                                        </div>
+                                        <div>
+                                            <div className="font-medium">
+                                                {availableDatabases?.[db.type]?.name || db.type} {db.version}
+                                            </div>
+                                            <div className="text-sm text-muted-foreground">
+                                                Port {db.port} · {db.name}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <div
+                                            className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                                                db.status === 'active'
+                                                    ? 'bg-green-500/10 text-green-600 dark:text-green-500'
+                                                    : db.status === 'installing'
+                                                      ? 'bg-blue-500/10 text-blue-600 dark:text-blue-500'
+                                                      : db.status === 'uninstalling'
+                                                        ? 'bg-orange-500/10 text-orange-600 dark:text-orange-500'
+                                                        : 'bg-gray-500/10 text-gray-600 dark:text-gray-500'
+                                            }`}
+                                        >
+                                            {db.status}
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="flex flex-col items-center justify-center py-8 text-center">
+                            <div className="mb-3 rounded-full bg-muted p-3">
+                                <DatabaseIcon className="h-6 w-6 text-muted-foreground" />
                             </div>
-                        </form>
-                    </CardContainer>
-                )}
+                            <p className="text-sm text-muted-foreground">No database installed on this server yet.</p>
+                        </div>
+                    )}
+                </CardContainer>
 
                 {installedDatabase && (
                     <CardContainer title="Current Database">
@@ -344,7 +437,21 @@ export default function Database({
                         </CardContainer>
 
                         {/* Submit */}
-                        <div className="flex justify-end">
+                        <div className="flex justify-between">
+                            <Button
+                                type="button"
+                                variant="destructive"
+                                disabled={processing}
+                                onClick={() => {
+                                    if (confirm('Are you sure you want to uninstall this database? This will remove all data and cannot be undone.')) {
+                                        router.delete(`/servers/${server.id}/database`, {
+                                            preserveScroll: true,
+                                        });
+                                    }
+                                }}
+                            >
+                                Uninstall Database
+                            </Button>
                             <Button type="submit" disabled={processing}>
                                 {processing ? (
                                     <span className="inline-flex items-center gap-2">

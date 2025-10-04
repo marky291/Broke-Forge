@@ -6,10 +6,14 @@ enum PackageName: string
 {
     case Nginx = 'nginx';
     case MySql80 = 'mysql80';
+    case MariaDb = 'mariadb';
     case Git = 'git';
     case Site = 'site';
     case Command = 'command';
     case Php83 = 'php83';
     case FirewallUfw = 'firewall-ufw';
     case Deployment = 'deployment';
+    case Monitoring = 'monitoring';
+    case Scheduler = 'scheduler';
+    case ScheduledTask = 'scheduled-task';
 }
