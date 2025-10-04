@@ -121,7 +121,7 @@ export default function Database({
     const [submitError, setSubmitError] = useState<string | null>(null);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [progress, setProgress] = useState<{ step: number; total: number; label?: string } | null>(
-        installedDatabase?.status === 'installing' && installedDatabase?.progress_total
+        (installedDatabase?.status === 'installing' || installedDatabase?.status === 'uninstalling') && installedDatabase?.progress_total
             ? {
                   step: installedDatabase.progress_step ?? 0,
                   total: installedDatabase.progress_total ?? 0,
@@ -131,9 +131,11 @@ export default function Database({
     );
 
     const isInstalling = installedDatabase?.status === 'installing';
+    const isUninstalling = installedDatabase?.status === 'uninstalling';
+    const isProcessing = isInstalling || isUninstalling;
 
     useEffect(() => {
-        if (!isInstalling) return;
+        if (!isProcessing) return;
         let cancelled = false;
         const id = window.setInterval(async () => {
             try {
@@ -144,7 +146,7 @@ export default function Database({
                 if (json.progress_total) {
                     setProgress({ step: json.progress_step ?? 0, total: json.progress_total ?? 0, label: json.progress_label ?? undefined });
                 }
-                if (json.status === 'installed' || json.status === 'failed' || json.status === 'uninstalled') {
+                if (json.status === 'active' || json.status === 'failed' || json.status === 'uninstalled') {
                     window.clearInterval(id);
                     // Reload both installedDatabase and databases to show completion state
                     router.reload({ only: ['installedDatabase', 'databases'] });
@@ -157,7 +159,7 @@ export default function Database({
             cancelled = true;
             window.clearInterval(id);
         };
-    }, [isInstalling, server.id]);
+    }, [isProcessing, server.id]);
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard.url() },
@@ -332,6 +334,7 @@ export default function Database({
                                                     required
                                                     placeholder="Enter root password"
                                                     disabled={processing}
+                                                    autoComplete="new-password"
                                                 />
                                                 {errors.root_password && <div className="text-sm text-red-600">{errors.root_password}</div>}
                                             </div>
@@ -421,7 +424,7 @@ export default function Database({
                                 <div className="text-sm text-muted-foreground">Status</div>
                                 <div className="font-medium capitalize">
                                     {installedDatabase.status}
-                                    {isInstalling && progress?.total ? (
+                                    {isProcessing && progress?.total ? (
                                         <span className="ml-2 text-xs text-muted-foreground">
                                             ({progress.step}/{progress.total})
                                         </span>
@@ -429,10 +432,12 @@ export default function Database({
                                 </div>
                             </div>
                         </div>
-                        {isInstalling && (
+                        {isProcessing && (
                             <div className="mt-4">
                                 <div className="mb-1 flex items-center justify-between">
-                                    <div className="text-sm text-muted-foreground">{progress?.label || 'Running installation steps...'}</div>
+                                    <div className="text-sm text-muted-foreground">
+                                        {progress?.label || (isInstalling ? 'Running installation steps...' : 'Running uninstallation steps...')}
+                                    </div>
                                     {progress?.total ? (
                                         <div className="text-xs text-muted-foreground">
                                             {Math.floor(((progress.step ?? 0) / (progress.total ?? 1)) * 100)}%
@@ -450,14 +455,14 @@ export default function Database({
                                     />
                                 </div>
                                 <div className="mt-2 text-xs text-muted-foreground">
-                                    Do not close this page — we're installing the database over SSH.
+                                    Do not close this page — we're {isInstalling ? 'installing' : 'uninstalling'} the database over SSH.
                                 </div>
                             </div>
                         )}
                     </CardContainer>
                 )}
 
-                {installedDatabase && !isInstalling && (
+                {installedDatabase && !isProcessing && (
                     <form onSubmit={handleSubmit} className="space-y-6">
                         <CardContainer title="Update Configuration">
                             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -487,6 +492,7 @@ export default function Database({
                                         onChange={(e) => setData('root_password', e.target.value)}
                                         placeholder="Enter new password (optional)"
                                         disabled={processing}
+                                        autoComplete="new-password"
                                     />
                                     {errors.root_password && <div className="text-sm text-red-600">{errors.root_password}</div>}
                                 </div>
@@ -503,6 +509,9 @@ export default function Database({
                                     if (confirm('Are you sure you want to uninstall this database? This will remove all data and cannot be undone.')) {
                                         router.delete(`/servers/${server.id}/database`, {
                                             preserveScroll: true,
+                                            onSuccess: () => {
+                                                router.reload({ only: ['installedDatabase', 'databases'] });
+                                            },
                                         });
                                     }
                                 }}
