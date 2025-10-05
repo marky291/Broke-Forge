@@ -25,6 +25,10 @@ class ProvisionCallbackController extends Controller
 
         // Update connection and provision status based on callback
         if ($status === 'started') {
+            // Clear any old events from previous failed provision attempts
+            // This ensures the UI shows fresh progress for the new attempt
+            $server->events()->delete();
+
             $server->connection = Connection::CONNECTING;
             $server->provision_status = ProvisionStatus::Connecting;
             $server->save();
@@ -76,7 +80,11 @@ class ProvisionCallbackController extends Controller
                 $server->connection = Connection::FAILED;
                 $server->provision_status = ProvisionStatus::Failed;
             } else {
-                // Connection successful, update status and dispatch web service provisioning job
+                // Connection successful - detect OS information before provisioning
+                $server->detectOsInfo();
+                Log::info("Detected OS for server #{$server->id}: {$server->os_name} {$server->os_version} ({$server->os_codename})");
+
+                // Update status and dispatch web service provisioning job
                 $server->provision_status = ProvisionStatus::Installing;
                 NginxInstallerJob::dispatch($server, PhpVersion::PHP83, isProvisioningServer: true);
                 Log::info("Dispatched web service provisioning job for server #{$server->id}");

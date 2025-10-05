@@ -68,7 +68,7 @@ class PostgreSqlInstaller extends PackageInstaller implements \App\Packages\Base
             "sudo -u postgres psql -c \"ALTER USER postgres WITH PASSWORD '{$rootPassword}';\"",
             $this->track(PostgreSqlInstallerMilestones::CONFIGURE_ROOT_PASSWORD),
 
-            "if [ -f {$postgresConf} ]; then sed -i \"s/#listen_addresses = 'localhost'/listen_addresses = '*'\/\" {$postgresConf}; fi",
+            "if [ -f {$postgresConf} ]; then sed -i \"s/#listen_addresses = 'localhost'/listen_addresses = '*'/\" {$postgresConf}; fi",
             "if [ -f {$pgHbaConf} ]; then grep -qxF \"host    all             all             0.0.0.0/0               md5\" {$pgHbaConf} || echo \"host    all             all             0.0.0.0/0               md5\" >> {$pgHbaConf}; fi",
             "if [ -f {$pgHbaConf} ]; then grep -qxF \"host    all             all             ::/0                    md5\" {$pgHbaConf} || echo \"host    all             all             ::/0                    md5\" >> {$pgHbaConf}; fi",
             $this->track(PostgreSqlInstallerMilestones::CONFIGURE_REMOTE_ACCESS),

@@ -77,7 +77,7 @@ class PhpInstaller extends PackageInstaller implements ServerPackage
             $this->track(PhpInstallerMilestones::SETUP_REPOSITORY),
 
             // Add PHP repository (Ondrej PPA for Ubuntu, standard repos for Debian)
-            'if command -v lsb_release >/dev/null 2>&1 && [ "$(lsb_release -is)" = "Ubuntu" ]; then add-apt-repository -y ppa:ondrej/php || true; DEBIAN_FRONTEND=noninteractive apt-get update -y; fi',
+            'if command -v lsb_release >/dev/null 2>&1 && [ "$(lsb_release -is)" = "Ubuntu" ]; then add-apt-repository -y ppa:ondrej/php || true; DEBIAN_FRONTEND=noninteractive apt-get update -y; fi || true',
 
             $this->track(PhpInstallerMilestones::INSTALL_PHP),
 

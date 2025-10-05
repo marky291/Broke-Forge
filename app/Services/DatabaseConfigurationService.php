@@ -6,14 +6,15 @@ use App\Enums\DatabaseType;
 
 class DatabaseConfigurationService
 {
-    public function getAvailableTypes(): array
+
+    public function getAvailableTypes(string $osCodename = null): array
     {
         return [
             DatabaseType::MySQL->value => [
                 'name' => 'MySQL',
                 'description' => 'Widely adopted relational database trusted for PHP applications.',
                 'versions' => [
-                    '8.0' => 'MySQL 8.0 (Recommended)',
+                    '8.0' => 'MySQL 8.0',
                 ],
                 'default_version' => '8.0',
                 'default_port' => 3306,
@@ -22,9 +23,8 @@ class DatabaseConfigurationService
                 'name' => 'MariaDB',
                 'description' => 'High-performance MySQL-compatible database',
                 'versions' => [
-                    '11.4' => 'MariaDB 11.4 LTS (Recommended)',
+                    '11.4' => 'MariaDB 11.4 LTS',
                     '10.11' => 'MariaDB 10.11 LTS',
-                    '10.6' => 'MariaDB 10.6 LTS',
                 ],
                 'default_version' => '11.4',
                 'default_port' => 3306,
@@ -33,8 +33,7 @@ class DatabaseConfigurationService
                 'name' => 'PostgreSQL',
                 'description' => 'Advanced open-source relational database with strong SQL compliance.',
                 'versions' => [
-                    '16' => 'PostgreSQL 16 (Recommended)',
-                    '15' => 'PostgreSQL 15',
+                    '16' => 'PostgreSQL 16',
                 ],
                 'default_version' => '16',
                 'default_port' => 5432,

@@ -20,6 +20,7 @@ class ServerDatabase extends Model
         'port',
         'status',
         'root_password',
+        'error_message',
     ];
 
     protected $hidden = [

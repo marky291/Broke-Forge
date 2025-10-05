@@ -141,6 +141,8 @@ Route::middleware('auth')->group(function () {
                 ->name('database.status');
             Route::post('/', [ServerDatabaseController::class, 'store'])
                 ->name('database.install');
+            Route::patch('/', [ServerDatabaseController::class, 'update'])
+                ->name('database.update');
             Route::delete('/', [ServerDatabaseController::class, 'destroy'])
                 ->name('database.uninstall');
         });

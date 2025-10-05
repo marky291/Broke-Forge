@@ -121,8 +121,9 @@ export default function Database({
 
     const [submitError, setSubmitError] = useState<string | null>(null);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [progress, setProgress] = useState<{ step: number; total: number; label?: string } | null>(
-        installedDatabase?.status === 'installing' && installedDatabase?.progress_total
+        (installedDatabase?.status === 'installing' || installedDatabase?.status === 'uninstalling' || installedDatabase?.status === 'updating') && installedDatabase?.progress_total
             ? {
                   step: installedDatabase.progress_step ?? 0,
                   total: installedDatabase.progress_total ?? 0,
@@ -132,9 +133,12 @@ export default function Database({
     );
 
     const isInstalling = installedDatabase?.status === 'installing';
+    const isUninstalling = installedDatabase?.status === 'uninstalling';
+    const isUpdating = installedDatabase?.status === 'updating';
+    const isProcessing = isInstalling || isUninstalling || isUpdating;
 
     useEffect(() => {
-        if (!isInstalling) return;
+        if (!isProcessing) return;
         let cancelled = false;
         const id = window.setInterval(async () => {
             try {
@@ -145,10 +149,16 @@ export default function Database({
                 if (json.progress_total) {
                     setProgress({ step: json.progress_step ?? 0, total: json.progress_total ?? 0, label: json.progress_label ?? undefined });
                 }
-                if (json.status === 'installed' || json.status === 'failed' || json.status === 'uninstalled') {
+                if (json.status === 'active' || json.status === 'failed' || json.status === 'uninstalled') {
                     window.clearInterval(id);
-                    // Reload just the installedDatabase prop to update UI quickly
-                    router.reload({ only: ['installedDatabase'] });
+
+                    // Show error message if operation failed
+                    if (json.status === 'failed' && json.error_message) {
+                        setErrorMessage(json.error_message);
+                    }
+
+                    // Reload both installedDatabase and databases to show completion state
+                    router.reload({ only: ['installedDatabase', 'databases'] });
                 }
             } catch {
                 // ignore transient errors
@@ -158,7 +168,7 @@ export default function Database({
             cancelled = true;
             window.clearInterval(id);
         };
-    }, [isInstalling, server.id]);
+    }, [isProcessing, server.id]);
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard.url() },
@@ -204,6 +214,7 @@ export default function Database({
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         setSubmitError(null);
+        setErrorMessage(null);
         post(`/servers/${server.id}/database`, {
             preserveScroll: true,
             onError: (formErrors) => {
@@ -227,6 +238,22 @@ export default function Database({
                     ? 'Configure and manage database services for your server.'
                     : 'Install and configure a database service for your server.'}
             >
+                {/* Error Alert */}
+                {errorMessage && (
+                    <Alert variant="destructive" className="mb-6">
+                        <AlertTitle>Operation Failed</AlertTitle>
+                        <AlertDescription>
+                            {errorMessage}
+                            <button
+                                onClick={() => setErrorMessage(null)}
+                                className="ml-2 underline"
+                            >
+                                Dismiss
+                            </button>
+                        </AlertDescription>
+                    </Alert>
+                )}
+
                 {/* Databases List */}
                 <CardContainer
                     title="Databases"
@@ -349,6 +376,7 @@ export default function Database({
                                                     required
                                                     placeholder="Enter root password"
                                                     disabled={processing}
+                                                    autoComplete="new-password"
                                                 />
                                                 {errors.root_password && <div className="text-sm text-red-600">{errors.root_password}</div>}
                                             </div>
@@ -400,9 +428,13 @@ export default function Database({
                                                     ? 'bg-green-500/10 text-green-600 dark:text-green-500'
                                                     : db.status === 'installing'
                                                       ? 'bg-blue-500/10 text-blue-600 dark:text-blue-500'
-                                                      : db.status === 'uninstalling'
-                                                        ? 'bg-orange-500/10 text-orange-600 dark:text-orange-500'
-                                                        : 'bg-gray-500/10 text-gray-600 dark:text-gray-500'
+                                                      : db.status === 'updating'
+                                                        ? 'bg-blue-500/10 text-blue-600 dark:text-blue-500'
+                                                        : db.status === 'uninstalling'
+                                                          ? 'bg-orange-500/10 text-orange-600 dark:text-orange-500'
+                                                          : db.status === 'failed'
+                                                            ? 'bg-red-500/10 text-red-600 dark:text-red-500'
+                                                            : 'bg-gray-500/10 text-gray-600 dark:text-gray-500'
                                             }`}
                                         >
                                             {db.status}
@@ -436,46 +468,17 @@ export default function Database({
                             </div>
                             <div>
                                 <div className="text-sm text-muted-foreground">Status</div>
-                                <div className="font-medium capitalize">
+                                <div className="font-medium capitalize inline-flex items-center gap-2">
                                     {installedDatabase.status}
-                                    {isInstalling && progress?.total ? (
-                                        <span className="ml-2 text-xs text-muted-foreground">
-                                            ({progress.step}/{progress.total})
-                                        </span>
-                                    ) : null}
+                                    {isProcessing && <Loader2 className="h-3 w-3 animate-spin" />}
                                 </div>
                             </div>
                         </div>
-                        {isInstalling && (
-                            <div className="mt-4">
-                                <div className="mb-1 flex items-center justify-between">
-                                    <div className="text-sm text-muted-foreground">{progress?.label || 'Running installation steps...'}</div>
-                                    {progress?.total ? (
-                                        <div className="text-xs text-muted-foreground">
-                                            {Math.floor(((progress.step ?? 0) / (progress.total ?? 1)) * 100)}%
-                                        </div>
-                                    ) : null}
-                                </div>
-                                <div className="h-2 w-full overflow-hidden rounded bg-muted">
-                                    <div
-                                        className="h-full bg-primary transition-all"
-                                        style={{
-                                            width: progress?.total
-                                                ? `${Math.floor(((progress.step ?? 0) / (progress.total ?? 1)) * 100)}%`
-                                                : '25%',
-                                        }}
-                                    />
-                                </div>
-                                <div className="mt-2 text-xs text-muted-foreground">
-                                    Do not close this page — we're installing the database over SSH.
-                                </div>
-                            </div>
-                        )}
                     </CardContainer>
                 )}
 
-                {installedDatabase && !isInstalling && (
-                    <form onSubmit={handleSubmit} className="space-y-6">
+                {installedDatabase && !isProcessing && (
+                    <div className="space-y-6">
                         <CardContainer title="Update Configuration">
                             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                 <div className="space-y-2">
@@ -485,11 +488,17 @@ export default function Database({
                                             <SelectValue placeholder="Select version" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {Object.entries(availableDatabases?.[selectedType]?.versions || {}).map(([value, label]) => (
-                                                <SelectItem key={value} value={value}>
-                                                    {label}
-                                                </SelectItem>
-                                            ))}
+                                            {Object.entries(availableDatabases?.[selectedType]?.versions || {})
+                                                .filter(([value]) => {
+                                                    // Only show versions higher than current for updates (upgrades only, no downgrades)
+                                                    const currentVersion = installedDatabase?.configuration?.version || '0';
+                                                    return parseFloat(value) > parseFloat(currentVersion);
+                                                })
+                                                .map(([value, label]) => (
+                                                    <SelectItem key={value} value={value}>
+                                                        {label}
+                                                    </SelectItem>
+                                                ))}
                                         </SelectContent>
                                     </Select>
                                     {errors.version && <div className="text-sm text-red-600">{errors.version}</div>}
@@ -504,6 +513,7 @@ export default function Database({
                                         onChange={(e) => setData('root_password', e.target.value)}
                                         placeholder="Enter new password (optional)"
                                         disabled={processing}
+                                        autoComplete="new-password"
                                     />
                                     {errors.root_password && <div className="text-sm text-red-600">{errors.root_password}</div>}
                                 </div>
@@ -518,15 +528,33 @@ export default function Database({
                                 disabled={processing}
                                 onClick={() => {
                                     if (confirm('Are you sure you want to uninstall this database? This will remove all data and cannot be undone.')) {
+                                        setErrorMessage(null);
                                         router.delete(`/servers/${server.id}/database`, {
                                             preserveScroll: true,
+                                            onSuccess: () => {
+                                                router.reload({ only: ['installedDatabase', 'databases'] });
+                                            },
                                         });
                                     }
                                 }}
                             >
                                 Uninstall Database
                             </Button>
-                            <Button type="submit" disabled={processing}>
+                            <Button
+                                type="button"
+                                disabled={processing}
+                                onClick={() => {
+                                    setErrorMessage(null);
+                                    router.patch(`/servers/${server.id}/database`, {
+                                        version: data.version,
+                                    }, {
+                                        preserveScroll: true,
+                                        onSuccess: () => {
+                                            router.reload({ only: ['installedDatabase', 'databases'] });
+                                        },
+                                    });
+                                }}
+                            >
                                 {processing ? (
                                     <span className="inline-flex items-center gap-2">
                                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -537,7 +565,7 @@ export default function Database({
                                 )}
                             </Button>
                         </div>
-                    </form>
+                    </div>
                 )}
             </PageHeader>
         </ServerLayout>

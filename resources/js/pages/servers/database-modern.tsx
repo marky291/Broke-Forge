@@ -79,7 +79,7 @@ export default function DatabasePage({
                 </div>
 
                 {/* Status Polling for real-time updates */}
-                <div poll={database?.status === 'installing' ? { interval: 2000, only: ['database'] } : undefined}>
+                <div poll={database && ['installing', 'uninstalling', 'updating'].includes(database.status) ? { interval: 2000, only: ['database'] } : undefined}>
                     {database ? (
                         <DatabaseStatusDisplay
                             database={database}

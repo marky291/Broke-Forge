@@ -1,6 +1,5 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { CheckIcon, DatabaseIcon, Loader2, XCircle } from 'lucide-react';
 
@@ -44,6 +43,20 @@ export default function DatabaseStatusDisplay({
                     color: 'text-blue-600',
                     label: 'Installing',
                 };
+            case 'uninstalling':
+                return {
+                    icon: Loader2,
+                    variant: 'secondary' as const,
+                    color: 'text-orange-600',
+                    label: 'Uninstalling',
+                };
+            case 'updating':
+                return {
+                    icon: Loader2,
+                    variant: 'secondary' as const,
+                    color: 'text-blue-600',
+                    label: 'Updating',
+                };
             case 'failed':
                 return {
                     icon: XCircle,
@@ -63,7 +76,7 @@ export default function DatabaseStatusDisplay({
 
     const statusConfig = getStatusConfig(database.status);
     const StatusIcon = statusConfig.icon;
-    const isInstalling = database.status === 'installing';
+    const isProcessing = ['installing', 'uninstalling', 'updating'].includes(database.status);
     const typeName = availableTypes[database.type]?.name || database.type;
 
     return (
@@ -77,7 +90,7 @@ export default function DatabaseStatusDisplay({
                         </div>
                     </div>
                     <Badge variant={statusConfig.variant} className="gap-1.5">
-                        <StatusIcon className={`h-3 w-3 ${isInstalling ? 'animate-spin' : ''}`} />
+                        <StatusIcon className={`h-3 w-3 ${isProcessing ? 'animate-spin' : ''}`} />
                         {statusConfig.label}
                     </Badge>
                 </div>
@@ -105,22 +118,8 @@ export default function DatabaseStatusDisplay({
                     </div>
                 </div>
 
-                {/* Installation Progress */}
-                {isInstalling && (
-                    <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                            <div className="text-sm font-medium">Installing database...</div>
-                            <div className="text-sm text-muted-foreground">This may take a few minutes</div>
-                        </div>
-                        <Progress value={undefined} className="h-2" />
-                        <div className="text-xs text-muted-foreground">
-                            Do not close this page — we're installing the database over SSH.
-                        </div>
-                    </div>
-                )}
-
                 {/* Actions */}
-                {!isInstalling && (
+                {!isProcessing && (
                     <div className="flex justify-end gap-2">
                         <Button 
                             variant="outline" 
