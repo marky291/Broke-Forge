@@ -1,4 +1,5 @@
 import { NavigationCard, NavigationSidebar } from '@/components/navigation-card';
+import { ServerProviderIcon, type ServerProvider } from '@/components/server-provider-icon';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type NavItem, type ServerMetric } from '@/types';
 import { usePage } from '@inertiajs/react';
@@ -13,7 +14,6 @@ import {
     HardDrive,
     Home,
     MemoryStick,
-    Server,
     Settings,
     Shield,
 } from 'lucide-react';
@@ -23,6 +23,7 @@ interface ServerContentLayoutProps extends PropsWithChildren {
     server: {
         id: number;
         vanity_name: string;
+        provider?: ServerProvider;
         connection?: string;
         public_ip?: string;
         private_ip?: string;
@@ -183,9 +184,7 @@ export default function ServerContentLayout({ children, server, breadcrumbs, lat
                     <div className="flex items-center gap-8">
                         {/* Title */}
                         <div className="flex items-center gap-3">
-                            <div className="flex items-center justify-center w-8 h-8 rounded-md bg-secondary/50">
-                                <Server className="h-4 w-4 text-muted-foreground" />
-                            </div>
+                            <ServerProviderIcon provider={server.provider} size="lg" />
                             <h1 className="text-xl font-semibold text-foreground">{server.vanity_name}</h1>
                         </div>
 

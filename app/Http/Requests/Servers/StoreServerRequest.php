@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Servers;
 
+use App\Enums\ServerProvider;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -16,6 +17,7 @@ class StoreServerRequest extends FormRequest
     {
         return [
             'vanity_name' => ['required', 'string', 'max:100'],
+            'provider' => ['nullable', Rule::enum(ServerProvider::class)],
             'public_ip' => ['required', 'ip', Rule::unique('servers', 'public_ip')],
             'private_ip' => ['nullable', 'ip'],
             'ssh_port' => ['required', 'integer', 'min:1', 'max:65535'],

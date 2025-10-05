@@ -1,4 +1,5 @@
 import InputError from '@/components/input-error';
+import { ServerProviderIcon, getAllProviders, type ServerProvider } from '@/components/server-provider-icon';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -60,11 +61,15 @@ interface DeployServerModalProps {
 export default function DeployServerModal({ trigger }: DeployServerModalProps) {
     const [defaultName, setDefaultName] = useState<string>('');
     const [phpVersion, setPhpVersion] = useState<string>('8.3');
+    const [provider, setProvider] = useState<ServerProvider>('custom');
     const [open, setOpen] = useState(false);
+
+    const providers = getAllProviders();
 
     const handleDialogOpen = () => {
         setDefaultName(generateFriendlyName());
         setPhpVersion('8.3');
+        setProvider('custom');
     };
 
     return (
@@ -73,15 +78,41 @@ export default function DeployServerModal({ trigger }: DeployServerModalProps) {
                 {trigger}
             </DialogTrigger>
             <DialogContent className="sm:max-w-[525px]">
-                <DialogHeader>
-                    <DialogTitle>Deploy New Server</DialogTitle>
-                    <DialogDescription>
-                        Add a new server to your infrastructure. We'll handle the provisioning automatically.
-                    </DialogDescription>
-                </DialogHeader>
+                <div className="flex items-start gap-4">
+                    <div className="flex-shrink-0 mt-1">
+                        <ServerProviderIcon provider={provider} size="lg" />
+                    </div>
+                    <DialogHeader className="flex-1">
+                        <DialogTitle>Deploy New Server</DialogTitle>
+                        <DialogDescription>
+                            Add a new server to your infrastructure. We'll handle the provisioning automatically.
+                        </DialogDescription>
+                    </DialogHeader>
+                </div>
                 <Form method="post" action={storeServer()} className="grid gap-4 py-4">
                     {({ processing, errors }) => (
                         <>
+                            <div className="grid gap-2">
+                                <Label htmlFor="provider">Server Host</Label>
+                                <Select value={provider || 'custom'} onValueChange={(value) => setProvider(value as ServerProvider)}>
+                                    <SelectTrigger id="provider">
+                                        <SelectValue placeholder="Select hosting provider" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {providers.map(({ value, label }) => (
+                                            <SelectItem key={value} value={value}>
+                                                <div className="flex items-center gap-2">
+                                                    <ServerProviderIcon provider={value as ServerProvider} size="sm" />
+                                                    <span>{label}</span>
+                                                </div>
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <input type="hidden" name="provider" value={provider || ''} />
+                                <InputError className="mt-1" message={errors.provider} />
+                            </div>
+
                             <div className="grid gap-2">
                                 <Label htmlFor="vanity_name">Server Name</Label>
                                 <Input

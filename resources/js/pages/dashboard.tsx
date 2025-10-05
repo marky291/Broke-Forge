@@ -1,5 +1,6 @@
 import { CardContainerAddButton } from '@/components/card-container-add-button';
 import DeployServerModal from '@/components/deploy-server-modal';
+import { ServerProviderIcon, type ServerProvider } from '@/components/server-provider-icon';
 import { Button } from '@/components/ui/button';
 import { CardContainer } from '@/components/ui/card-container';
 import { cn } from '@/lib/utils';
@@ -32,6 +33,7 @@ type Activity = { id: number; type: string; label: string; detail?: string | nul
 type Server = {
     id: number;
     name: string;
+    provider?: ServerProvider;
     public_ip: string;
     ssh_port: number;
     private_ip?: string | null;
@@ -65,8 +67,6 @@ export default function Dashboard({ activities, servers }: { activities: Activit
                     title="Servers"
                     action={
                         <DeployServerModal
-                            open={showDeployModal}
-                            onOpenChange={setShowDeployModal}
                             trigger={
                                 <CardContainerAddButton
                                     label="Add Server"
@@ -97,7 +97,7 @@ export default function Dashboard({ activities, servers }: { activities: Activit
                                                         <div className="flex items-start justify-between">
                                                             <div className="flex-1">
                                                                 <div className="flex items-center gap-3 mb-2">
-                                                                    <ServerIcon className="size-5 text-muted-foreground" />
+                                                                    <ServerProviderIcon provider={s.provider as ServerProvider} size="md" />
                                                                     <h3 className="font-semibold text-base">{s.name}</h3>
                                                                 </div>
                                                                 <div className="space-y-1">

@@ -264,4 +264,47 @@ class ServerMonitoringTest extends TestCase
             ],
         ]);
     }
+
+    public function test_get_metrics_validates_timeframe_parameter(): void
+    {
+        $user = User::factory()->create();
+        $server = Server::factory()->create();
+
+        // Test invalid timeframe (not in allowed values)
+        $response = $this->actingAs($user)
+            ->getJson(route('servers.monitoring.metrics', ['server' => $server, 'hours' => 48]));
+
+        $response->assertUnprocessable();
+        $response->assertJsonValidationErrors(['hours']);
+
+        // Test valid timeframes
+        $validTimeframes = [24, 72, 168];
+        foreach ($validTimeframes as $hours) {
+            $response = $this->actingAs($user)
+                ->getJson(route('servers.monitoring.metrics', ['server' => $server, 'hours' => $hours]));
+
+            $response->assertOk();
+        }
+    }
+
+    public function test_monitoring_index_validates_timeframe_parameter(): void
+    {
+        $user = User::factory()->create();
+        $server = Server::factory()->create();
+
+        // Test invalid timeframe (not in allowed values)
+        $response = $this->actingAs($user)
+            ->get(route('servers.monitoring', ['server' => $server, 'hours' => 999]));
+
+        $response->assertSessionHasErrors(['hours']);
+
+        // Test valid timeframes
+        $validTimeframes = [24, 72, 168];
+        foreach ($validTimeframes as $hours) {
+            $response = $this->actingAs($user)
+                ->get(route('servers.monitoring', ['server' => $server, 'hours' => $hours]));
+
+            $response->assertOk();
+        }
+    }
 }

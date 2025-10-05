@@ -16,6 +16,7 @@ class ServerPhp extends Model
         'server_id',
         'version', // e.g., "8.3", "7.4", "8.2.15"
         'is_cli_default', // Whether this is the default PHP version for CLI
+        'is_site_default', // Whether this is the default PHP version for sites
         'status',
     ];
 
@@ -23,6 +24,7 @@ class ServerPhp extends Model
     {
         return [
             'is_cli_default' => 'boolean',
+            'is_site_default' => 'boolean',
             'status' => PhpStatus::class,
         ];
     }

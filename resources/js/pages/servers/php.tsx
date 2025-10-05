@@ -1,46 +1,45 @@
 import { Button } from '@/components/ui/button';
 import { CardContainer } from '@/components/ui/card-container';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
+import { CardInput } from '@/components/ui/card-input';
+import { CardInputDropdown } from '@/components/ui/card-input-dropdown';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { PageHeader } from '@/components/ui/page-header';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import ServerLayout from '@/layouts/server/layout';
 import { dashboard } from '@/routes';
 import { show as showServer } from '@/routes/servers';
-import { type BreadcrumbItem, type Server, type ServerPhp, type ServerPhpModule } from '@/types';
+import { type BreadcrumbItem, type Server, type ServerPhp } from '@/types';
 import { Head, useForm } from '@inertiajs/react';
-import { CheckIcon, CodeIcon, Download } from 'lucide-react';
+import { useState } from 'react';
 
 type AvailablePhpVersions = {
-    [key: string]: string;
-};
-
-type PhpExtensions = {
     [key: string]: string;
 };
 
 export default function Php({
     server,
     availablePhpVersions,
-    phpExtensions,
     installedPhpVersions,
 }: {
     server: Server;
     availablePhpVersions: AvailablePhpVersions;
-    phpExtensions: PhpExtensions;
     installedPhpVersions: ServerPhp[];
 }) {
     // Get the default PHP version or first installed version
     const defaultPhp = installedPhpVersions.find(php => php.is_cli_default) || installedPhpVersions[0];
-    const installedModules = defaultPhp?.modules?.map(m => m.name) || [];
+
+    const [isAddVersionDialogOpen, setIsAddVersionDialogOpen] = useState(false);
 
     const { data, setData, post, processing, errors } = useForm({
         version: defaultPhp?.version || '8.3',
-        extensions: installedModules,
         memory_limit: '256M',
         max_execution_time: 30,
         upload_max_filesize: '2M',
+    });
+
+    const { data: addVersionData, setData: setAddVersionData, post: postAddVersion, processing: addVersionProcessing, errors: addVersionErrors, reset: resetAddVersion } = useForm({
+        version: '',
     });
 
     const breadcrumbs: BreadcrumbItem[] = [
@@ -49,20 +48,19 @@ export default function Php({
         { title: 'PHP', href: '#' },
     ];
 
-    const handleExtensionChange = (extension: string, checked: boolean) => {
-        if (checked) {
-            setData('extensions', [...data.extensions, extension]);
-        } else {
-            setData(
-                'extensions',
-                data.extensions.filter((ext) => ext !== extension),
-            );
-        }
-    };
-
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         post(`/servers/${server.id}/php`);
+    };
+
+    const handleAddVersion = (e: React.FormEvent) => {
+        e.preventDefault();
+        postAddVersion(`/servers/${server.id}/php/install`, {
+            onSuccess: () => {
+                setIsAddVersionDialogOpen(false);
+                resetAddVersion();
+            },
+        });
     };
 
     return (
@@ -104,65 +102,31 @@ export default function Php({
                                 {/* PHP Settings */}
                                 <div className="space-y-4">
                                     <h3 className="font-medium">Basic Settings</h3>
-                                    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="memory_limit">Memory Limit</Label>
-                                            <Input
-                                                id="memory_limit"
-                                                value={data.memory_limit}
-                                                onChange={(e) => setData('memory_limit', e.target.value)}
-                                                placeholder="256M"
-                                            />
-                                            {errors.memory_limit && <div className="text-sm text-red-600">{errors.memory_limit}</div>}
-                                        </div>
+                                    <div className="space-y-4">
+                                        <CardInput
+                                            label="Memory Limit"
+                                            value={data.memory_limit}
+                                            onChange={(e) => setData('memory_limit', e.target.value)}
+                                            placeholder="256M"
+                                            error={errors.memory_limit}
+                                        />
 
-                                        <div className="space-y-2">
-                                            <Label htmlFor="max_execution_time">Max Execution Time (seconds)</Label>
-                                            <Input
-                                                id="max_execution_time"
-                                                type="number"
-                                                value={data.max_execution_time}
-                                                onChange={(e) => setData('max_execution_time', parseInt(e.target.value) || 30)}
-                                                placeholder="30"
-                                            />
-                                            {errors.max_execution_time && <div className="text-sm text-red-600">{errors.max_execution_time}</div>}
-                                        </div>
+                                        <CardInput
+                                            label="Max Execution Time (seconds)"
+                                            type="number"
+                                            value={data.max_execution_time}
+                                            onChange={(e) => setData('max_execution_time', parseInt(e.target.value) || 30)}
+                                            placeholder="30"
+                                            error={errors.max_execution_time}
+                                        />
 
-                                        <div className="space-y-2">
-                                            <Label htmlFor="upload_max_filesize">Upload Max File Size</Label>
-                                            <Input
-                                                id="upload_max_filesize"
-                                                value={data.upload_max_filesize}
-                                                onChange={(e) => setData('upload_max_filesize', e.target.value)}
-                                                placeholder="2M"
-                                            />
-                                            {errors.upload_max_filesize && <div className="text-sm text-red-600">{errors.upload_max_filesize}</div>}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* PHP Extensions */}
-                                <div className="space-y-4">
-                                    <h3 className="font-medium">PHP Extensions</h3>
-                                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-                                        {Object.entries(phpExtensions).map(([extension, description]) => (
-                                            <div key={extension} className="flex items-start space-x-3">
-                                                <Checkbox
-                                                    id={extension}
-                                                    checked={data.extensions.includes(extension)}
-                                                    onCheckedChange={(checked) => handleExtensionChange(extension, !!checked)}
-                                                />
-                                                <div className="grid gap-1.5 leading-none">
-                                                    <Label
-                                                        htmlFor={extension}
-                                                        className="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                                                    >
-                                                        {extension}
-                                                    </Label>
-                                                    <p className="text-xs text-muted-foreground">{description}</p>
-                                                </div>
-                                            </div>
-                                        ))}
+                                        <CardInput
+                                            label="Upload Max File Size"
+                                            value={data.upload_max_filesize}
+                                            onChange={(e) => setData('upload_max_filesize', e.target.value)}
+                                            placeholder="2M"
+                                            error={errors.upload_max_filesize}
+                                        />
                                     </div>
                                 </div>
 
@@ -177,131 +141,105 @@ export default function Php({
                 )}
 
                 {installedPhpVersions.length > 0 && (
-                    <CardContainer title="Installed PHP Versions">
-                        {installedPhpVersions.map((php) => (
-                            <div key={php.id} className="mb-4 last:mb-0">
-                                <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-                                    <div>
-                                        <div className="text-sm text-muted-foreground">Version</div>
-                                        <div className="font-medium">
-                                            PHP {php.version}
+                    <>
+                        <CardContainer
+                            title="Versions"
+                            action={
+                                <Dialog open={isAddVersionDialogOpen} onOpenChange={setIsAddVersionDialogOpen}>
+                                    <DialogTrigger asChild>
+                                        <Button variant="outline" size="sm">Add Version</Button>
+                                    </DialogTrigger>
+                                    <DialogContent>
+                                        <form onSubmit={handleAddVersion}>
+                                            <DialogHeader>
+                                                <DialogTitle>Add PHP Version</DialogTitle>
+                                                <DialogDescription>
+                                                    Install a new PHP version on this server.
+                                                </DialogDescription>
+                                            </DialogHeader>
+                                            <div className="py-4">
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="add-version">PHP Version</Label>
+                                                    <Select value={addVersionData.version} onValueChange={(value) => setAddVersionData('version', value)}>
+                                                        <SelectTrigger id="add-version">
+                                                            <SelectValue placeholder="Select PHP version" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {Object.entries(availablePhpVersions).map(([value, label]) => (
+                                                                <SelectItem key={value} value={value}>
+                                                                    {label}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                    {addVersionErrors.version && <div className="text-sm text-red-600">{addVersionErrors.version}</div>}
+                                                </div>
+                                            </div>
+                                            <DialogFooter>
+                                                <Button type="button" variant="outline" onClick={() => setIsAddVersionDialogOpen(false)}>
+                                                    Cancel
+                                                </Button>
+                                                <Button type="submit" disabled={addVersionProcessing || !addVersionData.version}>
+                                                    {addVersionProcessing ? 'Installing...' : 'Install'}
+                                                </Button>
+                                            </DialogFooter>
+                                        </form>
+                                    </DialogContent>
+                                </Dialog>
+                            }
+                        >
+                            <div className="space-y-3">
+                                {installedPhpVersions.map((php) => (
+                                    <div key={php.id} className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-medium">PHP {php.version}</span>
                                             {php.is_cli_default && (
-                                                <span className="ml-2 text-xs text-muted-foreground">(CLI Default)</span>
+                                                <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                                                    CLI Default
+                                                </span>
+                                            )}
+                                            {php.is_site_default && (
+                                                <span className="rounded-full bg-blue-500/10 px-2 py-0.5 text-xs font-medium text-blue-600 dark:text-blue-400">
+                                                    Site Default
+                                                </span>
                                             )}
                                         </div>
+                                        <div className="text-sm text-muted-foreground capitalize">{php.status}</div>
                                     </div>
-                                    <div>
-                                        <div className="text-sm text-muted-foreground">Memory Limit</div>
-                                        <div className="font-medium">256M</div>
-                                    </div>
-                                    <div>
-                                        <div className="text-sm text-muted-foreground">Max Execution Time</div>
-                                        <div className="font-medium">30s</div>
-                                    </div>
-                                    <div>
-                                        <div className="text-sm text-muted-foreground">Status</div>
-                                        <div className="font-medium capitalize">{php.status}</div>
-                                    </div>
-                                </div>
-                                {php.modules && php.modules.length > 0 && (
-                                    <div className="mt-4">
-                                        <div className="mb-2 text-sm text-muted-foreground">Installed Extensions</div>
-                                        <div className="flex flex-wrap gap-2">
-                                            {php.modules.filter(m => m.is_enabled).map((module) => (
-                                                <span
-                                                    key={module.name}
-                                                    className="inline-flex items-center rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary"
-                                                >
-                                                    {module.name}
-                                                </span>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
+                                ))}
                             </div>
-                        ))}
-                    </CardContainer>
+                        </CardContainer>
+                    </>
                 )}
 
                 {defaultPhp && (
                     <form onSubmit={handleSubmit} className="space-y-6">
-                        <CardContainer title="Update PHP Version">
-                            <div className="space-y-2">
-                                <Label htmlFor="version">Version</Label>
-                                <Select value={data.version} onValueChange={(value) => setData('version', value)}>
-                                    <SelectTrigger className="w-full md:w-1/3">
-                                        <SelectValue placeholder="Select PHP version" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {Object.entries(availablePhpVersions).map(([value, label]) => (
-                                            <SelectItem key={value} value={value}>
-                                                {label}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                {errors.version && <div className="text-sm text-red-600">{errors.version}</div>}
-                            </div>
-                        </CardContainer>
-
                         <CardContainer title="PHP Settings">
-                            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                                <div className="space-y-2">
-                                    <Label htmlFor="memory_limit">Memory Limit</Label>
-                                    <Input
-                                        id="memory_limit"
-                                        value={data.memory_limit}
-                                        onChange={(e) => setData('memory_limit', e.target.value)}
-                                        placeholder="256M"
-                                    />
-                                    {errors.memory_limit && <div className="text-sm text-red-600">{errors.memory_limit}</div>}
-                                </div>
+                            <div className="space-y-4">
+                                <CardInput
+                                    label="Memory Limit"
+                                    value={data.memory_limit}
+                                    onChange={(e) => setData('memory_limit', e.target.value)}
+                                    placeholder="256M"
+                                    error={errors.memory_limit}
+                                />
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="max_execution_time">Max Execution Time (seconds)</Label>
-                                    <Input
-                                        id="max_execution_time"
-                                        type="number"
-                                        value={data.max_execution_time}
-                                        onChange={(e) => setData('max_execution_time', parseInt(e.target.value) || 30)}
-                                        placeholder="30"
-                                    />
-                                    {errors.max_execution_time && <div className="text-sm text-red-600">{errors.max_execution_time}</div>}
-                                </div>
+                                <CardInput
+                                    label="Max Execution Time (seconds)"
+                                    type="number"
+                                    value={data.max_execution_time}
+                                    onChange={(e) => setData('max_execution_time', parseInt(e.target.value) || 30)}
+                                    placeholder="30"
+                                    error={errors.max_execution_time}
+                                />
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="upload_max_filesize">Upload Max File Size</Label>
-                                    <Input
-                                        id="upload_max_filesize"
-                                        value={data.upload_max_filesize}
-                                        onChange={(e) => setData('upload_max_filesize', e.target.value)}
-                                        placeholder="2M"
-                                    />
-                                    {errors.upload_max_filesize && <div className="text-sm text-red-600">{errors.upload_max_filesize}</div>}
-                                </div>
-                            </div>
-                        </CardContainer>
-
-                        <CardContainer title="PHP Extensions">
-                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-                                {Object.entries(phpExtensions).map(([extension, description]) => (
-                                    <div key={extension} className="flex items-start space-x-3">
-                                        <Checkbox
-                                            id={extension}
-                                            checked={data.extensions.includes(extension)}
-                                            onCheckedChange={(checked) => handleExtensionChange(extension, !!checked)}
-                                        />
-                                        <div className="grid gap-1.5 leading-none">
-                                            <Label
-                                                htmlFor={extension}
-                                                className="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                                            >
-                                                {extension}
-                                            </Label>
-                                            <p className="text-xs text-muted-foreground">{description}</p>
-                                        </div>
-                                    </div>
-                                ))}
+                                <CardInput
+                                    label="Upload Max File Size"
+                                    value={data.upload_max_filesize}
+                                    onChange={(e) => setData('upload_max_filesize', e.target.value)}
+                                    placeholder="2M"
+                                    error={errors.upload_max_filesize}
+                                />
                             </div>
                         </CardContainer>
 

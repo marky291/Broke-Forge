@@ -8,8 +8,8 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-// Schedule monitoring metrics cleanup daily
-Schedule::command('monitoring:cleanup')
+// Schedule monitoring metrics purge daily
+Schedule::command('monitoring:purge')
     ->daily()
     ->at('03:00')
     ->onOneServer();

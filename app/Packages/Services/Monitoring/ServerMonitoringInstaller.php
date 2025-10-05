@@ -89,9 +89,12 @@ class ServerMonitoringInstaller extends PackageInstaller implements ServerPackag
                 return "cat > /etc/systemd/system/brokeforge-monitoring.service << 'EOF'\n{$serviceContent}\nEOF";
             },
 
-            // Create systemd timer for periodic collection (every 5 minutes)
+            // Create systemd timer for periodic collection
             function () {
-                $timerContent = view('monitoring.systemd-timer')->render();
+                $intervalMinutes = config('monitoring.collection_interval') / 60;
+                $timerContent = view('monitoring.systemd-timer', [
+                    'intervalMinutes' => $intervalMinutes,
+                ])->render();
 
                 return "cat > /etc/systemd/system/brokeforge-monitoring.timer << 'EOF'\n{$timerContent}\nEOF";
             },

@@ -1,6 +1,11 @@
 import { Button } from '@/components/ui/button';
 import { CardContainer } from '@/components/ui/card-container';
+import { CardTable, type CardTableColumn } from '@/components/ui/card-table';
+import { Label } from '@/components/ui/label';
 import { PageHeader } from '@/components/ui/page-header';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { usePagination } from '@/components/ui/table-pagination';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import ServerLayout from '@/layouts/server/layout';
 import { dashboard } from '@/routes';
 import { show as showServer } from '@/routes/servers';
@@ -14,10 +19,12 @@ export default function Monitoring({
     server,
     latestMetrics,
     recentMetrics,
+    selectedTimeframe = 24,
 }: {
     server: Server;
     latestMetrics: ServerMetric | null;
     recentMetrics: ServerMetric[];
+    selectedTimeframe?: number;
 }) {
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard.url() },
@@ -29,30 +36,132 @@ export default function Monitoring({
     const [localMetrics, setLocalMetrics] = useState<ServerMetric | null>(latestMetrics);
     const [localRecentMetrics, setLocalRecentMetrics] = useState<ServerMetric[]>(recentMetrics);
 
+    // Ensure timeframe is always valid (24, 72, or 168)
+    const validTimeframe = [24, 72, 168].includes(selectedTimeframe) ? selectedTimeframe : 24;
+    const [timeframe, setTimeframe] = useState<string>(validTimeframe.toString());
+    const [collectionInterval, setCollectionInterval] = useState<string>((server.monitoring_collection_interval || 300).toString());
+    const [nextCollectionCountdown, setNextCollectionCountdown] = useState<string>('Calculating...');
+
+    // Pagination for Recent Metrics table (latest first - already sorted by backend)
+    const { paginatedData: paginatedMetrics, paginationProps } = usePagination(localRecentMetrics, 5);
+
     const isActive = server.monitoring_status === 'active';
 
-    // Poll for new metrics when monitoring is active
+    // Table columns for Recent Metrics
+    const metricsColumns: CardTableColumn<ServerMetric>[] = [
+        {
+            header: 'Time',
+            accessor: (metric) => (
+                <span className="text-sm">
+                    {new Date(metric.collected_at).toLocaleString()}
+                </span>
+            ),
+        },
+        {
+            header: 'CPU',
+            accessor: (metric) => (
+                <span className="text-sm">{Number(metric.cpu_usage).toFixed(1)}%</span>
+            ),
+        },
+        {
+            header: 'Memory',
+            accessor: (metric) => (
+                <span className="text-sm">{Number(metric.memory_usage_percentage).toFixed(1)}%</span>
+            ),
+        },
+        {
+            header: 'Storage',
+            accessor: (metric) => (
+                <span className="text-sm">{Number(metric.storage_usage_percentage).toFixed(1)}%</span>
+            ),
+        },
+    ];
+
+    // Timeframe options
+    const timeframeOptions = [
+        { value: '24', label: '24 Hours' },
+        { value: '72', label: '3 Days' },
+        { value: '168', label: '7 Days' },
+    ];
+
+    // Handle timeframe change
+    const handleTimeframeChange = (value: string) => {
+        if (value) {
+            setTimeframe(value);
+            router.get(
+                `/servers/${server.id}/monitoring`,
+                { hours: value },
+                { preserveState: true, preserveScroll: true }
+            );
+        }
+    };
+
+    // Calculate countdown to next metric collection
+    useEffect(() => {
+        if (!isActive || !localMetrics) {
+            setNextCollectionCountdown('No metrics yet');
+            return;
+        }
+
+        const updateCountdown = () => {
+            const lastCollectedAt = new Date(localMetrics.collected_at);
+            const intervalSeconds = parseInt(collectionInterval);
+            const nextCollectionTime = new Date(lastCollectedAt.getTime() + intervalSeconds * 1000);
+            const now = new Date();
+            const secondsUntilNext = Math.floor((nextCollectionTime.getTime() - now.getTime()) / 1000);
+
+            if (secondsUntilNext <= 0) {
+                setNextCollectionCountdown('Collecting now...');
+            } else if (secondsUntilNext < 60) {
+                setNextCollectionCountdown(`${secondsUntilNext}s`);
+            } else {
+                const minutes = Math.floor(secondsUntilNext / 60);
+                const seconds = secondsUntilNext % 60;
+                setNextCollectionCountdown(`${minutes}m ${seconds}s`);
+            }
+        };
+
+        updateCountdown();
+        const interval = setInterval(updateCountdown, 1000);
+
+        return () => clearInterval(interval);
+    }, [isActive, localMetrics?.collected_at, collectionInterval]);
+
+    // Poll for new metrics when monitoring is active (matches collection interval)
     useEffect(() => {
         if (!isActive) return;
 
-        const interval = setInterval(async () => {
+        // Poll at the same interval as collection (in milliseconds)
+        const pollingInterval = parseInt(collectionInterval) * 1000;
+        // Capture current timeframe value to avoid closure issues
+        const currentTimeframe = timeframe;
+
+        const fetchMetrics = async () => {
             try {
-                const res = await fetch(`/servers/${server.id}/monitoring/metrics?hours=24`, {
+                const res = await fetch(`/servers/${server.id}/monitoring/metrics?hours=${currentTimeframe}`, {
                     headers: { Accept: 'application/json' },
                 });
                 if (!res.ok) return;
                 const json = await res.json();
                 if (json.success && json.data && json.data.length > 0) {
-                    setLocalMetrics(json.data[json.data.length - 1]);
+                    setLocalMetrics(json.data[0]); // First item is latest (desc order)
                     setLocalRecentMetrics(json.data);
                 }
             } catch (error) {
                 console.error('Failed to fetch metrics:', error);
             }
-        }, 30000); // Polling interval - configurable in config/monitoring.php
+        };
 
-        return () => clearInterval(interval);
-    }, [isActive, server.id]);
+        // Fetch immediately on mount
+        fetchMetrics();
+
+        // Then poll at regular intervals
+        const interval = setInterval(fetchMetrics, pollingInterval);
+
+        return () => {
+            clearInterval(interval);
+        };
+    }, [isActive, server.id, timeframe, collectionInterval]);
 
     // Auto-reload when monitoring status is installing or uninstalling
     useEffect(() => {
@@ -77,6 +186,16 @@ export default function Monitoring({
         }
         post(`/servers/${server.id}/monitoring/uninstall`, {
             onSuccess: () => router.reload(),
+        });
+    };
+
+    const handleIntervalChange = (value: string) => {
+        setCollectionInterval(value);
+        router.post(`/servers/${server.id}/monitoring/update-interval`, {
+            interval: parseInt(value),
+            hours: parseInt(timeframe), // Preserve current viewing timeframe
+        }, {
+            preserveScroll: true,
         });
     };
 
@@ -159,7 +278,7 @@ export default function Monitoring({
                             </Button>
                         </div>
                     ) : (
-                        <div className="p-6">
+                        <div className="p-6 space-y-6">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
                                     <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-green-500/10">
@@ -167,21 +286,33 @@ export default function Monitoring({
                                     </div>
                                     <div>
                                         <h3 className="text-base font-semibold">Monitoring Active</h3>
-                                        <p className="text-sm text-muted-foreground">
-                                            Collecting metrics every {(server.monitoring_collection_interval || 300) / 60} minutes
-                                        </p>
+                                        <p className="text-sm text-muted-foreground">Configure metrics collection interval below</p>
                                     </div>
                                 </div>
-                                <Button onClick={handleUninstall} disabled={processing} variant="destructive">
-                                    {processing ? (
-                                        <>
-                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                            Uninstalling...
-                                        </>
-                                    ) : (
-                                        'Uninstall Monitoring'
-                                    )}
-                                </Button>
+                                <div className="text-right">
+                                    <p className="text-xs text-muted-foreground">Next collection in</p>
+                                    <p className="text-lg font-semibold text-green-600">{nextCollectionCountdown}</p>
+                                </div>
+                            </div>
+
+                            <div className="grid gap-2">
+                                <Label htmlFor="collection-interval">Collection Interval</Label>
+                                <Select value={collectionInterval} onValueChange={handleIntervalChange} disabled={processing}>
+                                    <SelectTrigger id="collection-interval">
+                                        <SelectValue placeholder="Select interval" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="60">1 minute</SelectItem>
+                                        <SelectItem value="300">5 minutes</SelectItem>
+                                        <SelectItem value="600">10 minutes</SelectItem>
+                                        <SelectItem value="1200">20 minutes</SelectItem>
+                                        <SelectItem value="1800">30 minutes</SelectItem>
+                                        <SelectItem value="3600">Every Hourly</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <p className="text-xs text-muted-foreground">
+                                    Choose how often metrics are collected from your server
+                                </p>
                             </div>
                         </div>
                     )}
@@ -259,7 +390,18 @@ export default function Monitoring({
 
                         {/* Usage Chart */}
                         {localRecentMetrics.length > 1 && (
-                            <CardContainer title="Usage Over Time (Last 24 Hours)">
+                            <CardContainer
+                                title={`Usage Over Time (${timeframeOptions.find((opt) => opt.value === timeframe)?.label || 'Last 24 Hours'})`}
+                                action={
+                                    <ToggleGroup type="single" value={timeframe} onValueChange={handleTimeframeChange} variant="outline">
+                                        {timeframeOptions.map((option) => (
+                                            <ToggleGroupItem key={option.value} value={option.value}>
+                                                {option.label}
+                                            </ToggleGroupItem>
+                                        ))}
+                                    </ToggleGroup>
+                                }
+                            >
                                 <div className="p-6">
                                     <ResponsiveContainer width="100%" height={300}>
                                         <LineChart data={localRecentMetrics.slice().reverse()}>
@@ -316,42 +458,29 @@ export default function Monitoring({
 
                         {/* Recent Metrics Table */}
                         {localRecentMetrics.length > 0 && (
-                            <CardContainer title="Recent Metrics (Last 24 Hours)">
-                                <div className="overflow-x-auto">
-                                    <table className="w-full">
-                                        <thead className="bg-muted/50">
-                                            <tr>
-                                                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                                                    Time
-                                                </th>
-                                                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                                                    CPU
-                                                </th>
-                                                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                                                    Memory
-                                                </th>
-                                                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                                                    Storage
-                                                </th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-border/50">
-                                            {localRecentMetrics.slice().reverse().map((metric) => (
-                                                <tr key={metric.id} className="hover:bg-muted/30">
-                                                    <td className="px-4 py-3 text-sm">
-                                                        {new Date(metric.collected_at).toLocaleString()}
-                                                    </td>
-                                                    <td className="px-4 py-3 text-sm">{Number(metric.cpu_usage).toFixed(1)}%</td>
-                                                    <td className="px-4 py-3 text-sm">{Number(metric.memory_usage_percentage).toFixed(1)}%</td>
-                                                    <td className="px-4 py-3 text-sm">{Number(metric.storage_usage_percentage).toFixed(1)}%</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
+                            <CardContainer title={`Recent Metrics (${timeframeOptions.find((opt) => opt.value === timeframe)?.label || 'Last 24 Hours'})`}>
+                                <CardTable
+                                    columns={metricsColumns}
+                                    data={paginatedMetrics}
+                                    getRowKey={(metric) => metric.id}
+                                    pagination={paginationProps}
+                                />
                             </CardContainer>
                         )}
                     </>
+                )}
+
+                {/* Uninstall Monitoring Link */}
+                {isActive && (
+                    <div className="text-right mt-8">
+                        <button
+                            onClick={handleUninstall}
+                            disabled={processing}
+                            className="text-sm text-red-600 hover:text-red-700 dark:text-red-500 dark:hover:text-red-400 hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {processing ? 'Uninstalling monitoring...' : 'Uninstall Monitoring'}
+                        </button>
+                    </div>
                 )}
             </div>
         </ServerLayout>

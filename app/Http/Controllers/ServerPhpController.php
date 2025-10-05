@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Concerns\PreparesSiteData;
 use App\Models\Server;
 use App\Models\ServerPhp;
+use App\Packages\Enums\PhpVersion;
+use App\Packages\Services\PHP\PhpInstallerJob;
 use App\Packages\Services\PHP\Services\PhpConfigurationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -84,5 +86,45 @@ class ServerPhpController extends Controller
         return redirect()
             ->route('servers.php', $server)
             ->with('success', 'PHP configuration saved successfully');
+    }
+
+    public function install(Request $request, Server $server): RedirectResponse
+    {
+        $validated = $request->validate([
+            'version' => 'required|string|in:8.3',
+        ]);
+
+        // Map version string to PhpVersion enum
+        $phpVersion = PhpVersion::from($validated['version']);
+
+        // Check if this PHP version is already installed
+        $existingPhp = $server->phps()
+            ->where('version', $validated['version'])
+            ->first();
+
+        if ($existingPhp) {
+            return redirect()
+                ->route('servers.php', $server)
+                ->with('error', 'PHP ' . $validated['version'] . ' is already installed on this server');
+        }
+
+        // Check if this is the first PHP version
+        $isFirstPhp = $server->phps()->count() === 0;
+
+        // Create PHP record with installing status
+        ServerPhp::create([
+            'server_id' => $server->id,
+            'version' => $validated['version'],
+            'status' => \App\Enums\PhpStatus::Installing,
+            'is_cli_default' => $isFirstPhp, // First PHP version becomes CLI default
+            'is_site_default' => $isFirstPhp, // First PHP version becomes Site default
+        ]);
+
+        // Dispatch installation job
+        PhpInstallerJob::dispatch($server, $phpVersion);
+
+        return redirect()
+            ->route('servers.php', $server)
+            ->with('success', 'PHP ' . $validated['version'] . ' installation started');
     }
 }

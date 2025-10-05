@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\MonitoringStatus;
 use App\Enums\SchedulerStatus;
+use App\Enums\ServerProvider;
 use App\Packages\Enums\CredentialType;
 use App\Packages\Enums\ProvisionStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -31,6 +32,7 @@ class Server extends Model
     protected $fillable = [
         'user_id',
         'vanity_name',
+        'provider',
         'public_ip',
         'private_ip',
         'ssh_port',
@@ -56,6 +58,7 @@ class Server extends Model
     {
         return [
             'ssh_port' => 'integer',
+            'provider' => ServerProvider::class,
             'provision_status' => ProvisionStatus::class,
             'ssh_root_password' => 'encrypted',
             'monitoring_token' => 'encrypted',

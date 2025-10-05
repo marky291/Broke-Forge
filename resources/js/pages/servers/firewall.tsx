@@ -2,6 +2,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CardContainer } from '@/components/ui/card-container';
+import { CardTable, type CardTableColumn } from '@/components/ui/card-table';
 import { CardContainerAddButton } from '@/components/card-container-add-button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -201,6 +202,55 @@ export default function Firewall({
         return null;
     };
 
+    const columns: CardTableColumn<FirewallRule>[] = [
+        {
+            header: 'Name',
+            accessor: (rule) => <span className="text-sm">{rule.name}</span>,
+        },
+        {
+            header: 'Port',
+            accessor: (rule) => <span className="font-mono text-sm">{rule.port || 'All'}</span>,
+        },
+        {
+            header: 'Protocol',
+            accessor: () => <span className="text-sm">TCP/UDP</span>,
+        },
+        {
+            header: 'Source',
+            accessor: (rule) => <span className="font-mono text-sm">{rule.from_ip_address || 'Any'}</span>,
+        },
+        {
+            header: 'Action',
+            accessor: (rule) => getActionBadge(rule.rule_type),
+        },
+        {
+            header: 'Status',
+            accessor: (rule) => getStatusBadge(rule.status),
+        },
+        {
+            header: 'Actions',
+            align: 'right',
+            cell: (rule, index) => (
+                <>
+                    {(!rule.status || rule.status === 'active' || rule.status === 'failed') && rule.id && (
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteRule(rule.id!, index)}
+                            disabled={isDeletingRule === index}
+                        >
+                            {isDeletingRule === index ? (
+                                <Loader2 className="size-4 animate-spin" />
+                            ) : (
+                                <Trash2 className="size-4 text-red-500" />
+                            )}
+                        </Button>
+                    )}
+                </>
+            ),
+        },
+    ];
+
     if (!isFirewallInstalled) {
         return (
             <ServerLayout server={server} breadcrumbs={breadcrumbs}>
@@ -245,72 +295,31 @@ export default function Firewall({
                         />
                     }
                 >
-                    {rules.length === 0 ? (
-                        <div className="text-center py-8 text-muted-foreground">
-                            <Shield className="size-12 mx-auto mb-3 opacity-20" />
-                            <p>No firewall rules configured</p>
-                            <p className="text-sm mt-1">Add your first rule above</p>
-                        </div>
-                    ) : (
-                        <div className="space-y-2">
-                            {/* Table Header */}
-                            <div className="grid grid-cols-12 gap-2 px-4 py-2 text-sm font-medium text-muted-foreground border-b">
-                                <div className="col-span-2">Name</div>
-                                <div className="col-span-2">Port</div>
-                                <div className="col-span-1">Protocol</div>
-                                <div className="col-span-2">Source</div>
-                                <div className="col-span-2">Action</div>
-                                <div className="col-span-2">Status</div>
-                                <div className="col-span-1 text-right">Actions</div>
+                    <CardTable
+                        columns={columns}
+                        data={rules}
+                        getRowKey={(rule) => rule.id || Math.random()}
+                        rowClassName={(rule) =>
+                            cn(
+                                rule.status === 'pending'
+                                    ? 'bg-gray-50/50 dark:bg-gray-950/20'
+                                    : rule.status === 'installing'
+                                    ? 'bg-amber-50/50 dark:bg-amber-950/20 animate-pulse'
+                                    : rule.status === 'removing'
+                                    ? 'bg-orange-50/50 dark:bg-orange-950/20 animate-pulse'
+                                    : rule.status === 'failed'
+                                    ? 'bg-red-50/50 dark:bg-red-950/20'
+                                    : 'hover:bg-muted/50'
+                            )
+                        }
+                        emptyState={
+                            <div className="text-center py-8 text-muted-foreground">
+                                <Shield className="size-12 mx-auto mb-3 opacity-20" />
+                                <p>No firewall rules configured</p>
+                                <p className="text-sm mt-1">Add your first rule above</p>
                             </div>
-
-                            {/* Table Rows */}
-                            <div className="divide-y">
-                                {rules.map((rule, index) => (
-                                    <div
-                                        key={rule.id || index}
-                                        className={cn(
-                                            "grid grid-cols-12 gap-2 px-4 py-3 items-center transition-all",
-                                            rule.status === 'pending'
-                                                ? "bg-gray-50/50 dark:bg-gray-950/20"
-                                                : rule.status === 'installing'
-                                                ? "bg-amber-50/50 dark:bg-amber-950/20 animate-pulse"
-                                                : rule.status === 'removing'
-                                                ? "bg-orange-50/50 dark:bg-orange-950/20 animate-pulse"
-                                                : rule.status === 'failed'
-                                                ? "bg-red-50/50 dark:bg-red-950/20"
-                                                : "hover:bg-muted/50"
-                                        )}
-                                    >
-                                        <div className="col-span-2 text-sm">{rule.name}</div>
-                                        <div className="col-span-2 font-mono text-sm">{rule.port || 'All'}</div>
-                                        <div className="col-span-1 text-sm">TCP/UDP</div>
-                                        <div className="col-span-2 font-mono text-sm">
-                                            {rule.from_ip_address || 'Any'}
-                                        </div>
-                                        <div className="col-span-2">{getActionBadge(rule.rule_type)}</div>
-                                        <div className="col-span-2">{getStatusBadge(rule.status)}</div>
-                                        <div className="col-span-1 flex justify-end">
-                                            {(!rule.status || rule.status === 'active' || rule.status === 'failed') && rule.id && (
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => handleDeleteRule(rule.id!, index)}
-                                                    disabled={isDeletingRule === index}
-                                                >
-                                                    {isDeletingRule === index ? (
-                                                        <Loader2 className="size-4 animate-spin" />
-                                                    ) : (
-                                                        <Trash2 className="size-4 text-red-500" />
-                                                    )}
-                                                </Button>
-                                            )}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
+                        }
+                    />
                 </CardContainer>
 
                 {/* Recent Events */}

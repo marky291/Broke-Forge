@@ -112,6 +112,7 @@ export default function Database({
     const [selectedType, setSelectedType] = useState<string>(initialType);
 
     const { data, setData, post, processing, errors, reset } = useForm({
+        name: '',
         type: installedDatabase?.configuration?.type || initialType,
         version: installedDatabase?.configuration?.version || initialDefaults.version,
         port: installedDatabase?.port ?? initialDefaults.port,
@@ -211,7 +212,7 @@ export default function Database({
                 }
             },
             onSuccess: () => {
-                reset('root_password');
+                reset('name', 'root_password');
                 setIsDialogOpen(false);
             },
         });
@@ -290,6 +291,22 @@ export default function Database({
                                     <div className="space-y-4">
                                         <h3 className="font-medium">Configuration</h3>
                                         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                            <div className="space-y-2 md:col-span-2">
+                                                <Label htmlFor="name">Database Name</Label>
+                                                <Input
+                                                    id="name"
+                                                    type="text"
+                                                    value={data.name}
+                                                    onChange={(e) => setData('name', e.target.value)}
+                                                    placeholder={`Leave empty to use default (${selectedType})`}
+                                                    disabled={processing}
+                                                />
+                                                <p className="text-xs text-muted-foreground">
+                                                    Optional. This is used to identify your database in the list.
+                                                </p>
+                                                {errors.name && <div className="text-sm text-red-600">{errors.name}</div>}
+                                            </div>
+
                                             <div className="space-y-2">
                                                 <Label htmlFor="version">Version</Label>
                                                 <Select value={data.version} onValueChange={(value) => setData('version', value)}>

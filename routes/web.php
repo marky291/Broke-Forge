@@ -150,6 +150,8 @@ Route::middleware('auth')->group(function () {
             ->name('php');
         Route::post('php', [ServerPhpController::class, 'store'])
             ->name('php.store');
+        Route::post('php/install', [ServerPhpController::class, 'install'])
+            ->name('php.install');
 
         // Sites management
         Route::prefix('sites')->scopeBindings()->group(function () {
@@ -209,6 +211,8 @@ Route::middleware('auth')->group(function () {
                 ->name('monitoring.install');
             Route::post('uninstall', [ServerMonitoringController::class, 'uninstall'])
                 ->name('monitoring.uninstall');
+            Route::post('update-interval', [ServerMonitoringController::class, 'updateInterval'])
+                ->name('monitoring.update-interval');
             Route::get('metrics', [ServerMonitoringController::class, 'getMetrics'])
                 ->name('monitoring.metrics');
         });

@@ -61,6 +61,7 @@ export interface ServerEvent {
 export interface Server {
     id: number;
     vanity_name: string;
+    provider?: string | null;
     public_ip: string;
     ssh_port: number;
     private_ip?: string | null;
@@ -91,6 +92,7 @@ export interface ServerPhp {
     version: string;
     status: string;
     is_cli_default: boolean;
+    is_site_default: boolean;
     modules?: ServerPhpModule[];
     created_at?: string;
     updated_at?: string;

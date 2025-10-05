@@ -8,6 +8,7 @@ use App\Models\Server;
 use App\Models\ServerMetric;
 use App\Packages\Services\Monitoring\ServerMonitoringInstallerJob;
 use App\Packages\Services\Monitoring\ServerMonitoringRemoverJob;
+use App\Packages\Services\Monitoring\ServerMonitoringTimerUpdaterJob;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -19,11 +20,16 @@ class ServerMonitoringController extends Controller
     /**
      * Display monitoring page with installation status and metrics
      */
-    public function index(Server $server): Response
+    public function index(Request $request, Server $server): Response
     {
-        // Get recent metrics (last 24 hours)
+        // Validate and get timeframe in hours (default 24)
+        $hours = $request->validate([
+            'hours' => 'nullable|integer|in:24,72,168',
+        ])['hours'] ?? 24;
+
+        // Get recent metrics for the selected timeframe
         $recentMetrics = $server->metrics()
-            ->where('collected_at', '>=', now()->subDay())
+            ->where('collected_at', '>=', now()->subHours($hours))
             ->orderBy('collected_at', 'desc')
             ->get();
 
@@ -36,6 +42,7 @@ class ServerMonitoringController extends Controller
             'server' => $server->only(['id', 'vanity_name', 'public_ip', 'ssh_port', 'private_ip', 'connection', 'created_at', 'updated_at', 'monitoring_status', 'monitoring_token', 'monitoring_collection_interval', 'monitoring_installed_at', 'monitoring_uninstalled_at']),
             'latestMetrics' => $latestMetrics,
             'recentMetrics' => $recentMetrics,
+            'selectedTimeframe' => $hours,
         ]);
     }
 
@@ -102,7 +109,10 @@ class ServerMonitoringController extends Controller
      */
     public function getMetrics(Request $request, Server $server): JsonResponse
     {
-        $hours = $request->integer('hours', 24);
+        // Validate timeframe parameter
+        $hours = $request->validate([
+            'hours' => 'nullable|integer|in:24,72,168',
+        ])['hours'] ?? 24;
 
         $metrics = $server->metrics()
             ->where('collected_at', '>=', now()->subHours($hours))
@@ -113,5 +123,35 @@ class ServerMonitoringController extends Controller
             'success' => true,
             'data' => ServerMetricResource::collection($metrics),
         ]);
+    }
+
+    /**
+     * Update monitoring collection interval
+     */
+    public function updateInterval(Request $request, Server $server): RedirectResponse
+    {
+        // Validate interval (in seconds: 1min, 5min, 10min, 20min, 30min, 1hour)
+        // Also validate the hours parameter to preserve viewing timeframe
+        $validated = $request->validate([
+            'interval' => 'required|integer|in:60,300,600,1200,1800,3600',
+            'hours' => 'nullable|integer|in:24,72,168',
+        ]);
+
+        // Check if monitoring is active
+        if (! $server->monitoringIsActive()) {
+            return redirect()
+                ->route('servers.monitoring', $server)
+                ->with('error', 'Monitoring must be active to update collection interval');
+        }
+
+        // Dispatch timer update job
+        ServerMonitoringTimerUpdaterJob::dispatch($server, $validated['interval']);
+
+        // Preserve the current viewing timeframe when redirecting (default to 24)
+        $currentTimeframe = $validated['hours'] ?? 24;
+
+        return redirect()
+            ->route('servers.monitoring', ['server' => $server, 'hours' => $currentTimeframe])
+            ->with('success', 'Monitoring collection interval update started');
     }
 }

@@ -31,10 +31,10 @@ return [
     |
     | How long to retain historical metrics data (in days).
     | Older metrics are automatically cleaned up via scheduled task.
-    | Default: 30 days
+    | Default: 7 days (matches the maximum timeframe users can select)
     |
     */
-    'retention_days' => env('MONITORING_RETENTION_DAYS', 30),
+    'retention_days' => env('MONITORING_RETENTION_DAYS', 7),
 
     /*
     |--------------------------------------------------------------------------
