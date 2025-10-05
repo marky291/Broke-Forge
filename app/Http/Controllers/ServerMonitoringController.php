@@ -116,7 +116,7 @@ class ServerMonitoringController extends Controller
 
         $metrics = $server->metrics()
             ->where('collected_at', '>=', now()->subHours($hours))
-            ->orderBy('collected_at', 'asc')
+            ->orderBy('collected_at', 'desc')
             ->get();
 
         return response()->json([
