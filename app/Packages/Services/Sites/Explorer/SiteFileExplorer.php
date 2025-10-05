@@ -39,14 +39,38 @@ class SiteFileExplorer
     {
         $relativePath = $this->normalizeRelativePath($relativePath);
 
+        \Log::info('File explorer list requested', [
+            'site_id' => $this->site->id,
+            'server_id' => $this->site->server_id,
+            'relative_path' => $relativePath,
+            'base_path' => $this->basePath(),
+        ]);
+
         $command = $this->buildListCommand($relativePath);
+
+        \Log::debug('File explorer command generated', [
+            'command' => $command,
+            'site_id' => $this->site->id,
+        ]);
+
         $process = $this->runCommand($command, timeout: 30);
 
         if (! $process->isSuccessful()) {
+            \Log::error('File explorer list command failed', [
+                'site_id' => $this->site->id,
+                'exit_code' => $process->getExitCode(),
+                'error_output' => $process->getErrorOutput(),
+                'stdout' => $process->getOutput(),
+            ]);
             throw $this->mapListFailure($process);
         }
 
         $output = trim($process->getOutput());
+
+        \Log::debug('File explorer list command succeeded', [
+            'site_id' => $this->site->id,
+            'output_length' => strlen($output),
+        ]);
 
         if ($output === '') {
             return [
@@ -59,8 +83,18 @@ class SiteFileExplorer
             /** @var array{path: string, items: array<int, array<string, mixed>>} $decoded */
             $decoded = json_decode($output, true, flags: JSON_THROW_ON_ERROR);
         } catch (\JsonException $exception) {
+            \Log::error('Failed to decode file explorer JSON response', [
+                'site_id' => $this->site->id,
+                'output' => $output,
+                'error' => $exception->getMessage(),
+            ]);
             throw new ServerFileExplorerException('Failed to decode file listing response.', 500);
         }
+
+        \Log::info('File explorer list completed successfully', [
+            'site_id' => $this->site->id,
+            'item_count' => count($decoded['items']),
+        ]);
 
         return $decoded;
     }
@@ -71,6 +105,14 @@ class SiteFileExplorer
     public function upload(string $relativeDirectory, UploadedFile $file): void
     {
         $relativeDirectory = $this->normalizeRelativePath($relativeDirectory);
+
+        \Log::info('File explorer upload requested', [
+            'site_id' => $this->site->id,
+            'relative_directory' => $relativeDirectory,
+            'filename' => $file->getClientOriginalName(),
+            'size' => $file->getSize(),
+        ]);
+
         $absoluteDirectory = $this->resolveAbsolutePath($relativeDirectory, expect: 'dir');
 
         $originalName = $file->getClientOriginalName();
@@ -88,6 +130,12 @@ class SiteFileExplorer
 
         $remotePath = rtrim($absoluteDirectory, '/').'/'.$filename;
 
+        \Log::debug('File explorer uploading file', [
+            'site_id' => $this->site->id,
+            'local_path' => $localPath,
+            'remote_path' => $remotePath,
+        ]);
+
         $process = $this->makeSsh()
             ->setTimeout(120)
             ->upload(escapeshellarg($localPath), escapeshellarg($remotePath));
@@ -95,8 +143,18 @@ class SiteFileExplorer
         if (! $process->isSuccessful()) {
             $message = trim($process->getErrorOutput()) ?: 'File upload failed during transmission.';
 
+            \Log::error('File explorer upload failed', [
+                'site_id' => $this->site->id,
+                'error' => $message,
+            ]);
+
             throw new ServerFileExplorerException($message, 500);
         }
+
+        \Log::info('File explorer upload completed', [
+            'site_id' => $this->site->id,
+            'filename' => $filename,
+        ]);
     }
 
     /**
@@ -112,6 +170,11 @@ class SiteFileExplorer
             throw new ServerFileExplorerException('A file path is required for download.', 422);
         }
 
+        \Log::info('File explorer download requested', [
+            'site_id' => $this->site->id,
+            'relative_file_path' => $relativeFilePath,
+        ]);
+
         $absolutePath = $this->resolveAbsolutePath($relativeFilePath, expect: 'file');
         $filename = basename($absolutePath);
 
@@ -126,6 +189,12 @@ class SiteFileExplorer
         if ($handle === false) {
             throw new ServerFileExplorerException('Unable to open temporary download file for writing.', 500);
         }
+
+        \Log::debug('File explorer downloading file', [
+            'site_id' => $this->site->id,
+            'absolute_path' => $absolutePath,
+            'local_path' => $localPath,
+        ]);
 
         try {
             $process = $this->makeSsh()
@@ -147,8 +216,19 @@ class SiteFileExplorer
                 ? (trim($process->getErrorOutput()) ?: 'File download failed while reading from the server.')
                 : 'File download failed while reading from the server.';
 
+            \Log::error('File explorer download failed', [
+                'site_id' => $this->site->id,
+                'error' => $message,
+            ]);
+
             throw new ServerFileExplorerException($message, 500);
         }
+
+        \Log::info('File explorer download completed', [
+            'site_id' => $this->site->id,
+            'filename' => $filename,
+            'size' => filesize($localPath),
+        ]);
 
         return [
             'path' => $localPath,
@@ -221,6 +301,7 @@ class SiteFileExplorer
     protected function buildListCommand(string $relativePath): string
     {
         $script = <<<'PHP'
+<?php
 error_reporting(E_ERROR);
 $base = getenv('BF_BASE') ?: '';
 $base = rtrim($base, '/');
@@ -260,45 +341,50 @@ if ($entries === false) {
     fwrite(STDERR, 'DIR_READ_FAILED');
     exit(6);
 }
-$items = [];
+$items = array();
 foreach ($entries as $entry) {
     if ($entry === '.' || $entry === '..') {
         continue;
     }
     $fullPath = $target . '/' . $entry;
-    $items[] = [
+    $items[] = array(
         'name' => $entry,
         'path' => ltrim(($relativePath !== '' ? $relativePath . '/' : '') . $entry, '/'),
         'type' => is_dir($fullPath) ? 'directory' : 'file',
         'size' => is_file($fullPath) ? (int) @filesize($fullPath) : null,
         'modifiedAt' => date(DATE_ATOM, @filemtime($fullPath) ?: time()),
         'permissions' => substr(sprintf('%o', @fileperms($fullPath) ?: 0), -4),
-    ];
+    );
 }
-usort($items, static function (array $left, array $right): int {
+usort($items, function ($left, $right) {
     if ($left['type'] === $right['type']) {
         return strcasecmp($left['name'], $right['name']);
     }
-
     return $left['type'] === 'directory' ? -1 : 1;
 });
-echo json_encode([
-    'path' => $relativePath,
-    'items' => $items,
-], JSON_UNESCAPED_SLASHES);
+echo json_encode(array('path' => $relativePath, 'items' => $items), JSON_UNESCAPED_SLASHES);
 PHP;
 
+        $encoded = base64_encode($script);
+
+        // Use a temp file approach for cross-platform compatibility
+        $tempFile = '/tmp/bf_explorer_'.uniqid().'.php';
+
         return sprintf(
-            'BF_BASE=%s BF_PATH=%s php -d detect_unicode=0 -r %s',
+            'printf %%s %s | base64 -d > %s && BF_BASE=%s BF_PATH=%s php -d detect_unicode=0 %s 2>&1; rm -f %s',
+            escapeshellarg($encoded),
+            escapeshellarg($tempFile),
             escapeshellarg($this->basePath()),
             escapeshellarg($relativePath),
-            escapeshellarg($script),
+            escapeshellarg($tempFile),
+            escapeshellarg($tempFile),
         );
     }
 
     protected function resolveAbsolutePath(string $relativePath, string $expect): string
     {
         $script = <<<'PHP'
+<?php
 error_reporting(E_ERROR);
 $base = getenv('BF_BASE') ?: '';
 $base = rtrim($base, '/');
@@ -339,12 +425,20 @@ if ($type === 'file' && ! is_file($target)) {
 echo $target;
 PHP;
 
+        $encoded = base64_encode($script);
+
+        // Use a temp file approach for cross-platform compatibility
+        $tempFile = '/tmp/bf_resolver_'.uniqid().'.php';
+
         $command = sprintf(
-            'BF_BASE=%s BF_PATH=%s BF_EXPECT=%s php -d detect_unicode=0 -r %s',
+            'printf %%s %s | base64 -d > %s && BF_BASE=%s BF_PATH=%s BF_EXPECT=%s php -d detect_unicode=0 %s 2>&1; rm -f %s',
+            escapeshellarg($encoded),
+            escapeshellarg($tempFile),
             escapeshellarg($this->basePath()),
             escapeshellarg($relativePath),
             escapeshellarg($expect),
-            escapeshellarg($script),
+            escapeshellarg($tempFile),
+            escapeshellarg($tempFile),
         );
 
         $process = $this->runCommand($command, timeout: 15);
