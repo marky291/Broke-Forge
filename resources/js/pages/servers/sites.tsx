@@ -15,7 +15,7 @@ import { show as showServer } from '@/routes/servers';
 import { show as showSite } from '@/routes/servers/sites';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
-import { AlertCircle, CheckCircle, CheckCircle2, ChevronRight, Clock, FileCode2, GitBranch, Globe, Loader2, Lock, Plus, XCircle } from 'lucide-react';
+import { CheckCircle, CheckCircle2, ChevronRight, Clock, GitBranch, Globe, Loader2, Lock, Plus, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 type ServerType = {
@@ -93,7 +93,7 @@ export default function Sites({ server, sites }: SitesProps) {
 
     // Poll for updates when there are sites provisioning
     useEffect(() => {
-        const hasProvisioningSites = sites.data.some(site => site.status === 'provisioning');
+        const hasProvisioningSites = sites.data.some((site) => site.status === 'provisioning');
 
         if (hasProvisioningSites) {
             setWasProvisioning(true);
@@ -126,31 +126,31 @@ export default function Sites({ server, sites }: SitesProps) {
         switch (status) {
             case 'active':
                 return (
-                    <Badge variant="outline" className="border-green-200 bg-green-50 text-green-700 font-medium text-xs px-2.5 py-0.5">
+                    <Badge variant="outline" className="border-green-200 bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700">
                         Active
                     </Badge>
                 );
             case 'provisioning':
                 return (
-                    <Badge variant="outline" className="border-blue-200 bg-blue-50 text-blue-700 font-medium text-xs px-2.5 py-0.5">
+                    <Badge variant="outline" className="border-blue-200 bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700">
                         Provisioning
                     </Badge>
                 );
             case 'disabled':
                 return (
-                    <Badge variant="outline" className="border-gray-200 bg-gray-50 text-gray-700 font-medium text-xs px-2.5 py-0.5">
+                    <Badge variant="outline" className="border-gray-200 bg-gray-50 px-2.5 py-0.5 text-xs font-medium text-gray-700">
                         Disabled
                     </Badge>
                 );
             case 'failed':
                 return (
-                    <Badge variant="outline" className="border-red-200 bg-red-50 text-red-700 font-medium text-xs px-2.5 py-0.5">
+                    <Badge variant="outline" className="border-red-200 bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-700">
                         Failed
                     </Badge>
                 );
             default:
                 return (
-                    <Badge variant="outline" className="font-medium text-xs px-2.5 py-0.5">
+                    <Badge variant="outline" className="px-2.5 py-0.5 text-xs font-medium">
                         {status}
                     </Badge>
                 );
@@ -175,12 +175,24 @@ export default function Sites({ server, sites }: SitesProps) {
     const getApplicationTypeBadge = (type?: string) => {
         switch (type?.toLowerCase()) {
             case 'laravel':
-                return <Badge variant="outline" className="text-xs font-normal border-orange-200 text-orange-700 bg-orange-50">Laravel</Badge>;
+                return (
+                    <Badge variant="outline" className="border-orange-200 bg-orange-50 text-xs font-normal text-orange-700">
+                        Laravel
+                    </Badge>
+                );
             case 'wordpress':
-                return <Badge variant="outline" className="text-xs font-normal border-blue-200 text-blue-700 bg-blue-50">WordPress</Badge>;
+                return (
+                    <Badge variant="outline" className="border-blue-200 bg-blue-50 text-xs font-normal text-blue-700">
+                        WordPress
+                    </Badge>
+                );
             case 'static':
             case 'static-html':
-                return <Badge variant="outline" className="text-xs font-normal border-gray-200 text-gray-700 bg-gray-50">Static HTML</Badge>;
+                return (
+                    <Badge variant="outline" className="border-gray-200 bg-gray-50 text-xs font-normal text-gray-700">
+                        Static HTML
+                    </Badge>
+                );
             default:
                 return null;
         }
@@ -196,15 +208,7 @@ export default function Sites({ server, sites }: SitesProps) {
     return (
         <ServerLayout server={server} breadcrumbs={breadcrumbs}>
             <Head title={`Sites — ${server.vanity_name}`} />
-            <PageHeader
-                title="Sites Management"
-                description="Manage websites, domains, and applications hosted on your server."
-                action={
-                    <Button asChild variant="outline" size="sm">
-                        <Link href={`/servers/${server.id}/explorer`}>Open File Explorer</Link>
-                    </Button>
-                }
-            >
+            <PageHeader title="Sites Management" description="Manage websites, domains, and applications hosted on your server.">
                 {/* Success Message */}
                 {flash?.success && (
                     <Alert variant="default" className="border-green-200 bg-green-50 text-green-900">
@@ -224,90 +228,84 @@ export default function Sites({ server, sites }: SitesProps) {
                 {/* Sites List */}
                 <CardContainer
                     title="Configured Sites"
-                    action={
-                        <CardContainerAddButton
-                            label="Add Site"
-                            onClick={() => setShowAddSiteDialog(true)}
-                            aria-label="Add Site"
-                        />
-                    }
+                    action={<CardContainerAddButton label="Add Site" onClick={() => setShowAddSiteDialog(true)} aria-label="Add Site" />}
                 >
                     {sites.data.length > 0 ? (
                         <div>
                             {sites.data.map((site, index) => (
                                 <div key={site.id} style={{ marginBottom: index === sites.data.length - 1 ? '0' : '24px' }}>
-                                    <Link
-                                        href={showSite({ server: server.id, site: site.id }).url}
-                                        className="block group"
-                                    >
-                                        <div className="px-6 hover:bg-muted/30 transition-colors border-b border-border/50">
-                                        <div className="flex items-center gap-6 py-6">
-                                            {/* Icon */}
-                                            <div className="flex items-center justify-center w-11 h-11 rounded-lg bg-primary/10 flex-shrink-0">
-                                                <Globe className="h-5 w-5 text-primary" />
-                                            </div>
+                                    <Link href={showSite({ server: server.id, site: site.id }).url} className="group block">
+                                        <div className="border-b border-border/50 px-6 transition-colors hover:bg-muted/30">
+                                            <div className="flex items-center gap-6 py-2">
+                                                {/* Icon */}
+                                                <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                                                    <Globe className="h-5 w-5 text-primary" />
+                                                </div>
 
-                                            {/* Site Info */}
-                                            <div className="flex-1 min-w-0">
-                                                <h3 className="text-base font-semibold text-foreground truncate group-hover:text-primary transition-colors mb-1">
-                                                    {site.domain}
-                                                </h3>
-                                                {site.configuration?.git_repository?.repository ? (
-                                                    <div className="flex items-center gap-2">
-                                                        <GitBranch className="h-3.5 w-3.5 text-muted-foreground/60 flex-shrink-0" />
-                                                        <p className="text-sm text-muted-foreground truncate">
-                                                            {site.configuration.git_repository.repository}
-                                                            {site.configuration.git_repository.branch && (
-                                                                <span className="text-muted-foreground/60"> • {site.configuration.git_repository.branch}</span>
-                                                            )}
-                                                        </p>
+                                                {/* Site Info */}
+                                                <div className="min-w-0 flex-1">
+                                                    <h3 className="mb-1 truncate text-base font-semibold text-foreground transition-colors group-hover:text-primary">
+                                                        {site.domain}
+                                                    </h3>
+                                                    {site.configuration?.git_repository?.repository ? (
+                                                        <div className="flex items-center gap-2">
+                                                            <GitBranch className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground/60" />
+                                                            <p className="truncate text-sm text-muted-foreground">
+                                                                {site.configuration.git_repository.repository}
+                                                                {site.configuration.git_repository.branch && (
+                                                                    <span className="text-muted-foreground/60">
+                                                                        {' '}
+                                                                        • {site.configuration.git_repository.branch}
+                                                                    </span>
+                                                                )}
+                                                            </p>
+                                                        </div>
+                                                    ) : (
+                                                        <p className="text-sm text-muted-foreground/60">No repository configured</p>
+                                                    )}
+                                                </div>
+
+                                                {/* Metadata */}
+                                                <div className="flex flex-shrink-0 items-center gap-6">
+                                                    {/* SSL */}
+                                                    <div className="flex min-w-[80px] items-center gap-2">
+                                                        <Lock
+                                                            className={`h-4 w-4 flex-shrink-0 ${site.ssl_enabled ? 'text-green-600' : 'text-muted-foreground/30'}`}
+                                                        />
+                                                        <span className="text-sm text-muted-foreground">{site.ssl_enabled ? 'SSL' : 'No SSL'}</span>
                                                     </div>
-                                                ) : (
-                                                    <p className="text-sm text-muted-foreground/60">No repository configured</p>
-                                                )}
+
+                                                    {/* PHP Version */}
+                                                    <div className="min-w-[70px] text-sm">
+                                                        <span className="text-muted-foreground">PHP </span>
+                                                        <span className="font-medium text-foreground">{site.php_version}</span>
+                                                    </div>
+
+                                                    {/* Deployed Time */}
+                                                    <div className="min-w-[110px] text-right text-sm text-muted-foreground">
+                                                        {site.provisioned_at_human || 'Not deployed'}
+                                                    </div>
+
+                                                    {/* Arrow */}
+                                                    <ChevronRight className="h-5 w-5 flex-shrink-0 text-muted-foreground/40 transition-all group-hover:translate-x-0.5 group-hover:text-primary" />
+                                                </div>
                                             </div>
-
-                                            {/* Metadata */}
-                                            <div className="flex items-center gap-6 flex-shrink-0">
-                                                {/* SSL */}
-                                                <div className="flex items-center gap-2 min-w-[80px]">
-                                                    <Lock className={`h-4 w-4 flex-shrink-0 ${site.ssl_enabled ? 'text-green-600' : 'text-muted-foreground/30'}`} />
-                                                    <span className="text-sm text-muted-foreground">
-                                                        {site.ssl_enabled ? 'SSL' : 'No SSL'}
-                                                    </span>
-                                                </div>
-
-                                                {/* PHP Version */}
-                                                <div className="text-sm min-w-[70px]">
-                                                    <span className="text-muted-foreground">PHP </span>
-                                                    <span className="font-medium text-foreground">{site.php_version}</span>
-                                                </div>
-
-                                                {/* Deployed Time */}
-                                                <div className="text-sm text-muted-foreground min-w-[110px] text-right">
-                                                    {site.provisioned_at_human || 'Not deployed'}
-                                                </div>
-
-                                                {/* Arrow */}
-                                                <ChevronRight className="h-5 w-5 text-muted-foreground/40 group-hover:text-primary group-hover:translate-x-0.5 transition-all flex-shrink-0" />
-                                            </div>
-                                        </div>
                                         </div>
                                     </Link>
                                 </div>
                             ))}
                         </div>
                     ) : (
-                            <div className="p-8 text-center">
-                                <Globe className="mx-auto h-12 w-12 text-muted-foreground/50" />
-                                <h3 className="mt-4 text-lg font-semibold">No sites configured</h3>
-                                <p className="mt-2 text-sm text-muted-foreground">Get started by adding your first site to this server.</p>
-                                <Button onClick={() => setShowAddSiteDialog(true)} className="mt-4" variant="outline">
-                                    <Plus className="mr-2 h-4 w-4" />
-                                    Add Your First Site
-                                </Button>
-                            </div>
-                        )}
+                        <div className="p-8 text-center">
+                            <Globe className="mx-auto h-12 w-12 text-muted-foreground/50" />
+                            <h3 className="mt-4 text-lg font-semibold">No sites configured</h3>
+                            <p className="mt-2 text-sm text-muted-foreground">Get started by adding your first site to this server.</p>
+                            <Button onClick={() => setShowAddSiteDialog(true)} className="mt-4" variant="outline">
+                                <Plus className="mr-2 h-4 w-4" />
+                                Add Your First Site
+                            </Button>
+                        </div>
+                    )}
                 </CardContainer>
             </PageHeader>
 

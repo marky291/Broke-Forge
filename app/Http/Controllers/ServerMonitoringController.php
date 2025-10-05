@@ -58,6 +58,9 @@ class ServerMonitoringController extends Controller
                 ->with('error', 'Monitoring is already installed on this server');
         }
 
+        // Set status to installing immediately
+        $server->update(['monitoring_status' => 'installing']);
+
         // Dispatch monitoring installation job
         ServerMonitoringInstallerJob::dispatch($server);
 
@@ -77,6 +80,9 @@ class ServerMonitoringController extends Controller
                 ->route('servers.monitoring', $server)
                 ->with('error', 'Monitoring is not installed on this server');
         }
+
+        // Set status to uninstalling immediately
+        $server->update(['monitoring_status' => 'uninstalling']);
 
         // Dispatch monitoring removal job
         ServerMonitoringRemoverJob::dispatch($server);
