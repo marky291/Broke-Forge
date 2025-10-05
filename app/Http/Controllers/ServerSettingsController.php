@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\PreparesSiteData;
-
 use App\Models\Server;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -11,6 +10,7 @@ use Inertia\Inertia;
 class ServerSettingsController extends Controller
 {
     use PreparesSiteData;
+
     public function index(Request $request, Server $server): \Inertia\Response
     {
         return Inertia::render('servers/settings', [

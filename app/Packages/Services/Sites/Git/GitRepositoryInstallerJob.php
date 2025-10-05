@@ -43,6 +43,9 @@ class GitRepositoryInstallerJob implements ShouldQueue
             // Create installer instance
             $installer = new GitRepositoryInstaller($this->server);
 
+            // Set the site for event tracking
+            $installer->setSite($this->site);
+
             // Execute installation - the installer handles all logic, validation, and database tracking
             $installer->execute($this->site, $this->configuration);
 

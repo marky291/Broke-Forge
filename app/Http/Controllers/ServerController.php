@@ -14,6 +14,7 @@ use Inertia\Response;
 class ServerController extends Controller
 {
     use PreparesSiteData;
+
     public function index(): Response
     {
         $servers = Server::query()

@@ -25,6 +25,7 @@ class ServerEvent extends Model
      */
     protected $fillable = [
         'server_id',
+        'server_site_id',
         'service_type',
         'provision_type',
         'milestone',
@@ -55,6 +56,14 @@ class ServerEvent extends Model
     public function server(): BelongsTo
     {
         return $this->belongsTo(Server::class);
+    }
+
+    /**
+     * Get the site that owns the provision event (if site-level).
+     */
+    public function site(): BelongsTo
+    {
+        return $this->belongsTo(ServerSite::class, 'server_site_id');
     }
 
     /**

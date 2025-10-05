@@ -144,7 +144,7 @@ class DatabaseVersionCompatibility
             return [
                 'valid' => false,
                 'error' => "Database {$dbType->value} version {$dbVersion} is not compatible with Ubuntu {$ubuntuCodename}. ".
-                          "Compatible versions: ".implode(', ', $this->getCompatibleVersions($dbType, $ubuntuCodename)),
+                          'Compatible versions: '.implode(', ', $this->getCompatibleVersions($dbType, $ubuntuCodename)),
             ];
         }
 

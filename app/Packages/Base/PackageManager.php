@@ -3,6 +3,7 @@
 namespace App\Packages\Base;
 
 use App\Models\Server;
+use App\Models\ServerSite;
 use Closure;
 use Exception;
 use Illuminate\Database\Eloquent\Model;
@@ -16,6 +17,21 @@ use Stringable;
 abstract class PackageManager implements Package
 {
     protected Server $server;
+
+    /**
+     * Optional site for site-level packages
+     */
+    protected ?ServerSite $site = null;
+
+    /**
+     * Set the site for site-level packages
+     */
+    public function setSite(ServerSite $site): self
+    {
+        $this->site = $site;
+
+        return $this;
+    }
 
     /**
      * Get the total steps that have been run
@@ -79,7 +95,7 @@ abstract class PackageManager implements Package
 
             // Persist the provision event to database for frontend tracking
             if ($this instanceof \App\Packages\Base\ServerPackage || $this instanceof \App\Packages\Base\SitePackage) {
-                $this->currentEvent = $this->server->events()->create([
+                $eventData = [
                     'server_id' => $this->server->id,
                     'service_type' => $service,
                     'provision_type' => $this->actionableName() == 'Installing' ? 'install' : 'uninstall',
@@ -93,7 +109,14 @@ abstract class PackageManager implements Package
                     ],
                     'status' => 'pending', // Start as pending
                     'error_log' => null,
-                ]);
+                ];
+
+                // Add site_id if this is a site-level package
+                if ($this instanceof \App\Packages\Base\SitePackage && $this->site) {
+                    $eventData['server_site_id'] = $this->site->id;
+                }
+
+                $this->currentEvent = $this->server->events()->create($eventData);
             } else {
                 throw new Exception('Unknown package type. Class: '.get_class($this));
             }

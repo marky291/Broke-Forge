@@ -6,8 +6,7 @@ use App\Enums\DatabaseType;
 
 class DatabaseConfigurationService
 {
-
-    public function getAvailableTypes(string $osCodename = null): array
+    public function getAvailableTypes(?string $osCodename = null): array
     {
         return [
             DatabaseType::MySQL->value => [
