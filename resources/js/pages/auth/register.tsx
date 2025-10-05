@@ -1,6 +1,6 @@
 import RegisteredUserController from '@/actions/App/Http/Controllers/Auth/RegisteredUserController';
-import { login } from '@/routes';
-import { Form, Head } from '@inertiajs/react';
+import { dashboard, login } from '@/routes';
+import { Form, Head, router } from '@inertiajs/react';
 import { LoaderCircle } from 'lucide-react';
 
 import InputError from '@/components/input-error';
@@ -18,6 +18,7 @@ export default function Register() {
                 {...RegisteredUserController.store.form()}
                 resetOnSuccess={['password', 'password_confirmation']}
                 disableWhileProcessing
+                onSuccess={() => router.visit(dashboard.url())}
                 className="flex flex-col gap-6"
             >
                 {({ processing, errors }) => (

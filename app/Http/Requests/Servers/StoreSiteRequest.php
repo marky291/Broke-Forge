@@ -30,7 +30,7 @@ class StoreSiteRequest extends FormRequest
                 'string',
                 'max:255',
                 'regex:/^([a-z0-9]+(-[a-z0-9]+)*\.)+[a-z]{2,}$/i',
-                Rule::unique('sites')->where('server_id', $serverId),
+                Rule::unique('server_sites')->where('server_id', $serverId),
             ],
             'php_version' => [
                 'required',

@@ -1,4 +1,5 @@
 import { CardContainerAddButton } from '@/components/card-container-add-button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CardContainer } from '@/components/ui/card-container';
@@ -13,9 +14,9 @@ import { dashboard } from '@/routes';
 import { show as showServer } from '@/routes/servers';
 import { show as showSite } from '@/routes/servers/sites';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link, useForm } from '@inertiajs/react';
-import { CheckCircle, ChevronRight, Clock, FileCode2, GitBranch, Globe, Loader2, Lock, Plus, XCircle } from 'lucide-react';
-import { useState } from 'react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
+import { AlertCircle, CheckCircle, CheckCircle2, ChevronRight, Clock, FileCode2, GitBranch, Globe, Loader2, Lock, Plus, XCircle } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 type ServerType = {
     id: number;
@@ -76,6 +77,8 @@ type SitesProps = {
 
 export default function Sites({ server, sites }: SitesProps) {
     const [showAddSiteDialog, setShowAddSiteDialog] = useState(false);
+    const [wasProvisioning, setWasProvisioning] = useState(false);
+    const { flash } = usePage<{ flash: { success?: string; error?: string } }>().props;
     const form = useForm({
         domain: '',
         php_version: '8.3',
@@ -88,9 +91,30 @@ export default function Sites({ server, sites }: SitesProps) {
         { title: 'Sites', href: '#' },
     ];
 
+    // Poll for updates when there are sites provisioning
+    useEffect(() => {
+        const hasProvisioningSites = sites.data.some(site => site.status === 'provisioning');
+
+        if (hasProvisioningSites) {
+            setWasProvisioning(true);
+            const interval = setInterval(() => {
+                router.reload({ only: ['sites'], preserveScroll: true });
+            }, 3000); // Poll every 3 seconds
+
+            return () => clearInterval(interval);
+        } else if (wasProvisioning) {
+            // Sites finished provisioning, do one final reload to get fresh data
+            setWasProvisioning(false);
+            setTimeout(() => {
+                router.reload({ only: ['sites'], preserveScroll: true });
+            }, 500); // Small delay to ensure DB has been updated
+        }
+    }, [sites.data, wasProvisioning]);
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         form.post(`/servers/${server.id}/sites`, {
+            preserveScroll: true,
             onSuccess: () => {
                 setShowAddSiteDialog(false);
                 form.reset();
@@ -181,6 +205,22 @@ export default function Sites({ server, sites }: SitesProps) {
                     </Button>
                 }
             >
+                {/* Success Message */}
+                {flash?.success && (
+                    <Alert variant="default" className="border-green-200 bg-green-50 text-green-900">
+                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                        <AlertDescription>{flash.success}</AlertDescription>
+                    </Alert>
+                )}
+
+                {/* Error Message */}
+                {flash?.error && (
+                    <Alert variant="destructive">
+                        <XCircle className="h-4 w-4" />
+                        <AlertDescription>{flash.error}</AlertDescription>
+                    </Alert>
+                )}
+
                 {/* Sites List */}
                 <CardContainer
                     title="Configured Sites"
@@ -193,15 +233,15 @@ export default function Sites({ server, sites }: SitesProps) {
                     }
                 >
                     {sites.data.length > 0 ? (
-                        <div className="divide-y divide-border/50">
-                            {sites.data.map((site) => (
-                                <Link
-                                    key={site.id}
-                                    href={showSite({ server: server.id, site: site.id }).url}
-                                    className="block group"
-                                >
-                                    <div className="px-6 py-5 hover:bg-muted/30 transition-colors">
-                                        <div className="flex items-center gap-6">
+                        <div>
+                            {sites.data.map((site, index) => (
+                                <div key={site.id} style={{ marginBottom: index === sites.data.length - 1 ? '0' : '24px' }}>
+                                    <Link
+                                        href={showSite({ server: server.id, site: site.id }).url}
+                                        className="block group"
+                                    >
+                                        <div className="px-6 hover:bg-muted/30 transition-colors border-b border-border/50">
+                                        <div className="flex items-center gap-6 py-6">
                                             {/* Icon */}
                                             <div className="flex items-center justify-center w-11 h-11 rounded-lg bg-primary/10 flex-shrink-0">
                                                 <Globe className="h-5 w-5 text-primary" />
@@ -252,8 +292,9 @@ export default function Sites({ server, sites }: SitesProps) {
                                                 <ChevronRight className="h-5 w-5 text-muted-foreground/40 group-hover:text-primary group-hover:translate-x-0.5 transition-all flex-shrink-0" />
                                             </div>
                                         </div>
-                                    </div>
-                                </Link>
+                                        </div>
+                                    </Link>
+                                </div>
                             ))}
                         </div>
                     ) : (

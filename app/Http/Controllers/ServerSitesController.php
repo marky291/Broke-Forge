@@ -18,10 +18,8 @@ class ServerSitesController extends Controller
     public function index(Server $server): Response
     {
         $sites = $server->sites()
-            ->select(['id', 'domain', 'document_root', 'php_version', 'ssl_enabled', 'status', 'configuration', 'git_status', 'provisioned_at'])
             ->latest()
-            ->paginate(10)
-            ->withQueryString();
+            ->paginate(10);
 
         return Inertia::render('servers/sites', [
             'server' => $server->only([
@@ -64,13 +62,29 @@ class ServerSitesController extends Controller
     {
         $validated = $request->validated();
 
-        SiteInstallerJob::dispatch(
-            $server,
-            $validated['domain'],
-            $validated['php_version'],
-            $validated['ssl']
-        );
+        try {
+            // Create the site record immediately so it appears in the list
+            $site = ServerSite::create([
+                'server_id' => $server->id,
+                'domain' => $validated['domain'],
+                'php_version' => $validated['php_version'],
+                'ssl_enabled' => $validated['ssl'],
+                'status' => 'provisioning',
+                'document_root' => "/home/brokeforge/{$validated['domain']}/public",
+                'nginx_config_path' => "/etc/nginx/sites-available/{$validated['domain']}",
+            ]);
 
-        return back()->with('success', 'Site provisioning started.');
+            // Dispatch job to provision the site on the remote server
+            SiteInstallerJob::dispatch(
+                $server,
+                $validated['domain'],
+                $validated['php_version'],
+                $validated['ssl']
+            );
+
+            return back()->with('success', 'Site provisioning started. The site will appear in the list shortly.');
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Failed to start site provisioning: '.$e->getMessage());
+        }
     }
 }
