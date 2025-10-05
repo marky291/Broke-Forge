@@ -21,6 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'webhooks/github/*',
             'api/servers/*/scheduler/runs',
             'api/servers/*/metrics',
+            'stripe/webhook',
         ]);
 
         $middleware->web(append: [

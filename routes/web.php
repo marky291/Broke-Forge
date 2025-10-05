@@ -268,9 +268,19 @@ Route::middleware('auth')->group(function () {
 
 /*
 |--------------------------------------------------------------------------
+| Stripe Webhook Routes
+|--------------------------------------------------------------------------
+*/
+
+Route::post('stripe/webhook', [App\Http\Controllers\StripeWebhookController::class, 'handleWebhook'])
+    ->name('cashier.webhook');
+
+/*
+|--------------------------------------------------------------------------
 | Include Additional Route Files
 |--------------------------------------------------------------------------
 */
 
+require __DIR__.'/billing.php';
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';

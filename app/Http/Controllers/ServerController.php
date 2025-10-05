@@ -30,6 +30,13 @@ class ServerController extends Controller
 
     public function store(StoreServerRequest $request): RedirectResponse
     {
+        // Check server limit
+        if (! $request->user()->canCreateServer()) {
+            return back()->with('error',
+                'You have reached your server limit. Please upgrade your subscription to add more servers.'
+            );
+        }
+
         $data = $request->validated();
         $phpVersion = $data['php_version'];
         unset($data['php_version']);
