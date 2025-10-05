@@ -123,6 +123,79 @@ export default function SiteCommands({
                             </Button>
                     </form>
                 </CardContainer>
+
+                {result && (
+                    <CardContainer
+                        title={
+                            <div className="flex items-center justify-between">
+                                <span className="flex items-center gap-2">
+                                    <Terminal className="h-5 w-5" />
+                                    Command Output
+                                </span>
+                                <Badge variant={result.success ? 'default' : 'destructive'}>
+                                    {result.success ? (
+                                        <span className="inline-flex items-center gap-1">
+                                            <CheckCircle2 className="h-3 w-3" />
+                                            Success
+                                        </span>
+                                    ) : (
+                                        <span className="inline-flex items-center gap-1">
+                                            <XCircle className="h-3 w-3" />
+                                            Failed
+                                        </span>
+                                    )}
+                                </Badge>
+                            </div>
+                        }
+                    >
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between text-sm text-muted-foreground">
+                                <span className="inline-flex items-center gap-2">
+                                    <Clock className="h-4 w-4" />
+                                    Executed at {resultExecutedAt}
+                                </span>
+                                <span>Duration: {resultDurationSeconds}s</span>
+                            </div>
+
+                            <div>
+                                <div className="mb-2 text-sm font-medium text-muted-foreground">Command</div>
+                                <div className="rounded-md bg-muted p-3 font-mono text-sm">{result.command}</div>
+                            </div>
+
+                            {result.output && (
+                                <div>
+                                    <div className="mb-2 text-sm font-medium text-muted-foreground">Output</div>
+                                    <pre className="overflow-x-auto rounded-md bg-muted p-3 font-mono text-sm whitespace-pre-wrap">
+                                        {result.output}
+                                    </pre>
+                                </div>
+                            )}
+
+                            {result.errorOutput && (
+                                <div>
+                                    <div className="mb-2 text-sm font-medium text-destructive">Error Output</div>
+                                    <pre className="overflow-x-auto rounded-md bg-destructive/10 p-3 font-mono text-sm text-destructive whitespace-pre-wrap">
+                                        {result.errorOutput}
+                                    </pre>
+                                </div>
+                            )}
+
+                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                <span>Exit Code: <span className="font-mono">{result.exitCode ?? 'N/A'}</span></span>
+                            </div>
+                        </div>
+                    </CardContainer>
+                )}
+
+                <Alert>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Execution Context</AlertTitle>
+                    <AlertDescription>
+                        Commands run as <code className="rounded bg-muted px-1 py-0.5">{executionContext.user}</code> in{' '}
+                        <code className="rounded bg-muted px-1 py-0.5">{executionContext.workingDirectory}</code> with a{' '}
+                        {formattedTimeout} timeout.
+                    </AlertDescription>
+                </Alert>
             </PageHeader>
         </SiteLayout>
     );
