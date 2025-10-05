@@ -56,6 +56,13 @@ class MySqlUpdater extends PackageInstaller implements \App\Packages\Base\Server
 
             // Remove and reinstall MySQL to switch versions
             'DEBIAN_FRONTEND=noninteractive apt-get remove -y --purge mysql-server mysql-client mysql-common',
+
+            // Clean up old backup data directories from previous failed attempts
+            'rm -rf /var/lib/mysql-*',
+
+            // Remove version flag to prevent dpkg from trying to rename data directory
+            'rm -f /var/lib/mysql/debian-*.flag',
+
             'DEBIAN_FRONTEND=noninteractive apt-get update -y',
             'DEBIAN_FRONTEND=noninteractive apt-get install -y mysql-server mysql-client',
             $this->track(MySqlUpdaterMilestones::UPGRADE_MYSQL),

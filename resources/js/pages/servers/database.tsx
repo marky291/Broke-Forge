@@ -451,43 +451,12 @@ export default function Database({
                             </div>
                             <div>
                                 <div className="text-sm text-muted-foreground">Status</div>
-                                <div className="font-medium capitalize">
+                                <div className="font-medium capitalize inline-flex items-center gap-2">
                                     {installedDatabase.status}
-                                    {isProcessing && progress?.total ? (
-                                        <span className="ml-2 text-xs text-muted-foreground">
-                                            ({progress.step}/{progress.total})
-                                        </span>
-                                    ) : null}
+                                    {isProcessing && <Loader2 className="h-3 w-3 animate-spin" />}
                                 </div>
                             </div>
                         </div>
-                        {isProcessing && (
-                            <div className="mt-4">
-                                <div className="mb-1 flex items-center justify-between">
-                                    <div className="text-sm text-muted-foreground">
-                                        {progress?.label || (isInstalling ? 'Running installation steps...' : isUpdating ? 'Running update steps...' : 'Running uninstallation steps...')}
-                                    </div>
-                                    {progress?.total ? (
-                                        <div className="text-xs text-muted-foreground">
-                                            {Math.floor(((progress.step ?? 0) / (progress.total ?? 1)) * 100)}%
-                                        </div>
-                                    ) : null}
-                                </div>
-                                <div className="h-2 w-full overflow-hidden rounded bg-muted">
-                                    <div
-                                        className="h-full bg-primary transition-all"
-                                        style={{
-                                            width: progress?.total
-                                                ? `${Math.floor(((progress.step ?? 0) / (progress.total ?? 1)) * 100)}%`
-                                                : '25%',
-                                        }}
-                                    />
-                                </div>
-                                <div className="mt-2 text-xs text-muted-foreground">
-                                    Do not close this page — we're {isInstalling ? 'installing' : isUpdating ? 'updating' : 'uninstalling'} the database over SSH.
-                                </div>
-                            </div>
-                        )}
                     </CardContainer>
                 )}
 
@@ -502,11 +471,17 @@ export default function Database({
                                             <SelectValue placeholder="Select version" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {Object.entries(availableDatabases?.[selectedType]?.versions || {}).map(([value, label]) => (
-                                                <SelectItem key={value} value={value}>
-                                                    {label}
-                                                </SelectItem>
-                                            ))}
+                                            {Object.entries(availableDatabases?.[selectedType]?.versions || {})
+                                                .filter(([value]) => {
+                                                    // Only show versions higher than current for updates (upgrades only, no downgrades)
+                                                    const currentVersion = installedDatabase?.configuration?.version || '0';
+                                                    return parseFloat(value) > parseFloat(currentVersion);
+                                                })
+                                                .map(([value, label]) => (
+                                                    <SelectItem key={value} value={value}>
+                                                        {label}
+                                                    </SelectItem>
+                                                ))}
                                         </SelectContent>
                                     </Select>
                                     {errors.version && <div className="text-sm text-red-600">{errors.version}</div>}

@@ -58,6 +58,13 @@ class MariaDbUpdater extends PackageInstaller implements \App\Packages\Base\Serv
 
             // Remove old MariaDB packages and configure new repository for target version
             'DEBIAN_FRONTEND=noninteractive apt-get remove -y --purge mariadb-server mariadb-client mariadb-common',
+
+            // Clean up old backup data directories from previous failed attempts
+            'rm -rf /var/lib/mysql-*',
+
+            // Remove version flag to prevent dpkg from trying to rename data directory
+            'rm -f /var/lib/mysql/debian-*.flag',
+
             'rm -f /etc/apt/sources.list.d/mariadb.list',
             'rm -f /usr/share/keyrings/mariadb-keyring.gpg',
             "curl -fsSL https://mariadb.org/mariadb_release_signing_key.asc | gpg --batch --yes --dearmor -o /usr/share/keyrings/mariadb-keyring.gpg",
