@@ -4,6 +4,7 @@ namespace App\Packages\Services\Credential;
 
 use App\Models\Server;
 use App\Packages\Enums\CredentialType;
+use App\Packages\Services\WindowsCompatibleSsh;
 use Spatie\Ssh\Ssh;
 
 /**
@@ -54,7 +55,10 @@ class SshConnectionBuilder
         self::$activeTempFiles[] = $tempKeyFile;
 
         // Create SSH connection with private key
-        return Ssh::create($credentialType->username(), $server->public_ip, $server->ssh_port)
+        // Use Windows-compatible SSH wrapper on Windows to avoid heredoc issues
+        $sshClass = PHP_OS_FAMILY === 'Windows' ? WindowsCompatibleSsh::class : Ssh::class;
+
+        return $sshClass::create($credentialType->username(), $server->public_ip, $server->ssh_port)
             ->usePrivateKey($tempKeyFile->path())
             ->disableStrictHostKeyChecking();
     }
