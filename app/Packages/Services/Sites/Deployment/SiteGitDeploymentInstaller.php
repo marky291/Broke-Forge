@@ -52,7 +52,7 @@ class SiteGitDeploymentInstaller extends PackageInstaller implements \App\Packag
             $deployment->update([
                 'status' => 'success',
                 'output' => $this->deploymentOutput ?? '',
-                'error_output' => $this->deploymentError ?? '',
+                'error_output' => null, // Don't show stderr for successful deployments
                 'exit_code' => 0,
                 'commit_sha' => $this->commitSha,
                 'branch' => $site->getGitConfiguration()['branch'] ?? null,
