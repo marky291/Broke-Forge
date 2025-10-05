@@ -60,6 +60,7 @@ class SshConnectionBuilder
 
         return $sshClass::create($credentialType->username(), $server->public_ip, $server->ssh_port)
             ->usePrivateKey($tempKeyFile->path())
-            ->disableStrictHostKeyChecking();
+            ->disableStrictHostKeyChecking()
+            ->enableQuietMode();
     }
 }
