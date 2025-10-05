@@ -7,12 +7,16 @@ use App\Enums\DatabaseType;
 use App\Http\Controllers\Concerns\PreparesSiteData;
 use App\Http\Requests\Servers\InstallDatabaseRequest;
 use App\Models\Server;
+use Illuminate\Http\Request;
 use App\Packages\Services\Database\MariaDB\MariaDbInstallerJob;
 use App\Packages\Services\Database\MariaDB\MariaDbRemoverJob;
+use App\Packages\Services\Database\MariaDB\MariaDbUpdaterJob;
 use App\Packages\Services\Database\MySQL\MySqlInstallerJob;
 use App\Packages\Services\Database\MySQL\MySqlRemoverJob;
+use App\Packages\Services\Database\MySQL\MySqlUpdaterJob;
 use App\Packages\Services\Database\PostgreSQL\PostgreSqlInstallerJob;
 use App\Packages\Services\Database\PostgreSQL\PostgreSqlRemoverJob;
+use App\Packages\Services\Database\PostgreSQL\PostgreSqlUpdaterJob;
 use App\Services\DatabaseConfigurationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -45,7 +49,7 @@ class ServerDatabaseController extends Controller
                 'updated_at',
             ]),
             'availableDatabases' => Inertia::defer(
-                fn () => $this->databaseConfig->getAvailableTypes()
+                fn () => $this->databaseConfig->getAvailableTypes($server->os_codename)
             ),
             'installedDatabase' => $database ? [
                 'id' => $database->id,
@@ -113,6 +117,49 @@ class ServerDatabaseController extends Controller
         return back()->with('success', 'Database installation started.');
     }
 
+    public function update(Request $request, Server $server): RedirectResponse
+    {
+        $database = $server->databases()->first();
+
+        if (! $database) {
+            return back()->with('error', 'No database found to update.');
+        }
+
+        $validated = $request->validate([
+            'version' => 'required|string',
+        ]);
+
+        if ($database->status === DatabaseStatus::Installing ||
+            $database->status === DatabaseStatus::Uninstalling ||
+            $database->status === DatabaseStatus::Updating) {
+            return back()->with('error', 'Database is currently being modified. Please wait.');
+        }
+
+        $databaseType = $database->type instanceof DatabaseType
+            ? $database->type
+            : DatabaseType::from($database->type);
+
+        $database->update(['status' => DatabaseStatus::Updating->value]);
+
+        switch ($databaseType) {
+            case DatabaseType::MariaDB:
+                MariaDbUpdaterJob::dispatch($server, $validated['version']);
+                break;
+            case DatabaseType::MySQL:
+                MySqlUpdaterJob::dispatch($server, $validated['version']);
+                break;
+            case DatabaseType::PostgreSQL:
+                PostgreSqlUpdaterJob::dispatch($server, $validated['version']);
+                break;
+            default:
+                $database->update(['status' => DatabaseStatus::Failed->value]);
+
+                return back()->with('error', 'Selected database type cannot be updated automatically yet.');
+        }
+
+        return back()->with('success', 'Database update started.');
+    }
+
     public function destroy(Server $server): RedirectResponse
     {
         $database = $server->databases()->first();
@@ -173,6 +220,7 @@ class ServerDatabaseController extends Controller
             'progress_step' => $progressStep,
             'progress_total' => $progressTotal,
             'progress_label' => $progressLabel,
+            'error_message' => $database->error_message,
             'database' => [
                 'id' => $database->id,
                 'name' => $database->name,
@@ -183,6 +231,7 @@ class ServerDatabaseController extends Controller
                 'progress_step' => $progressStep,
                 'progress_total' => $progressTotal,
                 'progress_label' => $progressLabel,
+                'error_message' => $database->error_message,
                 'created_at' => $database->created_at->toISOString(),
                 'updated_at' => $database->updated_at->toISOString(),
             ],

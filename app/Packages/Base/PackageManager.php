@@ -163,18 +163,22 @@ abstract class PackageManager implements Package
                     Log::debug("SSH command: {$process->getCommandLine()}");
 
                     if (! $process->isSuccessful()) {
-                        $error = "Failed to execute command: $command\nError Output: ".$process->getErrorOutput();
+                        $errorOutput = trim($process->getErrorOutput());
+                        $fullError = "Failed to execute command: $command\nError Output: ".$errorOutput;
 
                         // Mark current event as failed if exists
                         if ($this->currentEvent) {
                             $this->currentEvent->update([
                                 'status' => 'failed',
-                                'error_log' => $error,
+                                'error_log' => $fullError,
                             ]);
                         }
 
-                        Log::error($error, ['credential_type' => $credentialType, 'server' => $this->server]);
-                        throw new \RuntimeException("Command failed: $command");
+                        Log::error($fullError, ['credential_type' => $credentialType, 'server' => $this->server]);
+
+                        // Include error output in exception message for better debugging
+                        $errorMessage = $errorOutput ? "$command - $errorOutput" : $command;
+                        throw new \RuntimeException("Command failed: $errorMessage");
                     }
                 }
             }

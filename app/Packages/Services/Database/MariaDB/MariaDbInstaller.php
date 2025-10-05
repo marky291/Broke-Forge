@@ -54,8 +54,21 @@ class MariaDbInstaller extends PackageInstaller implements \App\Packages\Base\Se
     {
         // Map version to repository version (11.4 -> 11.4, 10.11 -> 10.11, etc.)
         $repoVersion = $version;
+        $ubuntuCodename = $this->server->os_codename ?? 'jammy';
 
         return [
+            // Fix any broken package states first
+            'dpkg --configure -a',
+            'DEBIAN_FRONTEND=noninteractive apt-get -f install -y',
+
+            // Clean up any existing MariaDB installations
+            'systemctl stop mariadb 2>/dev/null || true',
+            'systemctl stop mysql 2>/dev/null || true',
+            'DEBIAN_FRONTEND=noninteractive apt-get remove -y --purge mariadb-* mysql-* 2>/dev/null || true',
+            'DEBIAN_FRONTEND=noninteractive apt-get autoremove -y',
+            'rm -rf /etc/mysql /var/lib/mysql',
+            'rm -f /etc/apt/sources.list.d/mariadb.list',
+
             // Update package lists
             'DEBIAN_FRONTEND=noninteractive apt-get update -y',
             $this->track(MariaDbInstallerMilestones::UPDATE_PACKAGES),
@@ -65,8 +78,9 @@ class MariaDbInstaller extends PackageInstaller implements \App\Packages\Base\Se
             $this->track(MariaDbInstallerMilestones::INSTALL_PREREQUISITES),
 
             // Add MariaDB repository
-            "curl -fsSL https://mariadb.org/mariadb_release_signing_key.asc | gpg --dearmor -o /usr/share/keyrings/mariadb-keyring.gpg",
-            "echo \"deb [signed-by=/usr/share/keyrings/mariadb-keyring.gpg] https://mirror.rackspace.com/mariadb/repo/{$repoVersion}/ubuntu \$(lsb_release -cs) main\" > /etc/apt/sources.list.d/mariadb.list",
+            'rm -f /usr/share/keyrings/mariadb-keyring.gpg',
+            "curl -fsSL https://mariadb.org/mariadb_release_signing_key.asc | gpg --batch --yes --dearmor -o /usr/share/keyrings/mariadb-keyring.gpg",
+            "echo \"deb [signed-by=/usr/share/keyrings/mariadb-keyring.gpg] https://mirror.rackspace.com/mariadb/repo/{$repoVersion}/ubuntu {$ubuntuCodename} main\" > /etc/apt/sources.list.d/mariadb.list",
             'DEBIAN_FRONTEND=noninteractive apt-get update -y',
             $this->track(MariaDbInstallerMilestones::ADD_REPOSITORY),
 

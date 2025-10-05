@@ -37,6 +37,9 @@ class Server extends Model
         'connection',
         'provision_status',
         'ssh_root_password',
+        'os_name',
+        'os_version',
+        'os_codename',
         'monitoring_token',
         'monitoring_status',
         'monitoring_collection_interval',
@@ -177,6 +180,50 @@ class Server extends Model
         $builder = new \App\Packages\Services\Credential\SshConnectionBuilder;
 
         return $builder->build($this, $type);
+    }
+
+    /**
+     * Detect and update server OS information
+     */
+    public function detectOsInfo(): bool
+    {
+        try {
+            $ssh = $this->createSshConnection(CredentialType::Root);
+
+            // Get OS information using lsb_release
+            $result = $ssh->execute('lsb_release -a 2>/dev/null');
+
+            if (! $result->isSuccessful()) {
+                // Fallback to /etc/os-release
+                $result = $ssh->execute('cat /etc/os-release');
+            }
+
+            $output = $result->getOutput();
+
+            // Parse lsb_release output
+            preg_match('/Distributor ID:\s*(.+)/i', $output, $nameMatch);
+            preg_match('/Release:\s*(.+)/i', $output, $versionMatch);
+            preg_match('/Codename:\s*(.+)/i', $output, $codenameMatch);
+
+            // If lsb_release didn't work, try /etc/os-release format
+            if (empty($nameMatch)) {
+                preg_match('/^NAME="?([^"\n]+)"?/m', $output, $nameMatch);
+                preg_match('/^VERSION_ID="?([^"\n]+)"?/m', $output, $versionMatch);
+                preg_match('/^VERSION_CODENAME="?([^"\n]+)"?/m', $output, $codenameMatch);
+            }
+
+            $this->update([
+                'os_name' => trim($nameMatch[1] ?? ''),
+                'os_version' => trim($versionMatch[1] ?? ''),
+                'os_codename' => trim($codenameMatch[1] ?? ''),
+            ]);
+
+            return true;
+        } catch (\Exception $e) {
+            \Log::warning("Failed to detect OS info for server #{$this->id}: {$e->getMessage()}");
+
+            return false;
+        }
     }
 
     /**

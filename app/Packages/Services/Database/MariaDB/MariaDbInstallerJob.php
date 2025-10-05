@@ -22,7 +22,11 @@ class MariaDbInstallerJob implements ShouldQueue
 
     public function handle(): void
     {
-        Log::info("Starting MariaDB installation for server #{$this->server->id}");
+        $database = $this->server->databases()->latest()->first();
+
+        Log::info("Starting MariaDB installation for server #{$this->server->id}", [
+            'version' => $database?->version ?? 'unknown',
+        ]);
 
         try {
             $installer = new MariaDbInstaller($this->server);
@@ -38,6 +42,7 @@ class MariaDbInstallerJob implements ShouldQueue
             // Update database status to failed so UI can show error state
             $this->server->databases()->latest()->first()?->update([
                 'status' => \App\Enums\DatabaseStatus::Failed->value,
+                'error_message' => $e->getMessage(),
             ]);
 
             throw $e;
