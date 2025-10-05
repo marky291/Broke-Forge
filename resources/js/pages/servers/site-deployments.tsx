@@ -147,28 +147,28 @@ export default function SiteDeployments({
         switch (status) {
             case 'success':
                 return (
-                    <Badge variant="default" className="flex items-center gap-1">
+                    <Badge variant="outline" className="flex items-center gap-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20">
                         <CheckCircle2 className="h-3.5 w-3.5" />
                         Success
                     </Badge>
                 );
             case 'failed':
                 return (
-                    <Badge variant="destructive" className="flex items-center gap-1">
+                    <Badge variant="outline" className="flex items-center gap-1 bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20">
                         <XCircle className="h-3.5 w-3.5" />
                         Failed
                     </Badge>
                 );
             case 'running':
                 return (
-                    <Badge variant="secondary" className="flex items-center gap-1">
+                    <Badge variant="outline" className="flex items-center gap-1 bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20">
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
                         Running
                     </Badge>
                 );
             default:
                 return (
-                    <Badge variant="secondary" className="flex items-center gap-1">
+                    <Badge variant="outline" className="flex items-center gap-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20">
                         <Clock className="h-3.5 w-3.5" />
                         Pending
                     </Badge>
