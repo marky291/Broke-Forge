@@ -12,7 +12,7 @@ import { show as showServer } from '@/routes/servers';
 import { type BreadcrumbItem, type Server, type ServerMetric } from '@/types';
 import { Head, router, useForm } from '@inertiajs/react';
 import { Activity, AlertCircle, CheckCircle, Cpu, HardDrive, Loader2, MemoryStick } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
 export default function Monitoring({
@@ -127,12 +127,12 @@ export default function Monitoring({
         return () => clearInterval(interval);
     }, [isActive, localMetrics?.collected_at, collectionInterval]);
 
-    // Poll for new metrics when monitoring is active (matches collection interval)
+    // Poll for new metrics when monitoring is active
     useEffect(() => {
         if (!isActive) return;
 
-        // Poll at the same interval as collection (in milliseconds)
-        const pollingInterval = parseInt(collectionInterval) * 1000;
+        // Poll every 10 seconds to check for new metrics (regardless of collection interval)
+        const pollingInterval = 10000; // 10 seconds
         // Capture current timeframe value to avoid closure issues
         const currentTimeframe = timeframe;
 
@@ -144,8 +144,10 @@ export default function Monitoring({
                 if (!res.ok) return;
                 const json = await res.json();
                 if (json.success && json.data && json.data.length > 0) {
-                    setLocalMetrics(json.data[0]); // First item is latest (desc order)
-                    setLocalRecentMetrics(json.data);
+                    // Force new array reference to trigger React re-render
+                    const metrics = [...json.data];
+                    setLocalMetrics(metrics[0]); // First item is latest (desc order)
+                    setLocalRecentMetrics(metrics);
                 }
             } catch (error) {
                 console.error('Failed to fetch metrics:', error);
@@ -161,7 +163,7 @@ export default function Monitoring({
         return () => {
             clearInterval(interval);
         };
-    }, [isActive, server.id, timeframe, collectionInterval]);
+    }, [isActive, server.id, timeframe]);
 
     // Auto-reload when monitoring status is installing or uninstalling
     useEffect(() => {
@@ -205,6 +207,11 @@ export default function Monitoring({
         }
         return `${mb} MB`;
     };
+
+    // Memoize chart data to prevent re-renders when countdown updates
+    const chartData = useMemo(() => {
+        return localRecentMetrics.slice().reverse();
+    }, [localRecentMetrics]);
 
     return (
         <ServerLayout server={server} breadcrumbs={breadcrumbs}>
@@ -404,7 +411,7 @@ export default function Monitoring({
                             >
                                 <div className="p-6">
                                     <ResponsiveContainer width="100%" height={300}>
-                                        <LineChart data={localRecentMetrics.slice().reverse()}>
+                                        <LineChart data={chartData}>
                                             <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                                             <XAxis
                                                 dataKey="collected_at"
@@ -433,6 +440,7 @@ export default function Monitoring({
                                                 strokeWidth={2}
                                                 dot={false}
                                                 name="CPU Usage"
+                                                isAnimationActive={false}
                                             />
                                             <Line
                                                 type="monotone"
@@ -441,6 +449,7 @@ export default function Monitoring({
                                                 strokeWidth={2}
                                                 dot={false}
                                                 name="Memory Usage"
+                                                isAnimationActive={false}
                                             />
                                             <Line
                                                 type="monotone"
@@ -449,6 +458,7 @@ export default function Monitoring({
                                                 strokeWidth={2}
                                                 dot={false}
                                                 name="Storage Usage"
+                                                isAnimationActive={false}
                                             />
                                         </LineChart>
                                     </ResponsiveContainer>

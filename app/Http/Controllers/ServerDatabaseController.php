@@ -7,7 +7,6 @@ use App\Enums\DatabaseType;
 use App\Http\Controllers\Concerns\PreparesSiteData;
 use App\Http\Requests\Servers\InstallDatabaseRequest;
 use App\Models\Server;
-use Illuminate\Http\Request;
 use App\Packages\Services\Database\MariaDB\MariaDbInstallerJob;
 use App\Packages\Services\Database\MariaDB\MariaDbRemoverJob;
 use App\Packages\Services\Database\MariaDB\MariaDbUpdaterJob;
@@ -20,6 +19,7 @@ use App\Packages\Services\Database\PostgreSQL\PostgreSqlUpdaterJob;
 use App\Services\DatabaseConfigurationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 

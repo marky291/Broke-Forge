@@ -118,7 +118,7 @@ export default function ServerContentLayout({ children, server, breadcrumbs, lat
     const serverNavItems: NavItem[] = [
         {
             title: 'Manage Sites',
-            href: `/servers/${server.id}`,
+            href: `/servers/${server.id}/sites`,
             icon: Globe,
             isActive: currentSection === 'server',
         },

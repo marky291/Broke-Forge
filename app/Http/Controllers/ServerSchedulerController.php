@@ -2,10 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Concerns\PreparesSiteData;
-
 use App\Enums\SchedulerStatus;
 use App\Enums\TaskStatus;
+use App\Http\Controllers\Concerns\PreparesSiteData;
 use App\Http\Requests\StoreScheduledTaskRequest;
 use App\Http\Requests\StoreTaskRunRequest;
 use App\Http\Requests\UpdateScheduledTaskRequest;
@@ -30,6 +29,7 @@ use Inertia\Response;
 class ServerSchedulerController extends Controller
 {
     use PreparesSiteData;
+
     /**
      * Display scheduler page with installation status and tasks
      */
@@ -264,7 +264,7 @@ class ServerSchedulerController extends Controller
             } else {
                 return redirect()
                     ->route('servers.scheduler', $server)
-                    ->with('error', 'Task execution failed with exit code: ' . $result->getExitCode());
+                    ->with('error', 'Task execution failed with exit code: '.$result->getExitCode());
             }
         } catch (\Exception $e) {
             Log::error('Manual task execution failed', [
@@ -275,7 +275,7 @@ class ServerSchedulerController extends Controller
 
             return redirect()
                 ->route('servers.scheduler', $server)
-                ->with('error', 'Failed to execute task: ' . $e->getMessage());
+                ->with('error', 'Failed to execute task: '.$e->getMessage());
         }
     }
 

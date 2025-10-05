@@ -4,6 +4,7 @@ namespace App\Packages\Services\Sites\Command;
 
 use App\Models\Server;
 use App\Models\ServerSite;
+use App\Models\ServerSiteCommandHistory;
 use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageInstaller;
 use App\Packages\Enums\CredentialType;
@@ -51,7 +52,7 @@ class SiteCommandInstaller extends PackageInstaller implements \App\Packages\Bas
             $this->install($this->commands($command, $timeout));
             $duration = (int) (microtime(true) * 1000) - $start;
 
-            return [
+            $result = [
                 'command' => $command,
                 'output' => $this->commandOutput ?? '',
                 'errorOutput' => $this->commandError ?? '',
@@ -60,10 +61,14 @@ class SiteCommandInstaller extends PackageInstaller implements \App\Packages\Bas
                 'durationMs' => $duration,
                 'success' => true,
             ];
+
+            $this->saveToHistory($result);
+
+            return $result;
         } catch (ProcessTimedOutException $exception) {
             $duration = (int) (microtime(true) * 1000) - $start;
 
-            return [
+            $result = [
                 'command' => $command,
                 'output' => '',
                 'errorOutput' => 'Command timed out after 120 seconds.',
@@ -72,10 +77,14 @@ class SiteCommandInstaller extends PackageInstaller implements \App\Packages\Bas
                 'durationMs' => $duration,
                 'success' => false,
             ];
+
+            $this->saveToHistory($result);
+
+            return $result;
         } catch (\Exception $e) {
             $duration = (int) (microtime(true) * 1000) - $start;
 
-            return [
+            $result = [
                 'command' => $command,
                 'output' => '',
                 'errorOutput' => $e->getMessage(),
@@ -84,6 +93,10 @@ class SiteCommandInstaller extends PackageInstaller implements \App\Packages\Bas
                 'durationMs' => $duration,
                 'success' => false,
             ];
+
+            $this->saveToHistory($result);
+
+            return $result;
         }
     }
 
@@ -152,5 +165,22 @@ class SiteCommandInstaller extends PackageInstaller implements \App\Packages\Bas
     public function credentialType(): CredentialType
     {
         return CredentialType::User;
+    }
+
+    /**
+     * Save command result to history
+     */
+    protected function saveToHistory(array $result): void
+    {
+        ServerSiteCommandHistory::create([
+            'server_id' => $this->server->id,
+            'server_site_id' => $this->site->id,
+            'command' => $result['command'],
+            'output' => $result['output'],
+            'error_output' => $result['errorOutput'],
+            'exit_code' => $result['exitCode'],
+            'duration_ms' => $result['durationMs'],
+            'success' => $result['success'],
+        ]);
     }
 }

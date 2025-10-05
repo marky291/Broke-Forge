@@ -34,16 +34,8 @@ class SiteInstaller extends PackageInstaller implements \App\Packages\Base\Serve
         $domain = $config['domain'];
         $documentRoot = $config['document_root'] ?? "/home/{$appUser}/{$config['domain']}/public";
 
-        // Detect PHP version from server services (inline logic)
-        $phpService = $this->server->packages()
-            ->where('service_name', 'php')
-            ->latest('id')
-            ->first();
-        $phpVersion = $config['php_version'] ?? (
-            ($phpService && is_array($phpService->configuration) && isset($phpService->configuration['version']))
-                ? (string) $phpService->configuration['version']
-                : '8.3'
-        );
+        // Detect PHP version from server or use provided/default
+        $phpVersion = $config['php_version'] ?? $this->server->defaultPhp?->version ?? '8.3';
 
         $ssl = $config['ssl'] ?? false;
         $sslCertPath = $config['ssl_cert_path'] ?? null;
@@ -112,6 +104,7 @@ class SiteInstaller extends PackageInstaller implements \App\Packages\Base\Serve
 
             $this->track(SiteInstallerMilestones::COMPLETE),
             function () use ($site) {
+                $site->refresh();
                 $site->update([
                     'status' => 'active',
                     'provisioned_at' => now(),

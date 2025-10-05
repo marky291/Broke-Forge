@@ -113,18 +113,16 @@ class GitRepositoryInstaller extends PackageInstaller implements \App\Packages\B
 
             $this->track(GitRepositoryInstallerMilestones::CHECKOUT_TARGET_BRANCH),
             sprintf(
-                'REPO_DIR=%1$s; cd "$REPO_DIR" && git checkout %2$s',
+                'REPO_DIR=%1$s; cd "$REPO_DIR" && BRANCH=%2$s; if git show-ref --verify --quiet refs/heads/"$BRANCH" || git show-ref --verify --quiet refs/remotes/origin/"$BRANCH"; then git checkout "$BRANCH"; else DETECTED_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed \'s@^refs/remotes/origin/@@\'); if [ -n "$DETECTED_BRANCH" ]; then git checkout "$DETECTED_BRANCH"; elif git show-ref --verify --quiet refs/remotes/origin/master; then git checkout master; elif git show-ref --verify --quiet refs/remotes/origin/main; then git checkout main; else echo "Error: Could not determine branch to checkout" && exit 1; fi; fi',
                 escapeshellarg($documentRoot),
                 escapeshellarg($branch)
             ),
 
             $this->track(GitRepositoryInstallerMilestones::SYNC_WORKTREE),
             sprintf(
-                'REPO_DIR=%1$s; cd "$REPO_DIR" && git reset --hard origin/%2$s && %3$s git pull origin %4$s',
+                'REPO_DIR=%1$s; cd "$REPO_DIR" && CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD) && git reset --hard origin/"$CURRENT_BRANCH" && %2$s git pull origin "$CURRENT_BRANCH"',
                 escapeshellarg($documentRoot),
-                $branch,
-                $gitSshCommand,
-                escapeshellarg($branch)
+                $gitSshCommand
             ),
 
             $this->track(GitRepositoryInstallerMilestones::COMPLETE),

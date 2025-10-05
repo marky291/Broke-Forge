@@ -21,6 +21,20 @@ class ServerSiteCommandsController extends Controller
         $siteIdentifier = $site->domain ?: (string) $site->id;
         $workingDirectory = $site->document_root ?: sprintf('/home/brokeforge/%s', $siteIdentifier);
 
+        $commandHistory = $site->commandHistory()
+            ->orderBy('created_at', 'desc')
+            ->paginate(10)
+            ->through(fn ($history) => [
+                'id' => $history->id,
+                'command' => $history->command,
+                'output' => $history->output,
+                'errorOutput' => $history->error_output,
+                'exitCode' => $history->exit_code,
+                'ranAt' => $history->created_at->toIso8601String(),
+                'durationMs' => $history->duration_ms,
+                'success' => $history->success,
+            ]);
+
         return Inertia::render('servers/site-commands', [
             'server' => $this->prepareServerData($server),
             'site' => $this->prepareSiteData($site, ['document_root']),
@@ -30,6 +44,7 @@ class ServerSiteCommandsController extends Controller
                 'timeout' => 120,
             ],
             'commandResult' => session('commandResult'),
+            'commandHistory' => $commandHistory,
         ]);
     }
 

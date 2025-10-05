@@ -33,6 +33,7 @@ class SiteGitDeploymentJob implements ShouldQueue
 
         try {
             $installer = new SiteGitDeploymentInstaller($this->server);
+            $installer->setSite($this->site);
             $installer->execute($this->site, $this->deployment);
 
             Log::info("Deployment completed for site #{$this->site->id}", [

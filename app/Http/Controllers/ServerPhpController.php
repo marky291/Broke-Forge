@@ -105,7 +105,7 @@ class ServerPhpController extends Controller
         if ($existingPhp) {
             return redirect()
                 ->route('servers.php', $server)
-                ->with('error', 'PHP ' . $validated['version'] . ' is already installed on this server');
+                ->with('error', 'PHP '.$validated['version'].' is already installed on this server');
         }
 
         // Check if this is the first PHP version
@@ -125,6 +125,6 @@ class ServerPhpController extends Controller
 
         return redirect()
             ->route('servers.php', $server)
-            ->with('success', 'PHP ' . $validated['version'] . ' installation started');
+            ->with('success', 'PHP '.$validated['version'].' installation started');
     }
 }

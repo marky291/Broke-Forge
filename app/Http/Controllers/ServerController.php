@@ -14,6 +14,7 @@ use Inertia\Response;
 class ServerController extends Controller
 {
     use PreparesSiteData;
+
     public function index(): Response
     {
         $servers = Server::query()
@@ -50,22 +51,9 @@ class ServerController extends Controller
             ->with('success', 'Server created');
     }
 
-    public function show(Server $server): Response
+    public function show(Server $server): RedirectResponse
     {
-        $sites = $server->sites()
-            ->select(['id', 'domain', 'document_root', 'php_version', 'ssl_enabled', 'status', 'configuration', 'git_status', 'provisioned_at'])
-            ->latest()
-            ->get()
-            ->map(fn ($site) => array_merge(
-                $site->only(['id', 'domain', 'document_root', 'php_version', 'ssl_enabled', 'status', 'configuration', 'git_status', 'provisioned_at']),
-                ['provisioned_at_human' => $site->provisioned_at?->diffForHumans()]
-            ));
-
-        return Inertia::render('servers/show', [
-            'server' => $server->only(['id', 'vanity_name', 'public_ip', 'ssh_port', 'private_ip', 'connection', 'monitoring_status', 'created_at', 'updated_at']),
-            'sites' => ['data' => $sites],
-            'latestMetrics' => $this->getLatestMetrics($server),
-        ]);
+        return redirect()->route('servers.sites', $server);
     }
 
     public function edit(Server $server): Response

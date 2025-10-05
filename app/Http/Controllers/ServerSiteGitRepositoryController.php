@@ -81,9 +81,10 @@ class ServerSiteGitRepositoryController extends Controller
     {
         $config = $site->getGitConfiguration();
 
-        // Get the latest Git installation event for error tracking
+        // Get the latest Git installation event for error tracking (site-specific)
         $latestGitEvent = $site->server->events()
             ->where('service_type', 'git')
+            ->where('server_site_id', $site->id)
             ->latest()
             ->first();
 

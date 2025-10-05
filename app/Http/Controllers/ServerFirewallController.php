@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\PreparesSiteData;
-
 use App\Http\Requests\Servers\FirewallRuleRequest;
 use App\Models\Server;
 use App\Models\ServerFirewallRule;
@@ -49,7 +48,7 @@ class ServerFirewallController extends Controller
                 'firewallStatus' => 'not_installed',
                 'recentEvents' => [],
                 'latestMetrics' => $this->getLatestMetrics($server),
-        ]);
+            ]);
         }
 
         return Inertia::render('servers/firewall', [

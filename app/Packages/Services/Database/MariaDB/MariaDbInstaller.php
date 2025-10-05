@@ -3,8 +3,6 @@
 namespace App\Packages\Services\Database\MariaDB;
 
 use App\Enums\DatabaseStatus;
-use App\Enums\DatabaseType;
-use App\Models\ServerDatabase;
 use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageInstaller;
 use App\Packages\Enums\CredentialType;
@@ -79,7 +77,7 @@ class MariaDbInstaller extends PackageInstaller implements \App\Packages\Base\Se
 
             // Add MariaDB repository
             'rm -f /usr/share/keyrings/mariadb-keyring.gpg',
-            "curl -fsSL https://mariadb.org/mariadb_release_signing_key.asc | gpg --batch --yes --dearmor -o /usr/share/keyrings/mariadb-keyring.gpg",
+            'curl -fsSL https://mariadb.org/mariadb_release_signing_key.asc | gpg --batch --yes --dearmor -o /usr/share/keyrings/mariadb-keyring.gpg',
             "echo \"deb [signed-by=/usr/share/keyrings/mariadb-keyring.gpg] https://mirror.rackspace.com/mariadb/repo/{$repoVersion}/ubuntu {$ubuntuCodename} main\" > /etc/apt/sources.list.d/mariadb.list",
             'DEBIAN_FRONTEND=noninteractive apt-get update -y',
             $this->track(MariaDbInstallerMilestones::ADD_REPOSITORY),

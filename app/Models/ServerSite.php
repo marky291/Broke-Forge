@@ -92,6 +92,22 @@ class ServerSite extends Model
     }
 
     /**
+     * Get all command history for this site.
+     */
+    public function commandHistory(): HasMany
+    {
+        return $this->hasMany(ServerSiteCommandHistory::class, 'server_site_id');
+    }
+
+    /**
+     * Get all events for this site.
+     */
+    public function events(): HasMany
+    {
+        return $this->hasMany(ServerEvent::class, 'server_site_id');
+    }
+
+    /**
      * Check if Git repository can be installed.
      */
     public function canInstallGitRepository(): bool
