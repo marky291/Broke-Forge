@@ -92,7 +92,7 @@ export default function SubscriptionCard({ subscription, currentPlan, isOnTrial,
 
     if (!subscription) {
         return (
-            <CardContainer title="Current Plan" icon={TrendingUp}>
+            <CardContainer title="Current Plan" icon={<TrendingUp />}>
                 <div className="space-y-4">
                     <div className="flex items-start justify-between">
                         <div>
@@ -110,7 +110,7 @@ export default function SubscriptionCard({ subscription, currentPlan, isOnTrial,
     }
 
     return (
-        <CardContainer title="Current Subscription" icon={TrendingUp}>
+        <CardContainer title="Current Subscription" icon={<TrendingUp />}>
             <div className="space-y-6">
                 {/* Plan Info */}
                 <div className="flex items-start justify-between">

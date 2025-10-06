@@ -65,7 +65,7 @@ export default function PlanComparison({ plans, currentPlan, subscription, onMan
     return (
         <CardContainer
             title="Available Plans"
-            icon={TrendingUp}
+            icon={<TrendingUp />}
             action={
                 <div className="inline-flex items-center gap-1 rounded-lg border p-1">
                     <button

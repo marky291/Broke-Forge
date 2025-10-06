@@ -106,7 +106,7 @@ export default function Billing({ subscription, paymentMethods, invoices, upcomi
                 {/* Server Usage */}
                 <CardContainer
                     title="Server Usage"
-                    icon={ServerIcon}
+                    icon={<ServerIcon />}
                     action={
                         <Button variant="ghost" size="sm" onClick={() => router.visit('/dashboard')}>
                             View Servers
@@ -144,7 +144,7 @@ export default function Billing({ subscription, paymentMethods, invoices, upcomi
                 <PlanComparison plans={plans} currentPlan={currentPlan} subscription={subscription} onManageBilling={handleManageBilling} />
 
                 {/* Billing Details */}
-                <CardContainer title="Billing Details" icon={CreditCard}>
+                <CardContainer title="Billing Details" icon={<CreditCard />}>
                     <div className="space-y-6">
                         <div>
                             <h3 className="mb-2 font-medium">Manage your subscription</h3>

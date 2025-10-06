@@ -31,7 +31,7 @@ export default function InvoicesList({ invoices }: InvoicesListProps) {
 
     if (!invoices || invoices.length === 0) {
         return (
-            <CardContainer title="Invoices" icon={Receipt}>
+            <CardContainer title="Invoices" icon={<Receipt />}>
                 <div className="py-8 text-center">
                     <Receipt className="mx-auto size-12 text-muted-foreground/30" />
                     <h3 className="mt-4 text-sm font-medium">No invoices</h3>
@@ -42,7 +42,7 @@ export default function InvoicesList({ invoices }: InvoicesListProps) {
     }
 
     return (
-        <CardContainer title="Invoices" icon={Receipt}>
+        <CardContainer title="Invoices" icon={<Receipt />}>
             <div className="space-y-3">
                 {invoices.map((invoice) => (
                     <div

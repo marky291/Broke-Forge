@@ -21,7 +21,7 @@ use Symfony\Component\Process\Exception\ProcessTimedOutException;
  */
 class SiteCommandInstaller extends PackageInstaller implements \App\Packages\Base\ServerPackage
 {
-    protected ServerSite $site;
+    protected ?ServerSite $site;
 
     protected ?string $commandOutput = null;
 
