@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\MonitoringStatus;
 use App\Enums\SchedulerStatus;
 use App\Enums\ServerProvider;
+use App\Enums\SupervisorStatus;
 use App\Packages\Enums\CredentialType;
 use App\Packages\Enums\ProvisionStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -51,6 +52,9 @@ class Server extends Model
         'scheduler_status',
         'scheduler_installed_at',
         'scheduler_uninstalled_at',
+        'supervisor_status',
+        'supervisor_installed_at',
+        'supervisor_uninstalled_at',
     ];
 
     protected $attributes = [
@@ -73,6 +77,9 @@ class Server extends Model
             'scheduler_status' => SchedulerStatus::class,
             'scheduler_installed_at' => 'datetime',
             'scheduler_uninstalled_at' => 'datetime',
+            'supervisor_status' => SupervisorStatus::class,
+            'supervisor_installed_at' => 'datetime',
+            'supervisor_uninstalled_at' => 'datetime',
         ];
     }
 
@@ -257,6 +264,11 @@ class Server extends Model
         return $this->hasMany(ServerScheduledTaskRun::class);
     }
 
+    public function supervisorTasks(): HasMany
+    {
+        return $this->hasMany(ServerSupervisorTask::class);
+    }
+
     public function databases(): HasMany
     {
         return $this->hasMany(ServerDatabase::class);
@@ -331,6 +343,30 @@ class Server extends Model
     public function monitoringIsFailed(): bool
     {
         return $this->monitoring_status === MonitoringStatus::Failed;
+    }
+
+    /**
+     * Check if supervisor is active
+     */
+    public function supervisorIsActive(): bool
+    {
+        return $this->supervisor_status === SupervisorStatus::Active;
+    }
+
+    /**
+     * Check if supervisor is installing
+     */
+    public function supervisorIsInstalling(): bool
+    {
+        return $this->supervisor_status === SupervisorStatus::Installing;
+    }
+
+    /**
+     * Check if supervisor failed
+     */
+    public function supervisorIsFailed(): bool
+    {
+        return $this->supervisor_status === SupervisorStatus::Failed;
     }
 
     protected static function booted(): void

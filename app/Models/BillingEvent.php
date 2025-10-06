@@ -30,7 +30,7 @@ class BillingEvent extends Model
     /**
      * Create event from Stripe webhook.
      */
-    public static function createFromStripeEvent($user, $event, string $description = null): self
+    public static function createFromStripeEvent($user, $event, ?string $description = null): self
     {
         return self::create([
             'user_id' => $user->id,

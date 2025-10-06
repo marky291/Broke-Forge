@@ -64,8 +64,8 @@ export default function Dashboard({ activities, servers }: { activities: Activit
                     }
                 >
                     {servers && servers.length > 0 ? (
-                        <div className="space-y-4">
-                            {servers.slice(0, 3).map((s) => {
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                            {servers.map((s) => {
                                 const status = s.connection ?? 'pending';
                                 const provisionStatus = s.provision_status ?? 'pending';
                                 const serverUrl = provisionStatus === 'completed' ? showServer(s.id) : provisioningServer(s.id);
@@ -78,46 +78,39 @@ export default function Dashboard({ activities, servers }: { activities: Activit
                                 }[status] || { color: 'text-gray-600', bg: 'bg-gray-500', label: status, icon: Activity };
 
                                 return (
-                                    <Link key={s.id} href={serverUrl} className="group block">
-                                        <div className="">
+                                    <Link
+                                        key={s.id}
+                                        href={serverUrl}
+                                        className="group relative block rounded-lg border border-neutral-200 bg-white p-4 transition-all hover:border-primary hover:shadow-sm dark:border-white/8 dark:bg-white/3 dark:hover:border-primary"
+                                    >
+                                        <div className="space-y-3">
                                             <div className="flex items-start justify-between">
-                                                <div className="flex-1">
-                                                    <div className="mb-2 flex items-center gap-3">
-                                                        <ServerProviderIcon provider={s.provider as ServerProvider} size="md" />
-                                                        <h3 className="text-base font-semibold">{s.name}</h3>
-                                                    </div>
-                                                    <div className="space-y-1">
-                                                        <p className="text-sm text-muted-foreground">
-                                                            <span className="font-medium">IP:</span> {s.public_ip}:{s.ssh_port}
-                                                        </p>
-                                                        {s.private_ip && (
-                                                            <p className="text-sm text-muted-foreground">
-                                                                <span className="font-medium">Private:</span> {s.private_ip}
-                                                            </p>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                                <div className="flex flex-col items-end gap-2">
-                                                    <div
-                                                        className={cn(
-                                                            'flex items-center gap-2 rounded-full px-2.5 py-1 text-xs font-medium',
-                                                            status === 'connected'
-                                                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                                                : status === 'failed'
-                                                                  ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                                                                  : status === 'pending'
-                                                                    ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
-                                                                    : 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400',
-                                                        )}
-                                                    >
-                                                        <span className={cn('size-1.5 rounded-full', statusConfig.bg)} />
-                                                        {statusConfig.label}
-                                                    </div>
-                                                    <p className="text-xs text-muted-foreground">{getTimeAgo(s.created_at)}</p>
+                                                <ServerProviderIcon provider={s.provider as ServerProvider} size="md" />
+                                                <div
+                                                    className={cn(
+                                                        'flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium',
+                                                        status === 'connected'
+                                                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                                            : status === 'failed'
+                                                              ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                                              : status === 'pending'
+                                                                ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                                                                : 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400',
+                                                    )}
+                                                >
+                                                    <span className={cn('size-1.5 rounded-full', statusConfig.bg)} />
+                                                    {statusConfig.label}
                                                 </div>
                                             </div>
-                                            <div className="absolute top-0 right-0 p-2 opacity-0 transition-opacity group-hover:opacity-100">
-                                                <ArrowRight className="size-4 text-muted-foreground" />
+                                            <div>
+                                                <h3 className="truncate text-sm font-semibold">{s.name}</h3>
+                                                <p className="mt-1 truncate text-xs text-muted-foreground">
+                                                    {s.public_ip}:{s.ssh_port}
+                                                </p>
+                                            </div>
+                                            <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                                <span>{getTimeAgo(s.created_at)}</span>
+                                                <ArrowRight className="size-3 opacity-0 transition-opacity group-hover:opacity-100" />
                                             </div>
                                         </div>
                                     </Link>
@@ -139,15 +132,6 @@ export default function Dashboard({ activities, servers }: { activities: Activit
                             />
                         </div>
                     )}
-                </CardContainer>
-
-                {/* Sites Section */}
-                <CardContainer title="Sites">
-                    <div className="py-12 text-center">
-                        <Globe className="mx-auto size-12 text-muted-foreground/30" />
-                        <h3 className="mt-4 text-sm font-medium">No sites configured</h3>
-                        <p className="mt-1 text-sm text-muted-foreground">Sites will appear here once you add them to your servers</p>
-                    </div>
                 </CardContainer>
 
                 {/* Recent Activity Section */}

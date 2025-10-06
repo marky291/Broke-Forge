@@ -72,6 +72,9 @@ export interface Server {
     scheduler_status?: 'installing' | 'active' | 'failed' | 'uninstalling' | 'uninstalled' | null;
     scheduler_installed_at?: string | null;
     scheduler_uninstalled_at?: string | null;
+    supervisor_status?: 'installing' | 'active' | 'failed' | 'uninstalling' | 'uninstalled' | null;
+    supervisor_installed_at?: string | null;
+    supervisor_uninstalled_at?: string | null;
     monitoring_status?: 'installing' | 'active' | 'failed' | 'uninstalling' | 'uninstalled' | null;
     monitoring_collection_interval?: number | null;
     monitoring_installed_at?: string | null;
@@ -188,4 +191,23 @@ export interface ServerScheduledTaskRun {
     created_at: string;
     updated_at: string;
     task?: ServerScheduledTask;
+}
+
+export interface ServerSupervisorTask {
+    id: number;
+    server_id: number;
+    name: string;
+    command: string;
+    working_directory: string;
+    processes: number;
+    user: string;
+    auto_restart: boolean;
+    autorestart_unexpected: boolean;
+    status: 'active' | 'inactive' | 'failed';
+    stdout_logfile: string | null;
+    stderr_logfile: string | null;
+    installed_at: string | null;
+    uninstalled_at: string | null;
+    created_at: string;
+    updated_at: string;
 }

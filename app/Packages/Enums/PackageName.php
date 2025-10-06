@@ -17,4 +17,6 @@ enum PackageName: string
     case Monitoring = 'monitoring';
     case Scheduler = 'scheduler';
     case ScheduledTask = 'scheduled-task';
+    case Supervisor = 'supervisor';
+    case SupervisorTask = 'supervisor-task';
 }

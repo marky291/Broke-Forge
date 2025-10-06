@@ -3,7 +3,7 @@ import { ServerProviderIcon, type ServerProvider } from '@/components/server-pro
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type NavItem, type ServerMetric } from '@/types';
 import { usePage } from '@inertiajs/react';
-import { Activity, ArrowLeft, Clock, CodeIcon, Cpu, DatabaseIcon, Globe, HardDrive, MemoryStick, Settings, Shield } from 'lucide-react';
+import { Activity, ArrowLeft, Clock, CodeIcon, Cpu, DatabaseIcon, Eye, Globe, HardDrive, MemoryStick, Settings, Shield } from 'lucide-react';
 import { PropsWithChildren, useEffect, useState } from 'react';
 
 interface ServerContentLayoutProps extends PropsWithChildren {
@@ -89,6 +89,8 @@ export default function ServerContentLayout({ children, server, breadcrumbs, lat
         currentSection = 'monitoring';
     } else if (path.includes('/scheduler')) {
         currentSection = 'scheduler';
+    } else if (path.includes('/supervisor')) {
+        currentSection = 'supervisor';
     } else if (path.includes('/settings')) {
         currentSection = 'settings';
     }
@@ -138,6 +140,12 @@ export default function ServerContentLayout({ children, server, breadcrumbs, lat
             href: `/servers/${server.id}/scheduler`,
             icon: Clock,
             isActive: currentSection === 'scheduler',
+        },
+        {
+            title: 'Supervisor',
+            href: `/servers/${server.id}/supervisor`,
+            icon: Eye,
+            isActive: currentSection === 'supervisor',
         },
         {
             title: 'Settings',

@@ -264,13 +264,21 @@ export default function SiteGitRepository({ server, site, gitRepository, flash, 
                     </Card>
 
                     {/* SSH Deploy Key Card */}
-                    <Card>
-                        <CardHeader className="space-y-1">
-                            <CardTitle>SSH Deploy Key</CardTitle>
-                            <CardDescription>Ensure this key is added to your repository with read access</CardDescription>
-                        </CardHeader>
-                        <Separator />
-                        <CardContent className="space-y-4 py-6">
+                    <CardContainer
+                        title="SSH Deploy Key"
+                        description="Ensure this key is added to your repository with read access"
+                        icon={
+                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path
+                                    d="M8.5 5.5H10.5M7 1.5L4.5 4L7 6.5M4.5 4H1.5M4.5 4C4.5 5.933 6.067 7.5 8 7.5H8.5V9.5L11 7L8.5 4.5V6.5H8C6.895 6.5 6 5.605 6 4.5"
+                                    stroke="currentColor"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                />
+                            </svg>
+                        }
+                    >
+                        <div className="space-y-4">
                             <div className="rounded-md border border-blue-200 bg-blue-50 p-3 dark:border-blue-900 dark:bg-blue-950/20">
                                 <p className="text-xs text-blue-800 dark:text-blue-200">
                                     <strong>Tip:</strong> Make sure this SSH key is properly configured in your repository settings before retrying.
@@ -285,8 +293,8 @@ export default function SiteGitRepository({ server, site, gitRepository, flash, 
                                 {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                                 {copied ? 'Copied' : 'Copy Deploy Key'}
                             </Button>
-                        </CardContent>
-                    </Card>
+                        </div>
+                    </CardContainer>
                 </div>
             </SiteLayout>
         );
@@ -434,93 +442,105 @@ export default function SiteGitRepository({ server, site, gitRepository, flash, 
                 )}
 
                 <div className="flex flex-col gap-6">
-                    <Card>
-                        <CardHeader className="space-y-1">
-                            <CardTitle>Repository Details</CardTitle>
-                            <CardDescription>Select the GitHub repository and branch you would like to deploy.</CardDescription>
-                        </CardHeader>
-                        <Separator />
-                        <CardContent className="py-6">
-                            <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-                                <div className="space-y-3">
-                                    <Label htmlFor="provider" className="text-sm text-muted-foreground">
-                                        Provider
-                                    </Label>
-                                    <Select value={data.provider} onValueChange={handleProviderChange}>
-                                        <SelectTrigger id="provider" className="w-full md:w-1/2">
-                                            <SelectValue placeholder="Choose provider" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectGroup>
-                                                {GIT_PROVIDERS.map((provider) => (
-                                                    <SelectItem key={provider.value} value={provider.value}>
-                                                        {provider.label}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectGroup>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
+                    <CardContainer
+                        title="Repository Details"
+                        icon={
+                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path
+                                    d="M6 1L10.5 3.5V8.5L6 11L1.5 8.5V3.5L6 1Z"
+                                    stroke="currentColor"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                />
+                                <path d="M6 6V11" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+                                <path d="M1.5 3.5L6 6L10.5 3.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                        }
+                    >
+                        <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+                            <div className="space-y-3">
+                                <Label htmlFor="provider" className="text-sm text-muted-foreground">
+                                    Provider
+                                </Label>
+                                <Select value={data.provider} onValueChange={handleProviderChange}>
+                                    <SelectTrigger id="provider" className="w-full md:w-1/2">
+                                        <SelectValue placeholder="Choose provider" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectGroup>
+                                            {GIT_PROVIDERS.map((provider) => (
+                                                <SelectItem key={provider.value} value={provider.value}>
+                                                    {provider.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectGroup>
+                                    </SelectContent>
+                                </Select>
+                            </div>
 
-                                <div className="space-y-3">
-                                    <Label htmlFor="repository" className="text-sm text-muted-foreground">
-                                        Repository
-                                    </Label>
-                                    <Input
-                                        id="repository"
-                                        value={data.repository}
-                                        onChange={(event) => setData('repository', event.target.value)}
-                                        placeholder="e.g. organisation/project"
-                                        className="w-full"
-                                        required
-                                    />
-                                    {(errors.repository || serverErrors?.repository) && (
-                                        <p className="text-xs text-destructive">{errors.repository || serverErrors?.repository}</p>
-                                    )}
-                                    <p className="text-xs text-muted-foreground">
-                                        Use the <span className="font-medium">owner/name</span> format. BrokeForge clones via SSH using the deploy key
-                                        below.
-                                    </p>
-                                </div>
+                            <div className="space-y-3">
+                                <Label htmlFor="repository" className="text-sm text-muted-foreground">
+                                    Repository
+                                </Label>
+                                <Input
+                                    id="repository"
+                                    value={data.repository}
+                                    onChange={(event) => setData('repository', event.target.value)}
+                                    placeholder="e.g. organisation/project"
+                                    className="w-full"
+                                    required
+                                />
+                                {(errors.repository || serverErrors?.repository) && (
+                                    <p className="text-xs text-destructive">{errors.repository || serverErrors?.repository}</p>
+                                )}
+                                <p className="text-xs text-muted-foreground">
+                                    Use the <span className="font-medium">owner/name</span> format. BrokeForge clones via SSH using the deploy key
+                                    below.
+                                </p>
+                            </div>
 
-                                <div className="space-y-3">
-                                    <Label htmlFor="branch" className="text-sm text-muted-foreground">
-                                        Branch
-                                    </Label>
-                                    <Input
-                                        id="branch"
-                                        value={data.branch}
-                                        onChange={(event) => setData('branch', event.target.value)}
-                                        placeholder="main"
-                                        className="w-full md:w-1/2"
-                                        required
-                                    />
-                                    {(errors.branch || serverErrors?.branch) && (
-                                        <p className="text-xs text-destructive">{errors.branch || serverErrors?.branch}</p>
-                                    )}
-                                    <p className="text-xs text-muted-foreground">
-                                        We will deploy this branch on new releases. Change it later if your workflow evolves.
-                                    </p>
-                                </div>
+                            <div className="space-y-3">
+                                <Label htmlFor="branch" className="text-sm text-muted-foreground">
+                                    Branch
+                                </Label>
+                                <Input
+                                    id="branch"
+                                    value={data.branch}
+                                    onChange={(event) => setData('branch', event.target.value)}
+                                    placeholder="main"
+                                    className="w-full md:w-1/2"
+                                    required
+                                />
+                                {(errors.branch || serverErrors?.branch) && (
+                                    <p className="text-xs text-destructive">{errors.branch || serverErrors?.branch}</p>
+                                )}
+                                <p className="text-xs text-muted-foreground">
+                                    We will deploy this branch on new releases. Change it later if your workflow evolves.
+                                </p>
+                            </div>
 
-                                <div className="flex justify-end">
-                                    <Button type="submit" disabled={processing || !data.repository || !data.branch}>
-                                        {processing ? 'Installing...' : 'Install Repository'}
-                                    </Button>
-                                </div>
-                            </form>
-                        </CardContent>
-                    </Card>
+                            <div className="flex justify-end">
+                                <Button type="submit" disabled={processing || !data.repository || !data.branch}>
+                                    {processing ? 'Installing...' : 'Install Repository'}
+                                </Button>
+                            </div>
+                        </form>
+                    </CardContainer>
 
-                    <Card>
-                        <CardHeader className="space-y-1">
-                            <CardTitle>SSH Deploy Key</CardTitle>
-                            <CardDescription>
-                                Add this key to your repository with read access. BrokeForge uses it to fetch your code securely.
-                            </CardDescription>
-                        </CardHeader>
-                        <Separator />
-                        <CardContent className="space-y-4 py-6">
+                    <CardContainer
+                        title="SSH Deploy Key"
+                        icon={
+                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path
+                                    d="M8.5 5.5H10.5M7 1.5L4.5 4L7 6.5M4.5 4H1.5M4.5 4C4.5 5.933 6.067 7.5 8 7.5H8.5V9.5L11 7L8.5 4.5V6.5H8C6.895 6.5 6 5.605 6 4.5"
+                                    stroke="currentColor"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                />
+                            </svg>
+                        }
+                    >
+                        <div className="space-y-4">
                             <div className="mb-4 rounded-md border border-blue-200 bg-blue-50 p-3 dark:border-blue-900 dark:bg-blue-950/20">
                                 <p className="text-xs text-blue-800 dark:text-blue-200">
                                     <strong>Security:</strong> This SSH key is unique to this server. If this server is compromised, only this key
@@ -544,8 +564,8 @@ export default function SiteGitRepository({ server, site, gitRepository, flash, 
                                 {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                                 {copied ? 'Copied' : 'Copy Deploy Key'}
                             </Button>
-                        </CardContent>
-                    </Card>
+                        </div>
+                    </CardContainer>
                 </div>
             </div>
         </SiteLayout>

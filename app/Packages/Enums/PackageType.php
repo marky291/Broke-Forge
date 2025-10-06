@@ -14,4 +14,5 @@ enum PackageType: string
     case Deployment = 'deployment';
     case Monitoring = 'monitoring';
     case Scheduler = 'scheduler';
+    case Supervisor = 'supervisor';
 }

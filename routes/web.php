@@ -16,6 +16,7 @@ use App\Http\Controllers\ServerSiteCommandsController;
 use App\Http\Controllers\ServerSiteDeploymentsController;
 use App\Http\Controllers\ServerSiteGitRepositoryController;
 use App\Http\Controllers\ServerSitesController;
+use App\Http\Controllers\ServerSupervisorController;
 use App\Http\Controllers\SourceProviderController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -255,6 +256,37 @@ Route::middleware('auth')->group(function () {
                 Route::get('{scheduledTask}/runs', [ServerSchedulerController::class, 'getTaskRuns'])
                     ->name('scheduler.tasks.runs')
                     ->withoutMiddleware('throttle:60,1');
+            });
+        });
+
+        // Supervisor management
+        Route::prefix('supervisor')->middleware('throttle:60,1')->group(function () {
+            Route::get('/', [ServerSupervisorController::class, 'index'])
+                ->name('supervisor')
+                ->withoutMiddleware('throttle:60,1');
+
+            Route::post('install', [ServerSupervisorController::class, 'install'])
+                ->name('supervisor.install')
+                ->middleware('throttle:5,1');
+
+            Route::post('uninstall', [ServerSupervisorController::class, 'uninstall'])
+                ->name('supervisor.uninstall')
+                ->middleware('throttle:5,1');
+
+            // Task management - scoped to ensure task belongs to server
+            Route::prefix('tasks')->scopeBindings()->group(function () {
+                Route::post('/', [ServerSupervisorController::class, 'storeTask'])
+                    ->name('supervisor.tasks.store')
+                    ->middleware('throttle:20,1');
+
+                Route::delete('{supervisorTask}', [ServerSupervisorController::class, 'destroyTask'])
+                    ->name('supervisor.tasks.destroy');
+
+                Route::post('{supervisorTask}/toggle', [ServerSupervisorController::class, 'toggleTask'])
+                    ->name('supervisor.tasks.toggle');
+
+                Route::post('{supervisorTask}/restart', [ServerSupervisorController::class, 'restartTask'])
+                    ->name('supervisor.tasks.restart');
             });
         });
 
