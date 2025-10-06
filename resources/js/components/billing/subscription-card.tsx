@@ -28,7 +28,7 @@ type SubscriptionPlan =
 
 type UpcomingInvoice = {
     total: string;
-    period_end: Date;
+    period_end: string;
 } | null;
 
 type SubscriptionCardProps = {

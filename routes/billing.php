@@ -22,6 +22,9 @@ Route::middleware(['auth', 'verified'])->prefix('billing')->name('billing.')->gr
     // Stripe Customer Portal
     Route::get('/portal', [BillingController::class, 'portal'])->name('portal');
 
+    // Stripe Checkout
+    Route::post('/checkout', [BillingController::class, 'checkout'])->name('checkout');
+
     // Subscription management
     Route::post('/subscriptions', [SubscriptionController::class, 'store'])->name('subscriptions.store');
     Route::put('/subscriptions', [SubscriptionController::class, 'update'])->name('subscriptions.update');

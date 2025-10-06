@@ -46,6 +46,11 @@ class SubscriptionService
             $subscription = $user->subscription('default');
             $oldPriceId = $subscription->stripe_price;
 
+            // If subscription is cancelled, resume it first
+            if ($subscription->cancelled()) {
+                $subscription->resume();
+            }
+
             // Swap plans (prorate by default)
             $subscription->swap($newPriceId);
 
