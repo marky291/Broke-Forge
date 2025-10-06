@@ -6,7 +6,8 @@
       "mcp__playwright__browser_fill_form",
       "mcp__playwright__browser_take_screenshot",
       "mcp__laravel-boost__tinker",
-      "mcp__laravel-boost__database-schema"
+      "mcp__laravel-boost__database-schema",
+      "mcp__laravel-boost__read-log-entries"
     ]
   },
   "enabledMcpjsonServers": [

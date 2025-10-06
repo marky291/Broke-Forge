@@ -236,6 +236,63 @@ class SiteFileExplorer
         ];
     }
 
+    /**
+     * Delete files and directories from the server.
+     *
+     * @param  array<int, string>  $relativePaths
+     */
+    public function delete(array $relativePaths): void
+    {
+        if (empty($relativePaths)) {
+            throw new ServerFileExplorerException('At least one file path is required for deletion.', 422);
+        }
+
+        \Log::info('File explorer delete requested', [
+            'site_id' => $this->site->id,
+            'file_count' => count($relativePaths),
+        ]);
+
+        $absolutePaths = [];
+
+        foreach ($relativePaths as $relativePath) {
+            $normalized = $this->normalizeRelativePath($relativePath);
+
+            if ($normalized === '') {
+                throw new ServerFileExplorerException('Cannot delete the base directory.', 422);
+            }
+
+            $absolutePaths[] = $this->resolveAbsolutePath($normalized, expect: 'any');
+        }
+
+        // Build rm command with all paths
+        $pathArgs = implode(' ', array_map('escapeshellarg', $absolutePaths));
+        $command = sprintf('rm -rf %s', $pathArgs);
+
+        \Log::debug('File explorer executing delete command', [
+            'site_id' => $this->site->id,
+            'command' => $command,
+        ]);
+
+        $process = $this->runCommand($command, timeout: 30);
+
+        if (! $process->isSuccessful()) {
+            $message = trim($process->getErrorOutput()) ?: 'File deletion failed.';
+
+            \Log::error('File explorer delete failed', [
+                'site_id' => $this->site->id,
+                'error' => $message,
+                'exit_code' => $process->getExitCode(),
+            ]);
+
+            throw new ServerFileExplorerException($message, 500);
+        }
+
+        \Log::info('File explorer delete completed', [
+            'site_id' => $this->site->id,
+            'deleted_count' => count($relativePaths),
+        ]);
+    }
+
     protected function makeSsh(): Ssh
     {
         return $this->site->server->createSshConnection(CredentialType::BrokeForge);

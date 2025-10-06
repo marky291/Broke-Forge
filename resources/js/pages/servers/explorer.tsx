@@ -32,7 +32,7 @@ type ExplorerPageProps = {
 };
 
 export default function Explorer({ server, site }: ExplorerPageProps) {
-    const { state, refresh, navigateTo, navigateUp, upload, download, dismissError } = useServerFileBrowser(server.id, site.id);
+    const { state, refresh, navigateTo, upload, download, deleteFiles } = useServerFileBrowser(server.id, site.id);
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard.url() },
@@ -47,11 +47,10 @@ export default function Explorer({ server, site }: ExplorerPageProps) {
             <ServerFileBrowser
                 state={state}
                 onNavigate={navigateTo}
-                onNavigateUp={navigateUp}
                 onRefresh={refresh}
                 onUpload={upload}
                 onDownload={download}
-                onDismissError={dismissError}
+                onDelete={deleteFiles}
             />
         </SiteLayout>
     );

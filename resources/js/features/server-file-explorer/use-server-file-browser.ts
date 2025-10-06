@@ -125,7 +125,7 @@ export const useServerFileBrowser = (serverId: number, siteId: number) => {
                     method: 'POST',
                     credentials: 'same-origin',
                     headers: {
-                        'X-CSRF-TOKEN': csrfToken,
+                        'X-XSRF-TOKEN': csrfToken,
                         Accept: 'application/json',
                     },
                     body: formData,
@@ -159,9 +159,52 @@ export const useServerFileBrowser = (serverId: number, siteId: number) => {
         [serverId, siteId],
     );
 
-    const dismissError = useCallback(() => {
-        setState((prev) => ({ ...prev, error: null }));
-    }, []);
+    const deleteFiles = useCallback(
+        async (files: FileItem[]) => {
+            const csrfToken = getCsrfTokenFromCookie();
+
+            if (!csrfToken) {
+                setState((prev) => ({
+                    ...prev,
+                    error: 'Unable to delete files because the CSRF token could not be determined.',
+                }));
+                return;
+            }
+
+            setState((prev) => ({ ...prev, loading: true, error: null }));
+
+            try {
+                const response = await fetch(`/servers/${serverId}/sites/${siteId}/files/delete`, {
+                    method: 'DELETE',
+                    credentials: 'same-origin',
+                    headers: {
+                        'X-XSRF-TOKEN': csrfToken,
+                        'Content-Type': 'application/json',
+                        Accept: 'application/json',
+                    },
+                    body: JSON.stringify({
+                        files: files.map((f) => f.path),
+                    }),
+                });
+
+                const payload = await response.json().catch(() => null);
+
+                if (!response.ok) {
+                    const message = payload?.message ?? 'File deletion failed.';
+                    throw new Error(message);
+                }
+
+                await loadDirectory(state.currentPath);
+            } catch (error) {
+                setState((prev) => ({
+                    ...prev,
+                    loading: false,
+                    error: (error as Error).message,
+                }));
+            }
+        },
+        [loadDirectory, serverId, siteId, state.currentPath],
+    );
 
     useEffect(() => {
         void loadDirectory('');
@@ -180,6 +223,6 @@ export const useServerFileBrowser = (serverId: number, siteId: number) => {
         navigateUp,
         upload,
         download,
-        dismissError,
+        deleteFiles,
     };
 };

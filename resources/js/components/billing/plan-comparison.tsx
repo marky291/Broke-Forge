@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { CardContainer } from '@/components/ui/card-container';
 import { cn } from '@/lib/utils';
+import { router } from '@inertiajs/react';
 import { Check, TrendingUp } from 'lucide-react';
 import { useState } from 'react';
 
@@ -38,8 +39,34 @@ export default function PlanComparison({ plans, currentPlan, subscription, onMan
     const filteredPlans = plans.filter((p) => p.interval === billingInterval);
 
     const handleSelectPlan = (priceId: string, planName: string) => {
-        // Always redirect to Stripe portal for subscription management
-        onManageBilling();
+        // If user has no subscription, initiate checkout
+        if (!subscription) {
+            router.post('/billing/checkout', { price_id: priceId });
+            return;
+        }
+
+        // If user is selecting their current plan, do nothing
+        if (isCurrentPlan(priceId)) {
+            return;
+        }
+
+        // Determine if upgrade or downgrade
+        const isUpgrade = currentPlan && currentPlan.amount < filteredPlans.find((p) => p.stripe_price_id === priceId)!.amount;
+        const actionType = isUpgrade ? 'upgrade' : 'downgrade';
+
+        // Confirm plan change
+        const confirmMessage = isUpgrade
+            ? `Upgrade to ${planName}? You'll be charged the prorated difference immediately.`
+            : `Downgrade to ${planName}? You'll receive a credit on your next invoice for the unused time.`;
+
+        if (!confirm(confirmMessage)) {
+            return;
+        }
+
+        // For plan changes (upgrade/downgrade), update subscription
+        router.put('/billing/subscriptions', { price_id: priceId }, {
+            preserveScroll: true,
+        });
     };
 
     const isCurrentPlan = (priceId: string) => {
@@ -65,7 +92,7 @@ export default function PlanComparison({ plans, currentPlan, subscription, onMan
     return (
         <CardContainer
             title="Available Plans"
-            icon={TrendingUp}
+            icon={<TrendingUp />}
             action={
                 <div className="inline-flex items-center gap-1 rounded-lg border p-1">
                     <button

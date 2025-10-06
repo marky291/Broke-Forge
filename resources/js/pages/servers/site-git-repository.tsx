@@ -284,8 +284,8 @@ export default function SiteGitRepository({ server, site, gitRepository, flash, 
                                     <strong>Tip:</strong> Make sure this SSH key is properly configured in your repository settings before retrying.
                                 </p>
                             </div>
-                            <div className="rounded-md border border-border bg-muted/60 p-4">
-                                <pre className="max-h-56 overflow-y-auto font-mono text-xs leading-relaxed break-words whitespace-pre-wrap">
+                            <div className="overflow-x-auto rounded-md border border-border bg-muted/60 p-4">
+                                <pre className="max-h-56 overflow-y-auto font-mono text-xs leading-relaxed break-all whitespace-pre-wrap">
                                     {deployKey}
                                 </pre>
                             </div>
@@ -555,8 +555,8 @@ export default function SiteGitRepository({ server, site, gitRepository, flash, 
                                 </li>
                                 <li>3. Paste the key below and grant read-only access.</li>
                             </ol>
-                            <div className="rounded-md border border-border bg-muted/60 p-4">
-                                <pre className="max-h-56 overflow-y-auto font-mono text-xs leading-relaxed break-words whitespace-pre-wrap">
+                            <div className="overflow-x-auto rounded-md border border-border bg-muted/60 p-4">
+                                <pre className="max-h-56 overflow-y-auto font-mono text-xs leading-relaxed break-all whitespace-pre-wrap">
                                     {deployKey}
                                 </pre>
                             </div>

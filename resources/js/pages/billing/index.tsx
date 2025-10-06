@@ -6,7 +6,9 @@ import { CardContainer } from '@/components/ui/card-container';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 import { Head, router, usePage } from '@inertiajs/react';
+import confetti from 'canvas-confetti';
 import { CreditCard, Server as ServerIcon } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Billing', href: '/billing' }];
 
@@ -36,15 +38,16 @@ type PaymentMethod = {
 
 type Invoice = {
     id: string;
-    date: Date;
+    date: string;
     total: string;
     status: string;
-    invoice_pdf: string;
+    invoice_pdf: string | null;
+    is_credit: boolean;
 };
 
 type UpcomingInvoice = {
     total: string;
-    period_end: Date;
+    period_end: string;
 } | null;
 
 type SubscriptionPlan = {
@@ -76,9 +79,20 @@ type BillingProps = {
     upcomingInvoice: UpcomingInvoice;
     serverUsage: ServerUsage;
     plans: SubscriptionPlan[];
+    justSubscribed?: boolean;
+    planChanged?: boolean;
 };
 
-export default function Billing({ subscription, paymentMethods, invoices, upcomingInvoice, serverUsage, plans }: BillingProps) {
+export default function Billing({
+    subscription,
+    paymentMethods,
+    invoices,
+    upcomingInvoice,
+    serverUsage,
+    plans,
+    justSubscribed = false,
+    planChanged = false,
+}: BillingProps) {
     const { auth } = usePage<SharedData>().props;
 
     const currentPlan = plans.find((p) => p.stripe_price_id === subscription?.stripe_price);
@@ -89,6 +103,49 @@ export default function Billing({ subscription, paymentMethods, invoices, upcomi
         // Force full browser redirect to Stripe portal
         window.location.href = '/billing/portal';
     };
+
+    // Track if confetti has already been triggered
+    const confettiTriggered = useRef(false);
+
+    // Trigger confetti when user just subscribed or changed plan
+    useEffect(() => {
+        if ((justSubscribed || planChanged) && subscription && !confettiTriggered.current) {
+            confettiTriggered.current = true;
+
+            // Fire confetti
+            const duration = 3000;
+            const animationEnd = Date.now() + duration;
+            const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 9999 };
+
+            function randomInRange(min: number, max: number) {
+                return Math.random() * (max - min) + min;
+            }
+
+            const interval: ReturnType<typeof setInterval> = setInterval(() => {
+                const timeLeft = animationEnd - Date.now();
+
+                if (timeLeft <= 0) {
+                    clearInterval(interval);
+                    return;
+                }
+
+                const particleCount = 50 * (timeLeft / duration);
+
+                confetti({
+                    ...defaults,
+                    particleCount,
+                    origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 },
+                });
+                confetti({
+                    ...defaults,
+                    particleCount,
+                    origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 },
+                });
+            }, 250);
+
+            return () => clearInterval(interval);
+        }
+    }, [justSubscribed, planChanged, subscription]);
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -106,7 +163,7 @@ export default function Billing({ subscription, paymentMethods, invoices, upcomi
                 {/* Server Usage */}
                 <CardContainer
                     title="Server Usage"
-                    icon={ServerIcon}
+                    icon={<ServerIcon />}
                     action={
                         <Button variant="ghost" size="sm" onClick={() => router.visit('/dashboard')}>
                             View Servers
@@ -144,7 +201,7 @@ export default function Billing({ subscription, paymentMethods, invoices, upcomi
                 <PlanComparison plans={plans} currentPlan={currentPlan} subscription={subscription} onManageBilling={handleManageBilling} />
 
                 {/* Billing Details */}
-                <CardContainer title="Billing Details" icon={CreditCard}>
+                <CardContainer title="Billing Details" icon={<CreditCard />}>
                     <div className="space-y-6">
                         <div>
                             <h3 className="mb-2 font-medium">Manage your subscription</h3>

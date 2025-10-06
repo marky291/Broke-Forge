@@ -5,10 +5,11 @@ import { Download, Receipt } from 'lucide-react';
 
 type Invoice = {
     id: string;
-    date: Date;
+    date: string;
     total: string;
     status: string;
-    invoice_pdf: string;
+    invoice_pdf: string | null;
+    is_credit: boolean;
 };
 
 type InvoicesListProps = {
@@ -31,7 +32,7 @@ export default function InvoicesList({ invoices }: InvoicesListProps) {
 
     if (!invoices || invoices.length === 0) {
         return (
-            <CardContainer title="Invoices" icon={Receipt}>
+            <CardContainer title="Invoices" icon={<Receipt />}>
                 <div className="py-8 text-center">
                     <Receipt className="mx-auto size-12 text-muted-foreground/30" />
                     <h3 className="mt-4 text-sm font-medium">No invoices</h3>
@@ -42,7 +43,7 @@ export default function InvoicesList({ invoices }: InvoicesListProps) {
     }
 
     return (
-        <CardContainer title="Invoices" icon={Receipt}>
+        <CardContainer title="Invoices" icon={<Receipt />}>
             <div className="space-y-3">
                 {invoices.map((invoice) => (
                     <div
@@ -54,23 +55,34 @@ export default function InvoicesList({ invoices }: InvoicesListProps) {
                                 <Receipt className="size-5 text-muted-foreground" />
                             </div>
                             <div>
-                                <p className="font-medium">
-                                    {new Date(invoice.date).toLocaleDateString('en-US', {
-                                        year: 'numeric',
-                                        month: 'long',
-                                        day: 'numeric',
-                                    })}
+                                <div className="flex items-center gap-2">
+                                    <p className="font-medium">
+                                        {new Date(invoice.date).toLocaleDateString('en-US', {
+                                            year: 'numeric',
+                                            month: 'long',
+                                            day: 'numeric',
+                                        })}
+                                    </p>
+                                    {invoice.is_credit && (
+                                        <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                                            Credit
+                                        </span>
+                                    )}
+                                </div>
+                                <p className={cn('text-sm', invoice.is_credit ? 'text-blue-600 dark:text-blue-400' : 'text-muted-foreground')}>
+                                    {invoice.total}
                                 </p>
-                                <p className="text-sm text-muted-foreground">{invoice.total}</p>
                             </div>
                         </div>
 
                         <div className="flex items-center gap-3">
                             {getStatusBadge(invoice.status)}
-                            <Button variant="outline" size="sm" onClick={() => window.open(invoice.invoice_pdf, '_blank')}>
-                                <Download className="mr-2 size-4" />
-                                Download
-                            </Button>
+                            {invoice.invoice_pdf && (
+                                <Button variant="outline" size="sm" onClick={() => window.open(invoice.invoice_pdf!, '_blank')}>
+                                    <Download className="mr-2 size-4" />
+                                    Download
+                                </Button>
+                            )}
                         </div>
                     </div>
                 ))}

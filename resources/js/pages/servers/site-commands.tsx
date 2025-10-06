@@ -133,7 +133,15 @@ export default function SiteCommands({
         <SiteLayout server={server} site={site} breadcrumbs={breadcrumbs}>
             <Head title={`Commands — ${site.domain}`} />
             <PageHeader title="Commands" description="Execute ad-hoc commands on your server within the site's context.">
-                <CardContainer title="Execute Command">
+                <CardContainer
+                    title="Execute Command"
+                    icon={
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <polyline points="2 8 5 5 2 2" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+                            <line x1="6" x2="10" y1="9.5" y2="9.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                    }
+                >
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div>
                             <label htmlFor="command" className="text-sm font-medium text-muted-foreground">
@@ -235,7 +243,15 @@ export default function SiteCommands({
                 )}
 
                 {commandHistory.data.length > 0 && (
-                    <CardContainer title="Command History">
+                    <CardContainer
+                        title="Command History"
+                        icon={
+                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+                                <polyline points="6 3 6 6 8 7" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                        }
+                    >
                         <div>
                             <div className="divide-y divide-border">
                                 {commandHistory.data.map((history) => {

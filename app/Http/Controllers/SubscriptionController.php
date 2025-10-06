@@ -50,7 +50,7 @@ class SubscriptionController extends Controller
                 $validated['price_id']
             );
 
-            return redirect()->route('billing.index')
+            return redirect()->route('billing.index', ['plan_changed' => 'true'])
                 ->with('success', 'Subscription updated successfully!');
         } catch (\Exception $e) {
             return back()->with('error', 'Failed to update subscription: '.$e->getMessage());
