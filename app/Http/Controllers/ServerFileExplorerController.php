@@ -11,6 +11,7 @@ use App\Models\Server;
 use App\Models\ServerSite;
 use App\Packages\Services\Sites\Explorer\SiteFileExplorer;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -74,5 +75,27 @@ class ServerFileExplorerController extends Controller
         return response()
             ->download($result['path'], $result['filename'])
             ->deleteFileAfterSend(true);
+    }
+
+    public function destroy(Request $request, Server $server, ServerSite $site): JsonResponse
+    {
+        $request->validate([
+            'files' => ['required', 'array', 'min:1'],
+            'files.*' => ['required', 'string'],
+        ]);
+
+        $explorer = new SiteFileExplorer($site);
+
+        try {
+            $explorer->delete($request->input('files'));
+        } catch (ServerFileExplorerException $exception) {
+            return response()->json([
+                'message' => $exception->getMessage(),
+            ], $exception->status());
+        }
+
+        return response()->json([
+            'message' => 'Files deleted successfully.',
+        ]);
     }
 }

@@ -187,6 +187,8 @@ Route::middleware('auth')->group(function () {
                     ->name('upload');
                 Route::get('download', [ServerFileExplorerController::class, 'download'])
                     ->name('download');
+                Route::delete('delete', [ServerFileExplorerController::class, 'destroy'])
+                    ->name('delete');
             });
             Route::get('{site}', [ServerSitesController::class, 'show'])
                 ->name('sites.show');
