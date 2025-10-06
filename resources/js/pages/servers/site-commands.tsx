@@ -1,4 +1,3 @@
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CardContainer } from '@/components/ui/card-container';
@@ -10,7 +9,7 @@ import { dashboard } from '@/routes';
 import { show as showServer } from '@/routes/servers';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router, useForm } from '@inertiajs/react';
-import { AlertCircle, CheckCircle2, Clock, Loader2, Terminal, XCircle } from 'lucide-react';
+import { CheckCircle2, Clock, Loader2, Terminal, XCircle } from 'lucide-react';
 import { useState } from 'react';
 
 type Server = {
@@ -115,7 +114,7 @@ export default function SiteCommands({
                 onError: () => {
                     setIsRerunning(false);
                 },
-            }
+            },
         );
     };
 
@@ -133,36 +132,33 @@ export default function SiteCommands({
     return (
         <SiteLayout server={server} site={site} breadcrumbs={breadcrumbs}>
             <Head title={`Commands — ${site.domain}`} />
-            <PageHeader
-                title="Commands"
-                description="Execute ad-hoc commands on your server within the site's context."
-            >
+            <PageHeader title="Commands" description="Execute ad-hoc commands on your server within the site's context.">
                 <CardContainer title="Execute Command">
                     <form onSubmit={handleSubmit} className="space-y-4">
-                            <div>
-                                <label htmlFor="command" className="text-sm font-medium text-muted-foreground">
-                                    Command
-                                </label>
-                                <Input
-                                    id="command"
-                                    value={data.command}
-                                    onChange={(event) => setData('command', event.target.value)}
-                                    placeholder="e.g. php artisan migrate"
-                                    className="mt-2"
-                                    name="command"
-                                />
-                                {errors.command && <p className="mt-2 text-sm text-destructive">{errors.command}</p>}
-                            </div>
-                            <Button type="submit" disabled={!hasCommand || processing}>
-                                {processing ? (
-                                    <span className="inline-flex items-center gap-2">
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                        Running...
-                                    </span>
-                                ) : (
-                                    'Run Command'
-                                )}
-                            </Button>
+                        <div>
+                            <label htmlFor="command" className="text-sm font-medium text-muted-foreground">
+                                Command
+                            </label>
+                            <Input
+                                id="command"
+                                value={data.command}
+                                onChange={(event) => setData('command', event.target.value)}
+                                placeholder="e.g. php artisan migrate"
+                                className="mt-2"
+                                name="command"
+                            />
+                            {errors.command && <p className="mt-2 text-sm text-destructive">{errors.command}</p>}
+                        </div>
+                        <Button type="submit" disabled={!hasCommand || processing}>
+                            {processing ? (
+                                <span className="inline-flex items-center gap-2">
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    Running...
+                                </span>
+                            ) : (
+                                'Run Command'
+                            )}
+                        </Button>
                     </form>
                 </CardContainer>
 
@@ -179,8 +175,8 @@ export default function SiteCommands({
                                 variant="outline"
                                 className={
                                     result.success
-                                        ? 'flex items-center gap-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-                                        : 'flex items-center gap-1 bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20'
+                                        ? 'flex items-center gap-1 border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                                        : 'flex items-center gap-1 border-red-500/20 bg-red-500/10 text-red-600 dark:text-red-400'
                                 }
                             >
                                 {result.success ? (
@@ -223,14 +219,16 @@ export default function SiteCommands({
                             {result.errorOutput && (
                                 <div>
                                     <div className="mb-2 text-sm font-medium text-destructive">Error Output</div>
-                                    <pre className="overflow-x-auto rounded-md bg-destructive/10 p-3 font-mono text-sm text-destructive whitespace-pre-wrap">
+                                    <pre className="overflow-x-auto rounded-md bg-destructive/10 p-3 font-mono text-sm whitespace-pre-wrap text-destructive">
                                         {result.errorOutput}
                                     </pre>
                                 </div>
                             )}
 
                             <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                <span>Exit Code: <span className="font-mono">{result.exitCode ?? 'N/A'}</span></span>
+                                <span>
+                                    Exit Code: <span className="font-mono">{result.exitCode ?? 'N/A'}</span>
+                                </span>
                             </div>
                         </div>
                     </CardContainer>
@@ -253,8 +251,8 @@ export default function SiteCommands({
                                                             variant="outline"
                                                             className={
                                                                 history.success
-                                                                    ? 'flex items-center gap-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-                                                                    : 'flex items-center gap-1 bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20'
+                                                                    ? 'flex items-center gap-1 border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                                                                    : 'flex items-center gap-1 border-red-500/20 bg-red-500/10 text-red-600 dark:text-red-400'
                                                             }
                                                         >
                                                             {history.success ? (
@@ -289,9 +287,7 @@ export default function SiteCommands({
                                                         )}
                                                     </Button>
                                                 </div>
-                                                <div className="rounded-md bg-muted p-2 font-mono text-sm">
-                                                    {history.command}
-                                                </div>
+                                                <div className="rounded-md bg-muted p-2 font-mono text-sm">{history.command}</div>
                                             </div>
                                         </div>
                                     );
@@ -307,7 +303,7 @@ export default function SiteCommands({
                                         router.get(
                                             `/servers/${server.id}/sites/${site.id}/commands`,
                                             { page },
-                                            { preserveState: true, preserveScroll: true }
+                                            { preserveState: true, preserveScroll: true },
                                         )
                                     }
                                 />

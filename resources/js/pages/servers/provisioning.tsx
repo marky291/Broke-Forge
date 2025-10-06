@@ -105,10 +105,7 @@ export default function Provisioning({
             return {
                 tone: 'error' as const,
                 title: 'Provisioning failed',
-                description:
-                    failedEvent.label ||
-                    statusLabels[failedEvent.milestone] ||
-                    'Review the event log below to resolve the issue.',
+                description: failedEvent.label || statusLabels[failedEvent.milestone] || 'Review the event log below to resolve the issue.',
             };
         }
 
@@ -116,10 +113,7 @@ export default function Provisioning({
             return {
                 tone: 'progress' as const,
                 title: 'Installation in progress',
-                description:
-                    pendingEvent.label ||
-                    statusLabels[pendingEvent.milestone] ||
-                    'We are configuring your server.',
+                description: pendingEvent.label || statusLabels[pendingEvent.milestone] || 'We are configuring your server.',
             };
         }
 
@@ -136,10 +130,7 @@ export default function Provisioning({
         return {
             tone: server.provision_status === 'failed' ? ('error' as const) : ('progress' as const),
             title: server.provision_status_label,
-            description:
-                latestEvent.label ||
-                statusLabels[latestEvent.milestone] ||
-                'Provisioning status has been updated.',
+            description: latestEvent.label || statusLabels[latestEvent.milestone] || 'Provisioning status has been updated.',
         };
     }, [events, server.provision_status, server.provision_status_label, statusLabels]);
 
@@ -246,7 +237,6 @@ export default function Provisioning({
         };
     }, [progressByPackageName]);
 
-
     const copy = (text: string, which: 'cmd' | 'root') => {
         const ok = copyToClipboard(text, { format: 'text/plain' });
         if (ok) {
@@ -295,12 +285,11 @@ export default function Provisioning({
             return;
         }
 
-
         // Check if we have any pending events
-        const hasPendingEvents = events.some(event => event.status === 'pending');
+        const hasPendingEvents = events.some((event) => event.status === 'pending');
 
         // Check if we have any failed events
-        const hasFailedEvents = events.some(event => event.status === 'failed');
+        const hasFailedEvents = events.some((event) => event.status === 'failed');
 
         // Check if all events are either success or failed (no pending)
         const allEventsFinished = events.length > 0 && !hasPendingEvents;
@@ -312,10 +301,7 @@ export default function Provisioning({
         // Stop polling only when:
         // 1. server.provision_status === 'completed' (handled above with redirect)
         // 2. server.provision_status === 'failed' AND no pending events
-        const shouldPoll = isInitialProvision ||
-                         isActiveProvisioning ||
-                         hasPendingEvents ||
-                         events.length === 0; // Keep polling if no events yet
+        const shouldPoll = isInitialProvision || isActiveProvisioning || hasPendingEvents || events.length === 0; // Keep polling if no events yet
 
         // Stop polling if provisioning failed and all events are finished
         if (server.provision_status === 'failed' && allEventsFinished && hasFailedEvents) {
@@ -333,7 +319,7 @@ export default function Provisioning({
             router.reload({
                 only: ['server', 'events', 'latestProgress', 'provision', 'packageNameLabels', 'statusLabels'],
                 preserveScroll: true,
-                preserveState: true
+                preserveState: true,
             });
         }, intervalMs);
 
@@ -528,7 +514,7 @@ export default function Provisioning({
                                 </Badge>
                             </div>
                             <Separator />
-                            <div className="px-4 py-5 space-y-6">
+                            <div className="space-y-6 px-4 py-5">
                                 <div className="space-y-3">
                                     <div className="flex items-start justify-between gap-3">
                                         <div>
@@ -551,10 +537,7 @@ export default function Provisioning({
                                     </div>
                                     {packageMetrics.total > 0 && (
                                         <div className="flex flex-wrap gap-2 text-xs">
-                                            <Badge
-                                                variant="outline"
-                                                className="border-transparent bg-muted/70 text-foreground"
-                                            >
+                                            <Badge variant="outline" className="border-transparent bg-muted/70 text-foreground">
                                                 {packageMetrics.completed} / {packageMetrics.total} services installed
                                             </Badge>
                                             {packageMetrics.active > 0 && (
@@ -565,16 +548,12 @@ export default function Provisioning({
                                                     {packageMetrics.active} installing
                                                 </Badge>
                                             )}
-                                            {packageMetrics.failed > 0 && (
-                                                <Badge variant="destructive">{packageMetrics.failed} failed</Badge>
-                                            )}
+                                            {packageMetrics.failed > 0 && <Badge variant="destructive">{packageMetrics.failed} failed</Badge>}
                                         </div>
                                     )}
                                 </div>
                                 <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                                    <span
-                                        className={`inline-flex items-center gap-2 ${summary.tone === 'error' ? 'text-destructive' : ''}`}
-                                    >
+                                    <span className={`inline-flex items-center gap-2 ${summary.tone === 'error' ? 'text-destructive' : ''}`}>
                                         <span
                                             className={`h-2.5 w-2.5 rounded-full ${connectionMeta.dotClass} ${connectionMeta.animate ? 'animate-pulse' : ''}`}
                                             aria-hidden="true"
@@ -582,7 +561,7 @@ export default function Provisioning({
                                         {connectionMeta.label}
                                     </span>
                                     {lastUpdatedAt && <span>Last update {lastUpdatedAt.toLocaleTimeString()}</span>}
-                                    <span className="ml-auto text-[0.7rem] uppercase tracking-wide text-muted-foreground/70">
+                                    <span className="ml-auto text-[0.7rem] tracking-wide text-muted-foreground/70 uppercase">
                                         {server.public_ip}:{server.ssh_port}
                                     </span>
                                 </div>
@@ -593,14 +572,14 @@ export default function Provisioning({
                                                 service.state === 'failed'
                                                     ? 'border-destructive/40 bg-destructive/10 text-destructive'
                                                     : service.state === 'complete'
-                                                        ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                                                        : 'border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-300';
+                                                      ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                                                      : 'border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-300';
                                             const barColor =
                                                 service.state === 'failed'
                                                     ? 'bg-destructive'
                                                     : service.state === 'complete'
-                                                        ? 'bg-emerald-500'
-                                                        : 'bg-primary';
+                                                      ? 'bg-emerald-500'
+                                                      : 'bg-primary';
 
                                             return (
                                                 <div
@@ -614,7 +593,9 @@ export default function Provisioning({
                                                                 <p className="text-xs text-muted-foreground">{service.latestEvent.label}</p>
                                                             )}
                                                         </div>
-                                                        <span className={`rounded-full px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide ${stateStyles}`}>
+                                                        <span
+                                                            className={`rounded-full px-2 py-0.5 text-[0.65rem] font-semibold tracking-wide uppercase ${stateStyles}`}
+                                                        >
                                                             {service.statusLabel}
                                                         </span>
                                                     </div>
@@ -645,9 +626,7 @@ export default function Provisioning({
                                             className="flex items-center gap-2 px-0 text-sm text-primary hover:text-primary"
                                         >
                                             <span>{showDetails ? 'Hide installation activity' : 'Show installation activity'}</span>
-                                            <ChevronDownIcon
-                                                className={`size-4 transition-transform ${showDetails ? 'rotate-180' : ''}`}
-                                            />
+                                            <ChevronDownIcon className={`size-4 transition-transform ${showDetails ? 'rotate-180' : ''}`} />
                                         </Button>
                                     </CollapsibleTrigger>
                                     <CollapsibleContent className="space-y-6 pt-4">
@@ -680,30 +659,36 @@ export default function Provisioning({
                                                             state === 'failed'
                                                                 ? 'bg-destructive'
                                                                 : state === 'complete'
-                                                                    ? 'bg-emerald-500'
-                                                                    : state === 'active'
-                                                                        ? 'bg-primary'
-                                                                        : 'bg-muted-foreground/60';
+                                                                  ? 'bg-emerald-500'
+                                                                  : state === 'active'
+                                                                    ? 'bg-primary'
+                                                                    : 'bg-muted-foreground/60';
                                                         const isLastEvent = events[events.length - 1]?.id === event.id;
 
                                                         return (
                                                             <li key={event.id} className="relative pl-7">
                                                                 <span
-                                                                    className={`absolute left-0 top-1.5 flex h-3 w-3 items-center justify-center rounded-full ${dotColor} ring-4 ring-background`}
+                                                                    className={`absolute top-1.5 left-0 flex h-3 w-3 items-center justify-center rounded-full ${dotColor} ring-4 ring-background`}
                                                                 >
                                                                     {state === 'complete' && <CheckIcon className="size-2.5 text-white" />}
                                                                     {state === 'failed' && <XCircleIcon className="size-2.5 text-white" />}
-                                                                    {state === 'active' && <Loader2Icon className="size-2.5 animate-spin text-white" />}
+                                                                    {state === 'active' && (
+                                                                        <Loader2Icon className="size-2.5 animate-spin text-white" />
+                                                                    )}
                                                                 </span>
                                                                 <div className="pb-4">
                                                                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                                                                         <div className="flex flex-col gap-1">
                                                                             <span className="font-medium text-foreground">{displayLabel}</span>
-                                                                            <span className="text-xs text-muted-foreground">{event.service_type}</span>
+                                                                            <span className="text-xs text-muted-foreground">
+                                                                                {event.service_type}
+                                                                            </span>
                                                                         </div>
                                                                         <div className="flex items-center gap-3 text-xs text-muted-foreground">
                                                                             {parseFloat(String(event.progress_percentage)) > 0 && (
-                                                                                <span>{parseFloat(String(event.progress_percentage)).toFixed(0)}%</span>
+                                                                                <span>
+                                                                                    {parseFloat(String(event.progress_percentage)).toFixed(0)}%
+                                                                                </span>
                                                                             )}
                                                                             {event.created_at && (
                                                                                 <span className="whitespace-nowrap">
@@ -714,15 +699,16 @@ export default function Provisioning({
                                                                     </div>
                                                                     {event.error_log && (
                                                                         <div className="mt-2 rounded-md border border-red-200 bg-red-50 p-2 dark:border-red-800 dark:bg-red-950/20">
-                                                                            <p className="font-mono text-xs text-red-700 dark:text-red-400 whitespace-pre-wrap break-all">
+                                                                            <p className="font-mono text-xs break-all whitespace-pre-wrap text-red-700 dark:text-red-400">
                                                                                 {event.error_log.split('\n')[0]}
                                                                             </p>
                                                                             {event.error_log.split('\n').length > 1 && (
                                                                                 <details className="mt-1">
                                                                                     <summary className="cursor-pointer text-xs text-red-600 hover:underline dark:text-red-500">
-                                                                                        Show full error ({event.error_log.split('\n').length - 1} more lines)
+                                                                                        Show full error ({event.error_log.split('\n').length - 1} more
+                                                                                        lines)
                                                                                     </summary>
-                                                                                    <pre className="mt-1 font-mono text-xs text-red-700 dark:text-red-400 whitespace-pre-wrap break-all">
+                                                                                    <pre className="mt-1 font-mono text-xs break-all whitespace-pre-wrap text-red-700 dark:text-red-400">
                                                                                         {event.error_log.split('\n').slice(1).join('\n')}
                                                                                     </pre>
                                                                                 </details>
@@ -731,7 +717,7 @@ export default function Provisioning({
                                                                     )}
                                                                 </div>
                                                                 {!isLastEvent && (
-                                                                    <span className="absolute left-[5px] top-4 block h-full w-px bg-border/60"></span>
+                                                                    <span className="absolute top-4 left-[5px] block h-full w-px bg-border/60"></span>
                                                                 )}
                                                             </li>
                                                         );

@@ -3,20 +3,7 @@ import { ServerProviderIcon, type ServerProvider } from '@/components/server-pro
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type NavItem, type ServerMetric } from '@/types';
 import { usePage } from '@inertiajs/react';
-import {
-    Activity,
-    ArrowLeft,
-    Clock,
-    CodeIcon,
-    Cpu,
-    DatabaseIcon,
-    Globe,
-    HardDrive,
-    Home,
-    MemoryStick,
-    Settings,
-    Shield,
-} from 'lucide-react';
+import { Activity, ArrowLeft, Clock, CodeIcon, Cpu, DatabaseIcon, Globe, HardDrive, MemoryStick, Settings, Shield } from 'lucide-react';
 import { PropsWithChildren, useEffect, useState } from 'react';
 
 interface ServerContentLayoutProps extends PropsWithChildren {
@@ -179,7 +166,7 @@ export default function ServerContentLayout({ children, server, breadcrumbs, lat
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             {/* Server Header */}
-            <div className="bg-card px-8 py-4 border-b">
+            <div className="border-b bg-card px-8 py-4">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-8">
                         {/* Title */}
@@ -189,21 +176,21 @@ export default function ServerContentLayout({ children, server, breadcrumbs, lat
                         </div>
 
                         {/* Server Info */}
-                        <div className="flex items-center gap-8 text-sm border-l pl-8">
+                        <div className="flex items-center gap-8 border-l pl-8 text-sm">
                             <div>
-                                <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Public IP</div>
+                                <div className="mb-0.5 text-[10px] tracking-wide text-muted-foreground uppercase">Public IP</div>
                                 <div className="font-medium">{server.public_ip || 'N/A'}</div>
                             </div>
                             <div>
-                                <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Private IP</div>
+                                <div className="mb-0.5 text-[10px] tracking-wide text-muted-foreground uppercase">Private IP</div>
                                 <div className="font-medium">{server.private_ip || 'N/A'}</div>
                             </div>
                             <div>
-                                <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Region</div>
+                                <div className="mb-0.5 text-[10px] tracking-wide text-muted-foreground uppercase">Region</div>
                                 <div className="font-medium">Frankfurt</div>
                             </div>
                             <div>
-                                <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">OS</div>
+                                <div className="mb-0.5 text-[10px] tracking-wide text-muted-foreground uppercase">OS</div>
                                 <div className="font-medium">Ubuntu 24.04</div>
                             </div>
                         </div>
@@ -211,25 +198,25 @@ export default function ServerContentLayout({ children, server, breadcrumbs, lat
 
                     {/* Monitoring Metrics - Far Right */}
                     {server.monitoring_status === 'active' && metrics && (
-                        <div className="flex items-center gap-4 text-sm border-l pl-8">
+                        <div className="flex items-center gap-4 border-l pl-8 text-sm">
                             <div className="flex items-center gap-2">
                                 <Cpu className="h-3.5 w-3.5 text-blue-600" />
                                 <div>
-                                    <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">CPU</div>
+                                    <div className="mb-0.5 text-[10px] tracking-wide text-muted-foreground uppercase">CPU</div>
                                     <div className="font-medium">{Number(metrics.cpu_usage).toFixed(1)}%</div>
                                 </div>
                             </div>
                             <div className="flex items-center gap-2">
                                 <MemoryStick className="h-3.5 w-3.5 text-purple-600" />
                                 <div>
-                                    <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Memory</div>
+                                    <div className="mb-0.5 text-[10px] tracking-wide text-muted-foreground uppercase">Memory</div>
                                     <div className="font-medium">{Number(metrics.memory_usage_percentage).toFixed(1)}%</div>
                                 </div>
                             </div>
                             <div className="flex items-center gap-2">
                                 <HardDrive className="h-3.5 w-3.5 text-orange-600" />
                                 <div>
-                                    <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Storage</div>
+                                    <div className="mb-0.5 text-[10px] tracking-wide text-muted-foreground uppercase">Storage</div>
                                     <div className="font-medium">{Number(metrics.storage_usage_percentage).toFixed(1)}%</div>
                                 </div>
                             </div>
@@ -238,7 +225,7 @@ export default function ServerContentLayout({ children, server, breadcrumbs, lat
                 </div>
             </div>
 
-            <div className="flex h-full mt-6">
+            <div className="mt-6 flex h-full">
                 <NavigationSidebar>
                     <div className="space-y-6">
                         <NavigationCard items={[backToDashboardNav]} />
@@ -248,9 +235,7 @@ export default function ServerContentLayout({ children, server, breadcrumbs, lat
 
                 {/* Main Content */}
                 <main className="flex-1 overflow-auto">
-                    <div className="p-6">
-                        {children}
-                    </div>
+                    <div className="p-6">{children}</div>
                 </main>
             </div>
         </AppLayout>

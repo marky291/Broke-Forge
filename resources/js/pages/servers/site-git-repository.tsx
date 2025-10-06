@@ -159,9 +159,7 @@ export default function SiteGitRepository({ server, site, gitRepository, flash, 
                 <div className="space-y-6">
                     <div className="space-y-2">
                         <h1 className="text-2xl font-semibold">Repository Installation Failed</h1>
-                        <p className="text-sm text-muted-foreground">
-                            Update your configuration below and retry the installation.
-                        </p>
+                        <p className="text-sm text-muted-foreground">Update your configuration below and retry the installation.</p>
                     </div>
 
                     <Alert variant="destructive">
@@ -172,7 +170,7 @@ export default function SiteGitRepository({ server, site, gitRepository, flash, 
                                 {gitRepository?.latestEvent?.error_log ? (
                                     <details className="mt-2">
                                         <summary className="cursor-pointer text-sm hover:underline">View error details</summary>
-                                        <pre className="mt-2 max-h-48 overflow-y-auto rounded bg-destructive/10 p-3 text-xs font-mono whitespace-pre-wrap">
+                                        <pre className="mt-2 max-h-48 overflow-y-auto rounded bg-destructive/10 p-3 font-mono text-xs whitespace-pre-wrap">
                                             {gitRepository.latestEvent.error_log}
                                         </pre>
                                     </details>
@@ -269,13 +267,11 @@ export default function SiteGitRepository({ server, site, gitRepository, flash, 
                     <Card>
                         <CardHeader className="space-y-1">
                             <CardTitle>SSH Deploy Key</CardTitle>
-                            <CardDescription>
-                                Ensure this key is added to your repository with read access
-                            </CardDescription>
+                            <CardDescription>Ensure this key is added to your repository with read access</CardDescription>
                         </CardHeader>
                         <Separator />
                         <CardContent className="space-y-4 py-6">
-                            <div className="rounded-md bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 p-3">
+                            <div className="rounded-md border border-blue-200 bg-blue-50 p-3 dark:border-blue-900 dark:bg-blue-950/20">
                                 <p className="text-xs text-blue-800 dark:text-blue-200">
                                     <strong>Tip:</strong> Make sure this SSH key is properly configured in your repository settings before retrying.
                                 </p>
@@ -312,34 +308,40 @@ export default function SiteGitRepository({ server, site, gitRepository, flash, 
 
                     {/* Application Section */}
                     <CardContainer title="Application">
-                        <div className="flex items-center gap-2.5 mb-6">
+                        <div className="mb-6 flex items-center gap-2.5">
                             <GitBranch className="h-4 w-4 text-muted-foreground" />
                             <span className="text-sm font-medium">{gitRepository.repository}</span>
                         </div>
 
                         <div className="grid grid-cols-2 gap-6">
                             <div>
-                                <div className="text-xs text-muted-foreground mb-1.5">HTTPS</div>
+                                <div className="mb-1.5 text-xs text-muted-foreground">HTTPS</div>
                                 <div className="text-sm">{site.status === 'active' ? 'Disabled' : 'Disabled'}</div>
                             </div>
                             <div>
-                                <div className="text-xs text-muted-foreground mb-1.5">PHP Version</div>
+                                <div className="mb-1.5 text-xs text-muted-foreground">PHP Version</div>
                                 <div className="text-sm">PHP 8.3</div>
                             </div>
                             <div>
-                                <div className="text-xs text-muted-foreground mb-1.5">Quick Deploy</div>
+                                <div className="mb-1.5 text-xs text-muted-foreground">Quick Deploy</div>
                                 <div className="text-sm">Enabled</div>
                             </div>
                             <div>
-                                <div className="text-xs text-muted-foreground mb-1.5">Web Directory</div>
-                                <div className="text-sm font-mono text-xs">{getWebDirectory(gitRepository.repository)}</div>
+                                <div className="mb-1.5 text-xs text-muted-foreground">Web Directory</div>
+                                <div className="font-mono text-sm text-xs">{getWebDirectory(gitRepository.repository)}</div>
                             </div>
                             <div>
-                                <div className="text-xs text-muted-foreground mb-1.5">Last Deployed</div>
+                                <div className="mb-1.5 text-xs text-muted-foreground">Last Deployed</div>
                                 <div className="text-sm">
                                     {formatDate(gitRepository.lastDeployedAt)}
                                     {gitRepository.lastDeployedSha && (
-                                        <> • <span className="font-mono text-xs text-muted-foreground">{gitRepository.lastDeployedSha.substring(0, 7)}</span></>
+                                        <>
+                                            {' '}
+                                            •{' '}
+                                            <span className="font-mono text-xs text-muted-foreground">
+                                                {gitRepository.lastDeployedSha.substring(0, 7)}
+                                            </span>
+                                        </>
                                     )}
                                 </div>
                             </div>
@@ -351,16 +353,17 @@ export default function SiteGitRepository({ server, site, gitRepository, flash, 
                         <Alert className="mb-6 border-muted-foreground/20 bg-muted/30">
                             <AlertCircle className="h-4 w-4" />
                             <AlertDescription className="text-sm leading-relaxed">
-                                This setting determines the Git remote URL on your server; however, the site will not be removed or become unavailable during the process.
-                                The updated Git remote must contain the same repository / Git history as the currently installed repository.{' '}
-                                <strong>You should not use this function to install an entirely different project onto this site.</strong> If you would like to install
-                                an entirely different project, you should completely uninstall the existing repository using the "Uninstall Repository" button below.
+                                This setting determines the Git remote URL on your server; however, the site will not be removed or become unavailable
+                                during the process. The updated Git remote must contain the same repository / Git history as the currently installed
+                                repository. <strong>You should not use this function to install an entirely different project onto this site.</strong>{' '}
+                                If you would like to install an entirely different project, you should completely uninstall the existing repository
+                                using the "Uninstall Repository" button below.
                             </AlertDescription>
                         </Alert>
 
                         <div className="space-y-4">
                             <div>
-                                <Label className="text-sm mb-2 block">Provider</Label>
+                                <Label className="mb-2 block text-sm">Provider</Label>
                                 <div className="grid grid-cols-2 gap-3">
                                     <button
                                         type="button"
@@ -380,15 +383,10 @@ export default function SiteGitRepository({ server, site, gitRepository, flash, 
                             </div>
 
                             <div>
-                                <Label htmlFor="update-repository" className="text-sm mb-2 block">
+                                <Label htmlFor="update-repository" className="mb-2 block text-sm">
                                     Repository
                                 </Label>
-                                <Input
-                                    id="update-repository"
-                                    type="text"
-                                    placeholder="e.g. organisation/project"
-                                    className="w-full"
-                                />
+                                <Input id="update-repository" type="text" placeholder="e.g. organisation/project" className="w-full" />
                             </div>
 
                             <div className="flex justify-end pt-2">
@@ -523,15 +521,17 @@ export default function SiteGitRepository({ server, site, gitRepository, flash, 
                         </CardHeader>
                         <Separator />
                         <CardContent className="space-y-4 py-6">
-                            <div className="rounded-md bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 p-3 mb-4">
+                            <div className="mb-4 rounded-md border border-blue-200 bg-blue-50 p-3 dark:border-blue-900 dark:bg-blue-950/20">
                                 <p className="text-xs text-blue-800 dark:text-blue-200">
-                                    <strong>Security:</strong> This SSH key is unique to this server. If this server is compromised, only this key needs to be revoked—your other servers remain secure.
+                                    <strong>Security:</strong> This SSH key is unique to this server. If this server is compromised, only this key
+                                    needs to be revoked—your other servers remain secure.
                                 </p>
                             </div>
                             <ol className="space-y-2 text-sm text-muted-foreground">
                                 <li>1. Go to your GitHub repository&apos;s deploy key settings.</li>
                                 <li>
-                                    2. Add a new key with a descriptive title, e.g. <span className="font-medium">BrokeForge Server #{server.id}</span>.
+                                    2. Add a new key with a descriptive title, e.g.{' '}
+                                    <span className="font-medium">BrokeForge Server #{server.id}</span>.
                                 </li>
                                 <li>3. Paste the key below and grant read-only access.</li>
                             </ol>

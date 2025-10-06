@@ -1,10 +1,8 @@
-import { CardContainer } from '@/components/ui/card-container';
 import { Button } from '@/components/ui/button';
-import { router } from '@inertiajs/react';
-import { Check, TrendingUp } from 'lucide-react';
+import { CardContainer } from '@/components/ui/card-container';
 import { cn } from '@/lib/utils';
+import { Check, TrendingUp } from 'lucide-react';
 import { useState } from 'react';
-import { usePage } from '@inertiajs/react';
 
 type Subscription = {
     id: number;
@@ -73,10 +71,8 @@ export default function PlanComparison({ plans, currentPlan, subscription, onMan
                     <button
                         onClick={() => setBillingInterval('month')}
                         className={cn(
-                            'px-3 py-1 text-sm font-medium rounded-md transition-colors',
-                            billingInterval === 'month'
-                                ? 'bg-primary text-primary-foreground'
-                                : 'text-muted-foreground hover:text-foreground'
+                            'rounded-md px-3 py-1 text-sm font-medium transition-colors',
+                            billingInterval === 'month' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground',
                         )}
                     >
                         Monthly
@@ -84,10 +80,8 @@ export default function PlanComparison({ plans, currentPlan, subscription, onMan
                     <button
                         onClick={() => setBillingInterval('year')}
                         className={cn(
-                            'px-3 py-1 text-sm font-medium rounded-md transition-colors',
-                            billingInterval === 'year'
-                                ? 'bg-primary text-primary-foreground'
-                                : 'text-muted-foreground hover:text-foreground'
+                            'rounded-md px-3 py-1 text-sm font-medium transition-colors',
+                            billingInterval === 'year' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground',
                         )}
                     >
                         Yearly
@@ -95,7 +89,7 @@ export default function PlanComparison({ plans, currentPlan, subscription, onMan
                 </div>
             }
         >
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
                 {filteredPlans.map((plan) => {
                     const isCurrent = isCurrentPlan(plan.stripe_price_id);
                     const isPopular = plan.slug === 'pro';
@@ -105,15 +99,13 @@ export default function PlanComparison({ plans, currentPlan, subscription, onMan
                             key={plan.id}
                             className={cn(
                                 'relative rounded-lg border p-6 transition-all',
-                                isCurrent
-                                    ? 'border-primary ring-2 ring-primary'
-                                    : 'border-border hover:border-primary/50',
-                                isPopular && !isCurrent && 'border-primary/50'
+                                isCurrent ? 'border-primary ring-2 ring-primary' : 'border-border hover:border-primary/50',
+                                isPopular && !isCurrent && 'border-primary/50',
                             )}
                         >
                             {isPopular && (
                                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-primary text-primary-foreground">
+                                    <span className="inline-flex items-center rounded-full bg-primary px-3 py-1 text-xs font-medium text-primary-foreground">
                                         Most Popular
                                     </span>
                                 </div>
@@ -124,19 +116,15 @@ export default function PlanComparison({ plans, currentPlan, subscription, onMan
                                     <h3 className="text-lg font-semibold">{plan.name}</h3>
                                     <div className="mt-2 flex items-baseline gap-1">
                                         <span className="text-3xl font-bold">{plan.formatted_price}</span>
-                                        <span className="text-sm text-muted-foreground">
-                                            / {plan.interval}
-                                        </span>
+                                        <span className="text-sm text-muted-foreground">/ {plan.interval}</span>
                                     </div>
                                 </div>
 
                                 <ul className="space-y-3">
                                     {plan.features.map((feature, idx) => (
                                         <li key={idx} className="flex items-start gap-2">
-                                            <Check className="size-4 text-green-600 mt-0.5 flex-shrink-0" />
-                                            <span className="text-sm text-muted-foreground">
-                                                {feature}
-                                            </span>
+                                            <Check className="mt-0.5 size-4 flex-shrink-0 text-green-600" />
+                                            <span className="text-sm text-muted-foreground">{feature}</span>
                                         </li>
                                     ))}
                                 </ul>

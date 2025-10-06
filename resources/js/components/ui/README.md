@@ -34,7 +34,7 @@ This directory contains reusable UI components for BrokeForge. Components are bu
 
 **Location:** `card-container.tsx`
 
-**Purpose:** Wraps content in a styled card with title, optional description, and optional action button.
+**Purpose:** Wraps content in a styled card with title, optional description, optional icon, and optional action button.
 
 **When to Use:**
 - To group related content sections on a page
@@ -42,14 +42,74 @@ This directory contains reusable UI components for BrokeForge. Components are bu
 - For forms, settings panels, or content blocks
 - When you want section-level actions (e.g., "Edit", "Delete")
 
+**Props:**
+- `title`: Section title text
+- `description`: Optional description/subtitle
+- `icon`: Optional icon SVG to display next to the title
+- `action`: Optional action button/component to display in the header
+- `children`: Section content
+- `className`: Additional CSS classes (optional)
+
 **Example:**
 ```tsx
 <CardContainer
   title="Application"
   description="Repository information and deployment settings"
-  action={<Button variant="ghost" size="sm">Edit</Button>}
+  icon={
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+      <circle cx="6" cy="6" r="5" stroke="currentColor" />
+    </svg>
+  }
+  action={<CardContainerAddButton label="Add App" onClick={handleAdd} />}
 >
   <div>Your content here</div>
+</CardContainer>
+```
+
+**Icon Guidelines:**
+- Use 12x12 SVG viewBox for consistency
+- Use `stroke="currentColor"` for theme compatibility
+- Keep icons simple and minimal
+- Icons are automatically styled with neutral colors
+
+---
+
+#### CardContainerAddButton
+
+**Location:** `card-container-add-button.tsx`
+
+**Purpose:** Standardized "Add" button designed specifically for CardContainer action slots with consistent styling across server pages.
+
+**When to Use:**
+- In the `action` prop of CardContainer when adding new items
+- For triggering modals/dialogs to create new entries
+- When you need consistent "add" button styling
+
+**Props:**
+- `label`: Button label text (e.g., "Add Site", "Create Task")
+- `onClick`: Click handler function
+- `aria-label`: Accessibility label (defaults to "Add")
+- `disabled`: Whether the button is disabled (optional)
+- All standard button HTML props
+
+**Design:**
+- Neutral gray with blue hover state
+- Icon-only mode (no label) displays as square button
+- With label displays as rounded button with plus icon and text
+
+**Example:**
+```tsx
+<CardContainer
+  title="Scheduled Tasks"
+  action={
+    <CardContainerAddButton
+      label="Create Task"
+      onClick={() => setDialogOpen(true)}
+      aria-label="Create Task"
+    />
+  }
+>
+  {/* Content */}
 </CardContainer>
 ```
 
@@ -139,6 +199,106 @@ This directory contains reusable UI components for BrokeForge. Components are bu
   />
 </CardContainer>
 ```
+
+---
+
+#### CardFormModal
+
+**Location:** `card-form-modal.tsx`
+
+**Purpose:** Reusable modal component for server-related forms with consistent styling, behavior, and loading states.
+
+**When to Use:**
+- For all form modals in server management pages
+- When creating/editing resources (sites, tasks, rules, etc.)
+- When you need consistent form submission UX
+- To maintain design consistency across all server pages
+
+**Props:**
+- `open`: Whether the modal is open (boolean)
+- `onOpenChange`: Callback when modal open state changes
+- `title`: Modal title
+- `description`: Optional modal description
+- `children`: Form fields content
+- `onSubmit`: Form submit handler
+- `submitLabel`: Submit button label (e.g., "Create", "Install")
+- `isSubmitting`: Whether form is currently submitting (optional)
+- `submitDisabled`: Additional condition to disable submit (optional)
+- `submittingLabel`: Label for submitting state (optional, defaults to submitLabel + '...')
+
+**Features:**
+- Automatic Cancel/Submit button footer
+- Loading states with disabled inputs during submission
+- Consistent spacing and styling
+- Built on Dialog component from shadcn/ui
+
+**Example:**
+```tsx
+const [dialogOpen, setDialogOpen] = useState(false);
+const { data, setData, post, processing, errors, reset } = useForm({
+  name: '',
+  port: 3306,
+});
+
+const handleSubmit = (e: React.FormEvent) => {
+  e.preventDefault();
+  post(`/servers/${server.id}/resource`, {
+    onSuccess: () => {
+      setDialogOpen(false);
+      reset();
+    }
+  });
+};
+
+return (
+  <CardFormModal
+    open={dialogOpen}
+    onOpenChange={(open) => {
+      setDialogOpen(open);
+      if (!open) reset();
+    }}
+    title="Add Database"
+    description="Configure a new database service on your server."
+    onSubmit={handleSubmit}
+    submitLabel="Install"
+    isSubmitting={processing}
+    submittingLabel="Installing..."
+    submitDisabled={!data.name}
+  >
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="name">Database Name</Label>
+        <Input
+          id="name"
+          value={data.name}
+          onChange={(e) => setData('name', e.target.value)}
+          disabled={processing}
+        />
+        {errors.name && <p className="text-sm text-red-600">{errors.name}</p>}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="port">Port</Label>
+        <Input
+          id="port"
+          type="number"
+          value={data.port}
+          onChange={(e) => setData('port', parseInt(e.target.value))}
+          disabled={processing}
+        />
+        {errors.port && <p className="text-sm text-red-600">{errors.port}</p>}
+      </div>
+    </div>
+  </CardFormModal>
+);
+```
+
+**Usage Pattern:**
+1. Create form state with Inertia's `useForm` hook
+2. Wrap form fields in `CardFormModal`
+3. Handle form submission and reset on close
+4. Use `processing` state for `isSubmitting` prop
+5. Display validation errors below inputs
 
 ---
 

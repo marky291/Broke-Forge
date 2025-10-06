@@ -47,9 +47,7 @@ export default ({ children, breadcrumbs, ...props }: AppLayoutProps) => (
 
         {/* Main Content */}
         <main className="flex-1">
-            <div className="container mx-auto max-w-7xl px-4 py-8">
-                {children}
-            </div>
+            <div className="container mx-auto max-w-7xl px-4 py-8">{children}</div>
         </main>
     </div>
 );

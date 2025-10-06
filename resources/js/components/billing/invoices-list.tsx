@@ -1,7 +1,7 @@
-import { CardContainer } from '@/components/ui/card-container';
 import { Button } from '@/components/ui/button';
-import { Download, Receipt } from 'lucide-react';
+import { CardContainer } from '@/components/ui/card-container';
 import { cn } from '@/lib/utils';
+import { Download, Receipt } from 'lucide-react';
 
 type Invoice = {
     id: string;
@@ -26,22 +26,16 @@ export default function InvoicesList({ invoices }: InvoicesListProps) {
 
         const config = statusConfig[status.toLowerCase()] || statusConfig.open;
 
-        return (
-            <span className={cn('inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium', config.color)}>
-                {config.label}
-            </span>
-        );
+        return <span className={cn('inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium', config.color)}>{config.label}</span>;
     };
 
     if (!invoices || invoices.length === 0) {
         return (
             <CardContainer title="Invoices" icon={Receipt}>
-                <div className="text-center py-8">
+                <div className="py-8 text-center">
                     <Receipt className="mx-auto size-12 text-muted-foreground/30" />
                     <h3 className="mt-4 text-sm font-medium">No invoices</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                        Your invoices will appear here once you have a subscription
-                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">Your invoices will appear here once you have a subscription</p>
                 </div>
             </CardContainer>
         );
@@ -53,10 +47,10 @@ export default function InvoicesList({ invoices }: InvoicesListProps) {
                 {invoices.map((invoice) => (
                     <div
                         key={invoice.id}
-                        className="flex items-center justify-between p-4 rounded-lg border border-border hover:border-primary/50 transition-colors"
+                        className="flex items-center justify-between rounded-lg border border-border p-4 transition-colors hover:border-primary/50"
                     >
                         <div className="flex items-center gap-3">
-                            <div className="size-10 rounded-full bg-muted flex items-center justify-center">
+                            <div className="flex size-10 items-center justify-center rounded-full bg-muted">
                                 <Receipt className="size-5 text-muted-foreground" />
                             </div>
                             <div>
@@ -73,11 +67,7 @@ export default function InvoicesList({ invoices }: InvoicesListProps) {
 
                         <div className="flex items-center gap-3">
                             {getStatusBadge(invoice.status)}
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => window.open(invoice.invoice_pdf, '_blank')}
-                            >
+                            <Button variant="outline" size="sm" onClick={() => window.open(invoice.invoice_pdf, '_blank')}>
                                 <Download className="mr-2 size-4" />
                                 Download
                             </Button>

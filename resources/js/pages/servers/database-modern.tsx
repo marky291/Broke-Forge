@@ -43,11 +43,7 @@ interface DatabasePageProps {
     database?: ServerDatabase | null;
 }
 
-export default function DatabasePage({
-    server,
-    availableTypes = {},
-    database = null,
-}: DatabasePageProps) {
+export default function DatabasePage({ server, availableTypes = {}, database = null }: DatabasePageProps) {
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard.url() },
         { title: `Server #${server.id}`, href: showServer(server.id).url },
@@ -56,9 +52,9 @@ export default function DatabasePage({
 
     const handleUninstallDatabase = () => {
         const confirmed = window.confirm(
-            'Are you sure you want to uninstall the database? This will permanently delete all data and cannot be undone.'
+            'Are you sure you want to uninstall the database? This will permanently delete all data and cannot be undone.',
         );
-        
+
         if (confirmed) {
             router.delete(`/servers/${server.id}/database`, {
                 preserveScroll: true,
@@ -69,17 +65,21 @@ export default function DatabasePage({
     return (
         <ServerLayout server={server} breadcrumbs={breadcrumbs}>
             <Head title={`Database — ${server.vanity_name}`} />
-            
+
             <div className="space-y-6">
                 <div>
                     <h2 className="text-2xl font-semibold">Database Management</h2>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                        Install and manage database services for your server.
-                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">Install and manage database services for your server.</p>
                 </div>
 
                 {/* Status Polling for real-time updates */}
-                <div poll={database && ['installing', 'uninstalling', 'updating'].includes(database.status) ? { interval: 2000, only: ['database'] } : undefined}>
+                <div
+                    poll={
+                        database && ['installing', 'uninstalling', 'updating'].includes(database.status)
+                            ? { interval: 2000, only: ['database'] }
+                            : undefined
+                    }
+                >
                     {database ? (
                         <DatabaseStatusDisplay
                             database={database}
@@ -88,10 +88,7 @@ export default function DatabasePage({
                             onUninstall={handleUninstallDatabase}
                         />
                     ) : (
-                        <DatabaseInstallationForm
-                            serverId={server.id}
-                            availableTypes={availableTypes}
-                        />
+                        <DatabaseInstallationForm serverId={server.id} availableTypes={availableTypes} />
                     )}
                 </div>
             </div>

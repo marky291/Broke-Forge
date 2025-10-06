@@ -1,21 +1,20 @@
+import { CardContainerAddButton } from '@/components/card-container-add-button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CardContainer } from '@/components/ui/card-container';
+import { CardFormModal } from '@/components/ui/card-form-modal';
 import { CardTable, type CardTableColumn } from '@/components/ui/card-table';
-import { CardContainerAddButton } from '@/components/card-container-add-button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PageHeader } from '@/components/ui/page-header';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useStatusPolling } from '@/hooks/useStatusPolling';
 import ServerLayout from '@/layouts/server/layout';
 import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
-import { Head, useForm, router } from '@inertiajs/react';
-import { AlertCircle, CheckCircle2, Clock, Loader2, Plus, Shield, Trash2 } from 'lucide-react';
+import { Head, router, useForm } from '@inertiajs/react';
+import { AlertCircle, CheckCircle2, Clock, Loader2, Shield, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
 type Server = {
@@ -62,7 +61,7 @@ export default function Firewall({
     rules: initialRules,
     isFirewallInstalled,
     firewallStatus: initialFirewallStatus,
-    recentEvents: initialRecentEvents
+    recentEvents: initialRecentEvents,
 }: FirewallProps) {
     const [showAddRuleDialog, setShowAddRuleDialog] = useState(false);
     const [isDeletingRule, setIsDeletingRule] = useState<number | null>(null);
@@ -84,7 +83,7 @@ export default function Firewall({
     });
 
     // Poll for status updates when there are pending or installing rules
-    const hasPendingRules = rules.some(r => r.status === 'pending' || r.status === 'installing' || r.status === 'removing');
+    const hasPendingRules = rules.some((r) => r.status === 'pending' || r.status === 'installing' || r.status === 'removing');
 
     useStatusPolling({
         url: `/servers/${server.id}/firewall/status`,
@@ -96,8 +95,8 @@ export default function Firewall({
 
             // Update recent events if provided
             if (data.latestEvent) {
-                setRecentEvents(prev => {
-                    const exists = prev.some(e => e.id === data.latestEvent.id);
+                setRecentEvents((prev) => {
+                    const exists = prev.some((e) => e.id === data.latestEvent.id);
                     if (!exists && data.latestEvent.id) {
                         return [data.latestEvent, ...prev].slice(0, 5);
                     }
@@ -107,10 +106,8 @@ export default function Firewall({
         },
         stopCondition: (data) => {
             // Stop polling if no more pending/installing rules
-            return !data.rules.some((r: FirewallRule) =>
-                r.status === 'pending' || r.status === 'installing'
-            );
-        }
+            return !data.rules.some((r: FirewallRule) => r.status === 'pending' || r.status === 'installing');
+        },
     });
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -145,8 +142,8 @@ export default function Firewall({
                 onFinish: () => setIsDeletingRule(null),
                 onSuccess: () => {
                     // Remove from local state immediately
-                    setRules(prev => prev.filter(r => r.id !== ruleId));
-                }
+                    setRules((prev) => prev.filter((r) => r.id !== ruleId));
+                },
             });
         }
     };
@@ -162,7 +159,7 @@ export default function Firewall({
         if (status === 'pending') {
             return (
                 <Badge className="bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200">
-                    <Clock className="size-3 mr-1" />
+                    <Clock className="mr-1 size-3" />
                     Pending
                 </Badge>
             );
@@ -170,7 +167,7 @@ export default function Firewall({
         if (status === 'installing') {
             return (
                 <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
-                    <Loader2 className="size-3 mr-1 animate-spin" />
+                    <Loader2 className="mr-1 size-3 animate-spin" />
                     Installing
                 </Badge>
             );
@@ -178,7 +175,7 @@ export default function Firewall({
         if (status === 'active') {
             return (
                 <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                    <CheckCircle2 className="size-3 mr-1" />
+                    <CheckCircle2 className="mr-1 size-3" />
                     Active
                 </Badge>
             );
@@ -186,7 +183,7 @@ export default function Firewall({
         if (status === 'failed') {
             return (
                 <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
-                    <AlertCircle className="size-3 mr-1" />
+                    <AlertCircle className="mr-1 size-3" />
                     Failed
                 </Badge>
             );
@@ -194,7 +191,7 @@ export default function Firewall({
         if (status === 'removing') {
             return (
                 <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
-                    <Loader2 className="size-3 mr-1 animate-spin" />
+                    <Loader2 className="mr-1 size-3 animate-spin" />
                     Removing
                 </Badge>
             );
@@ -233,17 +230,8 @@ export default function Firewall({
             cell: (rule, index) => (
                 <>
                     {(!rule.status || rule.status === 'active' || rule.status === 'failed') && rule.id && (
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteRule(rule.id!, index)}
-                            disabled={isDeletingRule === index}
-                        >
-                            {isDeletingRule === index ? (
-                                <Loader2 className="size-4 animate-spin" />
-                            ) : (
-                                <Trash2 className="size-4 text-red-500" />
-                            )}
+                        <Button variant="ghost" size="sm" onClick={() => handleDeleteRule(rule.id!, index)} disabled={isDeletingRule === index}>
+                            {isDeletingRule === index ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4 text-red-500" />}
                         </Button>
                     )}
                 </>
@@ -259,12 +247,10 @@ export default function Firewall({
                 <div className="space-y-6">
                     <div>
                         <h1 className="text-2xl font-semibold">Firewall</h1>
-                        <p className="text-sm text-muted-foreground mt-1">
-                            Manage firewall rules for your server
-                        </p>
+                        <p className="mt-1 text-sm text-muted-foreground">Manage firewall rules for your server</p>
                     </div>
 
-                    <Alert className="border-amber-200 bg-amber-50 dark:bg-amber-950 dark:border-amber-800">
+                    <Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950">
                         <AlertCircle className="size-4" />
                         <AlertDescription>
                             Firewall (UFW) is not installed on this server. Please install UFW through the server provisioning process first.
@@ -275,25 +261,26 @@ export default function Firewall({
         );
     }
 
-
     return (
         <ServerLayout server={server} breadcrumbs={breadcrumbs}>
             <Head title={`${server.vanity_name} - Firewall`} />
 
-            <PageHeader
-                title="Firewall"
-                description="Configure and manage firewall rules to control network traffic to your server."
-            >
+            <PageHeader title="Firewall" description="Configure and manage firewall rules to control network traffic to your server.">
                 {/* Firewall Rules */}
                 <CardContainer
                     title="Firewall Rules"
-                    action={
-                        <CardContainerAddButton
-                            label="Add Rule"
-                            onClick={() => setShowAddRuleDialog(true)}
-                            aria-label="Add Firewall Rule"
-                        />
+                    icon={
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path
+                                d="M6 1L10.5 2.5V5.5C10.5 8 8.5 10 6 11C3.5 10 1.5 8 1.5 5.5V2.5L6 1Z"
+                                stroke="currentColor"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            />
+                            <path d="M6 4.5V7.5M6 8.5V9" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
                     }
+                    action={<CardContainerAddButton label="Add Rule" onClick={() => setShowAddRuleDialog(true)} aria-label="Add Firewall Rule" />}
                 >
                     <CardTable
                         columns={columns}
@@ -304,19 +291,19 @@ export default function Firewall({
                                 rule.status === 'pending'
                                     ? 'bg-gray-50/50 dark:bg-gray-950/20'
                                     : rule.status === 'installing'
-                                    ? 'bg-amber-50/50 dark:bg-amber-950/20 animate-pulse'
-                                    : rule.status === 'removing'
-                                    ? 'bg-orange-50/50 dark:bg-orange-950/20 animate-pulse'
-                                    : rule.status === 'failed'
-                                    ? 'bg-red-50/50 dark:bg-red-950/20'
-                                    : 'hover:bg-muted/50'
+                                      ? 'animate-pulse bg-amber-50/50 dark:bg-amber-950/20'
+                                      : rule.status === 'removing'
+                                        ? 'animate-pulse bg-orange-50/50 dark:bg-orange-950/20'
+                                        : rule.status === 'failed'
+                                          ? 'bg-red-50/50 dark:bg-red-950/20'
+                                          : 'hover:bg-muted/50',
                             )
                         }
                         emptyState={
-                            <div className="text-center py-8 text-muted-foreground">
-                                <Shield className="size-12 mx-auto mb-3 opacity-20" />
+                            <div className="py-8 text-center text-muted-foreground">
+                                <Shield className="mx-auto mb-3 size-12 opacity-20" />
                                 <p>No firewall rules configured</p>
-                                <p className="text-sm mt-1">Add your first rule above</p>
+                                <p className="mt-1 text-sm">Add your first rule above</p>
                             </div>
                         }
                     />
@@ -326,10 +313,16 @@ export default function Firewall({
                 {recentEvents.length > 0 && (
                     <CardContainer
                         title="Recent Activity"
+                        icon={
+                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="6" cy="6" r="5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+                                <path d="M6 3v3l2 1" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                        }
                     >
                         <div className="space-y-2">
                             {recentEvents.map((event) => (
-                                <div key={event.id} className="flex items-center justify-between py-2 border-b last:border-0">
+                                <div key={event.id} className="flex items-center justify-between border-b py-2 last:border-0">
                                     <div className="flex items-center gap-3">
                                         {event.status === 'success' ? (
                                             <CheckCircle2 className="size-4 text-green-500" />
@@ -341,15 +334,11 @@ export default function Firewall({
                                         <div>
                                             <p className="text-sm font-medium">{event.milestone}</p>
                                             {event.details?.server_name && (
-                                                <p className="text-xs text-muted-foreground">
-                                                    {event.details.server_name}
-                                                </p>
+                                                <p className="text-xs text-muted-foreground">{event.details.server_name}</p>
                                             )}
                                         </div>
                                     </div>
-                                    <div className="text-xs text-muted-foreground">
-                                        {new Date(event.created_at).toLocaleString()}
-                                    </div>
+                                    <div className="text-xs text-muted-foreground">{new Date(event.created_at).toLocaleString()}</div>
                                 </div>
                             ))}
                         </div>
@@ -360,126 +349,101 @@ export default function Firewall({
                 <Alert>
                     <Shield className="size-4" />
                     <AlertDescription>
-                        Changes to firewall rules are applied immediately. SSH (port 22) is always allowed to prevent lockout.
-                        Be careful when modifying rules as incorrect configuration may block access to your services.
+                        Changes to firewall rules are applied immediately. SSH (port 22) is always allowed to prevent lockout. Be careful when
+                        modifying rules as incorrect configuration may block access to your services.
                     </AlertDescription>
                 </Alert>
             </PageHeader>
 
-            {/* Add Rule Dialog */}
-            <Dialog open={showAddRuleDialog} onOpenChange={setShowAddRuleDialog}>
-                    <DialogContent className="sm:max-w-[500px]">
-                        <form onSubmit={handleSubmit}>
-                            <DialogHeader>
-                                <DialogTitle>Add Firewall Rule</DialogTitle>
-                                <DialogDescription>
-                                    Configure port access and traffic rules for your server.
-                                </DialogDescription>
-                            </DialogHeader>
-                            <div className="grid gap-4 py-4">
-                                <div className="grid gap-2">
-                                    <Label htmlFor="name">Name</Label>
-                                    <Input
-                                        id="name"
-                                        placeholder="Application name"
-                                        value={data.name}
-                                        onChange={(e) => setData('name', e.target.value)}
-                                        className={errors.name ? 'border-red-500' : ''}
-                                        disabled={processing}
-                                        required
-                                    />
-                                    {errors.name && (
-                                        <p className="text-xs text-red-500">{errors.name}</p>
-                                    )}
-                                </div>
+            {/* Add Rule Modal */}
+            <CardFormModal
+                open={showAddRuleDialog}
+                onOpenChange={setShowAddRuleDialog}
+                title="Add Firewall Rule"
+                description="Configure port access and traffic rules for your server."
+                onSubmit={handleSubmit}
+                submitLabel="Add Rule"
+                isSubmitting={processing}
+                submittingLabel="Adding Rule..."
+            >
+                <div className="grid gap-4">
+                    <div className="grid gap-2">
+                        <Label htmlFor="name">Name</Label>
+                        <Input
+                            id="name"
+                            placeholder="Application name"
+                            value={data.name}
+                            onChange={(e) => setData('name', e.target.value)}
+                            className={errors.name ? 'border-red-500' : ''}
+                            disabled={processing}
+                            required
+                        />
+                        {errors.name && <p className="text-xs text-red-500">{errors.name}</p>}
+                    </div>
 
-                                <div className="grid gap-2">
-                                    <Label htmlFor="port">Port</Label>
-                                    <Input
-                                        id="port"
-                                        placeholder="80"
-                                        value={data.port}
-                                        onChange={(e) => setData('port', e.target.value)}
-                                        className={errors.port ? 'border-red-500' : ''}
-                                        disabled={processing}
-                                    />
-                                    <p className="text-xs text-muted-foreground">
-                                        You may provide a port range using a colon character (1:65535) or leave this field empty if the rule should apply to all ports.
-                                    </p>
-                                    {errors.port && (
-                                        <p className="text-xs text-red-500">{errors.port}</p>
-                                    )}
-                                </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="port">Port</Label>
+                        <Input
+                            id="port"
+                            placeholder="80"
+                            value={data.port}
+                            onChange={(e) => setData('port', e.target.value)}
+                            className={errors.port ? 'border-red-500' : ''}
+                            disabled={processing}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                            You may provide a port range using a colon character (1:65535) or leave this field empty if the rule should apply to all
+                            ports.
+                        </p>
+                        {errors.port && <p className="text-xs text-red-500">{errors.port}</p>}
+                    </div>
 
-                                <div className="grid gap-2">
-                                    <Label htmlFor="from_ip_address">From IP Address (Optional)</Label>
-                                    <Input
-                                        id="from_ip_address"
-                                        placeholder=""
-                                        value={data.from_ip_address}
-                                        onChange={(e) => setData('from_ip_address', e.target.value)}
-                                        className={errors.from_ip_address ? 'border-red-500' : ''}
-                                        disabled={processing}
-                                    />
-                                    <p className="text-xs text-muted-foreground">
-                                        You may also provide a subnet.
-                                    </p>
-                                    {errors.from_ip_address && (
-                                        <p className="text-xs text-red-500">{errors.from_ip_address}</p>
-                                    )}
-                                </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="from_ip_address">From IP Address (Optional)</Label>
+                        <Input
+                            id="from_ip_address"
+                            placeholder=""
+                            value={data.from_ip_address}
+                            onChange={(e) => setData('from_ip_address', e.target.value)}
+                            className={errors.from_ip_address ? 'border-red-500' : ''}
+                            disabled={processing}
+                        />
+                        <p className="text-xs text-muted-foreground">You may also provide a subnet.</p>
+                        {errors.from_ip_address && <p className="text-xs text-red-500">{errors.from_ip_address}</p>}
+                    </div>
 
-                                <div className="grid gap-2">
-                                    <Label>Rule Type</Label>
-                                    <div className="flex gap-4">
-                                        <label className="flex items-center gap-2">
-                                            <input
-                                                type="radio"
-                                                name="rule_type"
-                                                value="allow"
-                                                checked={data.rule_type === 'allow'}
-                                                onChange={(e) => setData('rule_type', e.target.value)}
-                                                className="text-primary"
-                                                disabled={processing}
-                                            />
-                                            <span>Allow</span>
-                                        </label>
-                                        <label className="flex items-center gap-2">
-                                            <input
-                                                type="radio"
-                                                name="rule_type"
-                                                value="deny"
-                                                checked={data.rule_type === 'deny'}
-                                                onChange={(e) => setData('rule_type', e.target.value)}
-                                                className="text-primary"
-                                                disabled={processing}
-                                            />
-                                            <span>Deny</span>
-                                        </label>
-                                    </div>
-                                    {errors.rule_type && (
-                                        <p className="text-xs text-red-500">{errors.rule_type}</p>
-                                    )}
-                                </div>
-                            </div>
-                            <DialogFooter>
-                                <Button type="button" variant="outline" onClick={() => setShowAddRuleDialog(false)} disabled={processing}>
-                                    Cancel
-                                </Button>
-                                <Button type="submit" disabled={processing}>
-                                    {processing ? (
-                                        <>
-                                            <Loader2 className="mr-2 size-4 animate-spin" />
-                                            Adding Rule...
-                                        </>
-                                    ) : (
-                                        'Add Rule'
-                                    )}
-                                </Button>
-                            </DialogFooter>
-                        </form>
-                    </DialogContent>
-                </Dialog>
+                    <div className="grid gap-2">
+                        <Label>Rule Type</Label>
+                        <div className="flex gap-4">
+                            <label className="flex items-center gap-2">
+                                <input
+                                    type="radio"
+                                    name="rule_type"
+                                    value="allow"
+                                    checked={data.rule_type === 'allow'}
+                                    onChange={(e) => setData('rule_type', e.target.value)}
+                                    className="text-primary"
+                                    disabled={processing}
+                                />
+                                <span>Allow</span>
+                            </label>
+                            <label className="flex items-center gap-2">
+                                <input
+                                    type="radio"
+                                    name="rule_type"
+                                    value="deny"
+                                    checked={data.rule_type === 'deny'}
+                                    onChange={(e) => setData('rule_type', e.target.value)}
+                                    className="text-primary"
+                                    disabled={processing}
+                                />
+                                <span>Deny</span>
+                            </label>
+                        </div>
+                        {errors.rule_type && <p className="text-xs text-red-500">{errors.rule_type}</p>}
+                    </div>
+                </div>
+            </CardFormModal>
         </ServerLayout>
     );
 }

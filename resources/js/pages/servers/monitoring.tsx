@@ -51,29 +51,19 @@ export default function Monitoring({
     const metricsColumns: CardTableColumn<ServerMetric>[] = [
         {
             header: 'Time',
-            accessor: (metric) => (
-                <span className="text-sm">
-                    {new Date(metric.collected_at).toLocaleString()}
-                </span>
-            ),
+            accessor: (metric) => <span className="text-sm">{new Date(metric.collected_at).toLocaleString()}</span>,
         },
         {
             header: 'CPU',
-            accessor: (metric) => (
-                <span className="text-sm">{Number(metric.cpu_usage).toFixed(1)}%</span>
-            ),
+            accessor: (metric) => <span className="text-sm">{Number(metric.cpu_usage).toFixed(1)}%</span>,
         },
         {
             header: 'Memory',
-            accessor: (metric) => (
-                <span className="text-sm">{Number(metric.memory_usage_percentage).toFixed(1)}%</span>
-            ),
+            accessor: (metric) => <span className="text-sm">{Number(metric.memory_usage_percentage).toFixed(1)}%</span>,
         },
         {
             header: 'Storage',
-            accessor: (metric) => (
-                <span className="text-sm">{Number(metric.storage_usage_percentage).toFixed(1)}%</span>
-            ),
+            accessor: (metric) => <span className="text-sm">{Number(metric.storage_usage_percentage).toFixed(1)}%</span>,
         },
     ];
 
@@ -88,11 +78,7 @@ export default function Monitoring({
     const handleTimeframeChange = (value: string) => {
         if (value) {
             setTimeframe(value);
-            router.get(
-                `/servers/${server.id}/monitoring`,
-                { hours: value },
-                { preserveState: true, preserveScroll: true }
-            );
+            router.get(`/servers/${server.id}/monitoring`, { hours: value }, { preserveState: true, preserveScroll: true });
         }
     };
 
@@ -193,12 +179,16 @@ export default function Monitoring({
 
     const handleIntervalChange = (value: string) => {
         setCollectionInterval(value);
-        router.post(`/servers/${server.id}/monitoring/update-interval`, {
-            interval: parseInt(value),
-            hours: parseInt(timeframe), // Preserve current viewing timeframe
-        }, {
-            preserveScroll: true,
-        });
+        router.post(
+            `/servers/${server.id}/monitoring/update-interval`,
+            {
+                interval: parseInt(value),
+                hours: parseInt(timeframe), // Preserve current viewing timeframe
+            },
+            {
+                preserveScroll: true,
+            },
+        );
     };
 
     const formatBytes = (mb: number) => {
@@ -225,10 +215,18 @@ export default function Monitoring({
                 />
 
                 {/* Monitoring Status */}
-                <CardContainer title="Monitoring Status">
+                <CardContainer
+                    title="Monitoring Status"
+                    icon={
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="6" cy="6" r="5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+                            <path d="M6 8V6M6 4h.01" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                    }
+                >
                     {server.monitoring_status === 'failed' ? (
                         <div className="p-8 text-center">
-                            <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-red-500/10 mx-auto">
+                            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg bg-red-500/10">
                                 <AlertCircle className="h-6 w-6 text-red-600" />
                             </div>
                             <h3 className="mt-4 text-lg font-semibold text-red-600">Installation Failed</h3>
@@ -248,23 +246,19 @@ export default function Monitoring({
                         </div>
                     ) : server.monitoring_status === 'installing' ? (
                         <div className="p-8 text-center">
-                            <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-blue-500/10 mx-auto">
-                                <Loader2 className="h-6 w-6 text-blue-600 animate-spin" />
+                            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg bg-blue-500/10">
+                                <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
                             </div>
                             <h3 className="mt-4 text-lg font-semibold">Installing Monitoring</h3>
-                            <p className="mt-2 text-sm text-muted-foreground">
-                                Please wait while monitoring is being installed on your server...
-                            </p>
+                            <p className="mt-2 text-sm text-muted-foreground">Please wait while monitoring is being installed on your server...</p>
                         </div>
                     ) : server.monitoring_status === 'uninstalling' ? (
                         <div className="p-8 text-center">
-                            <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-orange-500/10 mx-auto">
-                                <Loader2 className="h-6 w-6 text-orange-600 animate-spin" />
+                            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg bg-orange-500/10">
+                                <Loader2 className="h-6 w-6 animate-spin text-orange-600" />
                             </div>
                             <h3 className="mt-4 text-lg font-semibold">Uninstalling Monitoring</h3>
-                            <p className="mt-2 text-sm text-muted-foreground">
-                                Please wait while monitoring is being removed from your server...
-                            </p>
+                            <p className="mt-2 text-sm text-muted-foreground">Please wait while monitoring is being removed from your server...</p>
                         </div>
                     ) : !isActive ? (
                         <div className="p-8 text-center">
@@ -285,10 +279,10 @@ export default function Monitoring({
                             </Button>
                         </div>
                     ) : (
-                        <div className="p-6 space-y-6">
+                        <div className="space-y-6 p-6">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
-                                    <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-green-500/10">
+                                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-500/10">
                                         <CheckCircle className="h-5 w-5 text-green-600" />
                                     </div>
                                     <div>
@@ -317,9 +311,7 @@ export default function Monitoring({
                                         <SelectItem value="3600">Every Hourly</SelectItem>
                                     </SelectContent>
                                 </Select>
-                                <p className="text-xs text-muted-foreground">
-                                    Choose how often metrics are collected from your server
-                                </p>
+                                <p className="text-xs text-muted-foreground">Choose how often metrics are collected from your server</p>
                             </div>
                         </div>
                     )}
@@ -328,12 +320,20 @@ export default function Monitoring({
                 {/* Current Metrics */}
                 {isActive && localMetrics && (
                     <>
-                        <CardContainer title="Current Metrics">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6">
+                        <CardContainer
+                            title="Current Metrics"
+                            icon={
+                                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M1.5 9.5L4 7L6 9L10.5 4.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+                                    <path d="M7.5 4.5H10.5V7.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                            }
+                        >
+                            <div className="grid grid-cols-1 gap-6 p-6 md:grid-cols-3">
                                 {/* CPU Usage */}
                                 <div className="space-y-3">
                                     <div className="flex items-center gap-3">
-                                        <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-blue-500/10">
+                                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10">
                                             <Cpu className="h-5 w-5 text-blue-600" />
                                         </div>
                                         <div>
@@ -341,9 +341,9 @@ export default function Monitoring({
                                             <p className="text-2xl font-bold">{Number(localMetrics.cpu_usage).toFixed(1)}%</p>
                                         </div>
                                     </div>
-                                    <div className="w-full bg-muted rounded-full h-2">
+                                    <div className="h-2 w-full rounded-full bg-muted">
                                         <div
-                                            className="bg-blue-600 h-2 rounded-full transition-all"
+                                            className="h-2 rounded-full bg-blue-600 transition-all"
                                             style={{ width: `${Math.min(localMetrics.cpu_usage, 100)}%` }}
                                         />
                                     </div>
@@ -352,7 +352,7 @@ export default function Monitoring({
                                 {/* Memory Usage */}
                                 <div className="space-y-3">
                                     <div className="flex items-center gap-3">
-                                        <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-purple-500/10">
+                                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-500/10">
                                             <MemoryStick className="h-5 w-5 text-purple-600" />
                                         </div>
                                         <div>
@@ -360,9 +360,9 @@ export default function Monitoring({
                                             <p className="text-2xl font-bold">{Number(localMetrics.memory_usage_percentage).toFixed(1)}%</p>
                                         </div>
                                     </div>
-                                    <div className="w-full bg-muted rounded-full h-2">
+                                    <div className="h-2 w-full rounded-full bg-muted">
                                         <div
-                                            className="bg-purple-600 h-2 rounded-full transition-all"
+                                            className="h-2 rounded-full bg-purple-600 transition-all"
                                             style={{ width: `${Math.min(localMetrics.memory_usage_percentage, 100)}%` }}
                                         />
                                     </div>
@@ -374,7 +374,7 @@ export default function Monitoring({
                                 {/* Storage Usage */}
                                 <div className="space-y-3">
                                     <div className="flex items-center gap-3">
-                                        <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-orange-500/10">
+                                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-500/10">
                                             <HardDrive className="h-5 w-5 text-orange-600" />
                                         </div>
                                         <div>
@@ -382,9 +382,9 @@ export default function Monitoring({
                                             <p className="text-2xl font-bold">{Number(localMetrics.storage_usage_percentage).toFixed(1)}%</p>
                                         </div>
                                     </div>
-                                    <div className="w-full bg-muted rounded-full h-2">
+                                    <div className="h-2 w-full rounded-full bg-muted">
                                         <div
-                                            className="bg-orange-600 h-2 rounded-full transition-all"
+                                            className="h-2 rounded-full bg-orange-600 transition-all"
                                             style={{ width: `${Math.min(localMetrics.storage_usage_percentage, 100)}%` }}
                                         />
                                     </div>
@@ -399,6 +399,12 @@ export default function Monitoring({
                         {localRecentMetrics.length > 1 && (
                             <CardContainer
                                 title={`Usage Over Time (${timeframeOptions.find((opt) => opt.value === timeframe)?.label || 'Last 24 Hours'})`}
+                                icon={
+                                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M1.5 1.5V10.5H10.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+                                        <path d="M3 7.5L5 5.5L7 7L10.5 3.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+                                    </svg>
+                                }
                                 action={
                                     <ToggleGroup type="single" value={timeframe} onValueChange={handleTimeframeChange} variant="outline">
                                         {timeframeOptions.map((option) => (
@@ -418,11 +424,7 @@ export default function Monitoring({
                                                 tickFormatter={(value) => new Date(value).toLocaleTimeString()}
                                                 className="text-xs"
                                             />
-                                            <YAxis
-                                                domain={[0, 100]}
-                                                tickFormatter={(value) => `${value}%`}
-                                                className="text-xs"
-                                            />
+                                            <YAxis domain={[0, 100]} tickFormatter={(value) => `${value}%`} className="text-xs" />
                                             <Tooltip
                                                 labelFormatter={(value) => new Date(value).toLocaleString()}
                                                 formatter={(value: number) => `${Number(value).toFixed(1)}%`}
@@ -468,7 +470,24 @@ export default function Monitoring({
 
                         {/* Recent Metrics Table */}
                         {localRecentMetrics.length > 0 && (
-                            <CardContainer title={`Recent Metrics (${timeframeOptions.find((opt) => opt.value === timeframe)?.label || 'Last 24 Hours'})`}>
+                            <CardContainer
+                                title={`Recent Metrics (${timeframeOptions.find((opt) => opt.value === timeframe)?.label || 'Last 24 Hours'})`}
+                                icon={
+                                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <rect
+                                            x="1.5"
+                                            y="1.5"
+                                            width="9"
+                                            height="9"
+                                            rx="1"
+                                            stroke="currentColor"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                        />
+                                        <path d="M1.5 4.5H10.5M4.5 1.5V10.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+                                    </svg>
+                                }
+                            >
                                 <CardTable
                                     columns={metricsColumns}
                                     data={paginatedMetrics}
@@ -482,11 +501,11 @@ export default function Monitoring({
 
                 {/* Uninstall Monitoring Link */}
                 {isActive && (
-                    <div className="text-right mt-8">
+                    <div className="mt-8 text-right">
                         <button
                             onClick={handleUninstall}
                             disabled={processing}
-                            className="text-sm text-red-600 hover:text-red-700 dark:text-red-500 dark:hover:text-red-400 hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="text-sm text-red-600 hover:text-red-700 hover:underline disabled:cursor-not-allowed disabled:opacity-50 dark:text-red-500 dark:hover:text-red-400"
                         >
                             {processing ? 'Uninstalling monitoring...' : 'Uninstall Monitoring'}
                         </button>

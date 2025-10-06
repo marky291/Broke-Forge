@@ -1,4 +1,3 @@
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CardContainer } from '@/components/ui/card-container';
@@ -11,7 +10,7 @@ import { dashboard } from '@/routes';
 import { show as showServer } from '@/routes/servers';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router, useForm } from '@inertiajs/react';
-import { AlertCircle, CheckCircle2, Clock, GitBranch, GitCommitHorizontal, Loader2, Rocket, XCircle } from 'lucide-react';
+import { CheckCircle2, Clock, GitBranch, GitCommitHorizontal, Loader2, Rocket, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 type Server = {
@@ -72,13 +71,18 @@ export default function SiteDeployments({
     deployments: { data: Deployment[] };
     latestDeployment: Deployment | null;
 }) {
-    const { data, setData, put, processing: updating } = useForm({
+    const {
+        data,
+        setData,
+        put,
+        processing: updating,
+    } = useForm({
         deployment_script: deploymentScript,
     });
 
     const [deploying, setDeploying] = useState(false);
     const [liveDeployment, setLiveDeployment] = useState<Deployment | null>(
-        latestDeployment?.status === 'pending' || latestDeployment?.status === 'running' ? latestDeployment : null
+        latestDeployment?.status === 'pending' || latestDeployment?.status === 'running' ? latestDeployment : null,
     );
 
     const breadcrumbs: BreadcrumbItem[] = [
@@ -111,7 +115,7 @@ export default function SiteDeployments({
                     router.reload({ only: ['latestDeployment', 'deployments'] });
                 },
                 onFinish: () => setDeploying(false),
-            }
+            },
         );
     };
 
@@ -121,7 +125,7 @@ export default function SiteDeployments({
             { enabled },
             {
                 preserveScroll: true,
-            }
+            },
         );
     };
 
@@ -147,28 +151,34 @@ export default function SiteDeployments({
         switch (status) {
             case 'success':
                 return (
-                    <Badge variant="outline" className="flex items-center gap-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20">
+                    <Badge
+                        variant="outline"
+                        className="flex items-center gap-1 border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                    >
                         <CheckCircle2 className="h-3.5 w-3.5" />
                         Success
                     </Badge>
                 );
             case 'failed':
                 return (
-                    <Badge variant="outline" className="flex items-center gap-1 bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20">
+                    <Badge variant="outline" className="flex items-center gap-1 border-red-500/20 bg-red-500/10 text-red-600 dark:text-red-400">
                         <XCircle className="h-3.5 w-3.5" />
                         Failed
                     </Badge>
                 );
             case 'running':
                 return (
-                    <Badge variant="outline" className="flex items-center gap-1 bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20">
+                    <Badge variant="outline" className="flex items-center gap-1 border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-400">
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
                         Running
                     </Badge>
                 );
             default:
                 return (
-                    <Badge variant="outline" className="flex items-center gap-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20">
+                    <Badge
+                        variant="outline"
+                        className="flex items-center gap-1 border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                    >
                         <Clock className="h-3.5 w-3.5" />
                         Pending
                     </Badge>
@@ -208,7 +218,7 @@ export default function SiteDeployments({
                         title="Deployment Output"
                         action={
                             <div className="flex items-center gap-3">
-                                <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                                <div className="h-2 w-2 animate-pulse rounded-full bg-primary" />
                                 {getStatusBadge(liveDeployment.status)}
                             </div>
                         }
@@ -216,7 +226,7 @@ export default function SiteDeployments({
                         <div className="-mx-6 -my-6">
                             {liveDeployment.status === 'pending' || liveDeployment.status === 'running' ? (
                                 <div className="relative">
-                                    <pre className="overflow-auto bg-slate-950 text-slate-50 px-4 py-4 font-mono text-xs leading-relaxed whitespace-pre-wrap max-h-[400px] min-h-[200px]">
+                                    <pre className="max-h-[400px] min-h-[200px] overflow-auto bg-slate-950 px-4 py-4 font-mono text-xs leading-relaxed whitespace-pre-wrap text-slate-50">
                                         {liveDeployment.output || 'Waiting for output...'}
                                     </pre>
                                 </div>
@@ -224,20 +234,20 @@ export default function SiteDeployments({
                                 <div className="space-y-0">
                                     {liveDeployment.output && (
                                         <div>
-                                            <div className="px-4 py-2 bg-muted/50 border-b">
+                                            <div className="border-b bg-muted/50 px-4 py-2">
                                                 <span className="text-xs font-medium text-muted-foreground">Standard Output</span>
                                             </div>
-                                            <pre className="overflow-auto bg-slate-950 text-slate-50 px-4 py-4 font-mono text-xs leading-relaxed whitespace-pre-wrap max-h-[300px]">
+                                            <pre className="max-h-[300px] overflow-auto bg-slate-950 px-4 py-4 font-mono text-xs leading-relaxed whitespace-pre-wrap text-slate-50">
                                                 {liveDeployment.output}
                                             </pre>
                                         </div>
                                     )}
                                     {liveDeployment.error_output && (
                                         <div>
-                                            <div className="px-4 py-2 bg-destructive/10 border-b border-destructive/20">
+                                            <div className="border-b border-destructive/20 bg-destructive/10 px-4 py-2">
                                                 <span className="text-xs font-medium text-destructive">Error Output</span>
                                             </div>
-                                            <pre className="overflow-auto bg-destructive/5 text-destructive px-4 py-4 font-mono text-xs leading-relaxed whitespace-pre-wrap max-h-[300px] border-l-2 border-destructive">
+                                            <pre className="max-h-[300px] overflow-auto border-l-2 border-destructive bg-destructive/5 px-4 py-4 font-mono text-xs leading-relaxed whitespace-pre-wrap text-destructive">
                                                 {liveDeployment.error_output}
                                             </pre>
                                         </div>
@@ -264,54 +274,49 @@ export default function SiteDeployments({
                                 </div>
                             </div>
                         </div>
-                        <Switch
-                            checked={site.auto_deploy_enabled ?? false}
-                            onCheckedChange={handleToggleAutoDeploy}
-                        />
+                        <Switch checked={site.auto_deploy_enabled ?? false} onCheckedChange={handleToggleAutoDeploy} />
                     </div>
                 </CardContainer>
 
                 {/* Deployment Script Section */}
                 <CardContainer title="Deployment Script" description="Commands executed on the remote server">
                     <form onSubmit={handleUpdateScript} className="space-y-4">
-                            {/* Code Editor */}
-                            <div className="relative rounded-lg overflow-hidden border border-neutral-200 bg-neutral-50 dark:border-white/8 dark:bg-neutral-900">
-                                <div className="flex">
-                                    {/* Line Numbers */}
-                                    <div className="flex-shrink-0 py-4 px-4 bg-neutral-100 text-neutral-400 dark:bg-neutral-950 dark:text-neutral-600 text-sm font-mono leading-relaxed select-none border-r border-neutral-200 dark:border-white/8">
-                                        {Array.from({ length: Math.max(1, data.deployment_script.split('\n').length) }).map((_, index) => (
-                                            <div key={index} className="text-right">
-                                                {index + 1}
-                                            </div>
-                                        ))}
-                                    </div>
-                                    {/* Text Area */}
-                                    <Textarea
-                                        id="deployment_script"
-                                        value={data.deployment_script}
-                                        onChange={(event: React.ChangeEvent<HTMLTextAreaElement>) => setData('deployment_script', event.target.value)}
-                                        placeholder="git pull origin main"
-                                        className="flex-1 bg-transparent border-0 text-foreground placeholder:text-muted-foreground font-mono text-sm leading-relaxed resize-none focus-visible:ring-0 focus-visible:ring-offset-0 rounded-none p-4"
-                                        rows={Math.max(1, data.deployment_script.split('\n').length)}
-                                        spellCheck={false}
-                                    />
+                        {/* Code Editor */}
+                        <div className="relative overflow-hidden rounded-lg border border-neutral-200 bg-neutral-50 dark:border-white/8 dark:bg-neutral-900">
+                            <div className="flex">
+                                {/* Line Numbers */}
+                                <div className="flex-shrink-0 border-r border-neutral-200 bg-neutral-100 px-4 py-4 font-mono text-sm leading-relaxed text-neutral-400 select-none dark:border-white/8 dark:bg-neutral-950 dark:text-neutral-600">
+                                    {Array.from({ length: Math.max(1, data.deployment_script.split('\n').length) }).map((_, index) => (
+                                        <div key={index} className="text-right">
+                                            {index + 1}
+                                        </div>
+                                    ))}
                                 </div>
+                                {/* Text Area */}
+                                <Textarea
+                                    id="deployment_script"
+                                    value={data.deployment_script}
+                                    onChange={(event: React.ChangeEvent<HTMLTextAreaElement>) => setData('deployment_script', event.target.value)}
+                                    placeholder="git pull origin main"
+                                    className="flex-1 resize-none rounded-none border-0 bg-transparent p-4 font-mono text-sm leading-relaxed text-foreground placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
+                                    rows={Math.max(1, data.deployment_script.split('\n').length)}
+                                    spellCheck={false}
+                                />
                             </div>
+                        </div>
 
-                            <p className="text-xs text-muted-foreground">
-                                Commands run in <code className="rounded bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 font-mono">/home/brokeforge/{site.domain}</code> as the brokeforge user
-                            </p>
+                        <p className="text-xs text-muted-foreground">
+                            Commands run in{' '}
+                            <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono dark:bg-neutral-800">/home/brokeforge/{site.domain}</code>{' '}
+                            as the brokeforge user
+                        </p>
 
-                            {/* Update Button */}
-                            <div className="flex justify-end">
-                                <Button
-                                    type="submit"
-                                    disabled={updating}
-                                    size="sm"
-                                >
-                                    {updating ? 'Updating...' : 'Update'}
-                                </Button>
-                            </div>
+                        {/* Update Button */}
+                        <div className="flex justify-end">
+                            <Button type="submit" disabled={updating} size="sm">
+                                {updating ? 'Updating...' : 'Update'}
+                            </Button>
+                        </div>
                     </form>
                 </CardContainer>
 
@@ -332,15 +337,12 @@ export default function SiteDeployments({
                                 {deployments.data.map((deployment, index) => (
                                     <div
                                         key={deployment.id}
-                                        className={cn(
-                                            "px-6 py-4 transition-colors hover:bg-muted/30",
-                                            index === 0 && "bg-muted/20"
-                                        )}
+                                        className={cn('px-6 py-4 transition-colors hover:bg-muted/30', index === 0 && 'bg-muted/20')}
                                     >
-                                        <div className="flex items-center gap-3 mb-2">
+                                        <div className="mb-2 flex items-center gap-3">
                                             {getStatusBadge(deployment.status)}
                                             {deployment.commit_sha && (
-                                                <code className="rounded bg-muted px-2 py-0.5 text-xs font-mono text-muted-foreground">
+                                                <code className="rounded bg-muted px-2 py-0.5 font-mono text-xs text-muted-foreground">
                                                     {deployment.commit_sha.substring(0, 7)}
                                                 </code>
                                             )}
@@ -360,7 +362,7 @@ export default function SiteDeployments({
                                                         month: 'short',
                                                         year: 'numeric',
                                                         hour: '2-digit',
-                                                        minute: '2-digit'
+                                                        minute: '2-digit',
                                                     })}
                                                 </span>
                                             </div>
@@ -383,13 +385,11 @@ export default function SiteDeployments({
                         </div>
                     ) : (
                         <div className="flex flex-col items-center justify-center py-12 text-center">
-                            <div className="rounded-full bg-muted p-3 mb-4">
+                            <div className="mb-4 rounded-full bg-muted p-3">
                                 <Rocket className="h-6 w-6 text-muted-foreground" />
                             </div>
-                            <p className="text-sm font-medium mb-1">No deployments yet</p>
-                            <p className="text-sm text-muted-foreground">
-                                Click "Deploy Now" to start your first deployment
-                            </p>
+                            <p className="mb-1 text-sm font-medium">No deployments yet</p>
+                            <p className="text-sm text-muted-foreground">Click "Deploy Now" to start your first deployment</p>
                         </div>
                     )}
                 </CardContainer>

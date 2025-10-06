@@ -54,36 +54,21 @@ export default function Settings({ server, githubProvider }: { server: Server; g
         <ServerLayout server={server} breadcrumbs={breadcrumbs}>
             <Head title={`Settings — ${server.vanity_name}`} />
 
-            <PageHeader
-                title="Server Settings"
-                description="Manage your server configuration and connection details"
-            >
+            <PageHeader title="Server Settings" description="Manage your server configuration and connection details">
                 <CardContainer title="General Settings">
                     <Form method="put" action={`/servers/${server.id}/settings`} className="space-y-6">
                         {({ processing, errors, recentlySuccessful }) => (
                             <>
                                 <div className="grid gap-2">
                                     <Label htmlFor="vanity_name">Name</Label>
-                                    <Input
-                                        id="vanity_name"
-                                        name="vanity_name"
-                                        defaultValue={server.vanity_name}
-                                        required
-                                        placeholder="My Server"
-                                    />
+                                    <Input id="vanity_name" name="vanity_name" defaultValue={server.vanity_name} required placeholder="My Server" />
                                     <InputError className="mt-1" message={errors.vanity_name} />
                                 </div>
 
                                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                                     <div className="grid gap-2">
                                         <Label htmlFor="public_ip">Public IP Address</Label>
-                                        <Input
-                                            id="public_ip"
-                                            name="public_ip"
-                                            defaultValue={server.public_ip}
-                                            required
-                                            placeholder="192.168.1.1"
-                                        />
+                                        <Input id="public_ip" name="public_ip" defaultValue={server.public_ip} required placeholder="192.168.1.1" />
                                         <InputError className="mt-1" message={errors.public_ip} />
                                     </div>
 
@@ -151,9 +136,7 @@ export default function Settings({ server, githubProvider }: { server: Server; g
                                     </div>
                                     <div>
                                         <div className="font-medium">GitHub</div>
-                                        <div className="text-sm text-muted-foreground">
-                                            Connected as {githubProvider.username}
-                                        </div>
+                                        <div className="text-sm text-muted-foreground">Connected as {githubProvider.username}</div>
                                     </div>
                                 </div>
                                 <Button
@@ -175,9 +158,7 @@ export default function Settings({ server, githubProvider }: { server: Server; g
                                     </div>
                                     <div>
                                         <div className="font-medium">GitHub</div>
-                                        <div className="text-sm text-muted-foreground">
-                                            Connect GitHub to enable auto-deploy for your sites
-                                        </div>
+                                        <div className="text-sm text-muted-foreground">Connect GitHub to enable auto-deploy for your sites</div>
                                     </div>
                                 </div>
                                 <Button
@@ -194,12 +175,7 @@ export default function Settings({ server, githubProvider }: { server: Server; g
 
                 {/* Danger Zone */}
                 <CardContainer title="Danger Zone" description="Irreversible and destructive actions" className="border-red-200 dark:border-red-900">
-                    <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={handleDestroyServer}
-                        disabled={isDestroying}
-                    >
+                    <Button variant="destructive" size="sm" onClick={handleDestroyServer} disabled={isDestroying}>
                         {isDestroying ? (
                             <>
                                 <Loader2 className="mr-2 size-4 animate-spin" />

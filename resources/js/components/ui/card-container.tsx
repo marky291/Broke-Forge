@@ -6,6 +6,8 @@ interface CardContainerProps {
     title: string;
     /** Section description/subtitle */
     description?: string;
+    /** Optional icon to display on the left of the title */
+    icon?: ReactNode;
     /** Optional action button to display on the right side of the title */
     action?: ReactNode;
     /** Section content */
@@ -30,13 +32,20 @@ interface CardContainerProps {
  * </CardContainer>
  * ```
  */
-export function CardContainer({ title, description, action, children, className }: CardContainerProps) {
+export function CardContainer({ title, description, icon, action, children, className }: CardContainerProps) {
     return (
-        <div className={cn('rounded-xl border border-neutral-200/70 bg-neutral-50 p-1.5 dark:border-white/5 dark:bg-white/3', className)}>
-            <div className="space-y-4">
-                <div className="px-4 pt-4 flex items-start justify-between">
+        <div className={cn('rounded-xl border border-neutral-200/70 bg-neutral-50 p-1.5 dark:border-white/5 dark:bg-white/3 grid gap-2', className)}>
+            <div className="grid gap-2">
+                <div className="flex items-center justify-between p-2 pb-1.5">
                     <div>
-                        <h2 className="text-xl font-medium text-foreground">{title}</h2>
+                        <div className="flex items-center gap-2">
+                            {icon && (
+                                <span className="flex size-6 items-center justify-center rounded-md border border-neutral-300 bg-white dark:border-white/10 dark:bg-neutral-700/75 [&_svg]:size-3 [&_svg]:text-neutral-400">
+                                    {icon}
+                                </span>
+                            )}
+                            <h2 className="text-base font-medium text-foreground">{title}</h2>
+                        </div>
                         {description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}
                     </div>
                     {action && <div>{action}</div>}

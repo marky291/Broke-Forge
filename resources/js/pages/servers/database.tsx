@@ -1,7 +1,8 @@
+import { CardContainerAddButton } from '@/components/card-container-add-button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { CardContainer } from '@/components/ui/card-container';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PageHeader } from '@/components/ui/page-header';
@@ -11,7 +12,7 @@ import { dashboard } from '@/routes';
 import { show as showServer } from '@/routes/servers';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router, useForm } from '@inertiajs/react';
-import { CheckIcon, DatabaseIcon, Download, Loader2, Plus } from 'lucide-react';
+import { DatabaseIcon, Loader2 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 type Server = {
@@ -123,7 +124,8 @@ export default function Database({
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [progress, setProgress] = useState<{ step: number; total: number; label?: string } | null>(
-        (installedDatabase?.status === 'installing' || installedDatabase?.status === 'uninstalling' || installedDatabase?.status === 'updating') && installedDatabase?.progress_total
+        (installedDatabase?.status === 'installing' || installedDatabase?.status === 'uninstalling' || installedDatabase?.status === 'updating') &&
+            installedDatabase?.progress_total
             ? {
                   step: installedDatabase.progress_step ?? 0,
                   total: installedDatabase.progress_total ?? 0,
@@ -234,9 +236,11 @@ export default function Database({
             <Head title={`Database — ${server.vanity_name}`} />
             <PageHeader
                 title={installedDatabase ? 'Database Configuration' : 'Database Installation'}
-                description={installedDatabase
-                    ? 'Configure and manage database services for your server.'
-                    : 'Install and configure a database service for your server.'}
+                description={
+                    installedDatabase
+                        ? 'Configure and manage database services for your server.'
+                        : 'Install and configure a database service for your server.'
+                }
             >
                 {/* Error Alert */}
                 {errorMessage && (
@@ -244,10 +248,7 @@ export default function Database({
                         <AlertTitle>Operation Failed</AlertTitle>
                         <AlertDescription>
                             {errorMessage}
-                            <button
-                                onClick={() => setErrorMessage(null)}
-                                className="ml-2 underline"
-                            >
+                            <button onClick={() => setErrorMessage(null)} className="ml-2 underline">
                                 Dismiss
                             </button>
                         </AlertDescription>
@@ -257,151 +258,30 @@ export default function Database({
                 {/* Databases List */}
                 <CardContainer
                     title="Databases"
-                    description="Database services installed on this server."
+                    icon={
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <ellipse cx="6" cy="3" rx="4.5" ry="1.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+                            <path
+                                d="M10.5 3v6c0 .828-2.015 1.5-4.5 1.5S1.5 9.828 1.5 9V3"
+                                stroke="currentColor"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            />
+                            <path
+                                d="M10.5 6c0 .828-2.015 1.5-4.5 1.5S1.5 6.828 1.5 6"
+                                stroke="currentColor"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            />
+                        </svg>
+                    }
                     action={
-                        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                            <DialogTrigger asChild>
-                                <Button size="sm" disabled={installedDatabase !== null}>
-                                    <Plus className="h-4 w-4 mr-1" />
-                                    Add Database
-                                </Button>
-                            </DialogTrigger>
-                            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                                <DialogHeader>
-                                    <DialogTitle>Install Database Service</DialogTitle>
-                                    <DialogDescription>
-                                        Choose a database type and configuration to install on your server.
-                                    </DialogDescription>
-                                </DialogHeader>
-                                <form onSubmit={handleSubmit} className="space-y-6">
-                                    {submitError && (
-                                        <Alert variant="destructive">
-                                            <AlertTitle>Installation failed</AlertTitle>
-                                            <AlertDescription>{submitError}</AlertDescription>
-                                        </Alert>
-                                    )}
-                                    {/* Database Type Selection */}
-                                    <div className="space-y-4">
-                                        <h3 className="font-medium">Database Type</h3>
-                                        <div className={`grid grid-cols-1 gap-4 ${processing ? 'opacity-75' : ''}`}>
-                                            {Object.entries(availableDatabases || {}).map(([type, database]) => (
-                                                <div key={type} className="relative">
-                                                    <div
-                                                        className={`relative cursor-pointer rounded-lg border-2 p-4 transition-all ${
-                                                            selectedType === type
-                                                                ? 'border-primary bg-primary/5'
-                                                                : 'border-sidebar-border/70 bg-background hover:border-primary/50'
-                                                        }`}
-                                                        onClick={() => !processing && handleTypeChange(type)}
-                                                    >
-                                                        <div className="flex items-start gap-3">
-                                                            <div
-                                                                className={`flex-shrink-0 rounded-md p-2 ${
-                                                                    selectedType === type ? 'bg-primary text-primary-foreground' : 'bg-muted'
-                                                                }`}
-                                                            >
-                                                                <DatabaseIcon className="h-6 w-6" />
-                                                            </div>
-                                                            <div className="min-w-0 flex-1">
-                                                                <h3 className="font-medium">{database.name}</h3>
-                                                                <p className="mt-1 text-sm text-muted-foreground">{database.description}</p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                        {errors.type && <div className="text-sm text-red-600">{errors.type}</div>}
-                                    </div>
-
-                                    {/* Configuration */}
-                                    <div className="space-y-4">
-                                        <h3 className="font-medium">Configuration</h3>
-                                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                                            <div className="space-y-2 md:col-span-2">
-                                                <Label htmlFor="name">Database Name</Label>
-                                                <Input
-                                                    id="name"
-                                                    type="text"
-                                                    value={data.name}
-                                                    onChange={(e) => setData('name', e.target.value)}
-                                                    placeholder={`Leave empty to use default (${selectedType})`}
-                                                    disabled={processing}
-                                                />
-                                                <p className="text-xs text-muted-foreground">
-                                                    Optional. This is used to identify your database in the list.
-                                                </p>
-                                                {errors.name && <div className="text-sm text-red-600">{errors.name}</div>}
-                                            </div>
-
-                                            <div className="space-y-2">
-                                                <Label htmlFor="version">Version</Label>
-                                                <Select value={data.version} onValueChange={(value) => setData('version', value)}>
-                                                    <SelectTrigger disabled={processing}>
-                                                        <SelectValue placeholder="Select version" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {Object.entries(availableDatabases?.[selectedType]?.versions || {}).map(([value, label]) => (
-                                                            <SelectItem key={value} value={value}>
-                                                                {label}
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                                {errors.version && <div className="text-sm text-red-600">{errors.version}</div>}
-                                            </div>
-
-                                            <div className="space-y-2">
-                                                <Label htmlFor="port">Port</Label>
-                                                <Input
-                                                    id="port"
-                                                    type="number"
-                                                    value={data.port}
-                                                    onChange={(e) => setData('port', parseInt(e.target.value))}
-                                                    placeholder="3306"
-                                                    disabled={processing}
-                                                />
-                                                {errors.port && <div className="text-sm text-red-600">{errors.port}</div>}
-                                            </div>
-
-                                            <div className="space-y-2 md:col-span-2">
-                                                <Label htmlFor="root_password">
-                                                    Root Password <span className="text-red-500">*</span>
-                                                </Label>
-                                                <Input
-                                                    id="root_password"
-                                                    type="password"
-                                                    value={data.root_password}
-                                                    onChange={(e) => setData('root_password', e.target.value)}
-                                                    required
-                                                    placeholder="Enter root password"
-                                                    disabled={processing}
-                                                    autoComplete="new-password"
-                                                />
-                                                {errors.root_password && <div className="text-sm text-red-600">{errors.root_password}</div>}
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Install Button */}
-                                    <div className="flex justify-end gap-3">
-                                        <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} disabled={processing}>
-                                            Cancel
-                                        </Button>
-                                        <Button type="submit" disabled={processing}>
-                                            {processing ? (
-                                                <span className="inline-flex items-center gap-2">
-                                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                                    Installing...
-                                                </span>
-                                            ) : (
-                                                'Install Database'
-                                            )}
-                                        </Button>
-                                    </div>
-                                </form>
-                            </DialogContent>
-                        </Dialog>
+                        <CardContainerAddButton
+                            label="Add Database"
+                            onClick={() => setIsDialogOpen(true)}
+                            aria-label="Add Database"
+                            disabled={installedDatabase !== null}
+                        />
                     }
                 >
                     {databases.length > 0 ? (
@@ -454,7 +334,15 @@ export default function Database({
                 </CardContainer>
 
                 {installedDatabase && (
-                    <CardContainer title="Current Database">
+                    <CardContainer
+                        title="Current Database"
+                        icon={
+                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <rect x="2" y="2" width="8" height="8" rx="1" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+                                <path d="M2 5h8M5 2v8" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                        }
+                    >
                         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                             <div>
                                 <div className="text-sm text-muted-foreground">Type</div>
@@ -468,7 +356,7 @@ export default function Database({
                             </div>
                             <div>
                                 <div className="text-sm text-muted-foreground">Status</div>
-                                <div className="font-medium capitalize inline-flex items-center gap-2">
+                                <div className="inline-flex items-center gap-2 font-medium capitalize">
                                     {installedDatabase.status}
                                     {isProcessing && <Loader2 className="h-3 w-3 animate-spin" />}
                                 </div>
@@ -479,7 +367,14 @@ export default function Database({
 
                 {installedDatabase && !isProcessing && (
                     <div className="space-y-6">
-                        <CardContainer title="Update Configuration">
+                        <CardContainer
+                            title="Update Configuration"
+                            icon={
+                                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M6 1v10M3 4l3-3 3 3" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                            }
+                        >
                             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                 <div className="space-y-2">
                                     <Label htmlFor="version">Version</Label>
@@ -527,7 +422,9 @@ export default function Database({
                                 variant="destructive"
                                 disabled={processing}
                                 onClick={() => {
-                                    if (confirm('Are you sure you want to uninstall this database? This will remove all data and cannot be undone.')) {
+                                    if (
+                                        confirm('Are you sure you want to uninstall this database? This will remove all data and cannot be undone.')
+                                    ) {
                                         setErrorMessage(null);
                                         router.delete(`/servers/${server.id}/database`, {
                                             preserveScroll: true,
@@ -545,14 +442,18 @@ export default function Database({
                                 disabled={processing}
                                 onClick={() => {
                                     setErrorMessage(null);
-                                    router.patch(`/servers/${server.id}/database`, {
-                                        version: data.version,
-                                    }, {
-                                        preserveScroll: true,
-                                        onSuccess: () => {
-                                            router.reload({ only: ['installedDatabase', 'databases'] });
+                                    router.patch(
+                                        `/servers/${server.id}/database`,
+                                        {
+                                            version: data.version,
                                         },
-                                    });
+                                        {
+                                            preserveScroll: true,
+                                            onSuccess: () => {
+                                                router.reload({ only: ['installedDatabase', 'databases'] });
+                                            },
+                                        },
+                                    );
                                 }}
                             >
                                 {processing ? (
@@ -568,6 +469,141 @@ export default function Database({
                     </div>
                 )}
             </PageHeader>
+
+            {/* Add Database Dialog */}
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Install Database Service</DialogTitle>
+                        <DialogDescription>Choose a database type and configuration to install on your server.</DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        {submitError && (
+                            <Alert variant="destructive">
+                                <AlertTitle>Installation failed</AlertTitle>
+                                <AlertDescription>{submitError}</AlertDescription>
+                            </Alert>
+                        )}
+                        {/* Database Type Selection */}
+                        <div className="space-y-4">
+                            <h3 className="font-medium">Database Type</h3>
+                            <div className={`grid grid-cols-1 gap-4 ${processing ? 'opacity-75' : ''}`}>
+                                {Object.entries(availableDatabases || {}).map(([type, database]) => (
+                                    <div key={type} className="relative">
+                                        <div
+                                            className={`relative cursor-pointer rounded-lg border-2 p-4 transition-all ${
+                                                selectedType === type
+                                                    ? 'border-primary bg-primary/5'
+                                                    : 'border-sidebar-border/70 bg-background hover:border-primary/50'
+                                            }`}
+                                            onClick={() => !processing && handleTypeChange(type)}
+                                        >
+                                            <div className="flex items-start gap-3">
+                                                <div
+                                                    className={`flex-shrink-0 rounded-md p-2 ${
+                                                        selectedType === type ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                                                    }`}
+                                                >
+                                                    <DatabaseIcon className="h-6 w-6" />
+                                                </div>
+                                                <div className="min-w-0 flex-1">
+                                                    <h3 className="font-medium">{database.name}</h3>
+                                                    <p className="mt-1 text-sm text-muted-foreground">{database.description}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            {errors.type && <div className="text-sm text-red-600">{errors.type}</div>}
+                        </div>
+
+                        {/* Configuration */}
+                        <div className="space-y-4">
+                            <h3 className="font-medium">Configuration</h3>
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                <div className="space-y-2 md:col-span-2">
+                                    <Label htmlFor="name">Database Name</Label>
+                                    <Input
+                                        id="name"
+                                        type="text"
+                                        value={data.name}
+                                        onChange={(e) => setData('name', e.target.value)}
+                                        placeholder={`Leave empty to use default (${selectedType})`}
+                                        disabled={processing}
+                                    />
+                                    <p className="text-xs text-muted-foreground">Optional. This is used to identify your database in the list.</p>
+                                    {errors.name && <div className="text-sm text-red-600">{errors.name}</div>}
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="version">Version</Label>
+                                    <Select value={data.version} onValueChange={(value) => setData('version', value)}>
+                                        <SelectTrigger disabled={processing}>
+                                            <SelectValue placeholder="Select version" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {Object.entries(availableDatabases?.[selectedType]?.versions || {}).map(([value, label]) => (
+                                                <SelectItem key={value} value={value}>
+                                                    {label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    {errors.version && <div className="text-sm text-red-600">{errors.version}</div>}
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="port">Port</Label>
+                                    <Input
+                                        id="port"
+                                        type="number"
+                                        value={data.port}
+                                        onChange={(e) => setData('port', parseInt(e.target.value))}
+                                        placeholder="3306"
+                                        disabled={processing}
+                                    />
+                                    {errors.port && <div className="text-sm text-red-600">{errors.port}</div>}
+                                </div>
+
+                                <div className="space-y-2 md:col-span-2">
+                                    <Label htmlFor="root_password">
+                                        Root Password <span className="text-red-500">*</span>
+                                    </Label>
+                                    <Input
+                                        id="root_password"
+                                        type="password"
+                                        value={data.root_password}
+                                        onChange={(e) => setData('root_password', e.target.value)}
+                                        required
+                                        placeholder="Enter root password"
+                                        disabled={processing}
+                                        autoComplete="new-password"
+                                    />
+                                    {errors.root_password && <div className="text-sm text-red-600">{errors.root_password}</div>}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Install Button */}
+                        <div className="flex justify-end gap-3">
+                            <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} disabled={processing}>
+                                Cancel
+                            </Button>
+                            <Button type="submit" disabled={processing}>
+                                {processing ? (
+                                    <span className="inline-flex items-center gap-2">
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                        Installing...
+                                    </span>
+                                ) : (
+                                    'Install Database'
+                                )}
+                            </Button>
+                        </div>
+                    </form>
+                </DialogContent>
+            </Dialog>
         </ServerLayout>
     );
 }

@@ -1,11 +1,10 @@
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Form } from '@inertiajs/react';
-import { Plus, Shield, Trash2 } from 'lucide-react';
+import { Plus, Shield } from 'lucide-react';
 
 interface FirewallRule {
     id: number;
@@ -22,24 +21,15 @@ interface FirewallRuleFormProps {
     onSuccess?: () => void;
 }
 
-export default function FirewallRuleForm({ 
-    serverId, 
-    commonPorts,
-    onSuccess 
-}: FirewallRuleFormProps) {
+export default function FirewallRuleForm({ serverId, commonPorts, onSuccess }: FirewallRuleFormProps) {
     return (
         <div className="rounded-xl border bg-background p-6">
-            <div className="flex items-center gap-2 mb-4">
+            <div className="mb-4 flex items-center gap-2">
                 <Shield className="h-5 w-5 text-blue-600" />
                 <h3 className="text-lg font-semibold">Add Firewall Rule</h3>
             </div>
-            
-            <Form
-                method="post"
-                action={`/servers/${serverId}/firewall`}
-                resetOnSuccess
-                onSuccess={onSuccess}
-            >
+
+            <Form method="post" action={`/servers/${serverId}/firewall`} resetOnSuccess onSuccess={onSuccess}>
                 {({ processing, errors, data, setData }) => (
                     <div className="space-y-4">
                         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -59,8 +49,8 @@ export default function FirewallRuleForm({
 
                             <div className="space-y-2">
                                 <Label htmlFor="rule_type">Action</Label>
-                                <Select 
-                                    value={data.rule_type || 'allow'} 
+                                <Select
+                                    value={data.rule_type || 'allow'}
                                     onValueChange={(value) => setData('rule_type', value)}
                                     disabled={processing}
                                 >
@@ -89,11 +79,7 @@ export default function FirewallRuleForm({
                                         disabled={processing}
                                         required
                                     />
-                                    <Select 
-                                        value=""
-                                        onValueChange={(value) => setData('port', value)}
-                                        disabled={processing}
-                                    >
+                                    <Select value="" onValueChange={(value) => setData('port', value)} disabled={processing}>
                                         <SelectTrigger className="w-32">
                                             <SelectValue placeholder="Common" />
                                         </SelectTrigger>
@@ -107,9 +93,7 @@ export default function FirewallRuleForm({
                                     </Select>
                                 </div>
                                 {errors.port && <div className="text-sm text-destructive">{errors.port}</div>}
-                                <div className="text-xs text-muted-foreground">
-                                    Single port (80) or range (8000:8100)
-                                </div>
+                                <div className="text-xs text-muted-foreground">Single port (80) or range (8000:8100)</div>
                             </div>
 
                             <div className="space-y-2">
@@ -123,9 +107,7 @@ export default function FirewallRuleForm({
                                     disabled={processing}
                                 />
                                 {errors.from_ip_address && <div className="text-sm text-destructive">{errors.from_ip_address}</div>}
-                                <div className="text-xs text-muted-foreground">
-                                    Leave empty to allow from anywhere
-                                </div>
+                                <div className="text-xs text-muted-foreground">Leave empty to allow from anywhere</div>
                             </div>
                         </div>
 
@@ -133,7 +115,7 @@ export default function FirewallRuleForm({
 
                         <div className="flex justify-end">
                             <Button type="submit" disabled={processing}>
-                                <Plus className="h-4 w-4 mr-2" />
+                                <Plus className="mr-2 h-4 w-4" />
                                 {processing ? 'Adding Rule...' : 'Add Rule'}
                             </Button>
                         </div>

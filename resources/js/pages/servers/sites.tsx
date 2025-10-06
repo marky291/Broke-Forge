@@ -3,7 +3,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CardContainer } from '@/components/ui/card-container';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { CardFormModal } from '@/components/ui/card-form-modal';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PageHeader } from '@/components/ui/page-header';
@@ -227,7 +227,18 @@ export default function Sites({ server, sites }: SitesProps) {
 
                 {/* Sites List */}
                 <CardContainer
-                    title="Configured Sites"
+                    title="Sites"
+                    icon={
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="6" cy="6" r="5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+                            <path
+                                d="M1.5 6h9M6 1.5c-1.5 1.5-1.5 4.5 0 9M6 1.5c1.5 1.5 1.5 4.5 0 9"
+                                stroke="currentColor"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            />
+                        </svg>
+                    }
                     action={<CardContainerAddButton label="Add Site" onClick={() => setShowAddSiteDialog(true)} aria-label="Add Site" />}
                 >
                     {sites.data.length > 0 ? (
@@ -309,78 +320,62 @@ export default function Sites({ server, sites }: SitesProps) {
                 </CardContainer>
             </PageHeader>
 
-            {/* Add Site Dialog */}
-            <Dialog open={showAddSiteDialog} onOpenChange={setShowAddSiteDialog}>
-                <DialogContent className="sm:max-w-[425px]">
-                    <form onSubmit={handleSubmit}>
-                        <DialogHeader>
-                            <DialogTitle>Add New Site</DialogTitle>
-                            <DialogDescription>
-                                Configure a new site on your server. The site will be provisioned with nginx and PHP-FPM.
-                            </DialogDescription>
-                        </DialogHeader>
-                        <div className="grid gap-4 py-4">
-                            <div className="grid gap-2">
-                                <Label htmlFor="domain">Domain Name</Label>
-                                <Input
-                                    id="domain"
-                                    placeholder="example.com"
-                                    value={form.data.domain}
-                                    onChange={(e) => form.setData('domain', e.target.value)}
-                                    disabled={form.processing}
-                                />
-                                {form.errors.domain && <p className="text-sm text-red-500">{form.errors.domain}</p>}
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="php_version">PHP Version</Label>
-                                <Select
-                                    value={form.data.php_version}
-                                    onValueChange={(value) => form.setData('php_version', value)}
-                                    disabled={form.processing}
-                                >
-                                    <SelectTrigger id="php_version">
-                                        <SelectValue placeholder="Select PHP version" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="8.3">PHP 8.3</SelectItem>
-                                        <SelectItem value="8.2">PHP 8.2</SelectItem>
-                                        <SelectItem value="8.1">PHP 8.1</SelectItem>
-                                        <SelectItem value="8.0">PHP 8.0</SelectItem>
-                                        <SelectItem value="7.4">PHP 7.4</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                                <Switch
-                                    id="ssl"
-                                    checked={form.data.ssl}
-                                    onCheckedChange={(checked) => form.setData('ssl', checked)}
-                                    disabled={form.processing}
-                                />
-                                <Label htmlFor="ssl" className="flex cursor-pointer items-center gap-2">
-                                    <Lock className="h-4 w-4" />
-                                    Enable SSL (HTTPS)
-                                </Label>
-                            </div>
-                        </div>
-                        <DialogFooter>
-                            <Button type="button" variant="outline" onClick={() => setShowAddSiteDialog(false)} disabled={form.processing}>
-                                Cancel
-                            </Button>
-                            <Button type="submit" disabled={form.processing}>
-                                {form.processing ? (
-                                    <>
-                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                        Provisioning...
-                                    </>
-                                ) : (
-                                    'Add Site'
-                                )}
-                            </Button>
-                        </DialogFooter>
-                    </form>
-                </DialogContent>
-            </Dialog>
+            {/* Add Site Modal */}
+            <CardFormModal
+                open={showAddSiteDialog}
+                onOpenChange={setShowAddSiteDialog}
+                title="Add New Site"
+                description="Configure a new site on your server. The site will be provisioned with nginx and PHP-FPM."
+                onSubmit={handleSubmit}
+                submitLabel="Add Site"
+                isSubmitting={form.processing}
+                submittingLabel="Provisioning..."
+            >
+                <div className="grid gap-4">
+                    <div className="grid gap-2">
+                        <Label htmlFor="domain">Domain Name</Label>
+                        <Input
+                            id="domain"
+                            placeholder="example.com"
+                            value={form.data.domain}
+                            onChange={(e) => form.setData('domain', e.target.value)}
+                            disabled={form.processing}
+                        />
+                        {form.errors.domain && <p className="text-sm text-red-500">{form.errors.domain}</p>}
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="php_version">PHP Version</Label>
+                        <Select
+                            value={form.data.php_version}
+                            onValueChange={(value) => form.setData('php_version', value)}
+                            disabled={form.processing}
+                        >
+                            <SelectTrigger id="php_version">
+                                <SelectValue placeholder="Select PHP version" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="8.3">PHP 8.3</SelectItem>
+                                <SelectItem value="8.2">PHP 8.2</SelectItem>
+                                <SelectItem value="8.1">PHP 8.1</SelectItem>
+                                <SelectItem value="8.0">PHP 8.0</SelectItem>
+                                <SelectItem value="7.4">PHP 7.4</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <Switch
+                            id="ssl"
+                            checked={form.data.ssl}
+                            onCheckedChange={(checked) => form.setData('ssl', checked)}
+                            disabled={form.processing}
+                        />
+                        <Label htmlFor="ssl" className="flex cursor-pointer items-center gap-2">
+                            <Lock className="h-4 w-4" />
+                            Enable SSL (HTTPS)
+                        </Label>
+                    </div>
+                </div>
+            </CardFormModal>
         </ServerLayout>
     );
 }

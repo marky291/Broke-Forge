@@ -18,27 +18,17 @@ interface DatabaseInstallationFormProps {
     availableTypes: Record<string, DatabaseType>;
 }
 
-export default function DatabaseInstallationForm({
-    serverId,
-    availableTypes,
-}: DatabaseInstallationFormProps) {
+export default function DatabaseInstallationForm({ serverId, availableTypes }: DatabaseInstallationFormProps) {
     return (
         <div className="rounded-xl border border-sidebar-border/70 bg-background shadow-sm dark:border-sidebar-border">
             <div className="px-4 py-3">
                 <div className="flex items-center gap-2">
                     <DatabaseIcon className="h-5 w-5 text-blue-600" />
-                    <div className="text-sm font-medium tracking-wide text-neutral-600 uppercase dark:text-neutral-300">
-                        Install Database Service
-                    </div>
+                    <div className="text-sm font-medium tracking-wide text-neutral-600 uppercase dark:text-neutral-300">Install Database Service</div>
                 </div>
             </div>
-            
-            <Form
-                method="post"
-                action={`/servers/${serverId}/database`}
-                resetOnSuccess={['root_password']}
-                className="px-4 py-4"
-            >
+
+            <Form method="post" action={`/servers/${serverId}/database`} resetOnSuccess={['root_password']} className="px-4 py-4">
                 {({ processing, errors, data, setData }) => (
                     <div className="space-y-6">
                         {/* Database Type Selection */}
@@ -53,12 +43,15 @@ export default function DatabaseInstallationForm({
                                                 ? 'border-primary bg-primary/5'
                                                 : 'border-sidebar-border/70 bg-background hover:border-primary/50'
                                         } ${processing ? 'opacity-75' : ''}`}
-                                        onClick={() => !processing && setData({
-                                            ...data,
-                                            type,
-                                            version: config.default_version,
-                                            port: config.default_port,
-                                        })}
+                                        onClick={() =>
+                                            !processing &&
+                                            setData({
+                                                ...data,
+                                                type,
+                                                version: config.default_version,
+                                                port: config.default_port,
+                                            })
+                                        }
                                     >
                                         <div className="flex items-start gap-3">
                                             <div
@@ -85,11 +78,7 @@ export default function DatabaseInstallationForm({
                             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                 <div className="space-y-2">
                                     <Label htmlFor="version">Version</Label>
-                                    <Select
-                                        value={data.version || ''}
-                                        onValueChange={(value) => setData('version', value)}
-                                        disabled={processing}
-                                    >
+                                    <Select value={data.version || ''} onValueChange={(value) => setData('version', value)} disabled={processing}>
                                         <SelectTrigger>
                                             <SelectValue placeholder="Select version" />
                                         </SelectTrigger>

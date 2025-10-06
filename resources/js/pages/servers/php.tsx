@@ -1,8 +1,8 @@
+import { CardContainerAddButton } from '@/components/card-container-add-button';
 import { Button } from '@/components/ui/button';
 import { CardContainer } from '@/components/ui/card-container';
+import { CardFormModal } from '@/components/ui/card-form-modal';
 import { CardInput } from '@/components/ui/card-input';
-import { CardInputDropdown } from '@/components/ui/card-input-dropdown';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { PageHeader } from '@/components/ui/page-header';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -27,7 +27,7 @@ export default function Php({
     installedPhpVersions: ServerPhp[];
 }) {
     // Get the default PHP version or first installed version
-    const defaultPhp = installedPhpVersions.find(php => php.is_cli_default) || installedPhpVersions[0];
+    const defaultPhp = installedPhpVersions.find((php) => php.is_cli_default) || installedPhpVersions[0];
 
     const [isAddVersionDialogOpen, setIsAddVersionDialogOpen] = useState(false);
 
@@ -38,7 +38,14 @@ export default function Php({
         upload_max_filesize: '2M',
     });
 
-    const { data: addVersionData, setData: setAddVersionData, post: postAddVersion, processing: addVersionProcessing, errors: addVersionErrors, reset: resetAddVersion } = useForm({
+    const {
+        data: addVersionData,
+        setData: setAddVersionData,
+        post: postAddVersion,
+        processing: addVersionProcessing,
+        errors: addVersionErrors,
+        reset: resetAddVersion,
+    } = useForm({
         version: '',
     });
 
@@ -68,9 +75,11 @@ export default function Php({
             <Head title={`PHP — ${server.vanity_name}`} />
             <PageHeader
                 title={installedPhpVersions.length > 0 ? 'PHP Configuration' : 'PHP Installation'}
-                description={installedPhpVersions.length > 0
-                    ? 'Configure PHP version, extensions, and settings for your server.'
-                    : 'Install and configure PHP for your server.'}
+                description={
+                    installedPhpVersions.length > 0
+                        ? 'Configure PHP version, extensions, and settings for your server.'
+                        : 'Install and configure PHP for your server.'
+                }
             >
                 {installedPhpVersions.length === 0 && (
                     <CardContainer
@@ -78,57 +87,57 @@ export default function Php({
                         description="No PHP installation found on this server. Configure and install PHP to get started."
                     >
                         <form onSubmit={handleSubmit} className="space-y-6">
-                                {/* PHP Version */}
-                                <div className="space-y-4">
-                                    <h3 className="font-medium">PHP Version</h3>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="version">Version</Label>
-                                        <Select value={data.version} onValueChange={(value) => setData('version', value)}>
-                                            <SelectTrigger className="w-full md:w-1/3">
-                                                <SelectValue placeholder="Select PHP version" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {Object.entries(availablePhpVersions).map(([value, label]) => (
-                                                    <SelectItem key={value} value={value}>
-                                                        {label}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        {errors.version && <div className="text-sm text-red-600">{errors.version}</div>}
-                                    </div>
+                            {/* PHP Version */}
+                            <div className="space-y-4">
+                                <h3 className="font-medium">PHP Version</h3>
+                                <div className="space-y-2">
+                                    <Label htmlFor="version">Version</Label>
+                                    <Select value={data.version} onValueChange={(value) => setData('version', value)}>
+                                        <SelectTrigger className="w-full md:w-1/3">
+                                            <SelectValue placeholder="Select PHP version" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {Object.entries(availablePhpVersions).map(([value, label]) => (
+                                                <SelectItem key={value} value={value}>
+                                                    {label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    {errors.version && <div className="text-sm text-red-600">{errors.version}</div>}
                                 </div>
+                            </div>
 
-                                {/* PHP Settings */}
+                            {/* PHP Settings */}
+                            <div className="space-y-4">
+                                <h3 className="font-medium">Basic Settings</h3>
                                 <div className="space-y-4">
-                                    <h3 className="font-medium">Basic Settings</h3>
-                                    <div className="space-y-4">
-                                        <CardInput
-                                            label="Memory Limit"
-                                            value={data.memory_limit}
-                                            onChange={(e) => setData('memory_limit', e.target.value)}
-                                            placeholder="256M"
-                                            error={errors.memory_limit}
-                                        />
+                                    <CardInput
+                                        label="Memory Limit"
+                                        value={data.memory_limit}
+                                        onChange={(e) => setData('memory_limit', e.target.value)}
+                                        placeholder="256M"
+                                        error={errors.memory_limit}
+                                    />
 
-                                        <CardInput
-                                            label="Max Execution Time (seconds)"
-                                            type="number"
-                                            value={data.max_execution_time}
-                                            onChange={(e) => setData('max_execution_time', parseInt(e.target.value) || 30)}
-                                            placeholder="30"
-                                            error={errors.max_execution_time}
-                                        />
+                                    <CardInput
+                                        label="Max Execution Time (seconds)"
+                                        type="number"
+                                        value={data.max_execution_time}
+                                        onChange={(e) => setData('max_execution_time', parseInt(e.target.value) || 30)}
+                                        placeholder="30"
+                                        error={errors.max_execution_time}
+                                    />
 
-                                        <CardInput
-                                            label="Upload Max File Size"
-                                            value={data.upload_max_filesize}
-                                            onChange={(e) => setData('upload_max_filesize', e.target.value)}
-                                            placeholder="2M"
-                                            error={errors.upload_max_filesize}
-                                        />
-                                    </div>
+                                    <CardInput
+                                        label="Upload Max File Size"
+                                        value={data.upload_max_filesize}
+                                        onChange={(e) => setData('upload_max_filesize', e.target.value)}
+                                        placeholder="2M"
+                                        error={errors.upload_max_filesize}
+                                    />
                                 </div>
+                            </div>
 
                             {/* Install Button */}
                             <div className="flex justify-end">
@@ -144,48 +153,24 @@ export default function Php({
                     <>
                         <CardContainer
                             title="Versions"
+                            icon={
+                                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path
+                                        d="M6 1L10.5 3.5V8.5L6 11L1.5 8.5V3.5L6 1Z"
+                                        stroke="currentColor"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                    />
+                                    <path d="M6 6V11" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+                                    <path d="M1.5 3.5L6 6L10.5 3.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                            }
                             action={
-                                <Dialog open={isAddVersionDialogOpen} onOpenChange={setIsAddVersionDialogOpen}>
-                                    <DialogTrigger asChild>
-                                        <Button variant="outline" size="sm">Add Version</Button>
-                                    </DialogTrigger>
-                                    <DialogContent>
-                                        <form onSubmit={handleAddVersion}>
-                                            <DialogHeader>
-                                                <DialogTitle>Add PHP Version</DialogTitle>
-                                                <DialogDescription>
-                                                    Install a new PHP version on this server.
-                                                </DialogDescription>
-                                            </DialogHeader>
-                                            <div className="py-4">
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="add-version">PHP Version</Label>
-                                                    <Select value={addVersionData.version} onValueChange={(value) => setAddVersionData('version', value)}>
-                                                        <SelectTrigger id="add-version">
-                                                            <SelectValue placeholder="Select PHP version" />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            {Object.entries(availablePhpVersions).map(([value, label]) => (
-                                                                <SelectItem key={value} value={value}>
-                                                                    {label}
-                                                                </SelectItem>
-                                                            ))}
-                                                        </SelectContent>
-                                                    </Select>
-                                                    {addVersionErrors.version && <div className="text-sm text-red-600">{addVersionErrors.version}</div>}
-                                                </div>
-                                            </div>
-                                            <DialogFooter>
-                                                <Button type="button" variant="outline" onClick={() => setIsAddVersionDialogOpen(false)}>
-                                                    Cancel
-                                                </Button>
-                                                <Button type="submit" disabled={addVersionProcessing || !addVersionData.version}>
-                                                    {addVersionProcessing ? 'Installing...' : 'Install'}
-                                                </Button>
-                                            </DialogFooter>
-                                        </form>
-                                    </DialogContent>
-                                </Dialog>
+                                <CardContainerAddButton
+                                    label="Add Version"
+                                    onClick={() => setIsAddVersionDialogOpen(true)}
+                                    aria-label="Add Version"
+                                />
                             }
                         >
                             <div className="space-y-3">
@@ -214,7 +199,20 @@ export default function Php({
 
                 {defaultPhp && (
                     <form onSubmit={handleSubmit} className="space-y-6">
-                        <CardContainer title="PHP Settings">
+                        <CardContainer
+                            title="PHP Settings"
+                            icon={
+                                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path
+                                        d="M4.5 1.5H7.5L8.5 3.5L10.5 4.5V7.5L8.5 8.5L7.5 10.5H4.5L3.5 8.5L1.5 7.5V4.5L3.5 3.5L4.5 1.5Z"
+                                        stroke="currentColor"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                    />
+                                    <circle cx="6" cy="6" r="1.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                            }
+                        >
                             <div className="space-y-4">
                                 <CardInput
                                     label="Memory Limit"
@@ -252,6 +250,36 @@ export default function Php({
                     </form>
                 )}
             </PageHeader>
+
+            {/* Add Version Modal */}
+            <CardFormModal
+                open={isAddVersionDialogOpen}
+                onOpenChange={setIsAddVersionDialogOpen}
+                title="Add PHP Version"
+                description="Install a new PHP version on this server."
+                onSubmit={handleAddVersion}
+                submitLabel="Install"
+                isSubmitting={addVersionProcessing}
+                submitDisabled={!addVersionData.version}
+                submittingLabel="Installing..."
+            >
+                <div className="space-y-2">
+                    <Label htmlFor="add-version">PHP Version</Label>
+                    <Select value={addVersionData.version} onValueChange={(value) => setAddVersionData('version', value)}>
+                        <SelectTrigger id="add-version">
+                            <SelectValue placeholder="Select PHP version" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {Object.entries(availablePhpVersions).map(([value, label]) => (
+                                <SelectItem key={value} value={value}>
+                                    {label}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    {addVersionErrors.version && <div className="text-sm text-red-600">{addVersionErrors.version}</div>}
+                </div>
+            </CardFormModal>
         </ServerLayout>
     );
 }

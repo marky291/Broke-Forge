@@ -1,8 +1,8 @@
 import { Button } from '@/components/ui/button';
 import { router } from '@inertiajs/react';
 import { CardElement, useElements, useStripe } from '@stripe/react-stripe-js';
-import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
+import { useState } from 'react';
 
 type PaymentMethodFormProps = {
     onSuccess: () => void;
@@ -96,23 +96,19 @@ export default function PaymentMethodForm({ onSuccess, subscribeToPlan }: Paymen
         <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
                 <label className="text-sm font-medium">Card Information</label>
-                <div className="p-3 border rounded-lg bg-white dark:bg-zinc-800 border-input">
+                <div className="rounded-lg border border-input bg-white p-3 dark:bg-zinc-800">
                     <CardElement options={cardElementOptions} />
                 </div>
             </div>
 
             {error && (
-                <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-3">
                     <p className="text-sm text-destructive">{error}</p>
                 </div>
             )}
 
             <div className="flex gap-2">
-                <Button
-                    type="submit"
-                    disabled={!stripe || processing}
-                    className="flex-1"
-                >
+                <Button type="submit" disabled={!stripe || processing} className="flex-1">
                     {processing ? (
                         <>
                             <Loader2 className="mr-2 size-4 animate-spin" />
@@ -122,12 +118,7 @@ export default function PaymentMethodForm({ onSuccess, subscribeToPlan }: Paymen
                         'Add Payment Method'
                     )}
                 </Button>
-                <Button
-                    type="button"
-                    variant="outline"
-                    onClick={onSuccess}
-                    disabled={processing}
-                >
+                <Button type="button" variant="outline" onClick={onSuccess} disabled={processing}>
                     Cancel
                 </Button>
             </div>

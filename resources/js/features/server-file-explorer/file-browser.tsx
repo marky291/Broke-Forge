@@ -148,64 +148,64 @@ export const ServerFileBrowser = ({ state, onNavigate, onNavigateUp, onRefresh, 
 
             <CardContainer title={state.currentPath || 'Home'}>
                 <div className="relative">
-                        {state.loading && (
-                            <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/70">
-                                <Loader2 className="h-6 w-6 animate-spin" />
-                            </div>
-                        )}
+                    {state.loading && (
+                        <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/70">
+                            <Loader2 className="h-6 w-6 animate-spin" />
+                        </div>
+                    )}
 
-                        {state.items.length === 0 && !state.loading ? (
-                            <div className="flex h-56 flex-col items-center justify-center gap-2 px-4 text-center text-sm text-muted-foreground">
-                                <FolderOpen className="h-10 w-10 text-muted-foreground/60" />
-                                <p>This directory is empty.</p>
-                            </div>
-                        ) : (
-                            <div className="max-h-[480px] overflow-y-auto">
-                                {state.items.map((item) => (
-                                    <div
-                                        key={item.path}
+                    {state.items.length === 0 && !state.loading ? (
+                        <div className="flex h-56 flex-col items-center justify-center gap-2 px-4 text-center text-sm text-muted-foreground">
+                            <FolderOpen className="h-10 w-10 text-muted-foreground/60" />
+                            <p>This directory is empty.</p>
+                        </div>
+                    ) : (
+                        <div className="max-h-[480px] overflow-y-auto">
+                            {state.items.map((item) => (
+                                <div
+                                    key={item.path}
+                                    className={cn(
+                                        'flex items-center justify-between gap-3 px-4 py-3 transition-colors',
+                                        'border-b border-border/60 last:border-b-0',
+                                    )}
+                                >
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            if (item.type === 'directory') {
+                                                onNavigate(item.path);
+                                            }
+                                        }}
                                         className={cn(
-                                            'flex items-center justify-between gap-3 px-4 py-3 transition-colors',
-                                            'border-b border-border/60 last:border-b-0',
+                                            'flex flex-1 items-center gap-3 text-left focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
+                                            item.type === 'directory' ? 'hover:text-foreground' : '',
                                         )}
                                     >
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                if (item.type === 'directory') {
-                                                    onNavigate(item.path);
-                                                }
-                                            }}
-                                            className={cn(
-                                                'flex flex-1 items-center gap-3 text-left focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
-                                                item.type === 'directory' ? 'hover:text-foreground' : '',
-                                            )}
-                                        >
-                                            {item.type === 'directory' ? (
-                                                <Folder className="h-5 w-5 text-blue-500" />
-                                            ) : (
-                                                <FileText className="h-5 w-5 text-muted-foreground" />
-                                            )}
-                                            <div className="min-w-0">
-                                                <div className="truncate text-sm font-medium text-foreground">{item.name}</div>
-                                                <div className="text-xs text-muted-foreground">
-                                                    {item.type === 'directory' ? 'Directory' : `${formatBytes(item.size)} • ${item.permissions}`}
-                                                </div>
+                                        {item.type === 'directory' ? (
+                                            <Folder className="h-5 w-5 text-blue-500" />
+                                        ) : (
+                                            <FileText className="h-5 w-5 text-muted-foreground" />
+                                        )}
+                                        <div className="min-w-0">
+                                            <div className="truncate text-sm font-medium text-foreground">{item.name}</div>
+                                            <div className="text-xs text-muted-foreground">
+                                                {item.type === 'directory' ? 'Directory' : `${formatBytes(item.size)} • ${item.permissions}`}
                                             </div>
-                                        </button>
-
-                                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                                            <span>{formatTimestamp(item.modifiedAt)}</span>
-                                            {item.type === 'file' && (
-                                                <Button variant="ghost" size="icon" onClick={() => onDownload(item)} title="Download">
-                                                    <Download className="h-4 w-4" />
-                                                </Button>
-                                            )}
                                         </div>
+                                    </button>
+
+                                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                        <span>{formatTimestamp(item.modifiedAt)}</span>
+                                        {item.type === 'file' && (
+                                            <Button variant="ghost" size="icon" onClick={() => onDownload(item)} title="Download">
+                                                <Download className="h-4 w-4" />
+                                            </Button>
+                                        )}
                                     </div>
-                                ))}
-                            </div>
-                        )}
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </CardContainer>
         </PageHeader>

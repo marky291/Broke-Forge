@@ -1,8 +1,7 @@
-import { CardContainer } from '@/components/ui/card-container';
 import { Button } from '@/components/ui/button';
+import { CardContainer } from '@/components/ui/card-container';
 import { router } from '@inertiajs/react';
 import { Calendar, CreditCard, TrendingUp } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 type Subscription = {
     id: number;
@@ -15,15 +14,17 @@ type Subscription = {
     created_at: string;
 } | null;
 
-type SubscriptionPlan = {
-    id: number;
-    name: string;
-    slug: string;
-    amount: number;
-    currency: string;
-    interval: 'month' | 'year';
-    formatted_price: string;
-} | undefined;
+type SubscriptionPlan =
+    | {
+          id: number;
+          name: string;
+          slug: string;
+          amount: number;
+          currency: string;
+          interval: 'month' | 'year';
+          formatted_price: string;
+      }
+    | undefined;
 
 type UpcomingInvoice = {
     total: string;
@@ -38,13 +39,7 @@ type SubscriptionCardProps = {
     upcomingInvoice: UpcomingInvoice;
 };
 
-export default function SubscriptionCard({
-    subscription,
-    currentPlan,
-    isOnTrial,
-    isCancelled,
-    upcomingInvoice,
-}: SubscriptionCardProps) {
+export default function SubscriptionCard({ subscription, currentPlan, isOnTrial, isCancelled, upcomingInvoice }: SubscriptionCardProps) {
     const handleCancelSubscription = () => {
         if (confirm('Are you sure you want to cancel your subscription? You will lose access at the end of your billing period.')) {
             router.delete('/billing/subscriptions', {
@@ -54,36 +49,40 @@ export default function SubscriptionCard({
     };
 
     const handleResumeSubscription = () => {
-        router.post('/billing/subscriptions/resume', {}, {
-            preserveScroll: true,
-        });
+        router.post(
+            '/billing/subscriptions/resume',
+            {},
+            {
+                preserveScroll: true,
+            },
+        );
     };
 
     const getStatusBadge = () => {
         if (isOnTrial) {
             return (
-                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-1 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
                     Trial
                 </span>
             );
         }
         if (isCancelled) {
             return (
-                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
                     Cancelled
                 </span>
             );
         }
         if (subscription?.stripe_status === 'active') {
             return (
-                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
                     Active
                 </span>
             );
         }
         if (subscription?.stripe_status === 'past_due') {
             return (
-                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                <span className="inline-flex items-center rounded-full bg-red-100 px-2.5 py-1 text-xs font-medium text-red-700 dark:bg-red-900/30 dark:text-red-400">
                     Past Due
                 </span>
             );
@@ -98,33 +97,26 @@ export default function SubscriptionCard({
                     <div className="flex items-start justify-between">
                         <div>
                             <h3 className="text-2xl font-bold">Free Plan</h3>
-                            <p className="text-sm text-muted-foreground mt-1">
-                                Limited to 1 server
-                            </p>
+                            <p className="mt-1 text-sm text-muted-foreground">Limited to 1 server</p>
                         </div>
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400">
+                        <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 dark:bg-gray-900/30 dark:text-gray-400">
                             Free
                         </span>
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                        Upgrade to a paid plan to unlock more servers and advanced features.
-                    </p>
+                    <p className="text-sm text-muted-foreground">Upgrade to a paid plan to unlock more servers and advanced features.</p>
                 </div>
             </CardContainer>
         );
     }
 
     return (
-        <CardContainer
-            title="Current Subscription"
-            icon={TrendingUp}
-        >
+        <CardContainer title="Current Subscription" icon={TrendingUp}>
             <div className="space-y-6">
                 {/* Plan Info */}
                 <div className="flex items-start justify-between">
                     <div>
                         <h3 className="text-2xl font-bold">{currentPlan?.name || 'Unknown Plan'}</h3>
-                        <p className="text-sm text-muted-foreground mt-1">
+                        <p className="mt-1 text-sm text-muted-foreground">
                             {currentPlan?.formatted_price} / {currentPlan?.interval}
                         </p>
                     </div>
@@ -133,14 +125,12 @@ export default function SubscriptionCard({
 
                 {/* Trial Info */}
                 {isOnTrial && subscription.trial_ends_at && (
-                    <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 rounded-lg p-4">
+                    <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-900 dark:bg-blue-950/30">
                         <div className="flex items-start gap-3">
-                            <Calendar className="size-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+                            <Calendar className="mt-0.5 size-5 text-blue-600 dark:text-blue-400" />
                             <div>
-                                <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                                    Trial Period
-                                </p>
-                                <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                                <p className="text-sm font-medium text-blue-900 dark:text-blue-100">Trial Period</p>
+                                <p className="mt-1 text-sm text-blue-700 dark:text-blue-300">
                                     Your trial ends on {new Date(subscription.trial_ends_at).toLocaleDateString()}
                                 </p>
                             </div>
@@ -150,14 +140,12 @@ export default function SubscriptionCard({
 
                 {/* Cancelled Info */}
                 {isCancelled && subscription.ends_at && (
-                    <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-lg p-4">
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950/30">
                         <div className="flex items-start gap-3">
-                            <Calendar className="size-5 text-amber-600 dark:text-amber-400 mt-0.5" />
+                            <Calendar className="mt-0.5 size-5 text-amber-600 dark:text-amber-400" />
                             <div className="flex-1">
-                                <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
-                                    Subscription Cancelled
-                                </p>
-                                <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+                                <p className="text-sm font-medium text-amber-900 dark:text-amber-100">Subscription Cancelled</p>
+                                <p className="mt-1 text-sm text-amber-700 dark:text-amber-300">
                                     Your subscription will end on {new Date(subscription.ends_at).toLocaleDateString()}
                                 </p>
                             </div>
@@ -175,9 +163,7 @@ export default function SubscriptionCard({
                             </div>
                             <div className="text-right">
                                 <p className="font-semibold">{upcomingInvoice.total}</p>
-                                <p className="text-xs text-muted-foreground">
-                                    Due {new Date(upcomingInvoice.period_end).toLocaleDateString()}
-                                </p>
+                                <p className="text-xs text-muted-foreground">Due {new Date(upcomingInvoice.period_end).toLocaleDateString()}</p>
                             </div>
                         </div>
                     </div>
@@ -186,18 +172,11 @@ export default function SubscriptionCard({
                 {/* Actions */}
                 <div className="flex gap-2">
                     {isCancelled ? (
-                        <Button
-                            onClick={handleResumeSubscription}
-                            className="w-full"
-                        >
+                        <Button onClick={handleResumeSubscription} className="w-full">
                             Resume Subscription
                         </Button>
                     ) : (
-                        <Button
-                            variant="destructive"
-                            onClick={handleCancelSubscription}
-                            className="w-full"
-                        >
+                        <Button variant="destructive" onClick={handleCancelSubscription} className="w-full">
                             Cancel Subscription
                         </Button>
                     )}

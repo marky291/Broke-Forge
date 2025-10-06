@@ -21,12 +21,7 @@ interface DatabaseStatusDisplayProps {
     onUninstall: () => void;
 }
 
-export default function DatabaseStatusDisplay({
-    database,
-    serverId,
-    availableTypes,
-    onUninstall,
-}: DatabaseStatusDisplayProps) {
+export default function DatabaseStatusDisplay({ database, serverId, availableTypes, onUninstall }: DatabaseStatusDisplayProps) {
     const getStatusConfig = (status: string) => {
         switch (status) {
             case 'active':
@@ -85,9 +80,7 @@ export default function DatabaseStatusDisplay({
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         <DatabaseIcon className="h-5 w-5 text-green-600" />
-                        <div className="text-sm font-medium tracking-wide text-neutral-600 uppercase dark:text-neutral-300">
-                            Database Service
-                        </div>
+                        <div className="text-sm font-medium tracking-wide text-neutral-600 uppercase dark:text-neutral-300">Database Service</div>
                     </div>
                     <Badge variant={statusConfig.variant} className="gap-1.5">
                         <StatusIcon className={`h-3 w-3 ${isProcessing ? 'animate-spin' : ''}`} />
@@ -96,10 +89,10 @@ export default function DatabaseStatusDisplay({
                 </div>
             </div>
             <Separator />
-            
-            <div className="px-4 py-4 space-y-4">
+
+            <div className="space-y-4 px-4 py-4">
                 {/* Database Information */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
                     <div>
                         <div className="text-sm text-muted-foreground">Type</div>
                         <div className="font-medium">{typeName}</div>
@@ -121,8 +114,8 @@ export default function DatabaseStatusDisplay({
                 {/* Actions */}
                 {!isProcessing && (
                     <div className="flex justify-end gap-2">
-                        <Button 
-                            variant="outline" 
+                        <Button
+                            variant="outline"
                             size="sm"
                             onClick={() => {
                                 // Add manage/configure functionality here
@@ -131,11 +124,7 @@ export default function DatabaseStatusDisplay({
                         >
                             Manage
                         </Button>
-                        <Button 
-                            variant="destructive" 
-                            size="sm"
-                            onClick={onUninstall}
-                        >
+                        <Button variant="destructive" size="sm" onClick={onUninstall}>
                             Uninstall
                         </Button>
                     </div>

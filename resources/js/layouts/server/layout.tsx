@@ -1,7 +1,7 @@
-import ServerContentLayout from './server-content-layout';
-import SiteLayout from './site-layout';
 import { type BreadcrumbItem, type ServerMetric } from '@/types';
 import { PropsWithChildren } from 'react';
+import ServerContentLayout from './server-content-layout';
+import SiteLayout from './site-layout';
 
 interface ServerLayoutProps extends PropsWithChildren {
     server: {

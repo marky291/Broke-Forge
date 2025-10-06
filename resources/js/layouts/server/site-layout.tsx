@@ -1,19 +1,9 @@
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { NavigationCard, NavigationSidebar } from '@/components/navigation-card';
 import AppLayout from '@/layouts/app-layout';
 import { cn, formatRelativeTime } from '@/lib/utils';
 import { type BreadcrumbItem, type NavItem } from '@/types';
 import { usePage } from '@inertiajs/react';
-import {
-    AppWindow,
-    ArrowLeft,
-    Folder,
-    GitBranch,
-    Globe,
-    Rocket,
-    Terminal
-} from 'lucide-react';
+import { AppWindow, ArrowLeft, Folder, GitBranch, Globe, Rocket, Terminal } from 'lucide-react';
 import { PropsWithChildren } from 'react';
 
 interface SiteLayoutProps extends PropsWithChildren {
@@ -127,47 +117,47 @@ export default function SiteLayout({ children, server, site, breadcrumbs }: Site
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             {/* Site Header */}
-            <div className="bg-card px-8 py-4 border-b">
+            <div className="border-b bg-card px-8 py-4">
                 <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-8 flex-1">
+                    <div className="flex flex-1 items-center gap-8">
                         {/* Title */}
                         <div className="flex items-center gap-3">
-                            <div className="flex items-center justify-center w-8 h-8 rounded-md bg-primary/10">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10">
                                 <Globe className="h-4 w-4 text-primary" />
                             </div>
                             <h1 className="text-xl font-semibold text-foreground">{site.domain || 'Site'}</h1>
                         </div>
 
                         {/* Server Info */}
-                        <div className="flex items-center gap-8 text-sm border-l pl-8">
+                        <div className="flex items-center gap-8 border-l pl-8 text-sm">
                             <div>
-                                <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Public IP</div>
+                                <div className="mb-0.5 text-[10px] tracking-wide text-muted-foreground uppercase">Public IP</div>
                                 <div className="font-medium">{server.public_ip || 'N/A'}</div>
                             </div>
                             <div>
-                                <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Private IP</div>
+                                <div className="mb-0.5 text-[10px] tracking-wide text-muted-foreground uppercase">Private IP</div>
                                 <div className="font-medium">{server.private_ip || 'N/A'}</div>
                             </div>
                             <div>
-                                <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Region</div>
+                                <div className="mb-0.5 text-[10px] tracking-wide text-muted-foreground uppercase">Region</div>
                                 <div className="font-medium">Frankfurt</div>
                             </div>
                             <div>
-                                <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">OS</div>
+                                <div className="mb-0.5 text-[10px] tracking-wide text-muted-foreground uppercase">OS</div>
                                 <div className="font-medium">Ubuntu 24.04</div>
                             </div>
                         </div>
 
                         {/* Git Info */}
                         {site.git_status === 'installed' && site.git_repository && (
-                            <div className="flex items-center gap-8 text-sm border-l pl-8">
+                            <div className="flex items-center gap-8 border-l pl-8 text-sm">
                                 <div>
-                                    <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Repository</div>
+                                    <div className="mb-0.5 text-[10px] tracking-wide text-muted-foreground uppercase">Repository</div>
                                     <div className="font-medium">{site.git_repository}</div>
                                 </div>
                                 {site.git_branch && (
                                     <div>
-                                        <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Branch</div>
+                                        <div className="mb-0.5 text-[10px] tracking-wide text-muted-foreground uppercase">Branch</div>
                                         <div className="flex items-center gap-1.5 font-medium">
                                             <GitBranch className="h-3.5 w-3.5 text-muted-foreground" />
                                             {site.git_branch}
@@ -175,10 +165,8 @@ export default function SiteLayout({ children, server, site, breadcrumbs }: Site
                                     </div>
                                 )}
                                 <div>
-                                    <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Last Deployment</div>
-                                    <div className="font-medium">
-                                        {site.last_deployed_at ? formatRelativeTime(site.last_deployed_at) : 'Never'}
-                                    </div>
+                                    <div className="mb-0.5 text-[10px] tracking-wide text-muted-foreground uppercase">Last Deployment</div>
+                                    <div className="font-medium">{site.last_deployed_at ? formatRelativeTime(site.last_deployed_at) : 'Never'}</div>
                                 </div>
                             </div>
                         )}
@@ -186,15 +174,13 @@ export default function SiteLayout({ children, server, site, breadcrumbs }: Site
 
                     {/* Health Indicator */}
                     <div>
-                        <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Health</div>
-                        <div className={cn("font-medium", healthConfig.color)}>
-                            {healthConfig.label}
-                        </div>
+                        <div className="mb-0.5 text-[10px] tracking-wide text-muted-foreground uppercase">Health</div>
+                        <div className={cn('font-medium', healthConfig.color)}>{healthConfig.label}</div>
                     </div>
                 </div>
             </div>
 
-            <div className="flex h-full mt-6">
+            <div className="mt-6 flex h-full">
                 <NavigationSidebar>
                     <div className="space-y-6">
                         <NavigationCard items={[backToServerNav]} />
@@ -204,9 +190,7 @@ export default function SiteLayout({ children, server, site, breadcrumbs }: Site
 
                 {/* Main Content */}
                 <main className="flex-1 overflow-auto">
-                    <div className="p-6">
-                        {children}
-                    </div>
+                    <div className="p-6">{children}</div>
                 </main>
             </div>
         </AppLayout>

@@ -33,10 +33,8 @@ export function NavigationCardItem({ item }: NavigationCardItemProps) {
         <Link
             href={item.href}
             className={cn(
-                'navigation-card-item flex h-10 w-full items-center gap-3 rounded-lg cursor-pointer p-1 px-2.5 text-sm transition-all hover:text-neutral-800 dark:hover:text-white',
-                item.isActive
-                    ? 'border-white/8 bg-white/5 text-neutral-900 opacity-100 dark:text-neutral-50'
-                    : 'text-muted-foreground'
+                'navigation-card-item flex h-10 w-full cursor-pointer items-center gap-3 rounded-lg p-1 px-2.5 text-sm transition-all hover:text-neutral-800 dark:hover:text-white',
+                item.isActive ? 'border-white/8 bg-white/5 text-neutral-900 opacity-100 dark:text-neutral-50' : 'text-muted-foreground',
             )}
         >
             {Icon && <Icon className="size-4 flex-shrink-0" strokeWidth={2} />}
@@ -53,13 +51,11 @@ export function NavigationCardItem({ item }: NavigationCardItemProps) {
  */
 export function NavigationCard({ items, title, className }: NavigationCardProps) {
     return (
-        <div className={cn("", className)}>
+        <div className={cn('', className)}>
             <nav className="">
                 {title && (
-                    <div className="px-3 mb-2">
-                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                            {title}
-                        </span>
+                    <div className="mb-2 px-3">
+                        <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">{title}</span>
                     </div>
                 )}
                 {items.map((item) => (
@@ -80,9 +76,7 @@ export function NavigationSidebar({ children, className }: NavigationSidebarProp
         <div className={'p-6'}>
             <aside className={cn('w-64', className)}>
                 <div className="flex h-full flex-col">
-                    <div className="">
-                        {children}
-                    </div>
+                    <div className="">{children}</div>
                 </div>
             </aside>
         </div>

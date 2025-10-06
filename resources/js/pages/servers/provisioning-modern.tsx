@@ -1,5 +1,5 @@
-import ProvisioningProgress from '@/components/provisioning/provisioning-progress';
 import ProvisioningCommands from '@/components/provisioning/provisioning-commands';
+import ProvisioningProgress from '@/components/provisioning/provisioning-progress';
 import ServerLayout from '@/layouts/server/layout';
 import { dashboard } from '@/routes';
 import { show as showServer } from '@/routes/servers';
@@ -45,12 +45,7 @@ interface ProvisioningPageProps {
     latestProgress: ServerEvent[];
 }
 
-export default function ProvisioningPage({
-    server,
-    provision,
-    events,
-    latestProgress,
-}: ProvisioningPageProps) {
+export default function ProvisioningPage({ server, provision, events, latestProgress }: ProvisioningPageProps) {
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard.url() },
         { title: `Server #${server.id}`, href: showServer(server.id).url },
@@ -60,43 +55,27 @@ export default function ProvisioningPage({
     return (
         <ServerLayout server={server} breadcrumbs={breadcrumbs}>
             <Head title={`Provisioning — ${server.vanity_name}`} />
-            
+
             <div className="space-y-6">
                 <div>
                     <h2 className="text-2xl font-semibold">Server Provisioning</h2>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                        Set up your server with essential services and configurations.
-                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">Set up your server with essential services and configurations.</p>
                 </div>
 
                 {/* Show provisioning commands if server needs setup */}
-                {provision && (
-                    <ProvisioningCommands
-                        provisionData={provision}
-                        serverName={server.vanity_name}
-                        serverIp={server.public_ip}
-                    />
-                )}
+                {provision && <ProvisioningCommands provisionData={provision} serverName={server.vanity_name} serverIp={server.public_ip} />}
 
                 {/* Show progress if provisioning has started */}
-                {events.length > 0 && (
-                    <ProvisioningProgress
-                        events={events}
-                        latestProgress={latestProgress}
-                        serverId={server.id}
-                    />
-                )}
+                {events.length > 0 && <ProvisioningProgress events={events} latestProgress={latestProgress} serverId={server.id} />}
 
                 {/* Show completion message */}
                 {server.provision_status === 'completed' && (
                     <div className="rounded-xl border border-green-200 bg-green-50 p-6 dark:border-green-900 dark:bg-green-900/10">
                         <div className="flex items-center gap-2">
                             <div className="h-2 w-2 rounded-full bg-green-600"></div>
-                            <h3 className="font-semibold text-green-900 dark:text-green-100">
-                                Provisioning Complete!
-                            </h3>
+                            <h3 className="font-semibold text-green-900 dark:text-green-100">Provisioning Complete!</h3>
                         </div>
-                        <p className="text-sm text-green-700 dark:text-green-200 mt-1">
+                        <p className="mt-1 text-sm text-green-700 dark:text-green-200">
                             Your server is fully configured and ready to host applications.
                         </p>
                     </div>

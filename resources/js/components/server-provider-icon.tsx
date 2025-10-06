@@ -1,16 +1,7 @@
-import { Server as ServerIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Server as ServerIcon } from 'lucide-react';
 
-export type ServerProvider =
-    | 'aws'
-    | 'google-cloud'
-    | 'azure'
-    | 'digitalocean'
-    | 'linode'
-    | 'vultr'
-    | 'hetzner'
-    | 'custom'
-    | null;
+export type ServerProvider = 'aws' | 'google-cloud' | 'azure' | 'digitalocean' | 'linode' | 'vultr' | 'hetzner' | 'custom' | null;
 
 interface ProviderConfig {
     name: string;
@@ -157,7 +148,7 @@ export function ServerProviderIcon({ provider, size = 'md', className }: ServerP
                 config.darkBgColor,
                 config.darkTextColor,
                 sizeClasses[size],
-                className
+                className,
             )}
             title={config.name}
         >

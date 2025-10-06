@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
 interface PollingOptions {
     url: string;
@@ -9,21 +9,14 @@ interface PollingOptions {
     stopCondition?: (data: any) => boolean;
 }
 
-export function useStatusPolling({
-    url,
-    interval = 2000,
-    enabled = true,
-    onSuccess,
-    onError,
-    stopCondition,
-}: PollingOptions) {
+export function useStatusPolling({ url, interval = 2000, enabled = true, onSuccess, onError, stopCondition }: PollingOptions) {
     const intervalRef = useRef<NodeJS.Timeout | null>(null);
     const mountedRef = useRef(true);
 
     const poll = useCallback(async () => {
         try {
             const response = await fetch(url, {
-                headers: { 'Accept': 'application/json' }
+                headers: { Accept: 'application/json' },
             });
 
             if (!response.ok) {

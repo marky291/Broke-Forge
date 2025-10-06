@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { store as storeServer } from '@/routes/servers';
 import { Form } from '@inertiajs/react';
-import { useState, ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 
 function generateFriendlyName(): string {
     const adjectives = [
@@ -79,14 +79,12 @@ export default function DeployServerModal({ trigger }: DeployServerModalProps) {
             </DialogTrigger>
             <DialogContent className="sm:max-w-[525px]">
                 <div className="flex items-start gap-4">
-                    <div className="flex-shrink-0 mt-1">
+                    <div className="mt-1 flex-shrink-0">
                         <ServerProviderIcon provider={provider} size="lg" />
                     </div>
                     <DialogHeader className="flex-1">
                         <DialogTitle>Deploy New Server</DialogTitle>
-                        <DialogDescription>
-                            Add a new server to your infrastructure. We'll handle the provisioning automatically.
-                        </DialogDescription>
+                        <DialogDescription>Add a new server to your infrastructure. We'll handle the provisioning automatically.</DialogDescription>
                     </DialogHeader>
                 </div>
                 <Form method="post" action={storeServer()} className="grid gap-4 py-4">

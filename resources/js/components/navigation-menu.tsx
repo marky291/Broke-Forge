@@ -32,9 +32,7 @@ export function NavigationMenu({ items, title, className }: NavigationMenuProps)
             <nav className="divide-y divide-neutral-200 rounded-lg border border-neutral-200 bg-white shadow-md shadow-black/5 dark:divide-white/8 dark:border-white/8 dark:bg-white/3">
                 {title && (
                     <div className="px-4 py-3">
-                        <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 select-none">
-                            {title}
-                        </div>
+                        <div className="text-[10px] font-semibold tracking-wider text-muted-foreground/70 uppercase select-none">{title}</div>
                     </div>
                 )}
                 <div className="p-2">
@@ -45,10 +43,10 @@ export function NavigationMenu({ items, title, className }: NavigationMenuProps)
                                 key={item.href}
                                 href={item.href}
                                 className={cn(
-                                    'group flex items-center gap-3 px-3 py-2 text-sm font-medium transition-all duration-150 rounded-lg',
+                                    'group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150',
                                     item.isActive
                                         ? 'bg-accent text-accent-foreground'
-                                        : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+                                        : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground',
                                 )}
                             >
                                 {Icon && <Icon className="size-4 flex-shrink-0" strokeWidth={2} />}

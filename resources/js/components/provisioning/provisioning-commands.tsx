@@ -16,11 +16,7 @@ interface ProvisioningCommandsProps {
     serverIp: string;
 }
 
-export default function ProvisioningCommands({ 
-    provisionData, 
-    serverName, 
-    serverIp 
-}: ProvisioningCommandsProps) {
+export default function ProvisioningCommands({ provisionData, serverName, serverIp }: ProvisioningCommandsProps) {
     const [copiedField, setCopiedField] = useState<string | null>(null);
 
     if (!provisionData) {
@@ -42,26 +38,24 @@ export default function ProvisioningCommands({
             <CardHeader>
                 <div className="flex items-center gap-2">
                     <Terminal className="h-5 w-5 text-blue-600" />
-                    <CardTitle className="text-blue-900 dark:text-blue-100">
-                        Server Provisioning Required
-                    </CardTitle>
+                    <CardTitle className="text-blue-900 dark:text-blue-100">Server Provisioning Required</CardTitle>
                 </div>
                 <CardDescription className="text-blue-700 dark:text-blue-200">
                     Run the following command on your server ({serverName} - {serverIp}) to complete setup
                 </CardDescription>
             </CardHeader>
-            
+
             <CardContent className="space-y-4">
                 <Alert>
                     <AlertDescription>
-                        <strong>Important:</strong> This command must be executed as root on your server. 
-                        Make sure you have SSH access before proceeding.
+                        <strong>Important:</strong> This command must be executed as root on your server. Make sure you have SSH access before
+                        proceeding.
                     </AlertDescription>
                 </Alert>
 
                 <div className="space-y-3">
                     <div>
-                        <div className="flex items-center justify-between mb-2">
+                        <div className="mb-2 flex items-center justify-between">
                             <label className="text-sm font-medium">Root Password</label>
                             <Button
                                 variant="outline"
@@ -69,11 +63,11 @@ export default function ProvisioningCommands({
                                 onClick={() => copyToClipboard(provisionData.root_password, 'password')}
                                 className="h-7"
                             >
-                                <Copy className="h-3 w-3 mr-1" />
+                                <Copy className="mr-1 h-3 w-3" />
                                 {copiedField === 'password' ? 'Copied!' : 'Copy'}
                             </Button>
                         </div>
-                        <code className="block w-full p-3 text-sm bg-gray-100 dark:bg-gray-800 rounded border font-mono">
+                        <code className="block w-full rounded border bg-gray-100 p-3 font-mono text-sm dark:bg-gray-800">
                             {provisionData.root_password}
                         </code>
                     </div>
@@ -81,27 +75,24 @@ export default function ProvisioningCommands({
                     <Separator />
 
                     <div>
-                        <div className="flex items-center justify-between mb-2">
+                        <div className="mb-2 flex items-center justify-between">
                             <label className="text-sm font-medium">Provisioning Command</label>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => copyToClipboard(provisionData.command, 'command')}
-                                className="h-7"
-                            >
-                                <Copy className="h-3 w-3 mr-1" />
+                            <Button variant="outline" size="sm" onClick={() => copyToClipboard(provisionData.command, 'command')} className="h-7">
+                                <Copy className="mr-1 h-3 w-3" />
                                 {copiedField === 'command' ? 'Copied!' : 'Copy'}
                             </Button>
                         </div>
-                        <code className="block w-full p-3 text-sm bg-gray-100 dark:bg-gray-800 rounded border font-mono break-all">
+                        <code className="block w-full rounded border bg-gray-100 p-3 font-mono text-sm break-all dark:bg-gray-800">
                             {provisionData.command}
                         </code>
                     </div>
                 </div>
 
-                <div className="text-xs text-muted-foreground pt-2 border-t">
-                    <p><strong>Steps:</strong></p>
-                    <ol className="list-decimal list-inside mt-1 space-y-1">
+                <div className="border-t pt-2 text-xs text-muted-foreground">
+                    <p>
+                        <strong>Steps:</strong>
+                    </p>
+                    <ol className="mt-1 list-inside list-decimal space-y-1">
                         <li>SSH into your server as root</li>
                         <li>Copy and paste the provisioning command above</li>
                         <li>Press Enter to execute the script</li>
