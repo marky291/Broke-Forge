@@ -117,7 +117,7 @@ class ServerMonitoringController extends Controller
     {
         // Validate timeframe parameter
         $hours = $request->validate([
-            'hours' => 'nullable|integer|in:24,72,168',
+            'hours' => 'nullable|integer|in:1,24,72,168',
         ])['hours'] ?? 24;
 
         $metrics = $server->metrics()

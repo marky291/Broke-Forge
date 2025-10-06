@@ -278,7 +278,7 @@ class ServerMonitoringTest extends TestCase
         $response->assertJsonValidationErrors(['hours']);
 
         // Test valid timeframes
-        $validTimeframes = [24, 72, 168];
+        $validTimeframes = [1, 24, 72, 168];
         foreach ($validTimeframes as $hours) {
             $response = $this->actingAs($user)
                 ->getJson(route('servers.monitoring.metrics', ['server' => $server, 'hours' => $hours]));
