@@ -170,11 +170,7 @@ export const ServerFileBrowser = ({ state, onNavigate, onRefresh, onUpload, onDo
                         <div>
                             <div className="flex items-center gap-3 pl-4">
                                 {state.items.length > 0 && (
-                                    <Checkbox
-                                        checked={allItemsSelected}
-                                        onCheckedChange={handleSelectAll}
-                                        aria-label="Select all items"
-                                    />
+                                    <Checkbox checked={allItemsSelected} onCheckedChange={handleSelectAll} aria-label="Select all items" />
                                 )}
                                 <Breadcrumb>
                                     <BreadcrumbList>
@@ -237,7 +233,7 @@ export const ServerFileBrowser = ({ state, onNavigate, onRefresh, onUpload, onDo
                                         <div
                                             key={item.path}
                                             className={cn(
-                                                'flex items-center justify-between gap-3 px-4 py-3 transition-colors border-b border-border/60 last:border-b-0',
+                                                'flex items-center justify-between gap-3 border-b border-border/60 px-4 py-3 transition-colors last:border-b-0',
                                                 item.type === 'directory' && 'hover:bg-muted/50',
                                                 selectedItems.has(item.path) && 'bg-muted/30',
                                             )}
@@ -258,7 +254,7 @@ export const ServerFileBrowser = ({ state, onNavigate, onRefresh, onUpload, onDo
                                                     }}
                                                     disabled={state.loading}
                                                     className={cn(
-                                                        'flex flex-1 items-center gap-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                                                        'flex flex-1 items-center gap-3 text-left focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
                                                         item.type === 'directory' ? 'cursor-pointer' : 'cursor-default',
                                                     )}
                                                 >

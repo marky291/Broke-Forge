@@ -240,14 +240,18 @@ export default function Sites({ server, sites }: SitesProps) {
                         </svg>
                     }
                     action={<CardContainerAddButton label="Add Site" onClick={() => setShowAddSiteDialog(true)} aria-label="Add Site" />}
+                    parentBorder={false}
                 >
                     {sites.data.length > 0 ? (
-                        <div>
-                            {sites.data.map((site, index) => (
-                                <div key={site.id} style={{ marginBottom: index === sites.data.length - 1 ? '0' : '24px' }}>
+                        <div className="space-y-3">
+                            {sites.data.map((site) => (
+                                <div
+                                    key={site.id}
+                                    className="divide-y divide-neutral-200 rounded-lg border border-neutral-200 bg-white shadow-md shadow-black/5 dark:divide-white/8 dark:border-white/8 dark:bg-white/3"
+                                >
                                     <Link href={showSite({ server: server.id, site: site.id }).url} className="group block">
-                                        <div className="border-b border-border/50 px-6 transition-colors hover:bg-muted/30">
-                                            <div className="flex items-center gap-6 py-2">
+                                        <div className="px-6 py-6 transition-colors hover:bg-muted/30">
+                                            <div className="flex items-center gap-6">
                                                 {/* Icon */}
                                                 <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-primary/10">
                                                     <Globe className="h-5 w-5 text-primary" />
@@ -307,14 +311,18 @@ export default function Sites({ server, sites }: SitesProps) {
                             ))}
                         </div>
                     ) : (
-                        <div className="p-8 text-center">
-                            <Globe className="mx-auto h-12 w-12 text-muted-foreground/50" />
-                            <h3 className="mt-4 text-lg font-semibold">No sites configured</h3>
-                            <p className="mt-2 text-sm text-muted-foreground">Get started by adding your first site to this server.</p>
-                            <Button onClick={() => setShowAddSiteDialog(true)} className="mt-4" variant="outline">
-                                <Plus className="mr-2 h-4 w-4" />
-                                Add Your First Site
-                            </Button>
+                        <div className="divide-y divide-neutral-200 rounded-lg border border-neutral-200 bg-white shadow-md shadow-black/5 dark:divide-white/8 dark:border-white/8 dark:bg-white/3">
+                            <div className="px-6 py-6">
+                                <div className="p-8 text-center">
+                                    <Globe className="mx-auto h-12 w-12 text-muted-foreground/50" />
+                                    <h3 className="mt-4 text-lg font-semibold">No sites configured</h3>
+                                    <p className="mt-2 text-sm text-muted-foreground">Get started by adding your first site to this server.</p>
+                                    <Button onClick={() => setShowAddSiteDialog(true)} className="mt-4" variant="outline">
+                                        <Plus className="mr-2 h-4 w-4" />
+                                        Add Your First Site
+                                    </Button>
+                                </div>
+                            </div>
                         </div>
                     )}
                 </CardContainer>

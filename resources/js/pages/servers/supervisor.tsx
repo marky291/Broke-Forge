@@ -14,13 +14,7 @@ import { Head, router, useForm } from '@inertiajs/react';
 import { CheckCircle, Eye, Loader2, Pause, Play, RefreshCw, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-export default function Supervisor({
-    server,
-    tasks,
-}: {
-    server: Server;
-    tasks: any[];
-}) {
+export default function Supervisor({ server, tasks }: { server: Server; tasks: any[] }) {
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard.url() },
         { title: server.vanity_name, href: showServer({ server: server.id }).url },
@@ -51,7 +45,6 @@ export default function Supervisor({
         auto_restart: true,
         autorestart_unexpected: true,
     });
-
 
     // Auto-reload when supervisor status is installing or uninstalling
     useEffect(() => {
@@ -193,7 +186,9 @@ export default function Supervisor({
                                                         <div className="mt-1.5 flex items-center gap-3 text-xs text-muted-foreground">
                                                             <span>{task.working_directory}</span>
                                                             <span>•</span>
-                                                            <span>{task.processes} {task.processes === 1 ? 'process' : 'processes'}</span>
+                                                            <span>
+                                                                {task.processes} {task.processes === 1 ? 'process' : 'processes'}
+                                                            </span>
                                                             <span>•</span>
                                                             <span>User: {task.user}</span>
                                                         </div>
@@ -313,13 +308,7 @@ export default function Supervisor({
                         {/* User */}
                         <div className="space-y-2">
                             <Label htmlFor="user">Run as User</Label>
-                            <Input
-                                id="user"
-                                value={data.user}
-                                onChange={(e) => setData('user', e.target.value)}
-                                placeholder="brokeforge"
-                                required
-                            />
+                            <Input id="user" value={data.user} onChange={(e) => setData('user', e.target.value)} placeholder="brokeforge" required />
                             {errors.user && <p className="text-sm text-red-600">{errors.user}</p>}
                         </div>
 

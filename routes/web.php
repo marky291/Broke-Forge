@@ -155,6 +155,12 @@ Route::middleware('auth')->group(function () {
             ->name('php.store');
         Route::post('php/install', [ServerPhpController::class, 'install'])
             ->name('php.install');
+        Route::patch('php/{php}/set-cli-default', [ServerPhpController::class, 'setCliDefault'])
+            ->name('php.set-cli-default');
+        Route::patch('php/{php}/set-site-default', [ServerPhpController::class, 'setSiteDefault'])
+            ->name('php.set-site-default');
+        Route::delete('php/{php}', [ServerPhpController::class, 'destroy'])
+            ->name('php.destroy');
 
         // Sites management
         Route::prefix('sites')->scopeBindings()->group(function () {

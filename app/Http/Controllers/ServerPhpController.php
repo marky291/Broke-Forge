@@ -128,4 +128,75 @@ class ServerPhpController extends Controller
             ->route('servers.php', $server)
             ->with('success', 'PHP '.$validated['version'].' installation started');
     }
+
+    public function setCliDefault(Server $server, ServerPhp $php): RedirectResponse
+    {
+        // Verify the PHP version belongs to this server
+        if ($php->server_id !== $server->id) {
+            abort(404);
+        }
+
+        // Unset current CLI default
+        $server->phps()->update(['is_cli_default' => false]);
+
+        // Set new CLI default
+        $php->update(['is_cli_default' => true]);
+
+        return redirect()
+            ->route('servers.php', $server)
+            ->with('success', 'PHP '.$php->version.' set as CLI default');
+    }
+
+    public function setSiteDefault(Server $server, ServerPhp $php): RedirectResponse
+    {
+        // Verify the PHP version belongs to this server
+        if ($php->server_id !== $server->id) {
+            abort(404);
+        }
+
+        // Unset current Site default
+        $server->phps()->update(['is_site_default' => false]);
+
+        // Set new Site default
+        $php->update(['is_site_default' => true]);
+
+        return redirect()
+            ->route('servers.php', $server)
+            ->with('success', 'PHP '.$php->version.' set as Site default');
+    }
+
+    public function destroy(Server $server, ServerPhp $php): RedirectResponse
+    {
+        // Prevent removal if PHP is CLI default
+        if ($php->is_cli_default) {
+            return redirect()
+                ->route('servers.php', $server)
+                ->with('error', 'Cannot remove PHP '.$php->version.' as it is the CLI default version');
+        }
+
+        // Prevent removal if PHP is Site default
+        if ($php->is_site_default) {
+            return redirect()
+                ->route('servers.php', $server)
+                ->with('error', 'Cannot remove PHP '.$php->version.' as it is the Site default version');
+        }
+
+        // Verify the PHP version belongs to this server
+        if ($php->server_id !== $server->id) {
+            abort(404);
+        }
+
+        // Map version string to PhpVersion enum
+        $phpVersion = PhpVersion::from($php->version);
+
+        // Update PHP record to removing status
+        $php->update(['status' => \App\Enums\PhpStatus::Removing]);
+
+        // Dispatch removal job
+        \App\Packages\Services\PHP\PhpRemoverJob::dispatch($server, $phpVersion, $php->id);
+
+        return redirect()
+            ->route('servers.php', $server)
+            ->with('success', 'PHP '.$php->version.' removal started');
+    }
 }

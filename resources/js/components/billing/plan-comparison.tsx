@@ -64,9 +64,13 @@ export default function PlanComparison({ plans, currentPlan, subscription, onMan
         }
 
         // For plan changes (upgrade/downgrade), update subscription
-        router.put('/billing/subscriptions', { price_id: priceId }, {
-            preserveScroll: true,
-        });
+        router.put(
+            '/billing/subscriptions',
+            { price_id: priceId },
+            {
+                preserveScroll: true,
+            },
+        );
     };
 
     const isCurrentPlan = (priceId: string) => {

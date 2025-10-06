@@ -8,4 +8,5 @@ enum PhpStatus: string
     case Active = 'active';
     case Failed = 'failed';
     case Inactive = 'inactive';
+    case Removing = 'removing';
 }

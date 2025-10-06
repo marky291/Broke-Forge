@@ -14,6 +14,8 @@ interface CardContainerProps {
     children: ReactNode;
     /** Additional CSS classes for the container */
     className?: string;
+    /** Whether to wrap children with border/shadow styling (default: true) */
+    parentBorder?: boolean;
 }
 
 /**
@@ -31,8 +33,23 @@ interface CardContainerProps {
  *   <div>Your content here</div>
  * </CardContainer>
  * ```
+ *
+ * @example
+ * ```tsx
+ * // Without parent border - useful when children have their own card styling
+ * <CardContainer
+ *   title="Versions"
+ *   parentBorder={false}
+ * >
+ *   {items.map(item => (
+ *     <div className="divide-y divide-neutral-200 rounded-lg border...">
+ *       {item.content}
+ *     </div>
+ *   ))}
+ * </CardContainer>
+ * ```
  */
-export function CardContainer({ title, description, icon, action, children, className }: CardContainerProps) {
+export function CardContainer({ title, description, icon, action, children, className, parentBorder = true }: CardContainerProps) {
     return (
         <div className={cn('rounded-xl border border-neutral-200/70 bg-neutral-50 p-1.5 dark:border-white/5 dark:bg-white/3 grid gap-2', className)}>
             <div className="grid gap-2">
@@ -50,9 +67,13 @@ export function CardContainer({ title, description, icon, action, children, clas
                     </div>
                     {action && <div>{action}</div>}
                 </div>
-                <div className="divide-y divide-neutral-200 rounded-lg border border-neutral-200 bg-white shadow-md shadow-black/5 dark:divide-white/8 dark:border-white/8 dark:bg-white/3">
-                    <div className="px-6 py-6">{children}</div>
-                </div>
+                {parentBorder ? (
+                    <div className="divide-y divide-neutral-200 rounded-lg border border-neutral-200 bg-white shadow-md shadow-black/5 dark:divide-white/8 dark:border-white/8 dark:bg-white/3">
+                        <div className="px-6 py-6">{children}</div>
+                    </div>
+                ) : (
+                    <div>{children}</div>
+                )}
             </div>
         </div>
     );

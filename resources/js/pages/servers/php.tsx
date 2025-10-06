@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { CardContainer } from '@/components/ui/card-container';
 import { CardFormModal } from '@/components/ui/card-form-modal';
 import { CardInput } from '@/components/ui/card-input';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Label } from '@/components/ui/label';
 import { PageHeader } from '@/components/ui/page-header';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -10,7 +11,8 @@ import ServerLayout from '@/layouts/server/layout';
 import { dashboard } from '@/routes';
 import { show as showServer } from '@/routes/servers';
 import { type BreadcrumbItem, type Server, type ServerPhp } from '@/types';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, router, useForm } from '@inertiajs/react';
+import { MoreHorizontal } from 'lucide-react';
 import { useState } from 'react';
 
 type AvailablePhpVersions = {
@@ -68,6 +70,32 @@ export default function Php({
                 resetAddVersion();
             },
         });
+    };
+
+    const handleRemovePhp = (php: ServerPhp) => {
+        if (php.is_cli_default || php.is_site_default) {
+            return;
+        }
+
+        if (confirm(`Are you sure you want to remove PHP ${php.version}? This action cannot be undone.`)) {
+            router.delete(`/servers/${server.id}/php/${php.id}`);
+        }
+    };
+
+    const handleSetCliDefault = (php: ServerPhp) => {
+        if (php.is_cli_default) {
+            return;
+        }
+
+        router.patch(`/servers/${server.id}/php/${php.id}/set-cli-default`);
+    };
+
+    const handleSetSiteDefault = (php: ServerPhp) => {
+        if (php.is_site_default) {
+            return;
+        }
+
+        router.patch(`/servers/${server.id}/php/${php.id}/set-site-default`);
     };
 
     return (
@@ -150,32 +178,32 @@ export default function Php({
                 )}
 
                 {installedPhpVersions.length > 0 && (
-                    <>
-                        <CardContainer
-                            title="Versions"
-                            icon={
-                                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <path
-                                        d="M6 1L10.5 3.5V8.5L6 11L1.5 8.5V3.5L6 1Z"
-                                        stroke="currentColor"
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                    />
-                                    <path d="M6 6V11" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
-                                    <path d="M1.5 3.5L6 6L10.5 3.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
-                                </svg>
-                            }
-                            action={
-                                <CardContainerAddButton
-                                    label="Add Version"
-                                    onClick={() => setIsAddVersionDialogOpen(true)}
-                                    aria-label="Add Version"
+                    <CardContainer
+                        title="Versions"
+                        icon={
+                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path
+                                    d="M6 1L10.5 3.5V8.5L6 11L1.5 8.5V3.5L6 1Z"
+                                    stroke="currentColor"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
                                 />
-                            }
-                        >
-                            <div className="space-y-3">
-                                {installedPhpVersions.map((php) => (
-                                    <div key={php.id} className="flex items-center justify-between">
+                                <path d="M6 6V11" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+                                <path d="M1.5 3.5L6 6L10.5 3.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                        }
+                        action={
+                            <CardContainerAddButton label="Add Version" onClick={() => setIsAddVersionDialogOpen(true)} aria-label="Add Version" />
+                        }
+                        parentBorder={false}
+                    >
+                        <div className="space-y-3">
+                            {installedPhpVersions.map((php) => (
+                                <div
+                                    key={php.id}
+                                    className="divide-y divide-neutral-200 rounded-lg border border-neutral-200 bg-white shadow-md shadow-black/5 dark:divide-white/8 dark:border-white/8 dark:bg-white/3"
+                                >
+                                    <div className="flex items-center justify-between px-6 py-6">
                                         <div className="flex items-center gap-2">
                                             <span className="font-medium">PHP {php.version}</span>
                                             {php.is_cli_default && (
@@ -189,12 +217,37 @@ export default function Php({
                                                 </span>
                                             )}
                                         </div>
-                                        <div className="text-sm text-muted-foreground capitalize">{php.status}</div>
+                                        <div className="flex items-center gap-2">
+                                            <div className="text-sm text-muted-foreground capitalize">{php.status}</div>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="sm" className="size-8 p-0">
+                                                        <MoreHorizontal className="size-4" />
+                                                        <span className="sr-only">Open menu</span>
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuItem onClick={() => handleSetCliDefault(php)} disabled={php.is_cli_default}>
+                                                        Set as CLI Default
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={() => handleSetSiteDefault(php)} disabled={php.is_site_default}>
+                                                        Set as Site Default
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        variant="destructive"
+                                                        onClick={() => handleRemovePhp(php)}
+                                                        disabled={php.is_cli_default || php.is_site_default}
+                                                    >
+                                                        Remove PHP {php.version}
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </div>
                                     </div>
-                                ))}
-                            </div>
-                        </CardContainer>
-                    </>
+                                </div>
+                            ))}
+                        </div>
+                    </CardContainer>
                 )}
 
                 {defaultPhp && (
