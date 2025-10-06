@@ -16,6 +16,13 @@ class MySqlRemoverJob implements ShouldQueue
 {
     use Queueable;
 
+    /**
+     * The number of seconds the job can run before timing out.
+     *
+     * @var int
+     */
+    public $timeout = 600;
+
     public function __construct(
         public Server $server
     ) {}
@@ -24,21 +31,12 @@ class MySqlRemoverJob implements ShouldQueue
     {
         Log::info("Starting MySQL database removal for server #{$this->server->id}");
 
-        try {
-            // Create remover instance
-            $remover = new MySqlRemover($this->server);
+        // Create remover instance
+        $remover = new MySqlRemover($this->server);
 
-            // Execute removal - the remover handles all cleanup
-            $remover->execute();
+        // Execute removal - base class handles failure marking automatically
+        $remover->execute();
 
-            Log::info("MySQL database removal completed for server #{$this->server->id}");
-        } catch (\Exception $e) {
-            Log::error("MySQL database removal failed for server #{$this->server->id}", [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-
-            throw $e;
-        }
+        Log::info("MySQL database removal completed for server #{$this->server->id}");
     }
 }

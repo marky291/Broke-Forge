@@ -37,6 +37,17 @@ class MariaDbInstaller extends PackageInstaller implements \App\Packages\Base\Se
     }
 
     /**
+     * Mark MariaDB installation as failed in database
+     */
+    protected function markResourceAsFailed(string $errorMessage): void
+    {
+        $this->server->databases()->latest()->first()?->update([
+            'status' => DatabaseStatus::Failed,
+            'error_message' => $errorMessage,
+        ]);
+    }
+
+    /**
      * Execute the MariaDB server installation
      */
     public function execute(): void

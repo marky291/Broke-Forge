@@ -11,7 +11,10 @@ enum PackageName: string
     case Git = 'git';
     case Site = 'site';
     case Command = 'command';
+    case Php81 = 'php81';
+    case Php82 = 'php82';
     case Php83 = 'php83';
+    case Php84 = 'php84';
     case FirewallUfw = 'firewall-ufw';
     case Deployment = 'deployment';
     case Monitoring = 'monitoring';

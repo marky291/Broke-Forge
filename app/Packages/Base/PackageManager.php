@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
 use Spatie\Ssh\Ssh;
 use Stringable;
+use Symfony\Component\Process\Exception\ProcessTimedOutException;
 
 /**
  * Base class for managing server services (installation and removal)
@@ -179,8 +180,9 @@ abstract class PackageManager implements Package
                     $credentialType = $this->credentialType();
 
                     // Execute SSH commands with timeout to prevent hanging
+                    // 570 seconds (9.5 min) allows 30s buffer before 600s job timeout
                     $process = $this->server->createSshConnection($credentialType)
-                        ->setTimeout(300)
+                        ->setTimeout(570)
                         ->execute($command);
 
                     Log::debug("SSH command: {$process->getCommandLine()}");
@@ -210,11 +212,42 @@ abstract class PackageManager implements Package
             if ($this->currentEvent) {
                 $this->currentEvent->update(['status' => 'success']);
             }
+        } catch (ProcessTimedOutException $e) {
+            // Handle SSH command timeout specifically
+            $timeoutDuration = 570; // Match the setTimeout value above
+            $errorMessage = "SSH command timed out after {$timeoutDuration} seconds. This may indicate a slow network, large package downloads, or a command that's hanging. Check the server's network connectivity and system resources.";
+
+            // Log detailed timeout information
+            Log::error('SSH command timeout in PackageManager', [
+                'server_id' => $this->server->id,
+                'service' => $this->packageType()->value,
+                'credential_type' => $this->credentialType()->value,
+                'timeout_seconds' => $timeoutDuration,
+                'current_milestone' => $this->currentEvent?->milestone,
+                'exception' => $e->getMessage(),
+            ]);
+
+            // Mark current event as failed
+            if ($this->currentEvent) {
+                $this->currentEvent->update([
+                    'status' => 'failed',
+                    'error_log' => $errorMessage."\n\nOriginal error:\n".$e->getMessage()."\n\nStack trace:\n".$e->getTraceAsString(),
+                ]);
+            }
+
+            // Mark any previous events that are still pending as completed up to the failure point
+            foreach ($this->allEvents as $event) {
+                if ($this->currentEvent && $event->id !== $this->currentEvent->id && $event->status === 'pending') {
+                    $event->update(['status' => 'success']);
+                }
+            }
+
+            throw new \RuntimeException($errorMessage, 0, $e);
         } catch (\Exception $e) {
-            // Handle any exception including timeout errors
+            // Handle any other exception
             $errorMessage = $e->getMessage();
 
-            // Check for timeout error
+            // Check for timeout error patterns as fallback
             if (str_contains($errorMessage, 'Maximum execution time') || str_contains($errorMessage, 'timeout')) {
                 $errorMessage = 'Process timeout: '.$errorMessage;
             }

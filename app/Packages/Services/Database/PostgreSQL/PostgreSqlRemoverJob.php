@@ -11,6 +11,13 @@ class PostgreSqlRemoverJob implements ShouldQueue
 {
     use Queueable;
 
+    /**
+     * The number of seconds the job can run before timing out.
+     *
+     * @var int
+     */
+    public $timeout = 600;
+
     public function __construct(
         public Server $server
     ) {}
@@ -19,18 +26,10 @@ class PostgreSqlRemoverJob implements ShouldQueue
     {
         Log::info("Starting PostgreSQL removal for server #{$this->server->id}");
 
-        try {
-            $remover = new PostgreSqlRemover($this->server);
-            $remover->execute();
+        $remover = new PostgreSqlRemover($this->server);
+        // Execute removal - base class handles failure marking automatically
+        $remover->execute();
 
-            Log::info("PostgreSQL removal completed for server #{$this->server->id}");
-        } catch (\Exception $e) {
-            Log::error("PostgreSQL removal failed for server #{$this->server->id}", [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-
-            throw $e;
-        }
+        Log::info("PostgreSQL removal completed for server #{$this->server->id}");
     }
 }

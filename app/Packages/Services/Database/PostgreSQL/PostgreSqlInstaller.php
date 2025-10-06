@@ -31,6 +31,17 @@ class PostgreSqlInstaller extends PackageInstaller implements \App\Packages\Base
         return PackageType::Database;
     }
 
+    /**
+     * Mark PostgreSQL installation as failed in database
+     */
+    protected function markResourceAsFailed(string $errorMessage): void
+    {
+        $this->server->databases()->latest()->first()?->update([
+            'status' => DatabaseStatus::Failed,
+            'error_message' => $errorMessage,
+        ]);
+    }
+
     public function execute(): void
     {
         $database = $this->server->databases()->latest()->first();

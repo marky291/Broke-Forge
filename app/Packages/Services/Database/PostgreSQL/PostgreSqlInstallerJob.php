@@ -11,6 +11,13 @@ class PostgreSqlInstallerJob implements ShouldQueue
 {
     use Queueable;
 
+    /**
+     * The number of seconds the job can run before timing out.
+     *
+     * @var int
+     */
+    public $timeout = 600;
+
     public function __construct(
         public Server $server
     ) {}
@@ -19,23 +26,10 @@ class PostgreSqlInstallerJob implements ShouldQueue
     {
         Log::info("Starting PostgreSQL installation for server #{$this->server->id}");
 
-        try {
-            $installer = new PostgreSqlInstaller($this->server);
-            $installer->execute();
+        $installer = new PostgreSqlInstaller($this->server);
+        // Execute installation - base class handles failure marking automatically
+        $installer->execute();
 
-            Log::info("PostgreSQL installation completed for server #{$this->server->id}");
-        } catch (\Exception $e) {
-            Log::error("PostgreSQL installation failed for server #{$this->server->id}", [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-
-            // Update database status to failed so UI can show error state
-            $this->server->databases()->latest()->first()?->update([
-                'status' => \App\Enums\DatabaseStatus::Failed->value,
-            ]);
-
-            throw $e;
-        }
+        Log::info("PostgreSQL installation completed for server #{$this->server->id}");
     }
 }

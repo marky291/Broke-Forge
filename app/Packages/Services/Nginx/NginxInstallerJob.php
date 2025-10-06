@@ -19,6 +19,13 @@ class NginxInstallerJob implements ShouldQueue
 {
     use Queueable;
 
+    /**
+     * The number of seconds the job can run before timing out.
+     *
+     * @var int
+     */
+    public $timeout = 600;
+
     public function __construct(
         public Server $server,
         public PhpVersion $phpVersion,

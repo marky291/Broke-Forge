@@ -10,6 +10,7 @@ use App\Packages\Services\PHP\PhpInstallerJob;
 use App\Packages\Services\PHP\Services\PhpConfigurationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -91,7 +92,7 @@ class ServerPhpController extends Controller
     public function install(Request $request, Server $server): RedirectResponse
     {
         $validated = $request->validate([
-            'version' => 'required|string|in:8.3',
+            'version' => ['required', 'string', Rule::in(array_column(PhpVersion::cases(), 'value'))],
         ]);
 
         // Map version string to PhpVersion enum

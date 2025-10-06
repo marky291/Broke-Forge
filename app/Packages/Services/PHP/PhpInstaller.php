@@ -19,9 +19,19 @@ use App\Packages\Enums\PhpVersion;
  */
 class PhpInstaller extends PackageInstaller implements ServerPackage
 {
+    /**
+     * The PHP version being installed
+     */
+    private PhpVersion $installingVersion;
+
     public function packageName(): PackageName
     {
-        return PackageName::Php83;
+        return match ($this->installingVersion) {
+            PhpVersion::PHP81 => PackageName::Php81,
+            PhpVersion::PHP82 => PackageName::Php82,
+            PhpVersion::PHP83 => PackageName::Php83,
+            PhpVersion::PHP84 => PackageName::Php84,
+        };
     }
 
     public function packageType(): PackageType
@@ -40,10 +50,23 @@ class PhpInstaller extends PackageInstaller implements ServerPackage
     }
 
     /**
+     * Mark PHP installation as failed in database
+     */
+    protected function markResourceAsFailed(string $errorMessage): void
+    {
+        ServerPhp::where('server_id', $this->server->id)
+            ->where('version', $this->installingVersion->value)
+            ->update(['status' => PhpStatus::Failed]);
+    }
+
+    /**
      * Execute PHP installation with the specified version
      */
     public function execute(PhpVersion $phpVersion): void
     {
+        // Store the version for packageName() method
+        $this->installingVersion = $phpVersion;
+
         // Compose common PHP packages for the chosen version
         $phpPackages = implode(' ', [
             "php{$phpVersion->value}-fpm",
@@ -103,16 +126,10 @@ class PhpInstaller extends PackageInstaller implements ServerPackage
 
             // Save PHP installation to database
             function () use ($phpVersion) {
-                ServerPhp::updateOrCreate(
-                    [
-                        'server_id' => $this->server->id,
-                        'version' => $phpVersion->value,
-                    ],
-                    [
-                        'status' => PhpStatus::Active->value,
-                        'is_cli_default' => true,
-                    ]
-                );
+                // Only update status - preserve is_cli_default and is_site_default set by controller
+                ServerPhp::where('server_id', $this->server->id)
+                    ->where('version', $phpVersion->value)
+                    ->update(['status' => PhpStatus::Active->value]);
             },
 
             $this->track(PhpInstallerMilestones::VERIFY_INSTALLATION),

@@ -2,6 +2,7 @@
 
 namespace App\Packages\Services\Database\PostgreSQL;
 
+use App\Enums\DatabaseStatus;
 use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageRemover;
 use App\Packages\Enums\CredentialType;
@@ -28,6 +29,17 @@ class PostgreSqlRemover extends PackageRemover implements \App\Packages\Base\Ser
     public function milestones(): Milestones
     {
         return new PostgreSqlRemoverMilestones;
+    }
+
+    /**
+     * Mark PostgreSQL removal as failed in database
+     */
+    protected function markResourceAsFailed(string $errorMessage): void
+    {
+        $this->server->databases()->latest()->first()?->update([
+            'status' => DatabaseStatus::Failed,
+            'error_message' => $errorMessage,
+        ]);
     }
 
     public function execute(): void

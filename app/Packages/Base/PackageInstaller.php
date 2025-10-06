@@ -23,10 +23,27 @@ abstract class PackageInstaller extends PackageManager implements Installer
      */
 
     /**
+     * Mark the resource being installed as failed
+     *
+     * Override in concrete installers to update resource status (ServerPhp, ServerDatabase, etc.)
+     * Default implementation is no-op for installers without specific resource status tracking
+     */
+    protected function markResourceAsFailed(string $errorMessage): void
+    {
+        // Default: no-op
+        // Override in concrete installers to mark resource status as failed
+    }
+
+    /**
      * Send installation commands to the remote server
      */
     protected function install(array $commands): void
     {
-        $this->sendCommandsToRemote($commands);
+        try {
+            $this->sendCommandsToRemote($commands);
+        } catch (\Exception $e) {
+            $this->markResourceAsFailed($e->getMessage());
+            throw $e;
+        }
     }
 }

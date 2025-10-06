@@ -2,6 +2,7 @@
 
 namespace App\Packages\Services\Database\MySQL;
 
+use App\Enums\DatabaseStatus;
 use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageRemover;
 use App\Packages\Enums\CredentialType;
@@ -18,6 +19,17 @@ class MySqlRemover extends PackageRemover implements \App\Packages\Base\ServerPa
     public function credentialType(): CredentialType
     {
         return CredentialType::Root;
+    }
+
+    /**
+     * Mark MySQL removal as failed in database
+     */
+    protected function markResourceAsFailed(string $errorMessage): void
+    {
+        $this->server->databases()->latest()->first()?->update([
+            'status' => DatabaseStatus::Failed,
+            'error_message' => $errorMessage,
+        ]);
     }
 
     /**

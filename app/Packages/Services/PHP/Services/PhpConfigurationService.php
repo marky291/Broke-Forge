@@ -5,13 +5,11 @@ namespace App\Packages\Services\PHP\Services;
 class PhpConfigurationService
 {
     /**
-     * Get available PHP versions
+     * Get available PHP versions (Ubuntu 24.04 compatible)
      */
     public static function getAvailableVersions(): array
     {
         return [
-            '7.4' => 'PHP 7.4',
-            '8.0' => 'PHP 8.0',
             '8.1' => 'PHP 8.1',
             '8.2' => 'PHP 8.2',
             '8.3' => 'PHP 8.3',

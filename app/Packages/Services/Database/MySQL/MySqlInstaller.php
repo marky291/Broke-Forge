@@ -28,6 +28,17 @@ class MySqlInstaller extends PackageInstaller implements \App\Packages\Base\Serv
     }
 
     /**
+     * Mark MySQL installation as failed in database
+     */
+    protected function markResourceAsFailed(string $errorMessage): void
+    {
+        $this->server->databases()->latest()->first()?->update([
+            'status' => DatabaseStatus::Failed,
+            'error_message' => $errorMessage,
+        ]);
+    }
+
+    /**
      * Execute the MySQL server installation
      */
     public function execute(): void

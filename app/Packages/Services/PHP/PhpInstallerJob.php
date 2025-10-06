@@ -17,6 +17,13 @@ class PhpInstallerJob implements ShouldQueue
 {
     use Queueable;
 
+    /**
+     * The number of seconds the job can run before timing out.
+     *
+     * @var int
+     */
+    public $timeout = 600;
+
     public function __construct(
         public Server $server,
         public PhpVersion $phpVersion
@@ -29,21 +36,12 @@ class PhpInstallerJob implements ShouldQueue
 
         Log::info("Starting PHP {$this->phpVersion->value} installation for server #{$this->server->id}");
 
-        try {
-            // Create installer instance
-            $installer = new PhpInstaller($this->server);
+        // Create installer instance
+        $installer = new PhpInstaller($this->server);
 
-            // Execute installation - the installer's persist() method handles database tracking
-            $installer->execute($this->phpVersion);
+        // Execute installation - base class handles failure marking automatically
+        $installer->execute($this->phpVersion);
 
-            Log::info("PHP {$this->phpVersion->value} installation completed for server #{$this->server->id}");
-        } catch (\Exception $e) {
-            Log::error("PHP {$this->phpVersion->value} installation failed for server #{$this->server->id}", [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-
-            throw $e;
-        }
+        Log::info("PHP {$this->phpVersion->value} installation completed for server #{$this->server->id}");
     }
 }

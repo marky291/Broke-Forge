@@ -16,6 +16,13 @@ class MariaDbRemoverJob implements ShouldQueue
 {
     use Queueable;
 
+    /**
+     * The number of seconds the job can run before timing out.
+     *
+     * @var int
+     */
+    public $timeout = 600;
+
     public function __construct(
         public Server $server
     ) {}
@@ -24,18 +31,10 @@ class MariaDbRemoverJob implements ShouldQueue
     {
         Log::info("Starting MariaDB removal for server #{$this->server->id}");
 
-        try {
-            $remover = new MariaDbRemover($this->server);
-            $remover->execute();
+        $remover = new MariaDbRemover($this->server);
+        // Execute removal - base class handles failure marking automatically
+        $remover->execute();
 
-            Log::info("MariaDB removal completed for server #{$this->server->id}");
-        } catch (\Exception $e) {
-            Log::error("MariaDB removal failed for server #{$this->server->id}", [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-
-            throw $e;
-        }
+        Log::info("MariaDB removal completed for server #{$this->server->id}");
     }
 }
