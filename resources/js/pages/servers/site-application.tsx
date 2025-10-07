@@ -7,7 +7,7 @@ import { dashboard } from '@/routes';
 import { show as showServer } from '@/routes/servers';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/react';
-import { CheckCircle, GitBranch, Loader2, Lock, XCircle } from 'lucide-react';
+import { CheckCircle, Clock, GitBranch, Loader2, Lock, XCircle } from 'lucide-react';
 import { type ReactNode } from 'react';
 
 type ServerType = {
