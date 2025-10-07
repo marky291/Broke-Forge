@@ -174,39 +174,39 @@ export default function ServerContentLayout({ children, server, breadcrumbs, lat
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             {/* Server Header */}
-            <div className="border-b bg-card px-8 py-4">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-8">
+            <div className="border-b bg-card px-4 py-4 md:px-8">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:gap-8">
                         {/* Title */}
                         <div className="flex items-center gap-3">
                             <ServerProviderIcon provider={server.provider} size="lg" />
                             <h1 className="text-xl font-semibold text-foreground">{server.vanity_name}</h1>
                         </div>
 
-                        {/* Server Info */}
-                        <div className="flex items-center gap-8 border-l pl-8 text-sm">
+                        {/* Server Info - Hide some items on mobile */}
+                        <div className="flex flex-wrap items-center gap-4 text-sm lg:gap-8 lg:border-l lg:pl-8">
                             <div>
                                 <div className="mb-0.5 text-[10px] tracking-wide text-muted-foreground uppercase">Public IP</div>
                                 <div className="font-medium">{server.public_ip || 'N/A'}</div>
                             </div>
-                            <div>
+                            <div className="hidden md:block">
                                 <div className="mb-0.5 text-[10px] tracking-wide text-muted-foreground uppercase">Private IP</div>
                                 <div className="font-medium">{server.private_ip || 'N/A'}</div>
                             </div>
-                            <div>
+                            <div className="hidden md:block">
                                 <div className="mb-0.5 text-[10px] tracking-wide text-muted-foreground uppercase">Region</div>
                                 <div className="font-medium">Frankfurt</div>
                             </div>
-                            <div>
+                            <div className="hidden lg:block">
                                 <div className="mb-0.5 text-[10px] tracking-wide text-muted-foreground uppercase">OS</div>
                                 <div className="font-medium">Ubuntu 24.04</div>
                             </div>
                         </div>
                     </div>
 
-                    {/* Monitoring Metrics - Far Right */}
+                    {/* Monitoring Metrics - Responsive */}
                     {server.monitoring_status === 'active' && metrics && (
-                        <div className="flex items-center gap-4 border-l pl-8 text-sm">
+                        <div className="flex flex-wrap items-center gap-3 text-sm lg:gap-4 lg:border-l lg:pl-8">
                             <div className="flex items-center gap-2">
                                 <Cpu className="h-3.5 w-3.5 text-blue-600" />
                                 <div>
@@ -233,17 +233,19 @@ export default function ServerContentLayout({ children, server, breadcrumbs, lat
                 </div>
             </div>
 
-            <div className="mt-6 flex h-full">
-                <NavigationSidebar>
-                    <div className="space-y-6">
-                        <NavigationCard items={[backToDashboardNav]} />
-                        <NavigationCard title="Server" items={serverNavItems} />
-                    </div>
-                </NavigationSidebar>
+            <div className="mt-6 flex h-full flex-col lg:flex-row">
+                <div className="hidden lg:block">
+                    <NavigationSidebar>
+                        <div className="space-y-6">
+                            <NavigationCard items={[backToDashboardNav]} />
+                            <NavigationCard title="Server" items={serverNavItems} />
+                        </div>
+                    </NavigationSidebar>
+                </div>
 
                 {/* Main Content */}
                 <main className="flex-1 overflow-auto">
-                    <div className="p-6">{children}</div>
+                    <div className="p-4 md:p-6">{children}</div>
                 </main>
             </div>
         </AppLayout>

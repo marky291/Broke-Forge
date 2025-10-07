@@ -21,7 +21,7 @@ export default ({ children, breadcrumbs, ...props }: AppLayoutProps) => (
 
         {/* Breadcrumbs Section */}
         {breadcrumbs && breadcrumbs.length > 0 && (
-            <div className="border-b bg-muted/30">
+            <div className="hidden border-b bg-muted/30 md:block">
                 <div className="container mx-auto max-w-7xl px-4">
                     <div className="flex h-12 items-center">
                         <Breadcrumb>
@@ -47,7 +47,7 @@ export default ({ children, breadcrumbs, ...props }: AppLayoutProps) => (
 
         {/* Main Content */}
         <main className="flex-1">
-            <div className="container mx-auto max-w-7xl px-4 py-8">{children}</div>
+            <div className="container mx-auto max-w-7xl px-4 py-4">{children}</div>
         </main>
     </div>
 );

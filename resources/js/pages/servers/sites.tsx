@@ -266,66 +266,70 @@ export default function Sites({ server, sites }: SitesProps) {
                     parentBorder={false}
                 >
                     {sites.data.length > 0 ? (
-                        <div className="space-y-3">
+                        <div className="space-y-2 md:space-y-3">
                             {sites.data.map((site) => (
                                 <div
                                     key={site.id}
                                     className="divide-y divide-neutral-200 rounded-lg border border-neutral-200 bg-white shadow-md shadow-black/5 dark:divide-white/8 dark:border-white/8 dark:bg-white/3"
                                 >
                                     <Link href={showSite({ server: server.id, site: site.id }).url} className="group block">
-                                        <div className="px-6 py-6 transition-colors hover:bg-muted/30">
-                                            <div className="flex items-center gap-6">
-                                                {/* Icon */}
-                                                <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                                                    <Globe className="h-5 w-5 text-primary" />
+                                        <div className="px-3 py-3 transition-colors hover:bg-muted/30 md:px-6 md:py-6">
+                                            <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-6">
+                                                {/* Top row: Icon + Site Info + Arrow (on mobile) */}
+                                                <div className="flex items-center gap-3 md:min-w-0 md:flex-1 md:gap-6">
+                                                    {/* Icon */}
+                                                    <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-primary/10 md:h-11 md:w-11">
+                                                        <Globe className="h-4 w-4 text-primary md:h-5 md:w-5" />
+                                                    </div>
+
+                                                    {/* Site Info */}
+                                                    <div className="min-w-0 flex-1">
+                                                        <h3 className="mb-0.5 truncate text-sm font-semibold text-foreground transition-colors group-hover:text-primary md:mb-1 md:text-base">
+                                                            {site.domain}
+                                                        </h3>
+                                                        {site.configuration?.git_repository?.repository ? (
+                                                            <div className="flex items-center gap-1.5">
+                                                                <GitBranch className="h-3 w-3 flex-shrink-0 text-muted-foreground/60 md:h-3.5 md:w-3.5" />
+                                                                <p className="truncate text-xs text-muted-foreground md:text-sm">
+                                                                    {site.configuration.git_repository.repository}
+                                                                    {site.configuration.git_repository.branch && (
+                                                                        <span className="text-muted-foreground/60">
+                                                                            {' '}
+                                                                            • {site.configuration.git_repository.branch}
+                                                                        </span>
+                                                                    )}
+                                                                </p>
+                                                            </div>
+                                                        ) : (
+                                                            <p className="text-xs text-muted-foreground/60 md:text-sm">No repository configured</p>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Arrow - visible only on mobile */}
+                                                    <ChevronRight className="h-4 w-4 flex-shrink-0 text-muted-foreground/40 transition-all group-hover:translate-x-0.5 group-hover:text-primary md:hidden md:h-5 md:w-5" />
                                                 </div>
 
-                                                {/* Site Info */}
-                                                <div className="min-w-0 flex-1">
-                                                    <h3 className="mb-1 truncate text-base font-semibold text-foreground transition-colors group-hover:text-primary">
-                                                        {site.domain}
-                                                    </h3>
-                                                    {site.configuration?.git_repository?.repository ? (
-                                                        <div className="flex items-center gap-2">
-                                                            <GitBranch className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground/60" />
-                                                            <p className="truncate text-sm text-muted-foreground">
-                                                                {site.configuration.git_repository.repository}
-                                                                {site.configuration.git_repository.branch && (
-                                                                    <span className="text-muted-foreground/60">
-                                                                        {' '}
-                                                                        • {site.configuration.git_repository.branch}
-                                                                    </span>
-                                                                )}
-                                                            </p>
-                                                        </div>
-                                                    ) : (
-                                                        <p className="text-sm text-muted-foreground/60">No repository configured</p>
-                                                    )}
-                                                </div>
-
-                                                {/* Metadata */}
-                                                <div className="flex flex-shrink-0 items-center gap-6">
+                                                {/* Bottom row: Metadata (stacked on mobile, inline on desktop) */}
+                                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 pl-12 text-xs md:flex-shrink-0 md:gap-6 md:pl-0 md:text-sm">
                                                     {/* SSL */}
-                                                    <div className="flex min-w-[80px] items-center gap-2">
+                                                    <div className="flex items-center gap-1.5">
                                                         <Lock
-                                                            className={`h-4 w-4 flex-shrink-0 ${site.ssl_enabled ? 'text-green-600' : 'text-muted-foreground/30'}`}
+                                                            className={`h-3.5 w-3.5 flex-shrink-0 md:h-4 md:w-4 ${site.ssl_enabled ? 'text-green-600' : 'text-muted-foreground/30'}`}
                                                         />
-                                                        <span className="text-sm text-muted-foreground">{site.ssl_enabled ? 'SSL' : 'No SSL'}</span>
+                                                        <span className="text-muted-foreground">{site.ssl_enabled ? 'SSL' : 'No SSL'}</span>
                                                     </div>
 
                                                     {/* PHP Version */}
-                                                    <div className="min-w-[70px] text-sm">
+                                                    <div>
                                                         <span className="text-muted-foreground">PHP </span>
                                                         <span className="font-medium text-foreground">{site.php_version}</span>
                                                     </div>
 
                                                     {/* Deployed Time */}
-                                                    <div className="min-w-[110px] text-right text-sm text-muted-foreground">
-                                                        {site.provisioned_at_human || 'Not deployed'}
-                                                    </div>
+                                                    <div className="text-muted-foreground">{site.provisioned_at_human || 'Not deployed'}</div>
 
-                                                    {/* Arrow */}
-                                                    <ChevronRight className="h-5 w-5 flex-shrink-0 text-muted-foreground/40 transition-all group-hover:translate-x-0.5 group-hover:text-primary" />
+                                                    {/* Arrow - visible only on desktop */}
+                                                    <ChevronRight className="hidden h-5 w-5 flex-shrink-0 text-muted-foreground/40 transition-all group-hover:translate-x-0.5 group-hover:text-primary md:block" />
                                                 </div>
                                             </div>
                                         </div>

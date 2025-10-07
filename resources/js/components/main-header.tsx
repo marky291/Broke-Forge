@@ -2,9 +2,10 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/compon
 import { UserMenuContent } from '@/components/user-menu-content';
 import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
+import { edit } from '@/routes/profile';
 import { type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { ChevronsUpDown, Menu, Server, X } from 'lucide-react';
+import { ChevronsUpDown, Menu, Server, Settings, X } from 'lucide-react';
 import { useState } from 'react';
 import AppLogoIcon from './app-logo-icon';
 import { CommandSearch } from './command-search';
@@ -22,6 +23,12 @@ export function MainHeader() {
             icon: Server,
             isActive: path === dashboard() || path === '/',
         },
+        {
+            title: 'Settings',
+            href: edit(),
+            icon: Settings,
+            isActive: path === edit(),
+        },
     ];
 
     return (
@@ -32,22 +39,22 @@ export function MainHeader() {
             }}
         >
             <div className="container mx-auto max-w-7xl px-4">
-                <div className="flex h-16 items-center gap-4">
-                    {/* Left Section - Logo & Nav */}
-                    <div className="flex items-center gap-4">
-                        {/* Logo and Brand Name */}
-                        <Link href={dashboard()} prefetch className="flex items-center gap-3 transition-opacity hover:opacity-80">
-                            <div className="flex aspect-square size-9 items-center justify-center rounded-lg bg-white shadow-md">
-                                <AppLogoIcon className="size-5 fill-current text-primary" />
-                            </div>
-                            <div className="hidden lg:block">
-                                <h1 className="text-lg font-semibold text-white">Forge</h1>
-                            </div>
-                        </Link>
+                <div className="flex h-16 items-center gap-3">
+                    {/* Logo */}
+                    <Link href={dashboard()} prefetch className="flex items-center gap-3 transition-opacity hover:opacity-80">
+                        <div className="flex size-10 items-center justify-center rounded-lg bg-white shadow-md">
+                            <AppLogoIcon className="size-5 fill-current text-primary" />
+                        </div>
+                        <div className="hidden lg:block">
+                            <h1 className="text-lg font-semibold text-white">Forge</h1>
+                        </div>
+                    </Link>
 
-                        {/* Desktop Navigation - Main Items */}
-                        <nav className="hidden items-center md:flex">
-                            {mainNavItems.map((item) => {
+                    {/* Desktop Navigation - Main Items */}
+                    <nav className="hidden items-center md:flex">
+                        {mainNavItems
+                            .filter((item) => item.title !== 'Settings')
+                            .map((item) => {
                                 const Icon = item.icon;
                                 return (
                                     <Link
@@ -65,29 +72,23 @@ export function MainHeader() {
                                     </Link>
                                 );
                             })}
-                        </nav>
-                    </div>
+                    </nav>
 
-                    {/* Center Section - Search (now takes up available space) */}
-                    <div className="hidden flex-1 justify-center px-8 md:flex">
+                    {/* Search - Full width on mobile, centered on desktop */}
+                    <div className="flex flex-1 justify-center md:px-8">
                         <CommandSearch />
                     </div>
 
-                    {/* Right Section - User Menu & Mobile Toggle */}
+                    {/* Right Section - User Menu (Desktop) & Mobile Menu Button */}
                     <div className="flex items-center gap-3">
-                        {/* Mobile Search Button */}
-                        <div className="md:hidden">
-                            <CommandSearch />
-                        </div>
-
                         {/* User Menu (Desktop) */}
                         <div className="hidden md:block">
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                    <button className="flex items-center gap-2 rounded-lg border bg-card px-3 py-2 text-sm shadow-sm transition-all hover:bg-accent">
+                                    <button className="flex h-10 items-center gap-2 rounded-lg border border-white/20 bg-white/15 px-3 text-sm shadow-lg backdrop-blur-sm transition-all hover:border-white/30 hover:bg-white/25">
                                         <div className="flex items-center gap-2">
-                                            <div className="flex size-7 items-center justify-center rounded-full bg-primary/10">
-                                                <span className="text-xs font-semibold text-primary">
+                                            <div className="flex size-7 items-center justify-center rounded-full bg-white/20">
+                                                <span className="text-xs font-semibold text-white">
                                                     {auth.user.name
                                                         .split(' ')
                                                         .map((n) => n[0])
@@ -96,9 +97,9 @@ export function MainHeader() {
                                                         .slice(0, 2)}
                                                 </span>
                                             </div>
-                                            <span className="font-medium">{auth.user.name.split(' ')[0]}</span>
+                                            <span className="font-medium text-white">{auth.user.name.split(' ')[0]}</span>
                                         </div>
-                                        <ChevronsUpDown className="size-4 text-muted-foreground" />
+                                        <ChevronsUpDown className="size-4 text-white/70" />
                                     </button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent className="w-56" align="end" sideOffset={8}>
@@ -110,7 +111,7 @@ export function MainHeader() {
                         {/* Mobile Menu Button */}
                         <button
                             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                            className="flex size-10 items-center justify-center rounded-lg border bg-card text-muted-foreground shadow-sm transition-all hover:bg-accent hover:text-accent-foreground md:hidden"
+                            className="flex size-10 flex-shrink-0 items-center justify-center rounded-lg border border-white/20 bg-white/15 text-white shadow-lg backdrop-blur-sm transition-all hover:border-white/30 hover:bg-white/25 md:hidden"
                             aria-label="Toggle navigation menu"
                         >
                             {mobileMenuOpen ? <X className="size-5" /> : <Menu className="size-5" />}
@@ -122,25 +123,7 @@ export function MainHeader() {
             {/* Mobile Navigation Dropdown */}
             {mobileMenuOpen && (
                 <div className="border-t bg-card/50 backdrop-blur md:hidden">
-                    <div className="container mx-auto max-w-7xl space-y-6 px-4 py-6">
-                        {/* User Info Section */}
-                        <div className="flex items-center gap-3 border-b pb-4">
-                            <div className="flex size-10 items-center justify-center rounded-full bg-primary/10">
-                                <span className="text-sm font-semibold text-primary">
-                                    {auth.user.name
-                                        .split(' ')
-                                        .map((n) => n[0])
-                                        .join('')
-                                        .toUpperCase()
-                                        .slice(0, 2)}
-                                </span>
-                            </div>
-                            <div>
-                                <p className="text-sm font-medium">{auth.user.name}</p>
-                                <p className="text-xs text-muted-foreground">{auth.user.email}</p>
-                            </div>
-                        </div>
-
+                    <div className="container mx-auto max-w-7xl px-4 py-4">
                         {/* Navigation */}
                         <nav className="space-y-1">
                             {mainNavItems.map((item) => {
@@ -162,21 +145,6 @@ export function MainHeader() {
                                 );
                             })}
                         </nav>
-
-                        {/* Account Actions */}
-                        <div className="border-t pt-4">
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <button className="flex w-full items-center justify-between rounded-lg border bg-background px-3 py-2.5 text-sm transition-colors hover:bg-accent">
-                                        <span className="font-medium">Account Settings</span>
-                                        <ChevronsUpDown className="size-4 text-muted-foreground" />
-                                    </button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent className="w-[calc(100vw-2rem)]" align="end">
-                                    <UserMenuContent user={auth.user} />
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        </div>
                     </div>
                 </div>
             )}
