@@ -299,6 +299,10 @@ Route::middleware('auth')->group(function () {
                     ->name('supervisor.tasks.store')
                     ->middleware('throttle:20,1');
 
+                Route::put('{supervisorTask}', [ServerSupervisorController::class, 'updateTask'])
+                    ->name('supervisor.tasks.update')
+                    ->middleware('throttle:20,1');
+
                 Route::delete('{supervisorTask}', [ServerSupervisorController::class, 'destroyTask'])
                     ->name('supervisor.tasks.destroy');
 

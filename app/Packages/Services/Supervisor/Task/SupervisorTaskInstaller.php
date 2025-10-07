@@ -56,8 +56,8 @@ class SupervisorTaskInstaller extends PackageInstaller implements ServerPackage
 
     protected function commands(): array
     {
-        // Generate sanitized task name for filename
-        $taskFileName = preg_replace('/[^a-zA-Z0-9-_]/', '_', $this->task->name);
+        // Generate sanitized task name for filename and supervisor program name
+        $sanitizedName = preg_replace('/[^a-zA-Z0-9-_]/', '_', $this->task->name);
 
         // Generate config content from Blade template
         $configContent = view('supervisor.task', [
@@ -70,10 +70,10 @@ class SupervisorTaskInstaller extends PackageInstaller implements ServerPackage
             $this->track(SupervisorTaskInstallerMilestones::DEPLOY_CONFIG),
 
             // Deploy configuration file
-            "cat > /etc/supervisor/conf.d/{$taskFileName}.conf << 'EOF'\n{$configContent}\nEOF",
+            "cat > /etc/supervisor/conf.d/{$sanitizedName}.conf << 'EOF'\n{$configContent}\nEOF",
 
             // Set proper permissions
-            "chmod 644 /etc/supervisor/conf.d/{$taskFileName}.conf",
+            "chmod 644 /etc/supervisor/conf.d/{$sanitizedName}.conf",
 
             $this->track(SupervisorTaskInstallerMilestones::RELOAD_SUPERVISOR),
 
@@ -81,8 +81,8 @@ class SupervisorTaskInstaller extends PackageInstaller implements ServerPackage
             'supervisorctl reread',
             'supervisorctl update',
 
-            // Start the task
-            "supervisorctl start {$this->task->name} || true",
+            // Start the task using sanitized name
+            "supervisorctl start {$sanitizedName} || true",
 
             // Mark task as installed and active
             fn () => $this->task->update([

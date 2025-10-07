@@ -40,6 +40,14 @@ class ServerSupervisorPolicy
     }
 
     /**
+     * Determine whether the user can update supervisor tasks
+     */
+    public function updateTask(User $user, Server $server): bool
+    {
+        return $user->id === $server->user_id;
+    }
+
+    /**
      * Determine whether the user can delete supervisor tasks
      */
     public function deleteTask(User $user, Server $server): bool

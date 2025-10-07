@@ -56,19 +56,19 @@ class SupervisorTaskRemover extends PackageRemover implements ServerPackage
 
     protected function commands(): array
     {
-        // Generate sanitized task name for filename
-        $taskFileName = preg_replace('/[^a-zA-Z0-9-_]/', '_', $this->task->name);
+        // Generate sanitized task name for filename and supervisor program name
+        $sanitizedName = preg_replace('/[^a-zA-Z0-9-_]/', '_', $this->task->name);
 
         return [
             $this->track(SupervisorTaskRemoverMilestones::STOP_TASK),
 
-            // Stop the task
-            "supervisorctl stop {$this->task->name} || true",
+            // Stop the task using sanitized name
+            "supervisorctl stop {$sanitizedName} || true",
 
             $this->track(SupervisorTaskRemoverMilestones::REMOVE_CONFIG),
 
             // Remove configuration file
-            "rm -f /etc/supervisor/conf.d/{$taskFileName}.conf",
+            "rm -f /etc/supervisor/conf.d/{$sanitizedName}.conf",
 
             $this->track(SupervisorTaskRemoverMilestones::RELOAD_SUPERVISOR),
 

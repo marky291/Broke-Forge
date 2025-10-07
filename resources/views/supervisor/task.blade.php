@@ -1,4 +1,7 @@
-[program:{{ $task->name }}]
+@php
+    $sanitizedName = preg_replace('/[^a-zA-Z0-9-_]/', '_', $task->name);
+@endphp
+[program:{{ $sanitizedName }}]
 command={{ $task->command }}
 directory={{ $task->working_directory }}
 user={{ $task->user }}
@@ -13,9 +16,9 @@ stopsignal=TERM
 stopwaitsecs=10
 stopasgroup=true
 killasgroup=true
-stdout_logfile={{ $task->stdout_logfile ?? '/var/log/supervisor/' . $task->name . '-stdout.log' }}
+stdout_logfile={{ $task->stdout_logfile ?? '/var/log/supervisor/' . $sanitizedName . '-stdout.log' }}
 stdout_logfile_maxbytes=50MB
 stdout_logfile_backups=10
-stderr_logfile={{ $task->stderr_logfile ?? '/var/log/supervisor/' . $task->name . '-stderr.log' }}
+stderr_logfile={{ $task->stderr_logfile ?? '/var/log/supervisor/' . $sanitizedName . '-stderr.log' }}
 stderr_logfile_maxbytes=50MB
 stderr_logfile_backups=10
