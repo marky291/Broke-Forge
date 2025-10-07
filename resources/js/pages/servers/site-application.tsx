@@ -1,6 +1,5 @@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CardContainer } from '@/components/ui/card-container';
 import { Separator } from '@/components/ui/separator';
 import SiteLayout from '@/layouts/server/site-layout';
 import { dashboard } from '@/routes';
@@ -127,11 +126,15 @@ export default function SiteApplication({ server, site, applicationType, gitRepo
     }, [site.status, site.git_status]);
 
     const handleCancelInstallation = () => {
-        router.post(`/servers/${server.id}/sites/${site.id}/git/cancel`, {}, {
-            onSuccess: () => {
-                router.reload();
-            }
-        });
+        router.post(
+            `/servers/${server.id}/sites/${site.id}/git/cancel`,
+            {},
+            {
+                onSuccess: () => {
+                    router.reload();
+                },
+            },
+        );
     };
 
     // Show provisioning progress if site or Git is installing
@@ -142,9 +145,7 @@ export default function SiteApplication({ server, site, applicationType, gitRepo
                 <div className="space-y-8">
                     <div className="space-y-2">
                         <h1 className="text-2xl font-semibold">Installing Application</h1>
-                        <p className="text-sm text-muted-foreground">
-                            Setting up nginx and cloning your repository...
-                        </p>
+                        <p className="text-sm text-muted-foreground">Setting up nginx and cloning your repository...</p>
                     </div>
                     <Card>
                         <CardContent className="flex flex-col items-center justify-center py-16">
@@ -157,7 +158,7 @@ export default function SiteApplication({ server, site, applicationType, gitRepo
                             <div className="mt-6">
                                 <button
                                     onClick={handleCancelInstallation}
-                                    className="rounded-md border border-red-500 px-4 py-2 text-sm font-medium text-red-500 hover:bg-red-500 hover:text-white transition-colors"
+                                    className="rounded-md border border-red-500 px-4 py-2 text-sm font-medium text-red-500 transition-colors hover:bg-red-500 hover:text-white"
                                 >
                                     Cancel Installation
                                 </button>
@@ -266,9 +267,7 @@ export default function SiteApplication({ server, site, applicationType, gitRepo
                                 <Badge className={activeStatus.badgeClass}>{activeStatus.label}</Badge>
                             </div>
                         </div>
-                        <p className="text-sm text-muted-foreground">
-                            Your site is active and serving content from {site.document_root}.
-                        </p>
+                        <p className="text-sm text-muted-foreground">Your site is active and serving content from {site.document_root}.</p>
                     </div>
 
                     <Card>
@@ -280,7 +279,7 @@ export default function SiteApplication({ server, site, applicationType, gitRepo
                             <div className="grid grid-cols-2 gap-6">
                                 <div>
                                     <div className="mb-1.5 text-xs text-muted-foreground">Document Root</div>
-                                    <div className="text-sm font-mono">{site.document_root}</div>
+                                    <div className="font-mono text-sm">{site.document_root}</div>
                                 </div>
                                 <div>
                                     <div className="mb-1.5 text-xs text-muted-foreground">PHP Version</div>
@@ -318,9 +317,7 @@ export default function SiteApplication({ server, site, applicationType, gitRepo
             <div className="space-y-8">
                 <div className="space-y-2">
                     <h1 className="text-2xl font-semibold">Provisioning...</h1>
-                    <p className="text-sm text-muted-foreground">
-                        Your site is being configured. This page will update automatically.
-                    </p>
+                    <p className="text-sm text-muted-foreground">Your site is being configured. This page will update automatically.</p>
                 </div>
                 <Card>
                     <CardContent className="flex flex-col items-center justify-center py-16">

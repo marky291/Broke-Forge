@@ -16,20 +16,7 @@ import { show as showSite } from '@/routes/servers/sites';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import copyToClipboard from 'copy-to-clipboard';
-import {
-    Check,
-    CheckCircle,
-    CheckCircle2,
-    ChevronRight,
-    Clock,
-    Copy,
-    GitBranch,
-    Globe,
-    Loader2,
-    Lock,
-    Plus,
-    XCircle,
-} from 'lucide-react';
+import { Check, CheckCircle, CheckCircle2, ChevronRight, Clock, Copy, GitBranch, Globe, Loader2, Lock, Plus, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 type ServerType = {
@@ -463,7 +450,7 @@ export default function Sites({ server, sites }: SitesProps) {
                                 <GitBranch className="h-4 w-4 text-amber-600 dark:text-amber-500" />
                             </div>
                             <div className="flex-1 space-y-1">
-                                <h4 className="text-sm font-semibold leading-none">Deploy Key Required</h4>
+                                <h4 className="text-sm leading-none font-semibold">Deploy Key Required</h4>
                                 <p className="text-xs text-muted-foreground">
                                     Add this SSH key to your GitHub repository to allow BrokeForge to clone it.
                                 </p>
@@ -473,17 +460,13 @@ export default function Sites({ server, sites }: SitesProps) {
                         {deployKey ? (
                             <>
                                 <div className="w-full min-w-0 overflow-hidden rounded-md border border-border bg-background">
-                                    <pre className="max-h-24 w-full min-w-0 overflow-auto break-all p-3 font-mono text-[10px] leading-relaxed">{deployKey}</pre>
+                                    <pre className="max-h-24 w-full min-w-0 overflow-auto p-3 font-mono text-[10px] leading-relaxed break-all">
+                                        {deployKey}
+                                    </pre>
                                 </div>
 
                                 <div className="flex gap-2">
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={handleCopyDeployKey}
-                                        className="flex-1"
-                                    >
+                                    <Button type="button" variant="outline" size="sm" onClick={handleCopyDeployKey} className="flex-1">
                                         {copiedDeployKey ? (
                                             <>
                                                 <Check className="mr-2 h-3 w-3" />
