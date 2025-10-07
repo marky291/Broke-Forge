@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import { type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { ChevronsUpDown, CreditCard, Menu, Server, X } from 'lucide-react';
+import { ChevronsUpDown, Menu, Server, X } from 'lucide-react';
 import { useState } from 'react';
 import AppLogoIcon from './app-logo-icon';
 import { CommandSearch } from './command-search';
@@ -21,12 +21,6 @@ export function MainHeader() {
             href: dashboard(),
             icon: Server,
             isActive: path === dashboard() || path === '/',
-        },
-        {
-            title: 'Billing',
-            href: '/billing',
-            icon: CreditCard,
-            isActive: path === '/billing',
         },
     ];
 
