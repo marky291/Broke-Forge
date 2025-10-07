@@ -138,6 +138,7 @@ class GitRepositoryInstaller extends PackageInstaller implements \App\Packages\B
                 $brokeforgeCredential = $this->server->credential('brokeforge');
                 $deployKey = $brokeforgeCredential?->public_key;
 
+                $configuration['application_type'] = 'application';
                 $configuration['git_repository'] = array_filter([
                     'provider' => Arr::get($repositoryConfiguration, 'provider'),
                     'repository' => Arr::get($repositoryConfiguration, 'repository'),
