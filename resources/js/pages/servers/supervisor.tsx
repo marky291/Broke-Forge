@@ -11,7 +11,7 @@ import { dashboard } from '@/routes';
 import { show as showServer } from '@/routes/servers';
 import { type BreadcrumbItem, type Server } from '@/types';
 import { Head, router, useForm } from '@inertiajs/react';
-import { CheckCircle, Eye, Loader2, Pause, Play, RefreshCw, Trash2 } from 'lucide-react';
+import { CheckCircle, Eye, Loader2, Pause, Pencil, Play, RefreshCw, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 export default function Supervisor({ server, tasks }: { server: Server; tasks: any[] }) {
@@ -36,6 +36,26 @@ export default function Supervisor({ server, tasks }: { server: Server; tasks: a
         processing: creatingTask,
         errors,
         reset,
+    } = useForm({
+        name: '',
+        command: '',
+        working_directory: '/home/brokeforge',
+        processes: 1,
+        user: 'brokeforge',
+        auto_restart: true,
+        autorestart_unexpected: true,
+    });
+
+    // Edit task dialog state
+    const [editDialogOpen, setEditDialogOpen] = useState(false);
+    const [editingTask, setEditingTask] = useState<any>(null);
+    const {
+        data: editData,
+        setData: setEditData,
+        put: updateTask,
+        processing: updatingTask,
+        errors: editErrors,
+        reset: resetEdit,
     } = useForm({
         name: '',
         command: '',
@@ -102,6 +122,34 @@ export default function Supervisor({ server, tasks }: { server: Server; tasks: a
             onSuccess: () => {
                 setCreateDialogOpen(false);
                 reset();
+                router.reload();
+            },
+        });
+    };
+
+    const handleOpenEditDialog = (task: any) => {
+        setEditingTask(task);
+        setEditData({
+            name: task.name,
+            command: task.command,
+            working_directory: task.working_directory,
+            processes: task.processes,
+            user: task.user,
+            auto_restart: task.auto_restart,
+            autorestart_unexpected: task.autorestart_unexpected,
+        });
+        setEditDialogOpen(true);
+    };
+
+    const handleUpdateTask = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingTask) return;
+
+        updateTask(`/servers/${server.id}/supervisor/tasks/${editingTask.id}`, {
+            onSuccess: () => {
+                setEditDialogOpen(false);
+                setEditingTask(null);
+                resetEdit();
                 router.reload();
             },
         });
@@ -194,6 +242,16 @@ export default function Supervisor({ server, tasks }: { server: Server; tasks: a
                                                         </div>
                                                     </div>
                                                     <div className="flex flex-shrink-0 items-center gap-1.5">
+                                                        <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            onClick={() => handleOpenEditDialog(task)}
+                                                            disabled={processing}
+                                                            className="h-8 w-8 p-0"
+                                                            title="Edit task"
+                                                        >
+                                                            <Pencil className="h-4 w-4" />
+                                                        </Button>
                                                         <Button
                                                             size="sm"
                                                             variant="ghost"
@@ -332,6 +390,118 @@ export default function Supervisor({ server, tasks }: { server: Server; tasks: a
                                 onCheckedChange={(checked) => setData('autorestart_unexpected', checked === true)}
                             />
                             <Label htmlFor="autorestart_unexpected" className="cursor-pointer">
+                                Auto restart only on unexpected exit
+                            </Label>
+                        </div>
+                    </div>
+                </CardFormModal>
+
+                {/* Edit Task Modal */}
+                <CardFormModal
+                    open={editDialogOpen}
+                    onOpenChange={(open) => {
+                        setEditDialogOpen(open);
+                        if (!open) {
+                            setEditingTask(null);
+                            resetEdit();
+                        }
+                    }}
+                    title="Edit Supervisor Task"
+                    description="Update the configuration for this supervisor task"
+                    onSubmit={handleUpdateTask}
+                    submitLabel="Update Task"
+                    isSubmitting={updatingTask}
+                    submittingLabel="Updating..."
+                >
+                    <div className="space-y-4">
+                        {/* Task Name */}
+                        <div className="space-y-2">
+                            <Label htmlFor="edit-name">Task Name</Label>
+                            <Input
+                                id="edit-name"
+                                value={editData.name}
+                                onChange={(e) => setEditData('name', e.target.value)}
+                                placeholder="e.g., queue-worker"
+                                required
+                            />
+                            {editErrors.name && <p className="text-sm text-red-600">{editErrors.name}</p>}
+                        </div>
+
+                        {/* Command */}
+                        <div className="space-y-2">
+                            <Label htmlFor="edit-command">Command</Label>
+                            <Input
+                                id="edit-command"
+                                value={editData.command}
+                                onChange={(e) => setEditData('command', e.target.value)}
+                                placeholder="e.g., php artisan queue:work"
+                                required
+                            />
+                            {editErrors.command && <p className="text-sm text-red-600">{editErrors.command}</p>}
+                        </div>
+
+                        {/* Working Directory */}
+                        <div className="space-y-2">
+                            <Label htmlFor="edit-working_directory">Working Directory</Label>
+                            <Input
+                                id="edit-working_directory"
+                                value={editData.working_directory}
+                                onChange={(e) => setEditData('working_directory', e.target.value)}
+                                placeholder="/home/brokeforge"
+                                required
+                            />
+                            {editErrors.working_directory && <p className="text-sm text-red-600">{editErrors.working_directory}</p>}
+                        </div>
+
+                        {/* Number of Processes */}
+                        <div className="space-y-2">
+                            <Label htmlFor="edit-processes">Number of Processes</Label>
+                            <Input
+                                id="edit-processes"
+                                type="number"
+                                value={editData.processes}
+                                onChange={(e) => setEditData('processes', parseInt(e.target.value))}
+                                min="1"
+                                max="20"
+                                required
+                            />
+                            <p className="text-xs text-muted-foreground">How many instances of this process to run</p>
+                            {editErrors.processes && <p className="text-sm text-red-600">{editErrors.processes}</p>}
+                        </div>
+
+                        {/* User */}
+                        <div className="space-y-2">
+                            <Label htmlFor="edit-user">Run as User</Label>
+                            <Input
+                                id="edit-user"
+                                value={editData.user}
+                                onChange={(e) => setEditData('user', e.target.value)}
+                                placeholder="brokeforge"
+                                required
+                            />
+                            {editErrors.user && <p className="text-sm text-red-600">{editErrors.user}</p>}
+                        </div>
+
+                        {/* Auto Restart */}
+                        <div className="flex items-center space-x-2">
+                            <Checkbox
+                                id="edit-auto_restart"
+                                checked={editData.auto_restart}
+                                onCheckedChange={(checked) => setEditData('auto_restart', checked === true)}
+                            />
+                            <Label htmlFor="edit-auto_restart" className="cursor-pointer">
+                                Auto restart on exit
+                            </Label>
+                        </div>
+
+                        {/* Auto Restart on Unexpected Exit */}
+                        <div className="flex items-center space-x-2">
+                            <Checkbox
+                                id="edit-autorestart_unexpected"
+                                checked={editData.autorestart_unexpected}
+                                onCheckedChange={(checked) => setEditData('autorestart_unexpected', checked === true)}
+                            />
+                            <Label htmlFor="edit-autorestart_unexpected" className="cursor-pointer">
                                 Auto restart only on unexpected exit
                             </Label>
                         </div>

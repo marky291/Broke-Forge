@@ -1,14 +1,13 @@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CardContainer } from '@/components/ui/card-container';
 import { Separator } from '@/components/ui/separator';
 import SiteLayout from '@/layouts/server/site-layout';
 import { dashboard } from '@/routes';
 import { show as showServer } from '@/routes/servers';
 import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/react';
-import { CheckCircle, GitBranch, Loader2, Lock, XCircle } from 'lucide-react';
-import { type ReactNode } from 'react';
+import { Head, router } from '@inertiajs/react';
+import { CheckCircle, Clock, GitBranch, Loader2, Lock, XCircle } from 'lucide-react';
+import { type ReactNode, useEffect } from 'react';
 
 type ServerType = {
     id: number;
@@ -115,6 +114,29 @@ export default function SiteApplication({ server, site, applicationType, gitRepo
 
     const activeStatus = statusMeta[site.status] ?? statusMeta.default;
 
+    // Auto-refresh while provisioning or installing
+    useEffect(() => {
+        if (site.status === 'provisioning' || site.git_status === 'installing') {
+            const interval = setInterval(() => {
+                router.reload({ only: ['site', 'applicationType', 'gitRepository'] });
+            }, 3000); // Poll every 3 seconds
+
+            return () => clearInterval(interval);
+        }
+    }, [site.status, site.git_status]);
+
+    const handleCancelInstallation = () => {
+        router.post(
+            `/servers/${server.id}/sites/${site.id}/git/cancel`,
+            {},
+            {
+                onSuccess: () => {
+                    router.reload();
+                },
+            },
+        );
+    };
+
     // Show provisioning progress if site or Git is installing
     if (site.status === 'provisioning' || site.git_status === 'installing') {
         return (
@@ -123,9 +145,7 @@ export default function SiteApplication({ server, site, applicationType, gitRepo
                 <div className="space-y-8">
                     <div className="space-y-2">
                         <h1 className="text-2xl font-semibold">Installing Application</h1>
-                        <p className="text-sm text-muted-foreground">
-                            Setting up nginx and cloning your repository...
-                        </p>
+                        <p className="text-sm text-muted-foreground">Setting up nginx and cloning your repository...</p>
                     </div>
                     <Card>
                         <CardContent className="flex flex-col items-center justify-center py-16">
@@ -134,6 +154,15 @@ export default function SiteApplication({ server, site, applicationType, gitRepo
                             <p className="max-w-md text-center text-sm text-muted-foreground">
                                 Configuring nginx and cloning repository. Usually takes 1-2 minutes.
                             </p>
+
+                            <div className="mt-6">
+                                <button
+                                    onClick={handleCancelInstallation}
+                                    className="rounded-md border border-red-500 px-4 py-2 text-sm font-medium text-red-500 transition-colors hover:bg-red-500 hover:text-white"
+                                >
+                                    Cancel Installation
+                                </button>
+                            </div>
                         </CardContent>
                     </Card>
                 </div>
@@ -224,6 +253,63 @@ export default function SiteApplication({ server, site, applicationType, gitRepo
         );
     }
 
+    // Show static site or site without Git repository
+    if (applicationType === 'static' || site.status === 'active') {
+        return (
+            <SiteLayout server={server} site={site} breadcrumbs={breadcrumbs}>
+                <Head title={`Application — ${site.domain}`} />
+                <div className="space-y-8">
+                    <div className="space-y-2">
+                        <div className="flex flex-wrap items-center gap-3">
+                            <h1 className="text-2xl font-semibold">{site.domain}</h1>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                {activeStatus.icon}
+                                <Badge className={activeStatus.badgeClass}>{activeStatus.label}</Badge>
+                            </div>
+                        </div>
+                        <p className="text-sm text-muted-foreground">Your site is active and serving content from {site.document_root}.</p>
+                    </div>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Site Details</CardTitle>
+                        </CardHeader>
+                        <Separator />
+                        <CardContent className="space-y-6">
+                            <div className="grid grid-cols-2 gap-6">
+                                <div>
+                                    <div className="mb-1.5 text-xs text-muted-foreground">Document Root</div>
+                                    <div className="font-mono text-sm">{site.document_root}</div>
+                                </div>
+                                <div>
+                                    <div className="mb-1.5 text-xs text-muted-foreground">PHP Version</div>
+                                    <div className="text-sm">PHP {site.php_version}</div>
+                                </div>
+                                <div>
+                                    <div className="mb-1.5 text-xs text-muted-foreground">SSL Enabled</div>
+                                    <div className="flex items-center gap-1.5 text-sm">
+                                        {site.ssl_enabled ? (
+                                            <>
+                                                <Lock className="h-3.5 w-3.5 text-green-500" />
+                                                <span>Enabled</span>
+                                            </>
+                                        ) : (
+                                            <span>Disabled</span>
+                                        )}
+                                    </div>
+                                </div>
+                                <div>
+                                    <div className="mb-1.5 text-xs text-muted-foreground">Provisioned</div>
+                                    <div className="text-sm">{formatDate(site.provisioned_at)}</div>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            </SiteLayout>
+        );
+    }
+
     // Fallback: still provisioning or unknown state
     return (
         <SiteLayout server={server} site={site} breadcrumbs={breadcrumbs}>
@@ -231,9 +317,7 @@ export default function SiteApplication({ server, site, applicationType, gitRepo
             <div className="space-y-8">
                 <div className="space-y-2">
                     <h1 className="text-2xl font-semibold">Provisioning...</h1>
-                    <p className="text-sm text-muted-foreground">
-                        Your site is being configured. This page will update automatically.
-                    </p>
+                    <p className="text-sm text-muted-foreground">Your site is being configured. This page will update automatically.</p>
                 </div>
                 <Card>
                     <CardContent className="flex flex-col items-center justify-center py-16">

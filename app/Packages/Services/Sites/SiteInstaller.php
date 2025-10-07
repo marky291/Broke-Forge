@@ -101,6 +101,7 @@ class SiteInstaller extends PackageInstaller implements \App\Packages\Base\Serve
             "chown -R {$appUser}:{$appUser} {$documentRoot}",
             "chmod -R 775 {$documentRoot}",
             "echo '<?php phpinfo();' > {$documentRoot}/index.php",
+            "chown {$appUser}:{$appUser} {$documentRoot}/index.php",
 
             $this->track(SiteInstallerMilestones::COMPLETE),
             function () use ($site) {

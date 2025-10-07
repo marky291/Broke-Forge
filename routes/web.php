@@ -15,6 +15,7 @@ use App\Http\Controllers\ServerSettingsController;
 use App\Http\Controllers\ServerSiteApplicationController;
 use App\Http\Controllers\ServerSiteCommandsController;
 use App\Http\Controllers\ServerSiteDeploymentsController;
+use App\Http\Controllers\ServerSiteGitController;
 use App\Http\Controllers\ServerSiteGitRepositoryController;
 use App\Http\Controllers\ServerSitesController;
 use App\Http\Controllers\ServerSupervisorController;
@@ -193,6 +194,8 @@ Route::middleware('auth')->group(function () {
                 ->name('sites.application.git.setup');
             Route::post('{site}/application/git/setup', [ServerSiteGitRepositoryController::class, 'store'])
                 ->name('sites.application.git.store');
+            Route::post('{site}/git/cancel', [ServerSiteGitController::class, 'cancel'])
+                ->name('sites.git.cancel');
             Route::get('{site}/explorer', [ServerFileExplorerController::class, 'show'])
                 ->name('sites.explorer');
             Route::prefix('{site}/files')->name('sites.files.')->group(function () {
@@ -294,6 +297,10 @@ Route::middleware('auth')->group(function () {
             Route::prefix('tasks')->scopeBindings()->group(function () {
                 Route::post('/', [ServerSupervisorController::class, 'storeTask'])
                     ->name('supervisor.tasks.store')
+                    ->middleware('throttle:20,1');
+
+                Route::put('{supervisorTask}', [ServerSupervisorController::class, 'updateTask'])
+                    ->name('supervisor.tasks.update')
                     ->middleware('throttle:20,1');
 
                 Route::delete('{supervisorTask}', [ServerSupervisorController::class, 'destroyTask'])

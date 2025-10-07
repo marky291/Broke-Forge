@@ -58,9 +58,16 @@ class SshConnectionBuilder
         // Use Windows-compatible SSH wrapper on Windows to avoid heredoc issues
         $sshClass = PHP_OS_FAMILY === 'Windows' ? WindowsCompatibleSsh::class : Ssh::class;
 
-        return $sshClass::create($credentialType->username(), $server->public_ip, $server->ssh_port)
+        $ssh = $sshClass::create($credentialType->username(), $server->public_ip, $server->ssh_port)
             ->usePrivateKey($tempKeyFile->path())
             ->disableStrictHostKeyChecking()
             ->enableQuietMode();
+
+        // Set SSH connection and command timeout (60 seconds)
+        $ssh->addExtraOption('-o ConnectTimeout=60')
+            ->addExtraOption('-o ServerAliveInterval=15')
+            ->addExtraOption('-o ServerAliveCountMax=3');
+
+        return $ssh;
     }
 }

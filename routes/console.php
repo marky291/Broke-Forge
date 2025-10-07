@@ -19,3 +19,8 @@ Schedule::command('scheduler:cleanup')
     ->daily()
     ->at('03:15')
     ->onOneServer();
+
+// Schedule stuck Git installations cleanup every 5 minutes
+Schedule::command('git:cleanup-stuck')
+    ->everyFiveMinutes()
+    ->onOneServer();

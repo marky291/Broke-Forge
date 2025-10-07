@@ -178,6 +178,14 @@ export default function Database({
         { title: 'Database', href: '#' },
     ];
 
+    const availableUpgradeVersions = useMemo(() => {
+        if (!installedDatabase) return [];
+        const currentVersion = installedDatabase.configuration?.version || '0';
+        return Object.entries(availableDatabases?.[selectedType]?.versions || {}).filter(([value]) => {
+            return parseFloat(value) > parseFloat(currentVersion);
+        });
+    }, [installedDatabase, availableDatabases, selectedType]);
+
     const handleTypeChange = (type: string) => {
         setSelectedType(type);
         const defaults = resolveDefaults(type);
@@ -378,24 +386,22 @@ export default function Database({
                             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                 <div className="space-y-2">
                                     <Label htmlFor="version">Version</Label>
-                                    <Select value={data.version} onValueChange={(value) => setData('version', value)}>
-                                        <SelectTrigger disabled={processing}>
-                                            <SelectValue placeholder="Select version" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {Object.entries(availableDatabases?.[selectedType]?.versions || {})
-                                                .filter(([value]) => {
-                                                    // Only show versions higher than current for updates (upgrades only, no downgrades)
-                                                    const currentVersion = installedDatabase?.configuration?.version || '0';
-                                                    return parseFloat(value) > parseFloat(currentVersion);
-                                                })
-                                                .map(([value, label]) => (
+                                    {availableUpgradeVersions.length > 0 ? (
+                                        <Select value={data.version} onValueChange={(value) => setData('version', value)}>
+                                            <SelectTrigger disabled={processing}>
+                                                <SelectValue placeholder="Select version" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {availableUpgradeVersions.map(([value, label]) => (
                                                     <SelectItem key={value} value={value}>
                                                         {label}
                                                     </SelectItem>
                                                 ))}
-                                        </SelectContent>
-                                    </Select>
+                                            </SelectContent>
+                                        </Select>
+                                    ) : (
+                                        <Input value={installedDatabase?.configuration?.version || ''} disabled className="bg-muted" />
+                                    )}
                                     {errors.version && <div className="text-sm text-red-600">{errors.version}</div>}
                                 </div>
 

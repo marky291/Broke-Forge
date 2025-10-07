@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\SupervisorStatus;
 use App\Http\Controllers\Concerns\PreparesSiteData;
 use App\Http\Requests\StoreSupervisorTaskRequest;
+use App\Http\Requests\UpdateSupervisorTaskRequest;
 use App\Models\Server;
 use App\Models\ServerSupervisor;
 use App\Models\ServerSupervisorTask;
@@ -128,6 +129,62 @@ class ServerSupervisorController extends Controller
     }
 
     /**
+     * Update an existing supervisor task
+     */
+    public function updateTask(UpdateSupervisorTaskRequest $request, Server $server, ServerSupervisorTask $supervisorTask): RedirectResponse
+    {
+        // Authorization
+        Gate::authorize('updateTask', [ServerSupervisor::class, $server]);
+
+        // Store old sanitized name for cleanup
+        $oldSanitizedName = $this->sanitizeTaskName($supervisorTask->name);
+
+        // Audit log
+        Log::info('Supervisor task updated', [
+            'user_id' => auth()->id(),
+            'server_id' => $server->id,
+            'task_id' => $supervisorTask->id,
+            'old_name' => $supervisorTask->name,
+            'new_name' => $request->input('name'),
+            'ip_address' => request()->ip(),
+        ]);
+
+        // Update the task in database
+        $supervisorTask->update($request->validated());
+
+        // Get new sanitized name
+        $newSanitizedName = $this->sanitizeTaskName($supervisorTask->name);
+
+        try {
+            // Stop the old task
+            $this->executeSupervisorctl($server, "stop {$oldSanitizedName} || true");
+
+            // Remove old config file if name changed
+            if ($oldSanitizedName !== $newSanitizedName) {
+                $ssh = $server->createSshConnection(\App\Packages\Enums\CredentialType::Root);
+                $ssh->disableStrictHostKeyChecking()->execute("rm -f /etc/supervisor/conf.d/{$oldSanitizedName}.conf");
+            }
+
+            // Reinstall task with new configuration
+            $installer = new SupervisorTaskInstaller($server, $supervisorTask);
+            $installer->execute();
+
+            return redirect()
+                ->route('servers.supervisor', $server)
+                ->with('success', 'Supervisor task updated successfully');
+        } catch (\Exception $e) {
+            Log::error('Failed to update supervisor task', [
+                'task_id' => $supervisorTask->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return redirect()
+                ->route('servers.supervisor', $server)
+                ->with('error', 'Failed to update supervisor task: '.$e->getMessage());
+        }
+    }
+
+    /**
      * Delete a supervisor task
      */
     public function destroyTask(Server $server, ServerSupervisorTask $supervisorTask): RedirectResponse
@@ -168,14 +225,17 @@ class ServerSupervisorController extends Controller
         // Toggle status
         $newStatus = $supervisorTask->status === 'active' ? 'inactive' : 'active';
 
+        // Get sanitized task name for supervisor commands
+        $sanitizedName = $this->sanitizeTaskName($supervisorTask->name);
+
         // Execute supervisorctl command to stop/start
         if ($newStatus === 'inactive') {
             // Stop the task
-            $this->executeSupervisorctl($server, "stop {$supervisorTask->name}");
+            $this->executeSupervisorctl($server, "stop {$sanitizedName}");
             $supervisorTask->update(['status' => 'inactive']);
         } else {
             // Start the task
-            $this->executeSupervisorctl($server, "start {$supervisorTask->name}");
+            $this->executeSupervisorctl($server, "start {$sanitizedName}");
             $supervisorTask->update(['status' => 'active']);
         }
 
@@ -201,8 +261,11 @@ class ServerSupervisorController extends Controller
             'ip_address' => request()->ip(),
         ]);
 
+        // Get sanitized task name for supervisor commands
+        $sanitizedName = $this->sanitizeTaskName($supervisorTask->name);
+
         // Execute supervisorctl restart command
-        $this->executeSupervisorctl($server, "restart {$supervisorTask->name}");
+        $this->executeSupervisorctl($server, "restart {$sanitizedName}");
 
         return redirect()
             ->route('servers.supervisor', $server)
@@ -216,5 +279,13 @@ class ServerSupervisorController extends Controller
     {
         $ssh = $server->createSshConnection(\App\Packages\Enums\CredentialType::Root);
         $ssh->disableStrictHostKeyChecking()->execute("supervisorctl {$command}");
+    }
+
+    /**
+     * Sanitize task name for supervisor config and commands
+     */
+    private function sanitizeTaskName(string $name): string
+    {
+        return preg_replace('/[^a-zA-Z0-9-_]/', '_', $name);
     }
 }
