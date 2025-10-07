@@ -1,5 +1,6 @@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { CardContainer } from '@/components/ui/card-container';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import SiteLayout from '@/layouts/server/site-layout';
@@ -37,8 +38,26 @@ type ServerSite = {
     status: string;
     configuration: Record<string, unknown> | null;
     provisioned_at: string | null;
+    git_status?: string;
+    last_deployed_at?: string;
     created_at: string;
     updated_at: string;
+};
+
+type GitRepository = {
+    provider: string;
+    repository: string;
+    branch: string;
+    deployKey: string;
+    lastDeployedSha: string | null;
+    lastDeployedAt: string | null;
+};
+
+type SiteApplicationProps = {
+    server: ServerType;
+    site: ServerSite;
+    applicationType: string | null;
+    gitRepository?: GitRepository | null;
 };
 
 type InstallationOption = {
@@ -153,13 +172,25 @@ const statusMeta: Record<string, { badgeClass: string; label: string; icon: Reac
 };
 
 /**
+ * Format date for display.
+ */
+const formatDate = (dateString: string | null | undefined): string => {
+    if (!dateString) return 'Not deployed yet';
+
+    const date = new Date(dateString);
+    const dateOptions: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', year: 'numeric' };
+    const timeOptions: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit' };
+
+    return `${date.toLocaleDateString('en-US', dateOptions)} at ${date.toLocaleTimeString('en-US', timeOptions)}`;
+};
+
+/**
  * Render the BrokeForge site application view with available installation workflows.
  */
-export default function SiteApplication({ server, site }: { server: ServerType; site: ServerSite }) {
+export default function SiteApplication({ server, site, applicationType, gitRepository }: SiteApplicationProps) {
     const initialOptionKey = installationOptions[0]?.key ?? 'install-application';
     const [selectedOption, setSelectedOption] = useState<InstallationOption['key'] | ''>(initialOptionKey);
     const [searchQuery, setSearchQuery] = useState('');
-    const gitRepositorySetupUrl = applicationRoute({ server: server.id, site: site.id }).url;
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard.url() },
@@ -208,12 +239,95 @@ export default function SiteApplication({ server, site }: { server: ServerType; 
     const handleOptionSelect = (option: InstallationOption) => {
         if (option.key === 'git-repository') {
             setSelectedOption(option.key);
-            router.visit(gitRepositorySetupUrl);
+            router.visit(`/servers/${server.id}/sites/${site.id}/application/git/setup`);
             return;
         }
 
         setSelectedOption(option.key);
     };
+
+    // If an application is already installed, show the installed state
+    if (applicationType) {
+        return (
+            <SiteLayout server={server} site={site} breadcrumbs={breadcrumbs}>
+                <Head title={`Application — ${site.domain}`} />
+                <div className="space-y-8">
+                    <div className="space-y-2">
+                        <div className="flex flex-wrap items-center gap-3">
+                            <h1 className="text-2xl font-semibold">{site.domain}</h1>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                {activeStatus.icon}
+                                <Badge className={activeStatus.badgeClass}>{activeStatus.label}</Badge>
+                            </div>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                            Your application is configured and ready. Manage deployments and settings below.
+                        </p>
+                    </div>
+
+                    {applicationType === 'git' && gitRepository && (
+                        <Card>
+                            <CardHeader>
+                                <div className="flex items-center gap-2.5">
+                                    <GitBranch className="h-5 w-5 text-muted-foreground" />
+                                    <CardTitle>Git Repository</CardTitle>
+                                </div>
+                            </CardHeader>
+                            <Separator />
+                            <CardContent className="space-y-6">
+                                <div className="grid grid-cols-2 gap-6">
+                                    <div>
+                                        <div className="mb-1.5 text-xs text-muted-foreground">Repository</div>
+                                        <div className="text-sm font-medium">{gitRepository.repository}</div>
+                                    </div>
+                                    <div>
+                                        <div className="mb-1.5 text-xs text-muted-foreground">Branch</div>
+                                        <div className="text-sm font-medium">{gitRepository.branch}</div>
+                                    </div>
+                                    <div>
+                                        <div className="mb-1.5 text-xs text-muted-foreground">Provider</div>
+                                        <div className="text-sm">{gitRepository.provider}</div>
+                                    </div>
+                                    <div>
+                                        <div className="mb-1.5 text-xs text-muted-foreground">PHP Version</div>
+                                        <div className="text-sm">PHP {site.php_version}</div>
+                                    </div>
+                                    <div>
+                                        <div className="mb-1.5 text-xs text-muted-foreground">SSL Enabled</div>
+                                        <div className="flex items-center gap-1.5 text-sm">
+                                            {site.ssl_enabled ? (
+                                                <>
+                                                    <Lock className="h-3.5 w-3.5 text-green-500" />
+                                                    <span>Enabled</span>
+                                                </>
+                                            ) : (
+                                                <span>Disabled</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div className="mb-1.5 text-xs text-muted-foreground">Last Deployed</div>
+                                        <div className="text-sm">
+                                            {formatDate(gitRepository.lastDeployedAt)}
+                                            {gitRepository.lastDeployedSha && (
+                                                <>
+                                                    {' '}
+                                                    •{' '}
+                                                    <span className="font-mono text-xs text-muted-foreground">
+                                                        {gitRepository.lastDeployedSha.substring(0, 7)}
+                                                    </span>
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
+                </div>
+            </SiteLayout>
+        );
+    }
 
     return (
         <SiteLayout server={server} site={site} breadcrumbs={breadcrumbs}>
@@ -233,14 +347,11 @@ export default function SiteApplication({ server, site }: { server: ServerType; 
                 </div>
 
                 <div className="space-y-6">
-                    <Card>
-                        <CardHeader className="space-y-4">
-                            <div>
-                                <CardTitle>Initialise This Site</CardTitle>
-                                <p className="mt-1 text-sm text-muted-foreground">
-                                    Search the available installers and pick the option that matches how you want to launch.
-                                </p>
-                            </div>
+                    <CardContainer
+                        title="Initialise This Site"
+                        description="Search the available installers and pick the option that matches how you want to launch."
+                    >
+                        <div className="space-y-5">
                             <Input
                                 type="search"
                                 value={searchQuery}
@@ -248,9 +359,6 @@ export default function SiteApplication({ server, site }: { server: ServerType; 
                                 placeholder="Search installers (e.g. git, wordpress, database)"
                                 className="max-w-md"
                             />
-                        </CardHeader>
-                        <Separator />
-                        <CardContent className="space-y-5">
                             {filteredOptions.length > 0 ? (
                                 <>
                                     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -307,11 +415,11 @@ export default function SiteApplication({ server, site }: { server: ServerType; 
                                 </>
                             ) : (
                                 <div className="rounded-xl border border-dashed border-border bg-muted/30 p-6 text-center text-sm text-muted-foreground">
-                                    No installers match “{searchQuery}”. Try a different keyword.
+                                    No installers match "{searchQuery}". Try a different keyword.
                                 </div>
                             )}
-                        </CardContent>
-                    </Card>
+                        </div>
+                    </CardContainer>
                 </div>
             </div>
         </SiteLayout>

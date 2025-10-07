@@ -60,7 +60,10 @@ class ServerSiteGitRepositoryController extends Controller
             'git_status' => GitStatus::Installing,
             'configuration' => array_merge(
                 $site->configuration ?? [],
-                ['git_repository' => $configuration]
+                [
+                    'application_type' => 'git',
+                    'git_repository' => $configuration,
+                ]
             ),
         ]);
 

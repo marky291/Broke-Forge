@@ -12,6 +12,7 @@ use App\Http\Controllers\ServerPhpController;
 use App\Http\Controllers\ServerProvisioningController;
 use App\Http\Controllers\ServerSchedulerController;
 use App\Http\Controllers\ServerSettingsController;
+use App\Http\Controllers\ServerSiteApplicationController;
 use App\Http\Controllers\ServerSiteCommandsController;
 use App\Http\Controllers\ServerSiteDeploymentsController;
 use App\Http\Controllers\ServerSiteGitRepositoryController;
@@ -180,10 +181,12 @@ Route::middleware('auth')->group(function () {
                 ->name('sites.deployments.auto-deploy');
             Route::get('{site}/deployments/{deployment}/status', [ServerSiteDeploymentsController::class, 'status'])
                 ->name('sites.deployments.status');
-            Route::get('{site}/application', [ServerSiteGitRepositoryController::class, 'show'])
+            Route::get('{site}/application', [ServerSiteApplicationController::class, 'show'])
                 ->name('sites.application');
-            Route::post('{site}/application', [ServerSiteGitRepositoryController::class, 'store'])
-                ->name('sites.application.store');
+            Route::get('{site}/application/git/setup', [ServerSiteGitRepositoryController::class, 'show'])
+                ->name('sites.application.git.setup');
+            Route::post('{site}/application/git/setup', [ServerSiteGitRepositoryController::class, 'store'])
+                ->name('sites.application.git.store');
             Route::get('{site}/explorer', [ServerFileExplorerController::class, 'show'])
                 ->name('sites.explorer');
             Route::prefix('{site}/files')->name('sites.files.')->group(function () {
