@@ -23,6 +23,8 @@ interface CardFormModalProps {
     submitDisabled?: boolean;
     /** Optional label for submitting state (defaults to submitLabel with '...' suffix) */
     submittingLabel?: string;
+    /** Optional className for DialogContent */
+    className?: string;
 }
 
 /**
@@ -60,18 +62,19 @@ export function CardFormModal({
     isSubmitting = false,
     submitDisabled = false,
     submittingLabel,
+    className,
 }: CardFormModalProps) {
     const submittingText = submittingLabel || `${submitLabel}...`;
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent>
-                <form onSubmit={onSubmit}>
+            <DialogContent className={className}>
+                <form onSubmit={onSubmit} className="flex min-w-0 flex-col gap-4">
                     <DialogHeader>
                         <DialogTitle>{title}</DialogTitle>
                         {description && <DialogDescription>{description}</DialogDescription>}
                     </DialogHeader>
-                    <div className="py-4">{children}</div>
+                    <div className="min-w-0">{children}</div>
                     <DialogFooter>
                         <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
                             Cancel

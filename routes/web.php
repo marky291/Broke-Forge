@@ -163,10 +163,16 @@ Route::middleware('auth')->group(function () {
         Route::delete('php/{php}', [ServerPhpController::class, 'destroy'])
             ->name('php.destroy');
 
+        // Server credentials
+        Route::get('deploy-key', [ServerSitesController::class, 'deployKey'])
+            ->name('deploy-key');
+
         // Sites management
         Route::prefix('sites')->scopeBindings()->group(function () {
             Route::get('/', [ServerSitesController::class, 'index'])
                 ->name('sites');
+            Route::post('/', [ServerSitesController::class, 'store'])
+                ->name('sites.store');
             Route::get('{site}/commands', ServerSiteCommandsController::class)
                 ->name('sites.commands');
             Route::post('{site}/commands', [ServerSiteCommandsController::class, 'store'])

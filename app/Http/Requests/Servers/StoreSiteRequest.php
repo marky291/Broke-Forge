@@ -41,6 +41,18 @@ class StoreSiteRequest extends FormRequest
                 'required',
                 'boolean',
             ],
+            'git_repository' => [
+                'required',
+                'string',
+                'max:255',
+                'regex:/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/',
+            ],
+            'git_branch' => [
+                'required',
+                'string',
+                'max:255',
+                'regex:/^[A-Za-z0-9._\/-]+$/',
+            ],
         ];
     }
 
@@ -58,6 +70,10 @@ class StoreSiteRequest extends FormRequest
             'php_version.required' => 'Please select a PHP version.',
             'php_version.in' => 'Please select a valid PHP version.',
             'ssl.required' => 'Please specify whether to enable SSL.',
+            'git_repository.required' => 'Git repository is required.',
+            'git_repository.regex' => 'Repository must be in owner/repo format (e.g., owner/project).',
+            'git_branch.required' => 'Branch name is required.',
+            'git_branch.regex' => 'Branch name contains invalid characters.',
         ];
     }
 }

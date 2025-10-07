@@ -6,7 +6,11 @@ use App\Http\Controllers\Concerns\PreparesSiteData;
 use App\Http\Requests\Servers\StoreSiteRequest;
 use App\Models\Server;
 use App\Models\ServerSite;
+use App\Packages\Enums\CredentialType;
+use App\Packages\Enums\GitStatus;
+use App\Packages\Services\Sites\Git\GitRepositoryInstallerJob;
 use App\Packages\Services\Sites\SiteInstallerJob;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -45,12 +49,34 @@ class ServerSitesController extends Controller
         return redirect()->route('servers.sites.application', [$server, $site]);
     }
 
+    /**
+     * Get the deploy key for the server.
+     */
+    public function deployKey(Server $server): JsonResponse
+    {
+        $credential = $server->credential(CredentialType::BrokeForge);
+
+        return response()->json([
+            'deploy_key' => $credential?->public_key ?? 'Deploy key not available',
+        ]);
+    }
+
     public function store(StoreSiteRequest $request, Server $server): RedirectResponse
     {
         $validated = $request->validated();
 
         try {
-            // Create the site record immediately so it appears in the list
+            // Build configuration with Git repository (all sites are "Application" type)
+            $configuration = [
+                'application_type' => 'application',
+                'git_repository' => [
+                    'provider' => 'github',
+                    'repository' => $validated['git_repository'],
+                    'branch' => $validated['git_branch'],
+                ],
+            ];
+
+            // Create site with Git status as "installing"
             $site = ServerSite::create([
                 'server_id' => $server->id,
                 'domain' => $validated['domain'],
@@ -59,17 +85,15 @@ class ServerSitesController extends Controller
                 'status' => 'provisioning',
                 'document_root' => "/home/brokeforge/{$validated['domain']}/public",
                 'nginx_config_path' => "/etc/nginx/sites-available/{$validated['domain']}",
+                'configuration' => $configuration,
+                'git_status' => GitStatus::Installing,
             ]);
 
-            // Dispatch job to provision the site on the remote server
-            SiteInstallerJob::dispatch(
-                $server,
-                $validated['domain'],
-                $validated['php_version'],
-                $validated['ssl']
-            );
+            // Dispatch jobs: nginx/directories + Git clone
+            SiteInstallerJob::dispatch($server, $validated['domain'], $validated['php_version'], $validated['ssl']);
+            GitRepositoryInstallerJob::dispatch($server, $site, $configuration['git_repository']);
 
-            return back()->with('success', 'Site provisioning started. The site will appear in the list shortly.');
+            return back()->with('success', 'Site provisioning started. Repository will be cloned automatically.');
         } catch (\Throwable $e) {
             return back()->with('error', 'Failed to start site provisioning: '.$e->getMessage());
         }
