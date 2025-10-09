@@ -1,12 +1,13 @@
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import SiteLayout from '@/layouts/server/site-layout';
 import { dashboard } from '@/routes';
 import { show as showServer } from '@/routes/servers';
 import { type BreadcrumbItem } from '@/types';
-import { Head, router } from '@inertiajs/react';
-import { CheckCircle, Clock, GitBranch, Loader2, Lock, XCircle } from 'lucide-react';
+import { Head, router, useForm } from '@inertiajs/react';
+import { CheckCircle, Clock, GitBranch, Loader2, Lock, Trash2, XCircle } from 'lucide-react';
 import { type ReactNode, useEffect } from 'react';
 
 type ServerType = {
@@ -105,6 +106,8 @@ const formatDate = (dateString: string | null | undefined): string => {
  * Render the BrokeForge site application view.
  */
 export default function SiteApplication({ server, site, applicationType, gitRepository }: SiteApplicationProps) {
+    const { post, processing } = useForm();
+
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard.url() },
         { title: `Server #${server.id}`, href: showServer(server.id).url },
@@ -113,6 +116,15 @@ export default function SiteApplication({ server, site, applicationType, gitRepo
     ];
 
     const activeStatus = statusMeta[site.status] ?? statusMeta.default;
+
+    const handleUninstall = () => {
+        if (!confirm(`Are you sure you want to uninstall ${site.domain}? This will remove the site configuration from the server.`)) {
+            return;
+        }
+        post(`/servers/${server.id}/sites/${site.id}/uninstall`, {
+            preserveScroll: true,
+        });
+    };
 
     // Auto-refresh while provisioning or installing
     useEffect(() => {
@@ -248,6 +260,17 @@ export default function SiteApplication({ server, site, applicationType, gitRepo
                             </CardContent>
                         </Card>
                     )}
+
+                    {/* Uninstall Site Link */}
+                    <div className="mt-8 text-right">
+                        <button
+                            onClick={handleUninstall}
+                            disabled={processing}
+                            className="text-sm text-red-600 hover:text-red-700 hover:underline disabled:cursor-not-allowed disabled:opacity-50 dark:text-red-500 dark:hover:text-red-400"
+                        >
+                            {processing ? 'Uninstalling site...' : 'Uninstall Site'}
+                        </button>
+                    </div>
                 </div>
             </SiteLayout>
         );
@@ -305,6 +328,17 @@ export default function SiteApplication({ server, site, applicationType, gitRepo
                             </div>
                         </CardContent>
                     </Card>
+
+                    {/* Uninstall Site Link */}
+                    <div className="mt-8 text-right">
+                        <button
+                            onClick={handleUninstall}
+                            disabled={processing}
+                            className="text-sm text-red-600 hover:text-red-700 hover:underline disabled:cursor-not-allowed disabled:opacity-50 dark:text-red-500 dark:hover:text-red-400"
+                        >
+                            {processing ? 'Uninstalling site...' : 'Uninstall Site'}
+                        </button>
+                    </div>
                 </div>
             </SiteLayout>
         );

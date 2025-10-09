@@ -222,7 +222,31 @@ interface Package
 
 ### ServerPackage and SitePackage Interfaces
 
-**IMPORTANT**: To maintain clear separation between server-level and site-level packages, two specialized interfaces extend the base `Package` interface:
+**CRITICAL REQUIREMENT**: ALL packages (installers AND removers) MUST explicitly implement either `ServerPackage` or `SitePackage` interface. This is not optional.
+
+```php
+// ✅ CORRECT - Installer with interface
+class NginxInstaller extends PackageInstaller implements ServerPackage { }
+
+// ✅ CORRECT - Remover with interface
+class NginxRemover extends PackageRemover implements ServerPackage { }
+
+// ✅ CORRECT - Site installer with interface
+class SiteInstaller extends PackageInstaller implements SitePackage { }
+
+// ✅ CORRECT - Site remover with interface
+class SiteRemover extends PackageRemover implements SitePackage { }
+
+// ❌ WRONG - Missing interface (will cause "Unknown package type" error)
+class NginxRemover extends PackageRemover { }
+
+// ❌ WRONG - Missing interface (will cause "Unknown package type" error)
+class SiteRemover extends PackageRemover { }
+```
+
+**Why This Matters**: The package system uses these interfaces to determine the correct credential type, directory structure, and processing logic. Omitting the interface will cause runtime errors like "Unknown package type".
+
+To maintain clear separation between server-level and site-level packages, two specialized interfaces extend the base `Package` interface:
 
 #### ServerPackage Interface
 
@@ -1022,7 +1046,11 @@ class SiteCommandInstaller extends PackageInstaller
 
 ## Package Remover Implementation
 
-Package Removers follow the same pattern but extend `PackageRemover` (which also implements `Package` through `PackageManager`):
+Package Removers follow the same pattern but extend `PackageRemover` (which also implements `Package` through `PackageManager`).
+
+**CRITICAL: All removers MUST implement either `ServerPackage` or `SitePackage` interface, just like installers.**
+
+### Server-Level Package Remover
 
 ```php
 <?php
@@ -1031,11 +1059,12 @@ namespace App\Packages\Services\{Category};
 
 use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageRemover;
+use App\Packages\Base\ServerPackage;
 use App\Packages\Credentials\SshCredential;
 use App\Packages\Enums\PackageName;
 use App\Packages\Enums\PackageType;
 
-class {ServiceName}Remover extends PackageRemover
+class {ServiceName}Remover extends PackageRemover implements ServerPackage
 {
     /**
      * Generic name of the current package
@@ -1093,6 +1122,88 @@ class {ServiceName}Remover extends PackageRemover
     }
 }
 ```
+
+### Site-Level Package Remover
+
+**IMPORTANT: Site-level removers MUST be in `Services/Sites/` directory and implement `SitePackage`:**
+
+```php
+<?php
+
+namespace App\Packages\Services\Sites;
+
+use App\Models\ServerSite;
+use App\Packages\Base\Milestones;
+use App\Packages\Base\PackageRemover;
+use App\Packages\Base\SitePackage;
+use App\Packages\Enums\CredentialType;
+use App\Packages\Enums\PackageName;
+use App\Packages\Enums\PackageType;
+
+class SiteRemover extends PackageRemover implements SitePackage
+{
+    public function packageName(): PackageName
+    {
+        return PackageName::Site;
+    }
+
+    public function packageType(): PackageType
+    {
+        return PackageType::Site;
+    }
+
+    public function milestones(): Milestones
+    {
+        return new SiteRemoverMilestones;
+    }
+
+    public function credentialType(): CredentialType
+    {
+        return CredentialType::BrokeForge;
+    }
+
+    public function execute(array $config): void
+    {
+        $site = $config['site'] ?? null;
+        $domain = $config['domain'] ?? $site?->domain;
+
+        if (! $domain) {
+            throw new \LogicException('Site domain must be provided for removal.');
+        }
+
+        $this->remove($this->commands($domain, $site));
+    }
+
+    protected function commands(string $domain, ?ServerSite $site): array
+    {
+        return [
+            $this->track(SiteRemoverMilestones::DISABLE_SITE),
+            "rm -f /etc/nginx/sites-enabled/{$domain}",
+
+            $this->track(SiteRemoverMilestones::RELOAD_NGINX),
+            'nginx -s reload',
+
+            $this->track(SiteRemoverMilestones::COMPLETE),
+            fn () => $site?->update(['status' => 'disabled', 'deprovisioned_at' => now()]),
+        ];
+    }
+}
+```
+
+### Key Differences: ServerPackage vs SitePackage Removers
+
+| Aspect | ServerPackage Remover | SitePackage Remover |
+|--------|----------------------|---------------------|
+| **Interface** | `implements ServerPackage` | `implements SitePackage` |
+| **Directory** | `Services/{Category}/` | `Services/Sites/` |
+| **Credential** | `CredentialType::Root` | `CredentialType::BrokeForge` |
+| **Scope** | Server-wide services | Individual sites |
+| **Examples** | NginxRemover, MySqlRemover, PhpRemover | SiteRemover, GitRepositoryRemover |
+
+**Common Mistake to Avoid:**
+- ❌ Forgetting to add `implements ServerPackage` or `implements SitePackage`
+- ❌ Using wrong credential type for the package level
+- ❌ Placing site packages outside `Services/Sites/` directory
 
 ## Milestone System
 

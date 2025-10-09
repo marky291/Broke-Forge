@@ -196,6 +196,9 @@ Route::middleware('auth')->group(function () {
                 ->name('sites.application.git.store');
             Route::post('{site}/git/cancel', [ServerSiteGitController::class, 'cancel'])
                 ->name('sites.git.cancel');
+            Route::post('{site}/uninstall', [ServerSitesController::class, 'uninstall'])
+                ->name('sites.uninstall')
+                ->middleware('throttle:5,1');
             Route::get('{site}/explorer', [ServerFileExplorerController::class, 'show'])
                 ->name('sites.explorer');
             Route::prefix('{site}/files')->name('sites.files.')->group(function () {

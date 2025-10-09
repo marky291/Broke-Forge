@@ -5,6 +5,7 @@ namespace App\Packages\Services\Sites;
 use App\Models\ServerSite;
 use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageRemover;
+use App\Packages\Base\SitePackage;
 use App\Packages\Enums\CredentialType;
 use App\Packages\Enums\PackageName;
 use App\Packages\Enums\PackageType;
@@ -14,7 +15,7 @@ use App\Packages\Enums\PackageType;
  *
  * Handles site removal and cleanup with progress tracking
  */
-class SiteRemover extends PackageRemover
+class SiteRemover extends PackageRemover implements SitePackage
 {
     /**
      * Execute the site removal

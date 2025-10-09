@@ -10,6 +10,7 @@ use App\Packages\Enums\CredentialType;
 use App\Packages\Enums\GitStatus;
 use App\Packages\Services\Sites\Git\GitRepositoryInstallerJob;
 use App\Packages\Services\Sites\SiteInstallerJob;
+use App\Packages\Services\Sites\SiteRemoverJob;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
@@ -98,5 +99,21 @@ class ServerSitesController extends Controller
         } catch (\Throwable $e) {
             return back()->with('error', 'Failed to start site provisioning: '.$e->getMessage());
         }
+    }
+
+    /**
+     * Uninstall a site from the server
+     */
+    public function uninstall(Server $server, ServerSite $site): RedirectResponse
+    {
+        // Set status to uninstalling
+        $site->update(['status' => 'uninstalling']);
+
+        // Dispatch site removal job
+        SiteRemoverJob::dispatch($server, $site);
+
+        return redirect()
+            ->route('servers.sites', $server)
+            ->with('success', 'Site uninstallation started');
     }
 }
