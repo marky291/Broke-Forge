@@ -83,7 +83,7 @@ class SiteRemover extends PackageRemover implements SitePackage
 
     public function credentialType(): CredentialType
     {
-        return CredentialType::BrokeForge;
+        return CredentialType::Root;
     }
 
     public function packageName(): PackageName

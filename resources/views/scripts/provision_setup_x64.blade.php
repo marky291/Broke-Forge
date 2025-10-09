@@ -141,9 +141,10 @@ sudo -u {{ $appUser }} git config --global user.email '{{ $appUser }}@{{ str_rep
 
 # Set proper permissions on app user's home directory (755 for SSH compatibility)
 # SSH requires home directory to NOT be group-writable
+chown -R {{ $appUser }}:{{ $appUser }} /home/{{ $appUser }}
 chmod 755 /home/{{ $appUser }}
 
-echo "[+] App user '{{ $appUser }}' configured for Git operations"
+echo "[+] App user '{{ $appUser }}' configured for Git operations with full ownership of home directory"
 
 # Set passwords for all configured users
 echo "root:${ROOT_PASSWORD}" | chpasswd

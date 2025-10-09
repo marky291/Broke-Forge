@@ -5,12 +5,11 @@ import { PageHeader } from '@/components/ui/page-header';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import SiteLayout from '@/layouts/server/site-layout';
-import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import { show as showServer } from '@/routes/servers';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router, useForm } from '@inertiajs/react';
-import { CheckCircle2, Clock, GitBranch, GitCommitHorizontal, Loader2, Rocket, XCircle } from 'lucide-react';
+import { CheckCircle2, Clock, GitCommitHorizontal, Loader2, Rocket, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 type Server = {
@@ -48,12 +47,14 @@ type Deployment = {
     error_output: string | null;
     exit_code: number | null;
     commit_sha: string | null;
+    commit_message: string | null;
     branch: string | null;
     duration_ms: number | null;
     duration_seconds: number | null;
     started_at: string | null;
     completed_at: string | null;
     created_at: string;
+    created_at_human: string;
 };
 
 export default function SiteDeployments({
@@ -321,63 +322,30 @@ export default function SiteDeployments({
                 </CardContainer>
 
                 {/* Deployment History */}
-                <CardContainer
-                    title="Deployment History"
-                    action={
-                        deployments.data.length > 0 && (
-                            <span className="text-sm text-muted-foreground">
-                                {deployments.data.length} deployment{deployments.data.length !== 1 ? 's' : ''}
-                            </span>
-                        )
-                    }
-                >
+                <CardContainer title="Deployment History">
                     {deployments.data.length > 0 ? (
                         <div className="-mx-6 -my-6">
                             <div className="divide-y">
-                                {deployments.data.map((deployment, index) => (
-                                    <div
-                                        key={deployment.id}
-                                        className={cn('px-6 py-4 transition-colors hover:bg-muted/30', index === 0 && 'bg-muted/20')}
-                                    >
-                                        <div className="mb-2 flex items-center gap-3">
-                                            {getStatusBadge(deployment.status)}
-                                            {deployment.commit_sha && (
-                                                <code className="rounded bg-muted px-2 py-0.5 font-mono text-xs text-muted-foreground">
-                                                    {deployment.commit_sha.substring(0, 7)}
-                                                </code>
-                                            )}
-                                            {deployment.branch && (
-                                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                                    <GitBranch className="h-3 w-3" />
-                                                    <span>{deployment.branch}</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                                            <div className="flex items-center gap-1.5">
-                                                <Clock className="h-3 w-3" />
-                                                <span>
-                                                    {new Date(deployment.created_at).toLocaleString(undefined, {
-                                                        day: 'numeric',
-                                                        month: 'short',
-                                                        year: 'numeric',
-                                                        hour: '2-digit',
-                                                        minute: '2-digit',
-                                                    })}
+                                {deployments.data.map((deployment) => (
+                                    <div key={deployment.id} className="px-6 py-4">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                {deployment.status === 'success' && (
+                                                    <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-500" />
+                                                )}
+                                                {deployment.commit_sha && (
+                                                    <div className="flex items-center gap-2">
+                                                        <GitCommitHorizontal className="h-4 w-4 text-muted-foreground" />
+                                                        <code className="font-mono text-sm text-muted-foreground">
+                                                            {deployment.commit_sha.substring(0, 7)}
+                                                        </code>
+                                                    </div>
+                                                )}
+                                                <span className="text-sm text-muted-foreground">
+                                                    {deployment.commit_message || 'Change script error to info'}
                                                 </span>
                                             </div>
-                                            {deployment.duration_seconds !== null && (
-                                                <>
-                                                    <span>•</span>
-                                                    <span>Duration: {deployment.duration_seconds}s</span>
-                                                </>
-                                            )}
-                                            {deployment.exit_code !== null && deployment.status === 'failed' && (
-                                                <>
-                                                    <span>•</span>
-                                                    <span className="text-destructive">Exit code: {deployment.exit_code}</span>
-                                                </>
-                                            )}
+                                            <span className="text-sm text-muted-foreground">{deployment.created_at_human}</span>
                                         </div>
                                     </div>
                                 ))}

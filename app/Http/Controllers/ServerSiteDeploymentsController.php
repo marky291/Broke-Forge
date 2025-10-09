@@ -46,12 +46,14 @@ class ServerSiteDeploymentsController extends Controller
                 'error_output' => $deployment->error_output,
                 'exit_code' => $deployment->exit_code,
                 'commit_sha' => $deployment->commit_sha,
+                'commit_message' => $deployment->commit_message,
                 'branch' => $deployment->branch,
                 'duration_ms' => $deployment->duration_ms,
                 'duration_seconds' => $deployment->getDurationSeconds(),
                 'started_at' => $deployment->started_at,
                 'completed_at' => $deployment->completed_at,
                 'created_at' => $deployment->created_at,
+                'created_at_human' => $deployment->created_at->diffForHumans(),
             ]);
 
         // Get latest deployment
@@ -74,6 +76,7 @@ class ServerSiteDeploymentsController extends Controller
                 'output' => $latestDeployment->output,
                 'error_output' => $latestDeployment->error_output,
                 'commit_sha' => $latestDeployment->commit_sha,
+                'commit_message' => $latestDeployment->commit_message,
                 'branch' => $latestDeployment->branch,
                 'duration_seconds' => $latestDeployment->getDurationSeconds(),
                 'started_at' => $latestDeployment->started_at,
@@ -140,6 +143,7 @@ class ServerSiteDeploymentsController extends Controller
             'error_output' => $deployment->error_output,
             'exit_code' => $deployment->exit_code,
             'commit_sha' => $deployment->commit_sha,
+            'commit_message' => $deployment->commit_message,
             'branch' => $deployment->branch,
             'duration_ms' => $deployment->duration_ms,
             'duration_seconds' => $deployment->getDurationSeconds(),

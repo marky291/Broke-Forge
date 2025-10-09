@@ -352,7 +352,9 @@ class SiteFileExplorer
 
     protected function basePath(): string
     {
-        return $this->site->document_root;
+        // Return the site root directory (parent of document_root)
+        // e.g., /home/brokeforge/example.com instead of /home/brokeforge/example.com/public
+        return dirname($this->site->document_root);
     }
 
     protected function buildListCommand(string $relativePath): string

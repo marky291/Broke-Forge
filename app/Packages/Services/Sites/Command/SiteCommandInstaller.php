@@ -109,9 +109,11 @@ class SiteCommandInstaller extends PackageInstaller implements \App\Packages\Bas
         $appUser = $this->server->credential('user')?->getUsername()
             ?: str_replace(' ', '', strtolower(config('app.name')));
 
-        // Resolve working directory inline (avoid helper methods)
+        // Resolve working directory to site root (parent of document_root)
+        // e.g., /home/brokeforge/example.com instead of /home/brokeforge/example.com/public
         $workingDirectory = $this->site->document_root
-            ?: ($this->site->domain
+            ? dirname($this->site->document_root)
+            : ($this->site->domain
                 ? "/home/{$appUser}/{$this->site->domain}"
                 : "/home/{$appUser}/site-{$this->site->id}");
 

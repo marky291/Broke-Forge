@@ -25,6 +25,7 @@ class ServerDeployment extends Model
         'error_output',
         'exit_code',
         'commit_sha',
+        'commit_message',
         'branch',
         'duration_ms',
         'started_at',
