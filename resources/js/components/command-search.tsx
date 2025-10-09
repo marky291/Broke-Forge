@@ -93,7 +93,7 @@ export function CommandSearch() {
         }
     };
 
-    // Click outside to close
+    // Click outside to close & prevent body scroll
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
@@ -103,10 +103,14 @@ export function CommandSearch() {
 
         if (open) {
             document.addEventListener('mousedown', handleClickOutside);
+            // Prevent body scroll on mobile
+            document.body.style.overflow = 'hidden';
         }
 
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
+            // Restore body scroll
+            document.body.style.overflow = '';
         };
     }, [open]);
 
@@ -145,7 +149,7 @@ export function CommandSearch() {
                     setOpen(true);
                     setTimeout(() => inputRef.current?.focus(), 0);
                 }}
-                className="group flex w-full items-center gap-2.5 rounded-lg border border-white/20 bg-white/15 px-3 py-1.5 shadow-lg backdrop-blur-sm transition-all hover:border-white/30 hover:bg-white/25 md:px-4"
+                className="group flex h-10 w-full items-center gap-2.5 rounded-lg border border-white/20 bg-white/15 px-3 shadow-lg backdrop-blur-sm transition-all hover:border-white/30 hover:bg-white/25 md:px-4"
             >
                 <Search className="size-4 text-white/80 group-hover:text-white" />
                 <span className="hidden flex-1 text-left text-sm text-white/80 group-hover:text-white sm:flex">Search servers and sites...</span>
@@ -154,9 +158,12 @@ export function CommandSearch() {
                 </kbd>
             </button>
 
+            {/* Backdrop */}
+            {open && <div className="fixed inset-0 z-40 bg-black/50 md:hidden" onClick={() => setOpen(false)} />}
+
             {/* Command Palette */}
             {open && (
-                <div className="absolute top-full left-0 z-50 mt-2 w-screen max-w-xl overflow-hidden rounded-lg border bg-card shadow-xl md:right-0 md:left-auto md:w-full">
+                <div className="fixed inset-x-4 top-20 z-50 overflow-hidden rounded-lg border bg-card shadow-xl md:absolute md:inset-x-auto md:top-full md:right-0 md:mt-2 md:w-full">
                     {/* Search Input */}
                     <div className="flex items-center border-b px-3">
                         <Search className="size-4 text-muted-foreground" />
