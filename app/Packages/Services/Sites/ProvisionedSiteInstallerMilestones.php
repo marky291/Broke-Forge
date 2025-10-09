@@ -4,7 +4,7 @@ namespace App\Packages\Services\Sites;
 
 use App\Packages\Base\Milestones;
 
-class SiteInstallerMilestones extends Milestones
+class ProvisionedSiteInstallerMilestones extends Milestones
 {
     public const PREPARE_DIRECTORIES = 'prepare_directories';
 
@@ -18,6 +18,8 @@ class SiteInstallerMilestones extends Milestones
 
     public const SET_PERMISSIONS = 'set_permissions';
 
+    public const CLONE_REPOSITORY = 'clone_repository';
+
     public const COMPLETE = 'complete';
 
     private const LABELS = [
@@ -27,6 +29,7 @@ class SiteInstallerMilestones extends Milestones
         self::TEST_CONFIG => 'Testing nginx configuration',
         self::RELOAD_NGINX => 'Reloading nginx',
         self::SET_PERMISSIONS => 'Setting file permissions',
+        self::CLONE_REPOSITORY => 'Cloning git repository',
         self::COMPLETE => 'Site setup complete',
     ];
 

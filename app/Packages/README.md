@@ -1867,19 +1867,20 @@ protected function commands(string $phpVersion, string $phpPackages): array
 
 1. **Review Existing Code First**: Always examine existing packages (`WebServiceInstaller`, `SiteInstaller`, etc.) to understand patterns and reuse solutions before creating anything new
 2. **Avoid Creating New Classes/Methods**: Do not create new methods or classes unless absolutely necessary - leverage existing base classes and established patterns
-3. **Follow Naming Conventions**: Use consistent naming for classes and files
-4. **Implement All Required Methods**: Every package must implement the abstract methods (`execute()`, `commands()`, etc.)
-5. **Use Package Patterns Universally**: ALL packages, including single command executors, must follow the `execute()` and `commands()` pattern - no standalone `run()` methods
-6. **Use Parameters, Not Constructors**: Pass configuration via `execute()` and `commands()` parameters
-7. **Avoid Additional Methods**: Keep ALL logic within `execute()` and `commands()` methods - no helper methods
-8. **Use Appropriate Credentials**: Choose the right SSH credential type for the task
-9. **Track Progress**: Implement comprehensive milestone tracking for all package types
-10. **Handle Errors Gracefully**: Use try-catch blocks and proper logging
-11. **Test Thoroughly**: Write both unit and feature tests
-12. **Document Well**: Use PHPDoc blocks to describe functionality
-13. **Keep It Simple**: Break complex operations into smaller, manageable steps
-14. **Use Enums**: Leverage type safety with enum constants
-15. **Follow Laravel Conventions**: Use Laravel best practices throughout
+3. **⚠️ ALWAYS Implement ServerPackage or SitePackage Interface**: EVERY installer AND remover MUST explicitly implement either `ServerPackage` or `SitePackage` interface. Forgetting this will cause "Unknown package type" runtime errors
+4. **Follow Naming Conventions**: Use consistent naming for classes and files
+5. **Implement All Required Methods**: Every package must implement the abstract methods (`execute()`, `commands()`, etc.)
+6. **Use Package Patterns Universally**: ALL packages, including single command executors, must follow the `execute()` and `commands()` pattern - no standalone `run()` methods
+7. **Use Parameters, Not Constructors**: Pass configuration via `execute()` and `commands()` parameters
+8. **Avoid Additional Methods**: Keep ALL logic within `execute()` and `commands()` methods - no helper methods
+9. **Use Appropriate Credentials**: Choose the right SSH credential type for the task (Root for server-level, BrokeForge for site-level)
+10. **Track Progress**: Implement comprehensive milestone tracking for all package types
+11. **Handle Errors Gracefully**: Use try-catch blocks and proper logging
+12. **Test Thoroughly**: Write both unit and feature tests
+13. **Document Well**: Use PHPDoc blocks to describe functionality
+14. **Keep It Simple**: Break complex operations into smaller, manageable steps
+15. **Use Enums**: Leverage type safety with enum constants
+16. **Follow Laravel Conventions**: Use Laravel best practices throughout
 
 ## Integration with BrokeForge
 

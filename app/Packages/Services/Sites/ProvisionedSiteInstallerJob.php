@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Log;
  *
  * Handles queued site installation on remote servers
  */
-class SiteInstallerJob implements ShouldQueue
+class ProvisionedSiteInstallerJob implements ShouldQueue
 {
     use Queueable;
 
@@ -23,7 +23,9 @@ class SiteInstallerJob implements ShouldQueue
         public Server $server,
         public string $domain,
         public string $phpVersion,
-        public bool $ssl
+        public bool $ssl,
+        public ?string $gitRepository = null,
+        public ?string $gitBranch = null
     ) {}
 
     /**
@@ -34,11 +36,13 @@ class SiteInstallerJob implements ShouldQueue
         Log::info("Starting site installation for domain {$this->domain} on server #{$this->server->id}", [
             'php_version' => $this->phpVersion,
             'ssl_enabled' => $this->ssl,
+            'git_repository' => $this->gitRepository,
+            'git_branch' => $this->gitBranch,
         ]);
 
         try {
             // Create installer instance
-            $installer = new SiteInstaller($this->server);
+            $installer = new ProvisionedSiteInstaller($this->server);
 
             // Configure the site
             $config = [
@@ -46,6 +50,15 @@ class SiteInstallerJob implements ShouldQueue
                 'php_version' => $this->phpVersion,
                 'ssl' => $this->ssl,
             ];
+
+            // Add git repository configuration if provided
+            if ($this->gitRepository) {
+                $config['git_repository'] = [
+                    'provider' => 'github',
+                    'repository' => $this->gitRepository,
+                    'branch' => $this->gitBranch ?? 'main',
+                ];
+            }
 
             // Execute installation - the installer handles all logic and database tracking
             $installer->execute($config);

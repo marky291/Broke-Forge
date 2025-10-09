@@ -8,8 +8,7 @@ use App\Models\Server;
 use App\Models\ServerSite;
 use App\Packages\Enums\CredentialType;
 use App\Packages\Enums\GitStatus;
-use App\Packages\Services\Sites\Git\GitRepositoryInstallerJob;
-use App\Packages\Services\Sites\SiteInstallerJob;
+use App\Packages\Services\Sites\ProvisionedSiteInstallerJob;
 use App\Packages\Services\Sites\SiteRemoverJob;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -91,9 +90,15 @@ class ServerSitesController extends Controller
                 'git_status' => GitStatus::Installing,
             ]);
 
-            // Dispatch jobs: nginx/directories + Git clone
-            SiteInstallerJob::dispatch($server, $validated['domain'], $validated['php_version'], $validated['ssl']);
-            GitRepositoryInstallerJob::dispatch($server, $site, $configuration['git_repository']);
+            // Dispatch site installation job with git configuration
+            ProvisionedSiteInstallerJob::dispatch(
+                $server,
+                $validated['domain'],
+                $validated['php_version'],
+                $validated['ssl'],
+                $validated['git_repository'],
+                $validated['git_branch']
+            );
 
             return back()->with('success', 'Site provisioning started. Repository will be cloned automatically.');
         } catch (\Throwable $e) {
