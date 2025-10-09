@@ -28,7 +28,7 @@ export function MainHeader() {
         <header
             className="sticky top-0 z-50 w-full border-b"
             style={{
-                background: 'linear-gradient(to right, #c81abf, #1e63eb)',
+                background: '#151715',
             }}
         >
             <div className="container mx-auto max-w-7xl px-4">

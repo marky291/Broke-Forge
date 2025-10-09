@@ -26,4 +26,15 @@ enum ServerProvider: string
             self::Custom => 'Custom/Other',
         };
     }
+
+    /**
+     * Get the background color for the provider's SVG icon.
+     */
+    public function svgBgColor(): ?string
+    {
+        return match ($this) {
+            self::AWS => '#ffffff',
+            default => null,
+        };
+    }
 }

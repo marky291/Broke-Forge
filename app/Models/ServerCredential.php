@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Packages\Enums\CredentialType;
 use App\Packages\Services\Credential\SshKeyGenerator;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Crypt;
@@ -17,6 +18,8 @@ use Illuminate\Support\Facades\Crypt;
  */
 class ServerCredential extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'server_id',
         'credential_type',

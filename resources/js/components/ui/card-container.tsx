@@ -51,7 +51,7 @@ interface CardContainerProps {
  */
 export function CardContainer({ title, description, icon, action, children, className, parentBorder = true }: CardContainerProps) {
     return (
-        <div className={cn('rounded-xl border border-neutral-200/70 bg-neutral-50 p-1.5 dark:border-white/5 dark:bg-white/3 grid gap-2', className)}>
+        <div className={cn('grid gap-2', className)}>
             <div className="grid gap-2">
                 <div className="flex items-center justify-between p-2 pb-1.5">
                     <div>

@@ -2,21 +2,23 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Activity;
 use App\Models\Server;
 use Inertia\Inertia;
 use Inertia\Response;
+use Spatie\Activitylog\Models\Activity;
 
 class DashboardController extends Controller
 {
     public function __invoke(): Response
     {
-        $activities = $this->getRecentActivities();
         $servers = $this->getServers();
+        $sites = $this->getSites();
+        $activities = $this->getRecentActivities();
 
         return Inertia::render('dashboard', [
-            'activities' => $activities,
             'servers' => $servers,
+            'sites' => $sites,
+            'activities' => $activities,
         ]);
     }
 
@@ -31,21 +33,23 @@ class DashboardController extends Controller
 
                 return [
                     'id' => $activity->id,
-                    'type' => $activity->type,
-                    'label' => $this->getActivityLabel($activity->type),
+                    'type' => $activity->event ?? 'unknown',
+                    'label' => $this->getActivityLabel($activity->event ?? 'unknown'),
+                    'description' => $activity->description,
                     'detail' => $detail,
                     'created_at' => $activity->created_at,
+                    'created_at_human' => $activity->created_at->diffForHumans(),
                 ];
             });
     }
 
     protected function getActivityDetail(Activity $activity): ?string
     {
-        return match ($activity->type) {
-            'server.created' => $this->getServerDetail($activity->properties),
+        return match ($activity->event) {
+            'server.created' => $this->getServerDetail($activity->properties->toArray()),
             'server.provision.started',
             'server.provision.completed',
-            'server.provision.failed' => $this->getProvisioningDetail($activity->properties),
+            'server.provision.failed' => $this->getProvisioningDetail($activity->properties->toArray()),
             'auth.login' => data_get($activity->properties, 'email'),
             default => null,
         };
@@ -85,6 +89,9 @@ class DashboardController extends Controller
             'server.provision.started' => 'Provisioning started',
             'server.provision.completed' => 'Provisioning completed',
             'server.provision.failed' => 'Provisioning failed',
+            'site.created' => 'Site created',
+            'site.status_changed' => 'Site status changed',
+            'site.deleted' => 'Site deleted',
             'auth.login' => 'User logged in',
             default => $type,
         };
@@ -93,18 +100,44 @@ class DashboardController extends Controller
     protected function getServers(): \Illuminate\Support\Collection
     {
         return Server::query()
-            ->select(['id', 'vanity_name', 'public_ip', 'private_ip', 'ssh_port', 'connection', 'provision_status', 'created_at'])
+            ->with(['defaultPhp', 'sites', 'supervisorTasks', 'scheduledTasks'])
+            ->select(['id', 'vanity_name', 'provider', 'public_ip', 'ssh_port', 'created_at'])
             ->latest()
+            ->limit(5)
             ->get()
-            ->map(fn (Server $server) => [
-                'id' => $server->id,
-                'name' => $server->vanity_name,
-                'public_ip' => $server->public_ip,
-                'private_ip' => $server->private_ip,
-                'ssh_port' => $server->ssh_port,
-                'connection' => $server->connection,
-                'provision_status' => $server->provision_status->value,
-                'created_at' => $server->created_at,
-            ]);
+            ->map(function (Server $server) {
+                return [
+                    'id' => $server->id,
+                    'name' => $server->vanity_name,
+                    'provider' => $server->provider?->value,
+                    'public_ip' => $server->public_ip,
+                    'ssh_port' => $server->ssh_port,
+                    'php_version' => $server->defaultPhp?->version,
+                    'sites_count' => $server->sites->count(),
+                    'supervisor_tasks_count' => $server->supervisorTasks->count(),
+                    'scheduled_tasks_count' => $server->scheduledTasks->count(),
+                ];
+            });
+    }
+
+    protected function getSites(): \Illuminate\Support\Collection
+    {
+        return \App\Models\ServerSite::query()
+            ->with(['server'])
+            ->latest()
+            ->limit(5)
+            ->get()
+            ->map(function (\App\Models\ServerSite $site) {
+                $gitConfig = $site->getGitConfiguration();
+
+                return [
+                    'id' => $site->id,
+                    'domain' => $site->domain,
+                    'repository' => $gitConfig['repository'],
+                    'php_version' => $site->php_version,
+                    'server_name' => $site->server->vanity_name,
+                    'last_deployed_at' => $site->last_deployed_at,
+                ];
+            });
     }
 }

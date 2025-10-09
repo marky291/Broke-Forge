@@ -167,50 +167,44 @@ class ServerSite extends Model
     protected static function booted(): void
     {
         static::created(function (self $site): void {
-            Activity::create([
-                'type' => 'site.created',
-                'description' => sprintf('Site %s created on server %s', $site->domain, $site->server->vanity_name ?? $site->server->public_ip),
-                'causer_id' => Auth::id(),
-                'subject_type' => self::class,
-                'subject_id' => $site->id,
-                'properties' => [
+            activity()
+                ->causedBy(Auth::user())
+                ->performedOn($site)
+                ->event('site.created')
+                ->withProperties([
                     'domain' => $site->domain,
                     'server_id' => $site->server_id,
                     'php_version' => $site->php_version,
                     'ssl_enabled' => $site->ssl_enabled,
-                ],
-            ]);
+                ])
+                ->log(sprintf('Site %s created on server %s', $site->domain, $site->server->vanity_name ?? $site->server->public_ip));
         });
 
         static::updated(function (self $site): void {
             if ($site->wasChanged('status')) {
-                Activity::create([
-                    'type' => 'site.status_changed',
-                    'description' => sprintf('Site %s status changed to %s', $site->domain, $site->status),
-                    'causer_id' => Auth::id(),
-                    'subject_type' => self::class,
-                    'subject_id' => $site->id,
-                    'properties' => [
+                activity()
+                    ->causedBy(Auth::user())
+                    ->performedOn($site)
+                    ->event('site.status_changed')
+                    ->withProperties([
                         'domain' => $site->domain,
                         'old_status' => $site->getOriginal('status'),
                         'new_status' => $site->status,
-                    ],
-                ]);
+                    ])
+                    ->log(sprintf('Site %s status changed to %s', $site->domain, $site->status));
             }
         });
 
         static::deleted(function (self $site): void {
-            Activity::create([
-                'type' => 'site.deleted',
-                'description' => sprintf('Site %s deleted', $site->domain),
-                'causer_id' => Auth::id(),
-                'subject_type' => self::class,
-                'subject_id' => $site->id,
-                'properties' => [
+            activity()
+                ->causedBy(Auth::user())
+                ->performedOn($site)
+                ->event('site.deleted')
+                ->withProperties([
                     'domain' => $site->domain,
                     'server_id' => $site->server_id,
-                ],
-            ]);
+                ])
+                ->log(sprintf('Site %s deleted', $site->domain));
         });
     }
 }

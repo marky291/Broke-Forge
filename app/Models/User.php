@@ -209,4 +209,23 @@ class User extends Authenticatable
 
         return 'free';
     }
+
+    /**
+     * Get current subscription plan name.
+     */
+    public function getCurrentPlanName(): string
+    {
+        // If user has an active Cashier subscription, get the plan from subscription_plans table
+        if ($this->subscribed('default')) {
+            $subscription = $this->subscription('default');
+            $plan = SubscriptionPlan::where('stripe_price_id', $subscription->stripe_price)->first();
+
+            if ($plan) {
+                return $plan->name;
+            }
+        }
+
+        // Free plan for users without subscription
+        return 'Free';
+    }
 }

@@ -378,18 +378,16 @@ class Server extends Model
         });
 
         static::created(function (self $server): void {
-            Activity::create([
-                'type' => 'server.created',
-                'description' => sprintf('Server %s created', $server->vanity_name ?? $server->public_ip),
-                'causer_id' => Auth::id(),
-                'subject_type' => self::class,
-                'subject_id' => $server->id,
-                'properties' => [
+            activity()
+                ->causedBy(Auth::user())
+                ->performedOn($server)
+                ->event('server.created')
+                ->withProperties([
                     'vanity_name' => $server->vanity_name,
                     'public_ip' => $server->public_ip,
                     'private_ip' => $server->private_ip,
-                ],
-            ]);
+                ])
+                ->log(sprintf('Server %s created', $server->vanity_name ?? $server->public_ip));
         });
     }
 

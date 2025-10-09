@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Enums\MonitoringStatus;
 use App\Models\Server;
 use App\Models\ServerMetric;
-use App\Models\ServerMonitoring;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
@@ -36,25 +35,8 @@ class ServerMonitoringTest extends TestCase
     public function test_monitoring_page_shows_not_installed_state(): void
     {
         $user = User::factory()->create();
-        $server = Server::factory()->create();
-
-        $response = $this->actingAs($user)
-            ->get(route('servers.monitoring', $server));
-
-        $response->assertOk();
-        $response->assertInertia(fn ($page) => $page
-            ->component('servers/monitoring')
-            ->where('monitoring', null)
-        );
-    }
-
-    public function test_monitoring_page_shows_active_monitoring(): void
-    {
-        $user = User::factory()->create();
-        $server = Server::factory()->create();
-        $monitoring = ServerMonitoring::factory()->create([
-            'server_id' => $server->id,
-            'status' => MonitoringStatus::Active,
+        $server = Server::factory()->create([
+            'monitoring_status' => null,
         ]);
 
         $response = $this->actingAs($user)
@@ -63,7 +45,25 @@ class ServerMonitoringTest extends TestCase
         $response->assertOk();
         $response->assertInertia(fn ($page) => $page
             ->component('servers/monitoring')
-            ->where('monitoring.status', 'active')
+            ->where('server.monitoring_status', null)
+        );
+    }
+
+    public function test_monitoring_page_shows_active_monitoring(): void
+    {
+        $user = User::factory()->create();
+        $server = Server::factory()->create([
+            'monitoring_status' => MonitoringStatus::Active,
+            'monitoring_installed_at' => now(),
+        ]);
+
+        $response = $this->actingAs($user)
+            ->get(route('servers.monitoring', $server));
+
+        $response->assertOk();
+        $response->assertInertia(fn ($page) => $page
+            ->component('servers/monitoring')
+            ->where('server.monitoring_status', 'active')
         );
     }
 
@@ -87,10 +87,8 @@ class ServerMonitoringTest extends TestCase
         Queue::fake();
 
         $user = User::factory()->create();
-        $server = Server::factory()->create();
-        ServerMonitoring::factory()->create([
-            'server_id' => $server->id,
-            'status' => MonitoringStatus::Active,
+        $server = Server::factory()->create([
+            'monitoring_status' => MonitoringStatus::Active,
         ]);
 
         $this->actingAs($user)
@@ -106,10 +104,8 @@ class ServerMonitoringTest extends TestCase
         Queue::fake();
 
         $user = User::factory()->create();
-        $server = Server::factory()->create();
-        ServerMonitoring::factory()->create([
-            'server_id' => $server->id,
-            'status' => MonitoringStatus::Active,
+        $server = Server::factory()->create([
+            'monitoring_status' => MonitoringStatus::Active,
         ]);
 
         $this->actingAs($user)

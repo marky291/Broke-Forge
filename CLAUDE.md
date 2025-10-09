@@ -1,3 +1,13 @@
+# Guidelines
+
+- Always use Laravel boost MCP.
+- Use Context7 MCP for documentation where Laravel boost cannot provide one.
+- Always maintain unit test suite when working on code.
+- Avoid using mocks when writing unit tests except for mocking $server->createSshConnection which you should always use partial mock.
+- Always maintain unit tests to be fast and to complete < 0.2s
+- Use spatie activity logging to create audit trail for the end user.
+- If a readme.md file exists in the directory we are working on, you should always read the readme.md before starting any work.
+
 <laravel-boost-guidelines>
 === foundation rules ===
 

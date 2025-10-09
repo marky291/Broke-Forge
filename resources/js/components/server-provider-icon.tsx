@@ -7,6 +7,7 @@ interface ProviderConfig {
     name: string;
     abbreviation: string;
     svgPath?: string; // Path to SVG file in public directory
+    svgBgColor?: string; // Optional background color for SVG icons
     bgColor: string;
     textColor: string;
     darkBgColor: string;
@@ -18,6 +19,7 @@ const providerConfigs: Record<string, ProviderConfig> = {
         name: 'AWS',
         abbreviation: 'AWS',
         svgPath: '/provider/aws.svg',
+        svgBgColor: '#ffffff',
         bgColor: 'bg-orange-100',
         textColor: 'text-orange-700',
         darkBgColor: 'dark:bg-orange-900/30',
@@ -126,16 +128,31 @@ export function ServerProviderIcon({ provider, size = 'md', className }: ServerP
 
     // If provider has an SVG file, use it
     if (config.svgPath) {
-        return (
+        const imgElement = (
             <img
                 src={config.svgPath}
                 alt={config.name}
                 title={config.name}
-                className={cn('object-contain', sizeClasses[size], className)}
+                className={cn('object-contain', sizeClasses[size])}
                 width={sizeMap[size]}
                 height={sizeMap[size]}
             />
         );
+
+        // Wrap in background container if svgBgColor is specified
+        if (config.svgBgColor) {
+            return (
+                <div
+                    className={cn('flex items-center justify-center rounded-md p-1', className)}
+                    style={{ backgroundColor: config.svgBgColor }}
+                    title={config.name}
+                >
+                    {imgElement}
+                </div>
+            );
+        }
+
+        return <div className={className}>{imgElement}</div>;
     }
 
     // Otherwise, use colored badge fallback

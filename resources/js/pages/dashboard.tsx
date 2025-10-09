@@ -4,13 +4,11 @@ import { ServerProviderIcon, type ServerProvider } from '@/components/server-pro
 import { Button } from '@/components/ui/button';
 import { CardContainer } from '@/components/ui/card-container';
 import AppLayout from '@/layouts/app-layout';
-import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
-import { provisioning as provisioningServer, show as showServer } from '@/routes/servers';
+import { show as showServer } from '@/routes/servers';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/react';
-import { Activity, ArrowRight, Clock, FileText, Globe, Plus, Server as ServerIcon, Users, Zap } from 'lucide-react';
-import { useState } from 'react';
+import { Plus } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -19,109 +17,150 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-type Activity = { id: number; type: string; label: string; detail?: string | null; created_at: string };
 type Server = {
     id: number;
     name: string;
     provider?: ServerProvider;
     public_ip: string;
     ssh_port: number;
-    private_ip?: string | null;
-    connection?: 'pending' | 'connected' | 'failed' | 'disconnected' | string;
-    provision_status: 'pending' | 'connecting' | 'installing' | 'completed' | 'failed';
-    created_at: string;
+    php_version?: string;
+    sites_count: number;
+    supervisor_tasks_count: number;
+    scheduled_tasks_count: number;
 };
 
-export default function Dashboard({ activities, servers }: { activities: Activity[]; servers: Server[] }) {
-    const { auth } = usePage<SharedData>().props;
-    const [showDeployModal, setShowDeployModal] = useState(false);
+type Site = {
+    id: number;
+    domain: string;
+    repository?: string;
+    php_version?: string;
+    server_name: string;
+    last_deployed_at?: string;
+};
 
-    const getTimeAgo = (dateString: string) => {
+type Activity = {
+    id: number;
+    type: string;
+    label: string;
+    description: string;
+    detail?: string;
+    created_at: string;
+    created_at_human: string;
+};
+
+export default function Dashboard({ servers, sites, activities }: { servers: Server[]; sites: Site[]; activities: Activity[] }) {
+    const { auth } = usePage<SharedData>().props;
+
+    const getTimeAgo = (dateString?: string) => {
+        if (!dateString) return null;
+
         const date = new Date(dateString);
         const now = new Date();
         const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
         if (diffInSeconds < 60) return 'just now';
-        if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
-        if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
-        if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`;
+        if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`;
+        if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
+        if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)} days ago`;
         return date.toLocaleDateString();
+    };
+
+    const getSiteInitial = (domain: string) => {
+        return domain.charAt(0).toUpperCase();
+    };
+
+    const getSiteColor = (domain: string) => {
+        const colors = [
+            'bg-blue-500',
+            'bg-purple-500',
+            'bg-pink-500',
+            'bg-green-500',
+            'bg-yellow-500',
+            'bg-red-500',
+            'bg-indigo-500',
+        ];
+        const index = domain.charCodeAt(0) % colors.length;
+        return colors[index];
+    };
+
+    const getUserInitials = (name: string) => {
+        return name
+            .split(' ')
+            .map((n) => n[0])
+            .join('')
+            .toUpperCase()
+            .slice(0, 2);
     };
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Dashboard" />
-            <div className="space-y-6">
-                {/* Servers Section */}
+            <div className="space-y-8">
+                {/* User Header */}
+                <div className="flex items-center gap-4 pt-6">
+                    <div className="flex size-12 items-center justify-center rounded-lg bg-primary text-lg font-semibold text-primary-foreground">
+                        {getUserInitials(auth.user.name)}
+                    </div>
+                    <div>
+                        <h1 className="text-xl font-semibold">{auth.user.name}</h1>
+                        <p className="text-sm text-muted-foreground">{auth.user.plan_name || 'Free'}</p>
+                    </div>
+                </div>
+
+                {/* Recent Servers Section */}
                 <CardContainer
-                    title="Servers"
+                    title="Recent servers"
+                    parentBorder={false}
                     action={
                         <DeployServerModal
-                            trigger={
-                                <CardContainerAddButton label="Add Server" onClick={() => setShowDeployModal(true)} aria-label="Deploy Server" />
-                            }
+                            trigger={<CardContainerAddButton label="Add Server" onClick={() => {}} aria-label="Deploy Server" />}
                         />
                     }
                 >
                     {servers && servers.length > 0 ? (
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                            {servers.map((s) => {
-                                const status = s.connection ?? 'pending';
-                                const provisionStatus = s.provision_status ?? 'pending';
-                                const serverUrl = provisionStatus === 'completed' ? showServer(s.id) : provisioningServer(s.id);
-
-                                const statusConfig = {
-                                    connected: { color: 'text-green-600', bg: 'bg-green-500', label: 'Online', icon: Zap },
-                                    failed: { color: 'text-red-600', bg: 'bg-red-500', label: 'Failed', icon: Activity },
-                                    disconnected: { color: 'text-gray-600', bg: 'bg-gray-500', label: 'Offline', icon: Activity },
-                                    pending: { color: 'text-amber-600', bg: 'bg-amber-500', label: 'Pending', icon: Clock },
-                                }[status] || { color: 'text-gray-600', bg: 'bg-gray-500', label: status, icon: Activity };
-
-                                return (
-                                    <Link
-                                        key={s.id}
-                                        href={serverUrl}
-                                        className="group relative block rounded-lg border border-neutral-200 bg-white p-4 transition-all hover:border-primary hover:shadow-sm dark:border-white/8 dark:bg-white/3 dark:hover:border-primary"
-                                    >
-                                        <div className="space-y-3">
-                                            <div className="flex items-start justify-between">
-                                                <ServerProviderIcon provider={s.provider as ServerProvider} size="md" />
-                                                <div
-                                                    className={cn(
-                                                        'flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium',
-                                                        status === 'connected'
-                                                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                                            : status === 'failed'
-                                                              ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                                                              : status === 'pending'
-                                                                ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
-                                                                : 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400',
-                                                    )}
-                                                >
-                                                    <span className={cn('size-1.5 rounded-full', statusConfig.bg)} />
-                                                    {statusConfig.label}
-                                                </div>
-                                            </div>
+                        <div className="space-y-2">
+                            {servers.map((server) => (
+                                <Link
+                                    key={server.id}
+                                    href={showServer(server.id)}
+                                    className="group block rounded-lg border border-neutral-200 bg-white p-4 transition-all hover:border-neutral-300 hover:bg-neutral-50 dark:border-white/8 dark:bg-white/3 dark:hover:border-white/12 dark:hover:bg-white/5"
+                                >
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <ServerProviderIcon provider={server.provider as ServerProvider} size="md" />
                                             <div>
-                                                <h3 className="truncate text-sm font-semibold">{s.name}</h3>
-                                                <p className="mt-1 truncate text-xs text-muted-foreground">
-                                                    {s.public_ip}:{s.ssh_port}
+                                                <h3 className="font-medium">{server.name}</h3>
+                                                <p className="text-sm text-muted-foreground">
+                                                    {server.public_ip}
+                                                    {server.php_version && (
+                                                        <>
+                                                            {' '}
+                                                            · App server · PHP {server.php_version}
+                                                        </>
+                                                    )}
                                                 </p>
                                             </div>
-                                            <div className="flex items-center justify-between text-xs text-muted-foreground">
-                                                <span>{getTimeAgo(s.created_at)}</span>
-                                                <ArrowRight className="size-3 opacity-0 transition-opacity group-hover:opacity-100" />
-                                            </div>
                                         </div>
-                                    </Link>
-                                );
-                            })}
+                                        <div className="flex items-center gap-6 text-sm text-muted-foreground">
+                                            <span>
+                                                {server.sites_count} {server.sites_count === 1 ? 'site' : 'sites'}
+                                            </span>
+                                            <span>
+                                                {server.supervisor_tasks_count}{' '}
+                                                {server.supervisor_tasks_count === 1 ? 'background process' : 'background processes'}
+                                            </span>
+                                            <span>
+                                                {server.scheduled_tasks_count}{' '}
+                                                {server.scheduled_tasks_count === 1 ? 'scheduled job' : 'scheduled jobs'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </Link>
+                            ))}
                         </div>
                     ) : (
                         <div className="py-12 text-center">
-                            <ServerIcon className="mx-auto size-12 text-muted-foreground/30" />
-                            <h3 className="mt-4 text-sm font-medium">No servers yet</h3>
-                            <p className="mt-1 text-sm text-muted-foreground">Get started by deploying your first server</p>
+                            <p className="text-sm text-muted-foreground">No servers yet. Deploy your first server to get started.</p>
                             <DeployServerModal
                                 trigger={
                                     <Button className="mt-4" size="sm">
@@ -134,43 +173,74 @@ export default function Dashboard({ activities, servers }: { activities: Activit
                     )}
                 </CardContainer>
 
-                {/* Recent Activity Section */}
-                <CardContainer title="Recent Activity">
-                    <div className="space-y-4">
-                        {activities && activities.length > 0 ? (
-                            activities.slice(0, 10).map((activity) => {
-                                const activityIcons: Record<string, any> = {
-                                    server: ServerIcon,
-                                    site: Globe,
-                                    database: FileText,
-                                    user: Users,
-                                    default: Activity,
-                                };
-                                const Icon = activityIcons[activity.type] || activityIcons.default;
-
-                                return (
-                                    <div key={activity.id} className="flex gap-3 border-b pb-3 last:border-0 last:pb-0">
-                                        <div className="mt-0.5 flex-shrink-0">
-                                            <div className="flex size-8 items-center justify-center rounded-full bg-muted">
-                                                <Icon className="size-4 text-muted-foreground" />
+                {/* Recent Sites Section */}
+                <CardContainer title="Recent sites" parentBorder={false}>
+                    {sites && sites.length > 0 ? (
+                        <div className="space-y-2">
+                            {sites.map((site) => (
+                                <div
+                                    key={site.id}
+                                    className="group block rounded-lg border border-neutral-200 bg-white p-4 transition-all hover:border-neutral-300 hover:bg-neutral-50 dark:border-white/8 dark:bg-white/3 dark:hover:border-white/12 dark:hover:bg-white/5"
+                                >
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div
+                                                className={`flex size-10 shrink-0 items-center justify-center rounded-lg ${getSiteColor(site.domain)} text-white`}
+                                            >
+                                                <span className="text-lg font-semibold">{getSiteInitial(site.domain)}</span>
+                                            </div>
+                                            <div>
+                                                <h3 className="font-medium">{site.domain}</h3>
+                                                <p className="text-sm text-muted-foreground">
+                                                    {site.repository ? site.repository : 'Other'}
+                                                    {site.php_version && <> · PHP {site.php_version}</>}
+                                                    {site.server_name && <> · {site.server_name}</>}
+                                                </p>
                                             </div>
                                         </div>
-                                        <div className="min-w-0 flex-1">
-                                            <p className="text-sm leading-tight font-medium">{activity.label}</p>
-                                            {activity.detail && <p className="mt-1 text-xs text-muted-foreground">{activity.detail}</p>}
-                                            <p className="mt-1 text-xs text-muted-foreground">{getTimeAgo(activity.created_at)}</p>
-                                        </div>
+                                        {site.last_deployed_at && (
+                                            <div className="text-sm text-muted-foreground">Deployed {getTimeAgo(site.last_deployed_at)}</div>
+                                        )}
                                     </div>
-                                );
-                            })
-                        ) : (
-                            <div className="py-8 text-center">
-                                <Activity className="mx-auto size-8 text-muted-foreground/30" />
-                                <p className="mt-2 text-sm text-muted-foreground">No recent activity</p>
-                                <p className="mt-1 text-xs text-muted-foreground">Activity will appear here as you use the platform</p>
-                            </div>
-                        )}
-                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="py-12 text-center">
+                            <p className="text-sm text-muted-foreground">No sites yet. Create your first site to get started.</p>
+                        </div>
+                    )}
+                </CardContainer>
+
+                {/* Recent Activity Section */}
+                <CardContainer title="Recent activity" parentBorder={false}>
+                    {activities && activities.length > 0 ? (
+                        <div className="space-y-2">
+                            {activities.map((activity) => (
+                                <div
+                                    key={activity.id}
+                                    className="rounded-lg border border-neutral-200 bg-white p-4 dark:border-white/8 dark:bg-white/3"
+                                >
+                                    <div className="flex items-start justify-between gap-4">
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-medium">{activity.label}</span>
+                                                {activity.detail && (
+                                                    <span className="text-sm text-muted-foreground">· {activity.detail}</span>
+                                                )}
+                                            </div>
+                                            <p className="mt-1 text-sm text-muted-foreground">{activity.description}</p>
+                                        </div>
+                                        <div className="shrink-0 text-sm text-muted-foreground">{activity.created_at_human}</div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="py-12 text-center">
+                            <p className="text-sm text-muted-foreground">No recent activity to display.</p>
+                        </div>
+                    )}
                 </CardContainer>
             </div>
         </AppLayout>
