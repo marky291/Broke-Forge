@@ -110,71 +110,89 @@ export default function Php({
                 }
             >
                 {installedPhpVersions.length === 0 && (
-                    <CardContainer
-                        title="Install PHP"
-                        description="No PHP installation found on this server. Configure and install PHP to get started."
-                    >
-                        <form onSubmit={handleSubmit} className="space-y-6">
-                            {/* PHP Version */}
+                    <>
+                        <CardContainer
+                            title="Install PHP"
+                            icon={
+                                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path
+                                        d="M6 1L10.5 3.5V8.5L6 11L1.5 8.5V3.5L6 1Z"
+                                        stroke="currentColor"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                    />
+                                    <path d="M6 6V11" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+                                    <path d="M1.5 3.5L6 6L10.5 3.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                            }
+                            action={<CardContainerAddButton label="Add Version" onClick={() => setIsAddVersionDialogOpen(true)} />}
+                        >
+                            <div className="p-12 text-center">
+                                <svg
+                                    width="48"
+                                    height="48"
+                                    viewBox="0 0 48 48"
+                                    fill="none"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    className="mx-auto mb-4 text-muted-foreground/30"
+                                >
+                                    <path
+                                        d="M24 4L42 14V34L24 44L6 34V14L24 4Z"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                    />
+                                    <path d="M24 24V44" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                    <path d="M6 14L24 24L42 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                                <p className="text-muted-foreground">No PHP versions installed</p>
+                                <p className="mt-1 text-sm text-muted-foreground/70">Add your first PHP version to get started</p>
+                            </div>
+                        </CardContainer>
+
+                        <CardContainer
+                            title="Basic Settings"
+                            icon={
+                                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path
+                                        d="M4.5 1.5H7.5L8.5 3.5L10.5 4.5V7.5L8.5 8.5L7.5 10.5H4.5L3.5 8.5L1.5 7.5V4.5L3.5 3.5L4.5 1.5Z"
+                                        stroke="currentColor"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                    />
+                                    <circle cx="6" cy="6" r="1.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                            }
+                        >
                             <div className="space-y-4">
-                                <h3 className="font-medium">PHP Version</h3>
-                                <div className="space-y-2">
-                                    <Label htmlFor="version">Version</Label>
-                                    <Select value={data.version} onValueChange={(value) => setData('version', value)}>
-                                        <SelectTrigger className="w-full md:w-1/3">
-                                            <SelectValue placeholder="Select PHP version" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {Object.entries(availablePhpVersions).map(([value, label]) => (
-                                                <SelectItem key={value} value={value}>
-                                                    {label}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    {errors.version && <div className="text-sm text-red-600">{errors.version}</div>}
-                                </div>
+                                <CardInput
+                                    label="Memory Limit"
+                                    value={data.memory_limit}
+                                    onChange={(e) => setData('memory_limit', e.target.value)}
+                                    placeholder="256M"
+                                    error={errors.memory_limit}
+                                />
+
+                                <CardInput
+                                    label="Max Execution Time (seconds)"
+                                    type="number"
+                                    value={data.max_execution_time}
+                                    onChange={(e) => setData('max_execution_time', parseInt(e.target.value) || 30)}
+                                    placeholder="30"
+                                    error={errors.max_execution_time}
+                                />
+
+                                <CardInput
+                                    label="Upload Max File Size"
+                                    value={data.upload_max_filesize}
+                                    onChange={(e) => setData('upload_max_filesize', e.target.value)}
+                                    placeholder="2M"
+                                    error={errors.upload_max_filesize}
+                                />
                             </div>
-
-                            {/* PHP Settings */}
-                            <div className="space-y-4">
-                                <h3 className="font-medium">Basic Settings</h3>
-                                <div className="space-y-4">
-                                    <CardInput
-                                        label="Memory Limit"
-                                        value={data.memory_limit}
-                                        onChange={(e) => setData('memory_limit', e.target.value)}
-                                        placeholder="256M"
-                                        error={errors.memory_limit}
-                                    />
-
-                                    <CardInput
-                                        label="Max Execution Time (seconds)"
-                                        type="number"
-                                        value={data.max_execution_time}
-                                        onChange={(e) => setData('max_execution_time', parseInt(e.target.value) || 30)}
-                                        placeholder="30"
-                                        error={errors.max_execution_time}
-                                    />
-
-                                    <CardInput
-                                        label="Upload Max File Size"
-                                        value={data.upload_max_filesize}
-                                        onChange={(e) => setData('upload_max_filesize', e.target.value)}
-                                        placeholder="2M"
-                                        error={errors.upload_max_filesize}
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Install Button */}
-                            <div className="flex justify-end">
-                                <Button type="submit" disabled={processing}>
-                                    {processing ? 'Installing...' : 'Install PHP'}
-                                </Button>
-                            </div>
-                        </form>
-                    </CardContainer>
+                        </CardContainer>
+                    </>
                 )}
 
                 {installedPhpVersions.length > 0 && (
@@ -201,7 +219,7 @@ export default function Php({
                             {installedPhpVersions.map((php) => (
                                 <div
                                     key={php.id}
-                                    className="divide-y divide-neutral-200 rounded-lg border border-neutral-200 bg-white shadow-md shadow-black/5 dark:divide-white/8 dark:border-white/8 dark:bg-white/3"
+                                    className="divide-y divide-neutral-200 rounded-lg border border-neutral-200 bg-white dark:divide-white/8 dark:border-white/8 dark:bg-white/3"
                                 >
                                     <div className="flex items-center justify-between px-6 py-6">
                                         <div className="flex items-center gap-2">

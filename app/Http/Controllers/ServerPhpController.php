@@ -24,7 +24,7 @@ class ServerPhpController extends Controller
         $installedPhp = $server->phps()->with('modules')->get();
 
         return Inertia::render('servers/php', [
-            'server' => $server->only(['id', 'vanity_name', 'public_ip', 'ssh_port', 'private_ip', 'connection', 'monitoring_status', 'created_at', 'updated_at']),
+            'server' => $server->only(['id', 'vanity_name', 'provider', 'public_ip', 'ssh_port', 'private_ip', 'connection', 'monitoring_status', 'created_at', 'updated_at']),
             'availablePhpVersions' => PhpConfigurationService::getAvailableVersions(),
             'phpExtensions' => PhpConfigurationService::getAvailableExtensions(),
             'installedPhpVersions' => $installedPhp,

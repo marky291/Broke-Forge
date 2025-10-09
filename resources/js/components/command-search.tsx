@@ -1,8 +1,9 @@
 import { cn } from '@/lib/utils';
 import { type SharedData } from '@/types';
 import { router, usePage } from '@inertiajs/react';
-import { Globe, Search, Server, X } from 'lucide-react';
+import { Globe, Search, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { ServerProviderIcon, type ServerProvider } from './server-provider-icon';
 
 interface SearchItem {
     id: number;
@@ -11,7 +12,8 @@ interface SearchItem {
     url: string;
     serverId?: number;
     serverName?: string;
-    icon: typeof Server | typeof Globe;
+    provider?: ServerProvider;
+    icon?: typeof Globe;
 }
 
 export function CommandSearch() {
@@ -31,7 +33,7 @@ export function CommandSearch() {
             name: server.name || `Server #${server.id}`,
             category: 'Servers' as const,
             url: `/servers/${server.id}`,
-            icon: Server,
+            provider: server.provider as ServerProvider,
         })),
         // Add sites
         ...(props.searchSites || []).map((site) => ({
@@ -196,7 +198,6 @@ export function CommandSearch() {
                                     <div key={category}>
                                         <div className="px-3 py-1.5 text-xs font-semibold text-muted-foreground">{category}</div>
                                         {items.map((item, index) => {
-                                            const Icon = item.icon;
                                             const globalIndex = filteredItems.indexOf(item);
                                             return (
                                                 <button
@@ -209,7 +210,11 @@ export function CommandSearch() {
                                                         globalIndex === selectedIndex ? 'bg-accent text-accent-foreground' : 'hover:bg-accent/50',
                                                     )}
                                                 >
-                                                    <Icon className="size-4 flex-shrink-0" />
+                                                    {item.category === 'Servers' ? (
+                                                        <ServerProviderIcon provider={item.provider} size="sm" />
+                                                    ) : (
+                                                        item.icon && <item.icon className="size-4 flex-shrink-0" />
+                                                    )}
                                                     <div className="flex-1 text-left">
                                                         <div className="font-medium">{item.name}</div>
                                                         {item.serverName && <div className="text-xs text-muted-foreground">on {item.serverName}</div>}

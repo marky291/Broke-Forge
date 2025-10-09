@@ -45,6 +45,7 @@ class ServerSite extends Model
 
     protected $appends = [
         'provisioned_at_human',
+        'last_deployed_at_human',
     ];
 
     protected function casts(): array
@@ -68,6 +69,14 @@ class ServerSite extends Model
     public function getProvisionedAtHumanAttribute(): ?string
     {
         return $this->provisioned_at?->diffForHumans();
+    }
+
+    /**
+     * Get human-readable last deployed at timestamp.
+     */
+    public function getLastDeployedAtHumanAttribute(): ?string
+    {
+        return $this->last_deployed_at?->diffForHumans();
     }
 
     public function server(): BelongsTo

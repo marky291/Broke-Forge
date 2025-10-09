@@ -214,7 +214,7 @@ export const ServerFileBrowser = ({ state, onNavigate, onRefresh, onUpload, onDo
                         </div>
                     </div>
 
-                    <div className="divide-y divide-neutral-200 rounded-lg border border-neutral-200 bg-white shadow-md shadow-black/5 dark:divide-white/8 dark:border-white/8 dark:bg-white/3">
+                    <div className="divide-y divide-neutral-200 rounded-lg border border-neutral-200 bg-white dark:divide-white/8 dark:border-white/8 dark:bg-white/3">
                         <div className="relative px-2 py-6">
                             {state.loading && (
                                 <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-background/80">

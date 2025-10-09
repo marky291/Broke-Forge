@@ -35,7 +35,7 @@ class ServerSupervisorController extends Controller
         $server->load(['supervisorTasks']);
 
         return Inertia::render('servers/supervisor', [
-            'server' => $server->only(['id', 'vanity_name', 'public_ip', 'ssh_port', 'private_ip', 'connection', 'monitoring_status', 'supervisor_status', 'supervisor_installed_at', 'supervisor_uninstalled_at', 'created_at', 'updated_at']),
+            'server' => $server->only(['id', 'vanity_name', 'provider', 'public_ip', 'ssh_port', 'private_ip', 'connection', 'monitoring_status', 'supervisor_status', 'supervisor_installed_at', 'supervisor_uninstalled_at', 'created_at', 'updated_at']),
             'tasks' => $server->supervisorTasks,
             'latestMetrics' => $this->getLatestMetrics($server),
         ]);

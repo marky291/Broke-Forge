@@ -67,6 +67,22 @@ class PhpInstaller extends PackageInstaller implements ServerPackage
         // Store the version for packageName() method
         $this->installingVersion = $phpVersion;
 
+        // Check if this is the first PHP version being installed
+        $isFirstPhp = $this->server->phps()->count() === 0;
+
+        // Create ServerPhp record before installation if it doesn't exist
+        ServerPhp::firstOrCreate(
+            [
+                'server_id' => $this->server->id,
+                'version' => $phpVersion->value,
+            ],
+            [
+                'status' => PhpStatus::Installing,
+                'is_cli_default' => $isFirstPhp,
+                'is_site_default' => $isFirstPhp,
+            ]
+        );
+
         // Compose common PHP packages for the chosen version
         $phpPackages = implode(' ', [
             "php{$phpVersion->value}-fpm",

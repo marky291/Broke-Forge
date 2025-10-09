@@ -43,6 +43,8 @@ type ServerSite = {
     status: string;
     provisioned_at: string | null;
     provisioned_at_human?: string | null;
+    last_deployed_at: string | null;
+    last_deployed_at_human?: string | null;
     configuration?: {
         git_repository?: {
             provider?: string;
@@ -270,7 +272,7 @@ export default function Sites({ server, sites }: SitesProps) {
                             {sites.data.map((site) => (
                                 <div
                                     key={site.id}
-                                    className="divide-y divide-neutral-200 rounded-lg border border-neutral-200 bg-white shadow-md shadow-black/5 dark:divide-white/8 dark:border-white/8 dark:bg-white/3"
+                                    className="divide-y divide-neutral-200 rounded-lg border border-neutral-200 bg-white dark:divide-white/8 dark:border-white/8 dark:bg-white/3"
                                 >
                                     <Link href={showSite({ server: server.id, site: site.id }).url} className="group block">
                                         <div className="px-3 py-3 transition-colors hover:bg-muted/30 md:px-6 md:py-6">
@@ -326,7 +328,9 @@ export default function Sites({ server, sites }: SitesProps) {
                                                     </div>
 
                                                     {/* Deployed Time */}
-                                                    <div className="text-muted-foreground">{site.provisioned_at_human || 'Not deployed'}</div>
+                                                    <div className="text-muted-foreground">
+                                                        {site.last_deployed_at_human ? `Deployed ${site.last_deployed_at_human}` : 'Not deployed'}
+                                                    </div>
 
                                                     {/* Arrow - visible only on desktop */}
                                                     <ChevronRight className="hidden h-5 w-5 flex-shrink-0 text-muted-foreground/40 transition-all group-hover:translate-x-0.5 group-hover:text-primary md:block" />
@@ -338,7 +342,7 @@ export default function Sites({ server, sites }: SitesProps) {
                             ))}
                         </div>
                     ) : (
-                        <div className="divide-y divide-neutral-200 rounded-lg border border-neutral-200 bg-white shadow-md shadow-black/5 dark:divide-white/8 dark:border-white/8 dark:bg-white/3">
+                        <div className="divide-y divide-neutral-200 rounded-lg border border-neutral-200 bg-white dark:divide-white/8 dark:border-white/8 dark:bg-white/3">
                             <div className="px-6 py-6">
                                 <div className="p-8 text-center">
                                     <Globe className="mx-auto h-12 w-12 text-muted-foreground/50" />

@@ -66,7 +66,7 @@ class ServerController extends Controller
     public function edit(Server $server): Response
     {
         return Inertia::render('servers/edit', [
-            'server' => $server->only(['id', 'vanity_name', 'public_ip', 'ssh_port', 'private_ip']),
+            'server' => $server->only(['id', 'vanity_name', 'provider', 'public_ip', 'ssh_port', 'private_ip']),
         ]);
     }
 

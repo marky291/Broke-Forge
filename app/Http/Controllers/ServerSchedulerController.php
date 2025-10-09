@@ -49,7 +49,7 @@ class ServerSchedulerController extends Controller
             ->paginate(5);
 
         return Inertia::render('servers/scheduler', [
-            'server' => $server->only(['id', 'vanity_name', 'public_ip', 'ssh_port', 'private_ip', 'connection', 'monitoring_status', 'scheduler_status', 'scheduler_installed_at', 'scheduler_uninstalled_at', 'created_at', 'updated_at']),
+            'server' => $server->only(['id', 'vanity_name', 'provider', 'public_ip', 'ssh_port', 'private_ip', 'connection', 'monitoring_status', 'scheduler_status', 'scheduler_installed_at', 'scheduler_uninstalled_at', 'created_at', 'updated_at']),
             'tasks' => $server->scheduledTasks,
             'recentRuns' => $recentRuns,
             'latestMetrics' => $this->getLatestMetrics($server),

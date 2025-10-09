@@ -43,13 +43,14 @@ class HandleInertiaRequests extends Middleware
         // Load servers and sites for search functionality
         $searchData = [];
         if ($request->user()) {
-            $searchData['searchServers'] = Server::select('id', 'vanity_name', 'public_ip')
+            $searchData['searchServers'] = Server::select('id', 'vanity_name', 'public_ip', 'provider')
                 ->orderBy('vanity_name')
                 ->get()
                 ->map(fn (Server $server) => [
                     'id' => $server->id,
                     'name' => $server->vanity_name,
                     'public_ip' => $server->public_ip,
+                    'provider' => $server->provider?->value,
                 ]);
 
             $searchData['searchSites'] = ServerSite::with(['server:id,vanity_name'])

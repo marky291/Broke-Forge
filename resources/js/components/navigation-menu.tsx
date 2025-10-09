@@ -29,7 +29,7 @@ interface NavigationSectionProps {
 export function NavigationMenu({ items, title, className }: NavigationMenuProps) {
     return (
         <div className={cn('rounded-xl border border-neutral-200/70 bg-neutral-50 p-1.5 dark:border-white/5 dark:bg-white/3', className)}>
-            <nav className="divide-y divide-neutral-200 rounded-lg border border-neutral-200 bg-white shadow-md shadow-black/5 dark:divide-white/8 dark:border-white/8 dark:bg-white/3">
+            <nav className="divide-y divide-neutral-200 rounded-lg border border-neutral-200 bg-white dark:divide-white/8 dark:border-white/8 dark:bg-white/3">
                 {title && (
                     <div className="px-4 py-3">
                         <div className="text-[10px] font-semibold tracking-wider text-muted-foreground/70 uppercase select-none">{title}</div>

@@ -1,4 +1,5 @@
 import { CardContainerAddButton } from '@/components/card-container-add-button';
+import { InstallSkeleton } from '@/components/install-skeleton';
 import { Button } from '@/components/ui/button';
 import { CardContainer } from '@/components/ui/card-container';
 import { CardFormModal } from '@/components/ui/card-form-modal';
@@ -163,21 +164,23 @@ export default function Scheduler({
 
                 {/* Scheduled Tasks */}
                 {!server.scheduler_status ? (
-                    <CardContainer>
-                        <div className="p-12 text-center">
-                            <Clock className="mx-auto mb-4 h-12 w-12 text-muted-foreground/30" />
-                            <p className="mb-4 text-muted-foreground">Scheduler Not Installed</p>
-                            <Button onClick={handleInstall} disabled={processing}>
-                                {processing ? (
-                                    <>
-                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                        Installing...
-                                    </>
-                                ) : (
-                                    <>Install Scheduler</>
-                                )}
-                            </Button>
-                        </div>
+                    <CardContainer
+                        title="Task Scheduler"
+                        icon={
+                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="6" cy="6" r="5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+                                <path d="M6 3v3l2 1" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                        }
+                    >
+                        <InstallSkeleton
+                            icon={Clock}
+                            title="Scheduler Not Installed"
+                            description="Install the task scheduler to run commands automatically using cron."
+                            buttonLabel="Install Scheduler"
+                            onInstall={handleInstall}
+                            isInstalling={processing}
+                        />
                     </CardContainer>
                 ) : isInstalling || isUninstalling ? (
                     <CardContainer>

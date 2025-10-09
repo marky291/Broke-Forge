@@ -40,6 +40,7 @@ class ServerDatabaseController extends Controller
             'server' => $server->only([
                 'id',
                 'vanity_name',
+                'provider',
                 'public_ip',
                 'private_ip',
                 'ssh_port',

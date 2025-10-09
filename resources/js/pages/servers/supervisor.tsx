@@ -1,4 +1,5 @@
 import { CardContainerAddButton } from '@/components/card-container-add-button';
+import { InstallSkeleton } from '@/components/install-skeleton';
 import { Button } from '@/components/ui/button';
 import { CardContainer } from '@/components/ui/card-container';
 import { CardFormModal } from '@/components/ui/card-form-modal';
@@ -164,21 +165,23 @@ export default function Supervisor({ server, tasks }: { server: Server; tasks: a
 
                 {/* Supervisor Tasks */}
                 {!server.supervisor_status ? (
-                    <CardContainer>
-                        <div className="p-12 text-center">
-                            <Eye className="mx-auto mb-4 h-12 w-12 text-muted-foreground/30" />
-                            <p className="mb-4 text-muted-foreground">Supervisor Not Installed</p>
-                            <Button onClick={handleInstall} disabled={processing}>
-                                {processing ? (
-                                    <>
-                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                        Installing...
-                                    </>
-                                ) : (
-                                    <>Install Supervisor</>
-                                )}
-                            </Button>
-                        </div>
+                    <CardContainer
+                        title="Process Supervisor"
+                        icon={
+                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="6" cy="6" r="5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+                                <path d="M6 3v3l2 1" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                        }
+                    >
+                        <InstallSkeleton
+                            icon={Eye}
+                            title="Supervisor Not Installed"
+                            description="Install Supervisor to manage long-running processes with automatic restart on failure."
+                            buttonLabel="Install Supervisor"
+                            onInstall={handleInstall}
+                            isInstalling={processing}
+                        />
                     </CardContainer>
                 ) : isInstalling || isUninstalling ? (
                     <CardContainer>

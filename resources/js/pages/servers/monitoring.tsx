@@ -1,3 +1,4 @@
+import { InstallSkeleton } from '@/components/install-skeleton';
 import { Button } from '@/components/ui/button';
 import { CardContainer } from '@/components/ui/card-container';
 import { CardTable, type CardTableColumn } from '@/components/ui/card-table';
@@ -261,23 +262,14 @@ export default function Monitoring({
                             <p className="mt-2 text-sm text-muted-foreground">Please wait while monitoring is being removed from your server...</p>
                         </div>
                     ) : !isActive ? (
-                        <div className="p-8 text-center">
-                            <Activity className="mx-auto h-12 w-12 text-muted-foreground/50" />
-                            <h3 className="mt-4 text-lg font-semibold">Monitoring Not Installed</h3>
-                            <p className="mt-2 text-sm text-muted-foreground">
-                                Install monitoring to track CPU, memory, and storage usage on your server.
-                            </p>
-                            <Button onClick={handleInstall} disabled={processing} className="mt-4">
-                                {processing ? (
-                                    <>
-                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                        Installing...
-                                    </>
-                                ) : (
-                                    'Install Monitoring'
-                                )}
-                            </Button>
-                        </div>
+                        <InstallSkeleton
+                            icon={Activity}
+                            title="Monitoring Not Installed"
+                            description="Install monitoring to track CPU, memory, and storage usage on your server."
+                            buttonLabel="Install Monitoring"
+                            onInstall={handleInstall}
+                            isInstalling={processing}
+                        />
                     ) : (
                         <div className="space-y-6 p-6">
                             <div className="flex items-center justify-between">

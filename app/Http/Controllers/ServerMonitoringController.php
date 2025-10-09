@@ -39,7 +39,7 @@ class ServerMonitoringController extends Controller
             ->first();
 
         return Inertia::render('servers/monitoring', [
-            'server' => $server->only(['id', 'vanity_name', 'public_ip', 'ssh_port', 'private_ip', 'connection', 'created_at', 'updated_at', 'monitoring_status', 'monitoring_token', 'monitoring_collection_interval', 'monitoring_installed_at', 'monitoring_uninstalled_at']),
+            'server' => $server->only(['id', 'vanity_name', 'provider', 'public_ip', 'ssh_port', 'private_ip', 'connection', 'created_at', 'updated_at', 'monitoring_status', 'monitoring_token', 'monitoring_collection_interval', 'monitoring_installed_at', 'monitoring_uninstalled_at']),
             'latestMetrics' => $latestMetrics,
             'recentMetrics' => $recentMetrics,
             'selectedTimeframe' => $hours,

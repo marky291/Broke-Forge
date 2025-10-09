@@ -16,6 +16,7 @@ trait PreparesSiteData
         $baseFields = [
             'id',
             'vanity_name',
+            'provider',
             'public_ip',
             'private_ip',
             'connection',

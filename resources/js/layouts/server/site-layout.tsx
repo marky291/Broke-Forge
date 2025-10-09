@@ -3,13 +3,15 @@ import AppLayout from '@/layouts/app-layout';
 import { cn, formatRelativeTime } from '@/lib/utils';
 import { type BreadcrumbItem, type NavItem } from '@/types';
 import { usePage } from '@inertiajs/react';
-import { AppWindow, ArrowLeft, Folder, GitBranch, Globe, Menu, Rocket, Terminal, X } from 'lucide-react';
+import { AppWindow, ArrowLeft, Cpu, Folder, GitBranch, Globe, HardDrive, MemoryStick, Menu, Rocket, Terminal, X } from 'lucide-react';
 import { PropsWithChildren, useState } from 'react';
+import { ServerProviderIcon } from '@/components/server-provider-icon';
 
 interface SiteLayoutProps extends PropsWithChildren {
     server: {
         id: number;
         vanity_name: string;
+        provider?: string;
         connection: string;
         public_ip?: string;
         private_ip?: string;
@@ -150,7 +152,7 @@ export default function SiteLayout({ children, server, site, breadcrumbs }: Site
             )}
 
             {/* Site Header */}
-            <div className="border-b bg-card px-4 py-4 md:px-8">
+            <div className="border-b bg-card py-4">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                     <div className="flex flex-col gap-4 lg:flex-1 lg:flex-row lg:items-center lg:gap-8">
                         {/* Title with Mobile Menu Button */}

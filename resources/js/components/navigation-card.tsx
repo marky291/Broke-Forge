@@ -33,7 +33,7 @@ export function NavigationCardItem({ item }: NavigationCardItemProps) {
         <Link
             href={item.href}
             className={cn(
-                'navigation-card-item flex h-10 w-full cursor-pointer items-center gap-3 rounded-lg p-1 px-2.5 text-sm transition-all hover:text-neutral-800 dark:hover:text-white',
+                'navigation-card-item flex w-full cursor-pointer items-center gap-3 rounded-lg p-3 px-2.5 text-sm transition-all hover:text-neutral-800 dark:hover:text-white',
                 item.isActive ? 'border-white/8 bg-white/5 text-neutral-900 opacity-100 dark:text-neutral-50' : 'text-muted-foreground',
             )}
         >
@@ -73,7 +73,7 @@ export function NavigationCard({ items, title, className }: NavigationCardProps)
  */
 export function NavigationSidebar({ children, className }: NavigationSidebarProps) {
     return (
-        <div className={'p-6'}>
+        <div className={''}>
             <aside className={cn('w-64', className)}>
                 <div className="flex h-full flex-col">
                     <div className="">{children}</div>

@@ -7,6 +7,7 @@ interface ServerLayoutProps extends PropsWithChildren {
     server: {
         id: number;
         vanity_name: string;
+        provider?: string;
         connection: string;
         public_ip?: string;
         private_ip?: string;

@@ -1,9 +1,18 @@
+import { MainHeader } from '@/components/main-header';
 import { NavigationCard, NavigationSidebar } from '@/components/navigation-card';
+import { ServerDetail } from '@/components/server-detail';
 import { ServerProviderIcon, type ServerProvider } from '@/components/server-provider-icon';
-import AppLayout from '@/layouts/app-layout';
+import {
+    Breadcrumb,
+    BreadcrumbItem as BreadcrumbComponent,
+    BreadcrumbLink,
+    BreadcrumbList,
+    BreadcrumbPage,
+    BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
 import { type BreadcrumbItem, type NavItem, type ServerMetric } from '@/types';
 import { usePage } from '@inertiajs/react';
-import { Activity, ArrowLeft, Clock, CodeIcon, Cpu, DatabaseIcon, Eye, Globe, HardDrive, MemoryStick, Settings, Shield } from 'lucide-react';
+import { Activity, ArrowLeft, Check, Clock, CodeIcon, Cpu, DatabaseIcon, Eye, Globe, HardDrive, MemoryStick, Settings, Shield, XCircle } from 'lucide-react';
 import { PropsWithChildren, useEffect, useState } from 'react';
 
 interface ServerContentLayoutProps extends PropsWithChildren {
@@ -171,83 +180,125 @@ export default function ServerContentLayout({ children, server, breadcrumbs, lat
 
     const statusConfig = getStatusConfig(server.connection);
 
-    return (
-        <AppLayout breadcrumbs={breadcrumbs}>
-            {/* Server Header */}
-            <div className="border-b bg-card px-4 py-4 md:px-8">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:gap-8">
-                        {/* Title */}
-                        <div className="flex items-center gap-3">
-                            <ServerProviderIcon provider={server.provider} size="lg" />
-                            <h1 className="text-xl font-semibold text-foreground">{server.vanity_name}</h1>
-                        </div>
+    const getConnectionStatusBadge = (status?: string) => {
+        switch (status) {
+            case 'connected':
+                return (
+                    <span className="inline-flex items-center space-x-2 rounded-md border border-success-weak bg-success-weaker py-0.5 pl-1.5 pr-2 text-xssm font-medium text-success">
+                        <span className="size-3.5 text-icon-success">
+                            <svg className="overflow-visible" viewBox="0 0 14 14" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                                <path
+                                    fillRule="evenodd"
+                                    clipRule="evenodd"
+                                    d="M7 14C10.866 14 14 10.866 14 7C14 3.13401 10.866 0 7 0C3.13401 0 0 3.13401 0 7C0 10.866 3.13401 14 7 14ZM10.1865 4.1874C9.82121 3.8975 9.28276 3.94972 8.98386 4.30405L5.9191 7.93721L4.95897 7.00596C4.62521 6.68224 4.08408 6.68224 3.75032 7.00596C3.41656 7.32969 3.41656 7.85454 3.75032 8.17827L5.37822 9.75721C5.54896 9.92281 5.78396 10.0106 6.02512 9.99897C6.26629 9.9873 6.49111 9.87723 6.64401 9.69597L10.3068 5.35389C10.6057 4.99956 10.5518 4.47731 10.1865 4.1874Z"
+                                    fill="currentColor"
+                                />
+                            </svg>
+                        </span>
+                        <span>Connected</span>
+                    </span>
+                );
+            case 'failed':
+                return (
+                    <span className="inline-flex items-center space-x-2 rounded-md border border-danger-weak bg-danger-weaker py-0.5 pl-1.5 pr-2 text-xssm font-medium text-danger">
+                        <span className="size-3.5 text-icon-danger">
+                            <svg className="overflow-visible" viewBox="0 0 14 14" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                                <path
+                                    fillRule="evenodd"
+                                    clipRule="evenodd"
+                                    d="M7 14C10.866 14 14 10.866 14 7C14 3.13401 10.866 0 7 0C3.13401 0 0 3.13401 0 7C0 10.866 3.13401 14 7 14ZM4.28033 4.28033C4.57322 3.98744 5.04809 3.98744 5.34099 4.28033L7 5.93934L8.65901 4.28033C8.95191 3.98744 9.42678 3.98744 9.71967 4.28033C10.0126 4.57322 10.0126 5.04809 9.71967 5.34099L8.06066 7L9.71967 8.65901C10.0126 8.95191 10.0126 9.42678 9.71967 9.71967C9.42678 10.0126 8.95191 10.0126 8.65901 9.71967L7 8.06066L5.34099 9.71967C5.04809 10.0126 4.57322 10.0126 4.28033 9.71967C3.98744 9.42678 3.98744 8.95191 4.28033 8.65901L5.93934 7L4.28033 5.34099C3.98744 5.04809 3.98744 4.57322 4.28033 4.28033Z"
+                                    fill="currentColor"
+                                />
+                            </svg>
+                        </span>
+                        <span>Failed</span>
+                    </span>
+                );
+            case 'disconnected':
+                return (
+                    <span className="inline-flex items-center space-x-2 rounded-md border border-neutral-weak bg-neutral-weaker py-0.5 pl-1.5 pr-2 text-xssm font-medium text-neutral">
+                        <span className="size-3.5 text-icon-neutral">
+                            <svg className="overflow-visible" viewBox="0 0 14 14" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                                <path
+                                    fillRule="evenodd"
+                                    clipRule="evenodd"
+                                    d="M7 14C10.866 14 14 10.866 14 7C14 3.13401 10.866 0 7 0C3.13401 0 0 3.13401 0 7C0 10.866 3.13401 14 7 14ZM4.28033 4.28033C4.57322 3.98744 5.04809 3.98744 5.34099 4.28033L7 5.93934L8.65901 4.28033C8.95191 3.98744 9.42678 3.98744 9.71967 4.28033C10.0126 4.57322 10.0126 5.04809 9.71967 5.34099L8.06066 7L9.71967 8.65901C10.0126 8.95191 10.0126 9.42678 9.71967 9.71967C9.42678 10.0126 8.95191 10.0126 8.65901 9.71967L7 8.06066L5.34099 9.71967C5.04809 10.0126 4.57322 10.0126 4.28033 9.71967C3.98744 9.42678 3.98744 8.95191 4.28033 8.65901L5.93934 7L4.28033 5.34099C3.98744 5.04809 3.98744 4.57322 4.28033 4.28033Z"
+                                    fill="currentColor"
+                                />
+                            </svg>
+                        </span>
+                        <span>Disconnected</span>
+                    </span>
+                );
+            default:
+                return (
+                    <span className="inline-flex items-center space-x-2 rounded-md border border-warning-weak bg-warning-weaker py-0.5 pl-1.5 pr-2 text-xssm font-medium text-warning">
+                        <span className="size-3.5 text-icon-warning">
+                            <svg className="overflow-visible" viewBox="0 0 14 14" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                                <path
+                                    fillRule="evenodd"
+                                    clipRule="evenodd"
+                                    d="M7 14C10.866 14 14 10.866 14 7C14 3.13401 10.866 0 7 0C3.13401 0 0 3.13401 0 7C0 10.866 3.13401 14 7 14ZM7 3C7.55228 3 8 3.44772 8 4V7C8 7.55228 7.55228 8 7 8C6.44772 8 6 7.55228 6 7V4C6 3.44772 6.44772 3 7 3ZM7 11C7.55228 11 8 10.5523 8 10C8 9.44772 7.55228 9 7 9C6.44772 9 6 9.44772 6 10C6 10.5523 6.44772 11 7 11Z"
+                                    fill="currentColor"
+                                />
+                            </svg>
+                        </span>
+                        <span>Pending</span>
+                    </span>
+                );
+        }
+    };
 
-                        {/* Server Info - Hide some items on mobile */}
-                        <div className="flex flex-wrap items-center gap-4 text-sm lg:gap-8 lg:border-l lg:pl-8">
-                            <div>
-                                <div className="mb-0.5 text-[10px] tracking-wide text-muted-foreground uppercase">Public IP</div>
-                                <div className="font-medium">{server.public_ip || 'N/A'}</div>
-                            </div>
-                            <div className="hidden md:block">
-                                <div className="mb-0.5 text-[10px] tracking-wide text-muted-foreground uppercase">Private IP</div>
-                                <div className="font-medium">{server.private_ip || 'N/A'}</div>
-                            </div>
-                            <div className="hidden md:block">
-                                <div className="mb-0.5 text-[10px] tracking-wide text-muted-foreground uppercase">Region</div>
-                                <div className="font-medium">Frankfurt</div>
-                            </div>
-                            <div className="hidden lg:block">
-                                <div className="mb-0.5 text-[10px] tracking-wide text-muted-foreground uppercase">OS</div>
-                                <div className="font-medium">Ubuntu 24.04</div>
-                            </div>
+    return (
+        <div className="flex min-h-screen flex-col bg-background">
+            <MainHeader />
+
+            {/* Breadcrumbs Section */}
+            {breadcrumbs && breadcrumbs.length > 0 && (
+                <div className="border-b bg-muted/30">
+                    <div className="container mx-auto max-w-7xl px-4">
+                        <div className="flex h-12 items-center">
+                            <Breadcrumb>
+                                <BreadcrumbList>
+                                    {breadcrumbs.map((breadcrumb, index) => (
+                                        <div key={index} className="flex items-center gap-2">
+                                            {index > 0 && <BreadcrumbSeparator />}
+                                            <BreadcrumbComponent>
+                                                {index === breadcrumbs.length - 1 ? (
+                                                    <BreadcrumbPage>{breadcrumb.title}</BreadcrumbPage>
+                                                ) : (
+                                                    <BreadcrumbLink href={breadcrumb.href}>{breadcrumb.title}</BreadcrumbLink>
+                                                )}
+                                            </BreadcrumbComponent>
+                                        </div>
+                                    ))}
+                                </BreadcrumbList>
+                            </Breadcrumb>
                         </div>
                     </div>
+                </div>
+            )}
 
-                    {/* Monitoring Metrics - Responsive */}
-                    {server.monitoring_status === 'active' && metrics && (
-                        <div className="flex flex-wrap items-center gap-3 text-sm lg:gap-4 lg:border-l lg:pl-8">
-                            <div className="flex items-center gap-2">
-                                <Cpu className="h-3.5 w-3.5 text-blue-600" />
-                                <div>
-                                    <div className="mb-0.5 text-[10px] tracking-wide text-muted-foreground uppercase">CPU</div>
-                                    <div className="font-medium">{Number(metrics.cpu_usage).toFixed(1)}%</div>
-                                </div>
+            {/* Server Header - Full Width */}
+            <ServerDetail server={server} metrics={metrics} />
+
+            <div className="container mx-auto max-w-7xl px-4">
+                <div className="mt-6 flex h-full flex-col lg:flex-row">
+                    <div className="hidden lg:block">
+                        <NavigationSidebar>
+                            <div className="space-y-8">
+                                <NavigationCard items={[backToDashboardNav]} />
+                                <NavigationCard title="Server" items={serverNavItems} />
                             </div>
-                            <div className="flex items-center gap-2">
-                                <MemoryStick className="h-3.5 w-3.5 text-purple-600" />
-                                <div>
-                                    <div className="mb-0.5 text-[10px] tracking-wide text-muted-foreground uppercase">Memory</div>
-                                    <div className="font-medium">{Number(metrics.memory_usage_percentage).toFixed(1)}%</div>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <HardDrive className="h-3.5 w-3.5 text-orange-600" />
-                                <div>
-                                    <div className="mb-0.5 text-[10px] tracking-wide text-muted-foreground uppercase">Storage</div>
-                                    <div className="font-medium">{Number(metrics.storage_usage_percentage).toFixed(1)}%</div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
+                        </NavigationSidebar>
+                    </div>
+
+                    {/* Main Content */}
+                    <main className="flex-1 overflow-auto">
+                        <div className="p-4 md:p-6">{children}</div>
+                    </main>
                 </div>
             </div>
-
-            <div className="mt-6 flex h-full flex-col lg:flex-row">
-                <div className="hidden lg:block">
-                    <NavigationSidebar>
-                        <div className="space-y-6">
-                            <NavigationCard items={[backToDashboardNav]} />
-                            <NavigationCard title="Server" items={serverNavItems} />
-                        </div>
-                    </NavigationSidebar>
-                </div>
-
-                {/* Main Content */}
-                <main className="flex-1 overflow-auto">
-                    <div className="p-4 md:p-6">{children}</div>
-                </main>
-            </div>
-        </AppLayout>
+        </div>
     );
 }
