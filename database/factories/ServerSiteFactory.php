@@ -3,7 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\Server;
-use App\Provision\Enums\GitStatus;
+use App\Packages\Enums\GitStatus;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**

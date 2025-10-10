@@ -92,8 +92,6 @@ class SiteGitDeploymentInstaller extends PackageInstaller implements \App\Packag
                 'error' => $e->getMessage(),
                 'duration_ms' => $duration,
             ]);
-
-            throw $e;
         }
     }
 

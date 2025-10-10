@@ -31,22 +31,13 @@ class SiteGitDeploymentJob implements ShouldQueue
             'server_id' => $this->server->id,
         ]);
 
-        try {
-            $installer = new SiteGitDeploymentInstaller($this->server);
-            $installer->setSite($this->site);
-            $installer->execute($this->site, $this->deployment);
+        $installer = new SiteGitDeploymentInstaller($this->server);
+        $installer->setSite($this->site);
+        $installer->execute($this->site, $this->deployment);
 
-            Log::info("Deployment completed for site #{$this->site->id}", [
-                'deployment_id' => $this->deployment->id,
-            ]);
-        } catch (\Exception $e) {
-            Log::error("Deployment failed for site #{$this->site->id}", [
-                'deployment_id' => $this->deployment->id,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-
-            throw $e;
-        }
+        Log::info("Deployment job completed for site #{$this->site->id}", [
+            'deployment_id' => $this->deployment->id,
+            'status' => $this->deployment->fresh()->status,
+        ]);
     }
 }

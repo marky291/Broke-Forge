@@ -211,3 +211,25 @@ export interface ServerSupervisorTask {
     created_at: string;
     updated_at: string;
 }
+
+export interface ServerSite {
+    id: number;
+    server_id: number;
+    domain: string;
+    document_root: string;
+    php_version: string;
+    ssl_enabled: boolean;
+    status: string;
+    health?: string | null;
+    git_status?: string | null;
+    git_provider?: string | null;
+    git_repository?: string | null;
+    git_branch?: string | null;
+    last_deployment_sha?: string | null;
+    last_deployed_at?: string | null;
+    configuration?: Record<string, unknown> | null;
+    provisioned_at?: string | null;
+    git_installed_at?: string | null;
+    created_at: string;
+    updated_at: string;
+}
