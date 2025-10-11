@@ -2,14 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\ServerProvisioningResource;
 use App\Models\Server;
-use App\Models\ServerEvent;
 use App\Packages\Enums\Connection;
-use App\Packages\Enums\PackageType;
 use App\Packages\Enums\ProvisionStatus;
 use App\Packages\ProvisionAccess;
-use App\Packages\Services\Nginx\NginxInstallerMilestones;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -25,67 +22,11 @@ class ServerProvisioningController extends Controller
             return redirect()->route('servers.show', $server);
         }
 
-        // Get all events for comprehensive progress tracking
-        $events = $server->events()
-            ->orderBy('created_at')
-            ->get()
-            ->map(function (ServerEvent $event) {
-                $label = null;
-
-                if (is_string($event->milestone)) {
-                    $label = NginxInstallerMilestones::label($event->milestone)
-                        ?? Str::headline($event->milestone);
-                } elseif (is_array($event->milestone) && array_key_exists('label', $event->milestone)) {
-                    $label = $event->milestone['label'];
-                }
-
-                return [
-                    'id' => $event->id,
-                    'server_id' => $event->server_id,
-                    'service_type' => $event->service_type,
-                    'provision_type' => $event->provision_type,
-                    'milestone' => $event->milestone,
-                    'current_step' => $event->current_step,
-                    'total_steps' => $event->total_steps,
-                    'progress_percentage' => $event->progress_percentage,
-                    'details' => $event->details,
-                    'label' => $label,
-                    'status' => $event->status,
-                    'error_log' => $event->error_log,
-                    'created_at' => $event->created_at->toISOString(),
-                ];
-            })
-            ->values()
-            ->all();
-
-        // Get the latest progress for each service type
-        $latestProgress = collect($events)
-            ->groupBy('service_type')
-            ->map(fn ($serviceEvents) => $serviceEvents->last())
-            ->values()
-            ->all();
+        $server->load(['databases', 'defaultPhp', 'events']);
 
         return Inertia::render('servers/provisioning', [
-            'server' => array_merge(
-                $server->only(['id', 'vanity_name', 'provider', 'public_ip', 'ssh_port', 'private_ip', 'connection', 'created_at', 'updated_at']),
-                [
-                    'provision_status' => $server->provision_status->value,
-                    'provision_status_label' => $server->provision_status->label(),
-                    'provision_status_color' => $server->provision_status->color(),
-                ]
-            ),
+            'server' => new ServerProvisioningResource($server),
             'provision' => $this->getProvisionData($server),
-            'events' => $events,
-            'latestProgress' => $latestProgress,
-            'webServiceMilestones' => NginxInstallerMilestones::labels(),
-            'packageNameLabels' => [
-                PackageType::ReverseProxy->value => 'Reverse Proxy',
-                PackageType::Database->value => 'Database',
-                PackageType::Git->value => 'Git',
-                PackageType::Site->value => 'Site',
-                PackageType::Command->value => 'Command',
-            ],
-            'statusLabels' => ProvisionStatus::statusLabels(),
         ]);
     }
 
@@ -140,45 +81,8 @@ class ServerProvisioningController extends Controller
             ->with('success', 'Provisioning reset. Run the provisioning command again.');
     }
 
-    /**
-     * Get package events for a server
-     *
-     * Returns all package install/uninstall events for tracking on the frontend
-     */
-    public function events(Server $server): JsonResponse
-    {
-        $events = $server->events()
-            ->orderBy('created_at', 'desc')
-            ->get()
-            ->map(function (ServerEvent $event) {
-                return [
-                    'id' => $event->id,
-                    'service_type' => $event->service_type,
-                    'provision_type' => $event->provision_type,
-                    'milestone' => $event->milestone,
-                    'current_step' => $event->current_step,
-                    'total_steps' => $event->total_steps,
-                    'progress_percentage' => $event->progress_percentage,
-                    'details' => $event->details,
-                    'status' => $event->status,
-                    'error_log' => $event->error_log,
-                    'created_at' => $event->created_at->toISOString(),
-                ];
-            });
-
-        return response()->json([
-            'events' => $events,
-            'server_id' => $server->id,
-        ]);
-    }
-
     protected function getProvisionData(Server $server): ?array
     {
-        // Show provision data only when connection is pending
-        if ($server->connection !== 'pending') {
-            return null;
-        }
-
         return [
             'command' => $this->buildProvisionCommand($server),
             'root_password' => $server->ssh_root_password,

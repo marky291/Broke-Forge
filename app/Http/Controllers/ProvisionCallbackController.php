@@ -3,11 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Server;
-use App\Packages\Enums\Connection;
-use App\Packages\Enums\CredentialType;
-use App\Packages\Enums\PhpVersion;
-use App\Packages\Enums\ProvisionStatus;
-use App\Packages\Services\Nginx\NginxInstallerJob;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -15,83 +10,58 @@ use Illuminate\Support\Facades\Log;
 class ProvisionCallbackController extends Controller
 {
     /**
-     * Handle signed callbacks from remote provisioning scripts.
+     * Handle provision step callbacks from remote provisioning scripts.
      */
-    public function __invoke(Request $request, Server $server, string $status): JsonResponse
+    public function step(Request $request, Server $server): JsonResponse
     {
-        if (! in_array($status, ['started', 'completed'], true)) {
-            abort(404);
+        // Get from query params (appended to signed URL) or POST body
+        $step = (int) ($request->query('step') ?? $request->input('step'));
+        $status = $request->query('status') ?? $request->input('status');
+
+        Log::info('Provision step callback received', [
+            'server_id' => $server->id,
+            'step' => $step,
+            'status' => $status,
+            'all_input' => $request->all(),
+            'query' => $request->query(),
+        ]);
+
+        // Validate step and status
+        if (! in_array($step, [1, 2, 3], true)) {
+            Log::error("Invalid step: {$step}");
+            abort(400, 'Invalid step');
         }
 
-        // Update connection and provision status based on callback
-        if ($status === 'started') {
-            // Clear any old events from previous failed provision attempts
-            // This ensures the UI shows fresh progress for the new attempt
-            $server->events()->delete();
-
-            $server->connection = Connection::CONNECTING;
-            $server->provision_status = ProvisionStatus::Connecting;
-            $server->save();
+        if (! in_array($status, ['pending', 'installing', 'completed', 'failed'], true)) {
+            Log::error("Invalid status: {$status}");
+            abort(400, 'Invalid status');
         }
 
-        if ($status === 'completed') {
+        // Get current provision array or initialize empty
+        $provision = $server->provision ?? [];
 
-            $rootUserSuccess = true;
-            $brokeforgeUserSuccess = true;
-            $server->connection = Connection::CONNECTED;
-
-            // Verify SSH access for both credential types (root and brokeforge)
-            foreach (CredentialType::cases() as $credentialType) {
-                try {
-                    $credential = $server->credential($credentialType);
-                    $expectedUsername = $credential?->getUsername();
-
-                    if (! $credential || ! $expectedUsername) {
-                        Log::error("Missing {$credentialType->value} credential for server", ['server' => $server]);
-                        ${$credentialType->value.'UserSuccess'} = false;
-
-                        continue;
-                    }
-
-                    $result = $server->createSshConnection($credentialType)
-                        ->execute('whoami');
-
-                    $actualUsername = trim($result->getOutput());
-                    $errorOutput = trim($result->getErrorOutput());
-                    $exitCode = $result->getExitCode();
-
-                    if ($actualUsername !== $expectedUsername) {
-                        Log::error("{$credentialType->value} SSH access failed, Found '{$actualUsername}' expected '{$expectedUsername}'", [
-                            'server' => $server,
-                            'exit_code' => $exitCode,
-                            'error_output' => $errorOutput,
-                            'stdout' => $actualUsername,
-                        ]);
-                        ${$credentialType->value.'UserSuccess'} = false;
-                    }
-                } catch (\Exception $e) {
-                    Log::error("{$credentialType->value} SSH connection failed: {$e->getMessage()}", ['server' => $server]);
-                    ${$credentialType->value.'UserSuccess'} = false;
-                }
+        // Update or add the step status
+        $stepFound = false;
+        foreach ($provision as $key => $item) {
+            if ($item['step'] === $step) {
+                $provision[$key]['status'] = $status;
+                $stepFound = true;
+                break;
             }
-
-            // Connection failed if we cannot connect with SSH for either user
-            if (! $rootUserSuccess || ! $brokeforgeUserSuccess) {
-                $server->connection = Connection::FAILED;
-                $server->provision_status = ProvisionStatus::Failed;
-            } else {
-                // Connection successful - detect OS information before provisioning
-                $server->detectOsInfo();
-                Log::info("Detected OS for server #{$server->id}: {$server->os_name} {$server->os_version} ({$server->os_codename})");
-
-                // Update status and dispatch web service provisioning job
-                $server->provision_status = ProvisionStatus::Installing;
-                NginxInstallerJob::dispatch($server, PhpVersion::PHP83, isProvisioningServer: true);
-                Log::info("Dispatched web service provisioning job for server #{$server->id}");
-            }
-
-            $server->save();
         }
+
+        if (! $stepFound) {
+            $provision[] = ['step' => $step, 'status' => $status];
+        }
+
+        // Sort by step number
+        usort($provision, fn ($a, $b) => $a['step'] <=> $b['step']);
+
+        // Save to database
+        $server->provision = $provision;
+        $server->save();
+
+        Log::info("Provision step {$step} updated to {$status} for server #{$server->id}");
 
         return response()->json(['ok' => true]);
     }

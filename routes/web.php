@@ -43,10 +43,11 @@ Route::get('/', function () {
 Route::get('servers/{server}/provision', [ServerProvisioningController::class, 'provision'])
     ->name('servers.provision');
 
-// Provisioning callback with signed URL verification
-Route::post('servers/{server}/provision/callback/{status}', ProvisionCallbackController::class)
+// Provisioning step callback with signed URL verification
+Route::post('servers/{server}/provision/step', [ProvisionCallbackController::class, 'step'])
     ->middleware('signed')
-    ->name('servers.provision.callback');
+    ->withoutMiddleware(\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class)
+    ->name('servers.provision.step');
 
 /*
 |--------------------------------------------------------------------------

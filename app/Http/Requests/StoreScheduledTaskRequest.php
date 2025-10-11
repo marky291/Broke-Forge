@@ -3,8 +3,8 @@
 namespace App\Http\Requests;
 
 use App\Enums\ScheduleFrequency;
-use App\Rules\SafeCommand;
-use App\Rules\ValidCronExpression;
+use App\Packages\Services\Sites\Command\Rules\SafeCommand;
+use App\Packages\Services\Sites\Command\Rules\ValidCronExpression;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 

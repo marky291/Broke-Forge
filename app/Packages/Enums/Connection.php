@@ -2,13 +2,13 @@
 
 namespace App\Packages\Enums;
 
-class Connection
+enum Connection: string
 {
-    public const PENDING = 'pending';
+    case PENDING = 'pending';
 
-    public const CONNECTING = 'connecting';
+    case CONNECTING = 'connecting';
 
-    public const CONNECTED = 'connected';
+    case CONNECTED = 'connected';
 
-    public const FAILED = 'failed';
+    case FAILED = 'failed';
 }

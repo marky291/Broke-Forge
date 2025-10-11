@@ -48,9 +48,6 @@ class NginxInstaller extends PackageInstaller implements \App\Packages\Base\Serv
      */
     public function execute(PhpVersion $phpVersion): void
     {
-        // First install PHP as a dependency using the dedicated PHP installer
-        PhpInstallerJob::dispatchSync($this->server, $phpVersion);
-
         // Ensure firewall is installed and configured first
         FirewallInstallerJob::dispatchSync($this->server);
 
@@ -65,6 +62,9 @@ class NginxInstaller extends PackageInstaller implements \App\Packages\Base\Serv
             $rule = $this->server->firewall->rules()->create($ruleData);
             FirewallRuleInstallerJob::dispatchSync($this->server, $rule->id);
         }
+
+        // First install PHP as a dependency using the dedicated PHP installer
+        PhpInstallerJob::dispatchSync($this->server, $phpVersion);
 
         // Then proceed with Nginx installation
         $this->install($this->commands($phpVersion));

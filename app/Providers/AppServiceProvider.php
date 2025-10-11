@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Queue\TimeoutExceededException;
 use Illuminate\Support\Facades\Log;
@@ -23,6 +24,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        JsonResource::withoutWrapping();
+
         // Global queue failure listener for all jobs
         Queue::failing(function (JobFailed $event) {
             $jobName = $event->job->resolveName();

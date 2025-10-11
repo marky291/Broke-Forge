@@ -2,9 +2,9 @@
 
 namespace App\Packages\Services\Sites\Explorer;
 
-use App\Exceptions\ServerFileExplorerException;
 use App\Models\ServerSite;
 use App\Packages\Enums\CredentialType;
+use App\Packages\Services\Sites\Explorer\Exceptions\ServerFileExplorerException;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Str;
 use Spatie\Ssh\Ssh;

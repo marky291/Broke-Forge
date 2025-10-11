@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Exceptions;
+namespace App\Packages\Services\Sites\Explorer\Exceptions;
 
 use RuntimeException;
 

@@ -18,10 +18,10 @@ class BillingController extends Controller
 
         // Handle negative amounts (credits)
         if ($amount < 0) {
-            return '-' . $symbol . number_format(abs($amount), 2);
+            return '-'.$symbol.number_format(abs($amount), 2);
         }
 
-        return $symbol . number_format($amount, 2);
+        return $symbol.number_format($amount, 2);
     }
 
     /**

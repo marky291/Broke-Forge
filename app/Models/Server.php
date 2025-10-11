@@ -6,6 +6,7 @@ use App\Enums\MonitoringStatus;
 use App\Enums\SchedulerStatus;
 use App\Enums\ServerProvider;
 use App\Enums\SupervisorStatus;
+use App\Packages\Enums\Connection;
 use App\Packages\Enums\CredentialType;
 use App\Packages\Enums\ProvisionStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -25,6 +26,7 @@ use Illuminate\Support\Facades\Auth;
  * @property string $connection
  * @property string $vanity_name
  * @property ProvisionStatus $provision_status
+ * @property array|null $provision
  */
 class Server extends Model
 {
@@ -39,6 +41,7 @@ class Server extends Model
         'ssh_port',
         'connection',
         'provision_status',
+        'provision',
         'ssh_root_password',
         'os_name',
         'os_version',
@@ -65,8 +68,10 @@ class Server extends Model
     {
         return [
             'ssh_port' => 'integer',
+            'connection' => Connection::class,
             'provider' => ServerProvider::class,
             'provision_status' => ProvisionStatus::class,
+            'provision' => 'array',
             'ssh_root_password' => 'encrypted',
             'monitoring_token' => 'encrypted',
             'monitoring_status' => MonitoringStatus::class,

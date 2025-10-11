@@ -58,6 +58,11 @@ export interface ServerEvent {
     updated_at: string;
 }
 
+export interface ProvisionStep {
+    step: number;
+    status: 'pending' | 'connecting' | 'installing' | 'completed' | 'failed';
+}
+
 export interface Server {
     id: number;
     vanity_name: string;
@@ -67,6 +72,7 @@ export interface Server {
     private_ip?: string | null;
     connection: 'pending' | 'connecting' | 'connected' | 'failed' | 'disconnected';
     provision_status: 'pending' | 'connecting' | 'installing' | 'completed' | 'failed';
+    provision?: ProvisionStep[] | null;
     provision_status_label: string;
     provision_status_color: string;
     scheduler_status?: 'installing' | 'active' | 'failed' | 'uninstalling' | 'uninstalled' | null;

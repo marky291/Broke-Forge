@@ -48,7 +48,7 @@ class ProvisionAccess
     }
 
     /**
-     * Build signed callback URLs for provisioning lifecycle stages.
+     * Build signed callback URLs for provisioning steps.
      */
     protected function buildCallbackUrls(Server $server): array
     {
@@ -56,13 +56,8 @@ class ProvisionAccess
         $expiresAt = now()->addMinutes($ttlMinutes);
 
         return [
-            'started' => URL::temporarySignedRoute('servers.provision.callback', $expiresAt, [
+            'step' => URL::temporarySignedRoute('servers.provision.step', $expiresAt, [
                 'server' => $server->getKey(),
-                'status' => 'started',
-            ]),
-            'completed' => URL::temporarySignedRoute('servers.provision.callback', $expiresAt, [
-                'server' => $server->getKey(),
-                'status' => 'completed',
             ]),
         ];
     }
