@@ -6,6 +6,7 @@ use App\Http\Controllers\Concerns\PreparesSiteData;
 use App\Http\Requests\Servers\StoreServerRequest;
 use App\Http\Requests\Servers\UpdateServerRequest;
 use App\Models\Server;
+use App\Packages\Enums\ProvisionStatus;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -60,6 +61,11 @@ class ServerController extends Controller
 
     public function show(Server $server): RedirectResponse
     {
+        // Redirect to provisioning page if not fully provisioned
+        if ($server->provision_status !== ProvisionStatus::Completed) {
+            return redirect()->route('servers.provisioning', $server);
+        }
+
         return redirect()->route('servers.sites', $server);
     }
 

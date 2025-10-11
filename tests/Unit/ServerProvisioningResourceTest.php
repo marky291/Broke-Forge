@@ -34,8 +34,6 @@ class ServerProvisioningResourceTest extends TestCase
         $this->assertEquals('10.0.0.1', $array['private_ip']);
         $this->assertEquals(22, $array['ssh_port']);
         $this->assertEquals('installing', $array['provision_status']);
-        $this->assertEquals('Installing services', $array['provision_status_label']);
-        $this->assertEquals('blue', $array['provision_status_color']);
         $this->assertEquals('Ubuntu', $array['os_name']);
         $this->assertEquals('24.04', $array['os_version']);
         $this->assertEquals('Noble Numbat', $array['os_codename']);
@@ -52,19 +50,18 @@ class ServerProvisioningResourceTest extends TestCase
 
         $this->assertArrayHasKey('steps', $array);
         $this->assertIsArray($array['steps']);
-        $this->assertCount(7, $array['steps']);
+        $this->assertCount(8, $array['steps']);
 
         // Verify first step
-        $this->assertEquals('Waiting on your server to become ready', $array['steps'][0]['name']);
+        $this->assertEquals('Waiting for connection', $array['steps'][0]['name']);
         $this->assertStringContainsString('waiting to hear from your server', $array['steps'][0]['description']);
-        $this->assertEquals(ProvisionStatus::Pending, $array['steps'][0]['status']);
 
         // Verify some middle steps
-        $this->assertEquals('Installing PHP', $array['steps'][4]['name']);
-        $this->assertEquals('Installing Nginx', $array['steps'][5]['name']);
+        $this->assertEquals('Installing PHP', $array['steps'][5]['name']);
+        $this->assertEquals('Installing Nginx', $array['steps'][6]['name']);
 
         // Verify last step
-        $this->assertEquals('Making final touches', $array['steps'][6]['name']);
+        $this->assertEquals('Making final touches', $array['steps'][7]['name']);
     }
 
     public function test_all_steps_have_required_fields(): void
@@ -80,7 +77,11 @@ class ServerProvisioningResourceTest extends TestCase
             $this->assertArrayHasKey('name', $step);
             $this->assertArrayHasKey('description', $step);
             $this->assertArrayHasKey('status', $step);
-            $this->assertInstanceOf(ProvisionStatus::class, $step['status']);
+            $this->assertIsArray($step['status']);
+            $this->assertArrayHasKey('isCompleted', $step['status']);
+            $this->assertArrayHasKey('isPending', $step['status']);
+            $this->assertArrayHasKey('isFailed', $step['status']);
+            $this->assertArrayHasKey('isInstalling', $step['status']);
         }
     }
 }

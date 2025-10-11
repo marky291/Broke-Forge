@@ -49,9 +49,6 @@ class NginxInstaller extends PackageInstaller implements \App\Packages\Base\Serv
      */
     public function execute(PhpVersion $phpVersion): void
     {
-        $this->server->provision->put(4, ProvisionStatus::Installing);
-        $this->server->save();
-
         // Ensure firewall is installed and configured first
         FirewallInstallerJob::dispatchSync($this->server);
 
@@ -67,24 +64,24 @@ class NginxInstaller extends PackageInstaller implements \App\Packages\Base\Serv
             FirewallRuleInstallerJob::dispatchSync($this->server, $rule->id);
         }
 
-        $this->server->provision->put(4, ProvisionStatus::Completed);
-        $this->server->provision->put(5, ProvisionStatus::Installing);
+        $this->server->provision->put(5, ProvisionStatus::Completed->value);
+        $this->server->provision->put(6, ProvisionStatus::Installing->value);
         $this->server->save();
 
         PhpInstallerJob::dispatchSync($this->server, $phpVersion);
 
-        $this->server->provision->put(5, ProvisionStatus::Completed);
-        $this->server->provision->put(6, ProvisionStatus::Installing);
+        $this->server->provision->put(6, ProvisionStatus::Completed->value);
+        $this->server->provision->put(7, ProvisionStatus::Installing->value);
         $this->server->save();
 
         $this->install($this->commands($phpVersion));
 
-        $this->server->provision->put(6, ProvisionStatus::Completed);
-        $this->server->provision->put(7, ProvisionStatus::Installing);
+        $this->server->provision->put(7, ProvisionStatus::Completed->value);
+        $this->server->provision->put(8, ProvisionStatus::Installing->value);
         $this->server->save();
 
         sleep(7);
-        $this->server->provision->put(7, ProvisionStatus::Completed);
+        $this->server->provision->put(8, ProvisionStatus::Completed->value);
         $this->server->save();
     }
 

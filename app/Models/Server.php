@@ -63,6 +63,7 @@ class Server extends Model
 
     protected $attributes = [
         'ssh_port' => 22,
+        'provision' => '{"1":"installing"}',
     ];
 
     protected function casts(): array

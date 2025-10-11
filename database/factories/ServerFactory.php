@@ -22,6 +22,7 @@ class ServerFactory extends Factory
             'private_ip' => $this->faker->optional()->ipv4(),
             'ssh_port' => 22,
             'connection' => 'connected',
+            'provision' => [1 => 'installing'],
         ];
     }
 }
