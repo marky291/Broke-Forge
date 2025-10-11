@@ -17,7 +17,7 @@ class ServerProvisioningResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        $provision = $this->provision ?? [];
+        $provision = $this->provision ?? collect();
 
         return [
             'id' => $this->id,
@@ -81,10 +81,9 @@ class ServerProvisioningResource extends JsonResource
     /**
      * Get the status for a specific provision step
      */
-    protected function getStepStatus(array $provision, int $stepNumber): array
+    protected function getStepStatus($provision, int $stepNumber): array
     {
-        $stepData = collect($provision)->firstWhere('step', $stepNumber);
-        $status = $stepData['status'] ?? 'pending';
+        $status = $provision->get($stepNumber, 'pending');
 
         return [
             'isCompleted' => $status === 'completed',

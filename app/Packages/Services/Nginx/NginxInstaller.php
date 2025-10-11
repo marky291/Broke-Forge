@@ -12,6 +12,7 @@ use App\Packages\Enums\CredentialType;
 use App\Packages\Enums\PackageName;
 use App\Packages\Enums\PackageType;
 use App\Packages\Enums\PhpVersion;
+use App\Packages\Enums\ProvisionStatus;
 use App\Packages\Services\Firewall\FirewallInstallerJob;
 use App\Packages\Services\Firewall\FirewallRuleInstallerJob;
 use App\Packages\Services\PHP\PhpInstallerJob;
@@ -48,6 +49,9 @@ class NginxInstaller extends PackageInstaller implements \App\Packages\Base\Serv
      */
     public function execute(PhpVersion $phpVersion): void
     {
+        $this->server->provision->put(4, ProvisionStatus::Installing);
+        $this->server->save();
+
         // Ensure firewall is installed and configured first
         FirewallInstallerJob::dispatchSync($this->server);
 
@@ -63,11 +67,25 @@ class NginxInstaller extends PackageInstaller implements \App\Packages\Base\Serv
             FirewallRuleInstallerJob::dispatchSync($this->server, $rule->id);
         }
 
-        // First install PHP as a dependency using the dedicated PHP installer
+        $this->server->provision->put(4, ProvisionStatus::Completed);
+        $this->server->provision->put(5, ProvisionStatus::Installing);
+        $this->server->save();
+
         PhpInstallerJob::dispatchSync($this->server, $phpVersion);
 
-        // Then proceed with Nginx installation
+        $this->server->provision->put(5, ProvisionStatus::Completed);
+        $this->server->provision->put(6, ProvisionStatus::Installing);
+        $this->server->save();
+
         $this->install($this->commands($phpVersion));
+
+        $this->server->provision->put(6, ProvisionStatus::Completed);
+        $this->server->provision->put(7, ProvisionStatus::Installing);
+        $this->server->save();
+
+        sleep(7);
+        $this->server->provision->put(7, ProvisionStatus::Completed);
+        $this->server->save();
     }
 
     protected function commands(PhpVersion $phpVersion): array

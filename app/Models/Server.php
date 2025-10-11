@@ -9,6 +9,7 @@ use App\Enums\SupervisorStatus;
 use App\Packages\Enums\Connection;
 use App\Packages\Enums\CredentialType;
 use App\Packages\Enums\ProvisionStatus;
+use Illuminate\Database\Eloquent\Casts\AsCollection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -26,7 +27,7 @@ use Illuminate\Support\Facades\Auth;
  * @property string $connection
  * @property string $vanity_name
  * @property ProvisionStatus $provision_status
- * @property array|null $provision
+ * @property \Illuminate\Support\Collection|null $provision
  */
 class Server extends Model
 {
@@ -71,7 +72,7 @@ class Server extends Model
             'connection' => Connection::class,
             'provider' => ServerProvider::class,
             'provision_status' => ProvisionStatus::class,
-            'provision' => 'array',
+            'provision' => AsCollection::class,
             'ssh_root_password' => 'encrypted',
             'monitoring_token' => 'encrypted',
             'monitoring_status' => MonitoringStatus::class,
