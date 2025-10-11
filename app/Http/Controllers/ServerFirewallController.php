@@ -98,23 +98,16 @@ class ServerFirewallController extends Controller
     public function store(FirewallRuleRequest $request, Server $server): RedirectResponse
     {
         try {
-            // Ensure firewall exists for this server
-            $firewall = $server->firewall()->firstOrCreate(
-                ['server_id' => $server->id],
-                ['is_enabled' => true]
-            );
-
-            // Create the firewall rule
-            $rule = $firewall->rules()->create([
+            // Prepare rule data from validated request
+            $ruleData = [
                 'name' => $request->validated('name'),
                 'port' => $request->validated('port'),
                 'from_ip_address' => $request->validated('from_ip_address'),
                 'rule_type' => $request->validated('rule_type', 'allow'),
-                'status' => 'pending',
-            ]);
+            ];
 
-            // Dispatch job to configure the rule on the server
-            FirewallRuleInstallerJob::dispatch($server, $rule->id);
+            // Dispatch job to create the rule in DB and configure it on the server
+            FirewallRuleInstallerJob::dispatch($server, $ruleData);
 
             return back()->with('success', 'Firewall rule is being applied.');
 

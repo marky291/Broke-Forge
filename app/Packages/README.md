@@ -1334,19 +1334,418 @@ class CustomCredential implements SshCredential
 }
 ```
 
+## ⚠️ CRITICAL ARCHITECTURAL RULES
+
+**These rules are MANDATORY for all package implementations. Violating these patterns will cause runtime errors, job failures, and architectural inconsistencies.**
+
+### Rule 1: Installer/Remover Classes Handle ALL Logic
+
+**Installer and Remover classes are responsible for:**
+- ✅ ALL business logic and data preparation
+- ✅ ALL database operations (creating, updating, deleting records)
+- ✅ SSH command generation in `commands()` method
+- ✅ Milestone tracking
+- ✅ Configuration validation
+- ✅ Error handling and recovery
+
+**Real-World Examples:**
+- `app/Packages/Services/Nginx/NginxInstaller.php` - Handles firewall setup, PHP installation, Nginx config, database operations
+- `app/Packages/Services/PHP/PhpInstaller.php` - Creates ServerPhp records, generates commands, handles installation
+
+```php
+// ✅ CORRECT - NginxInstaller handles everything including job dispatching
+class NginxInstaller extends PackageInstaller implements ServerPackage
+{
+    public function execute(PhpVersion $phpVersion): void
+    {
+        // Installers can dispatch other jobs as dependencies
+        FirewallInstallerJob::dispatchSync($this->server);
+
+        // Configure firewall rules for HTTP and HTTPS
+        $firewallRules = [
+            ['port' => '80', 'name' => 'HTTP', 'rule_type' => 'allow', 'from_ip_address' => null],
+            ['port' => '443', 'name' => 'HTTPS', 'rule_type' => 'allow', 'from_ip_address' => null],
+        ];
+
+        // One job per instance pattern - dispatch separate job for each rule
+        foreach ($firewallRules as $ruleData) {
+            FirewallRuleInstallerJob::dispatchSync($this->server, $ruleData);
+        }
+
+        // Installers update provision status directly
+        $this->server->provision->put(5, ProvisionStatus::Completed->value);
+        $this->server->provision->put(6, ProvisionStatus::Installing->value);
+        $this->server->save();
+
+        // Dispatch PHP installation job
+        PhpInstallerJob::dispatchSync($this->server, $phpVersion);
+
+        $this->server->provision->put(6, ProvisionStatus::Completed->value);
+        $this->server->provision->put(7, ProvisionStatus::Installing->value);
+        $this->server->save();
+
+        // Generate and execute SSH commands
+        $this->install($this->commands($phpVersion));
+
+        $this->server->provision->put(7, ProvisionStatus::Completed->value);
+        $this->server->save();
+    }
+
+    protected function commands(PhpVersion $phpVersion): array
+    {
+        $appUser = config('app.ssh_user', str_replace(' ', '', strtolower(config('app.name'))));
+
+        return [
+            $this->track(NginxInstallerMilestones::PREPARE_SYSTEM),
+            'apt-get update -y',
+
+            $this->track(NginxInstallerMilestones::INSTALL_SOFTWARE),
+            'apt-get install -y nginx',
+
+            $this->track(NginxInstallerMilestones::CONFIGURE_NGINX),
+
+            // Database operations in closures - executed later when array is processed
+            function () use ($appUser, $phpVersion) {
+                $this->server->sites()->updateOrCreate(
+                    ['domain' => 'default'],
+                    [
+                        'document_root' => "/home/{$appUser}/default",
+                        'nginx_config_path' => '/etc/nginx/sites-available/default',
+                        'php_version' => $phpVersion,
+                        'ssl_enabled' => false,
+                        'configuration' => ['is_default_site' => true],
+                        'status' => 'active',
+                        'provisioned_at' => now(),
+                        'deprovisioned_at' => null,
+                    ]
+                );
+            },
+
+            $this->track(NginxInstallerMilestones::COMPLETE),
+        ];
+    }
+}
+```
+
+### Rule 2: Job Classes Are ONLY Lightweight Wrappers
+
+**Job classes should ONLY:**
+- ✅ Log start/completion messages
+- ✅ Create installer/remover instance
+- ✅ Dispatch the installer/remover
+- ✅ Catch and re-throw exceptions for Laravel's retry mechanism
+
+**Job classes should NEVER:**
+- ❌ Create or update database records
+- ❌ Contain business logic
+- ❌ Generate SSH commands
+- ❌ Use the `persist()` method
+- ❌ Track milestones
+
+**Real-World Example:**
+
+```php
+// ✅ CORRECT - NginxInstallerJob (app/Packages/Services/Nginx/NginxInstallerJob.php)
+class NginxInstallerJob implements ShouldQueue
+{
+    use Queueable;
+
+    public $timeout = 600;
+
+    public function __construct(
+        public Server $server,
+        public PhpVersion $phpVersion,
+        public bool $isProvisioningServer = false
+    ) {}
+
+    public function handle(): void
+    {
+        set_time_limit(0);
+
+        Log::info("Starting Nginx installation for server #{$this->server->id} with PHP {$this->phpVersion->value}");
+
+        try {
+            $installer = new NginxInstaller($this->server);
+
+            if ($this->isProvisioningServer) {
+                $this->server->update(['provision_status' => ProvisionStatus::Installing]);
+            }
+
+            // Installer handles EVERYTHING - business logic, DB ops, SSH commands, milestones
+            $installer->execute($this->phpVersion);
+
+            Log::info("Nginx installation completed for server #{$this->server->id}");
+
+            if ($this->isProvisioningServer) {
+                $this->server->update(['provision_status' => ProvisionStatus::Completed]);
+            }
+
+        } catch (Exception $e) {
+            if ($this->isProvisioningServer) {
+                $this->server->update(['provision_status' => ProvisionStatus::Failed]);
+            }
+            Log::error("Nginx installation failed for server #{$this->server->id}", [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            throw $e;
+        }
+    }
+}
+```
+
+```php
+// ❌ WRONG - Job doing too much
+class BadInstallerJob implements ShouldQueue
+{
+    public function handle(): void
+    {
+        // ❌ Database operations in job
+        ServerPhp::create([...]);
+
+        // ❌ Business logic in job
+        $packages = $this->determinePackages();
+
+        // ❌ SSH commands in job
+        $ssh->execute('apt-get install...');
+    }
+}
+```
+
+### Rule 3: Use execute() Parameters, NEVER Constructors
+
+**Configuration must be passed through `execute()` method parameters, NOT through constructor parameters.**
+
+The base `PackageInstaller` constructor accepts ONLY `Server $server`. Do not override the constructor to add configuration parameters.
+
+```php
+// ✅ CORRECT - Configuration via execute() parameters
+class NginxInstaller extends PackageInstaller implements ServerPackage
+{
+    // Constructor inherited from base class - accepts ONLY Server
+    // public function __construct(Server $server) { parent::__construct($server); }
+
+    public function execute(PhpVersion $phpVersion): void  // ← Parameters here!
+    {
+        $this->install($this->commands($phpVersion));
+    }
+
+    protected function commands(PhpVersion $phpVersion): array  // ← Parameters here!
+    {
+        return [
+            "systemctl enable --now php{$phpVersion->value}-fpm",
+            // ... more commands using $phpVersion
+        ];
+    }
+}
+```
+
+```php
+// ❌ WRONG - Configuration via constructor
+class BadInstaller extends PackageInstaller
+{
+    public function __construct(
+        Server $server,
+        PhpVersion $phpVersion  // ❌ NO! Don't add config to constructor
+    ) {
+        parent::__construct($server);
+        $this->phpVersion = $phpVersion;
+    }
+}
+```
+
+**Why this matters:** Passing configuration through `execute()` keeps installers reusable and makes the command generation dynamic.
+
+### Rule 4: One Job = One Instance
+
+**Each job should handle ONE installation or removal. For multiple items, dispatch MULTIPLE jobs.**
+
+This pattern provides:
+- ✅ Granular retry logic (if one fails, others succeed)
+- ✅ Individual error handling
+- ✅ Proper job queue monitoring
+- ✅ Database integrity (one job = one record)
+
+**Real-World Example from NginxInstaller:**
+
+```php
+// ✅ CORRECT - One job per firewall rule (NginxInstaller.php:59-67)
+$firewallRules = [
+    ['port' => '80', 'name' => 'HTTP', 'rule_type' => 'allow'],
+    ['port' => '443', 'name' => 'HTTPS', 'rule_type' => 'allow'],
+];
+
+// Dispatch SEPARATE job for EACH rule
+foreach ($firewallRules as $ruleData) {
+    FirewallRuleInstallerJob::dispatchSync($this->server, $ruleData);
+}
+```
+
+```php
+// ❌ WRONG - One job handling multiple items
+FirewallRuleInstallerJob::dispatchSync($this->server, $firewallRules);  // Array of rules ❌
+```
+
+**Another Real-World Example:**
+
+```php
+// ✅ CORRECT - Installing multiple scheduled tasks
+$tasks = [
+    ['name' => 'Cleanup', 'command' => 'rm -rf /tmp/*', 'frequency' => ScheduleFrequency::Daily],
+    ['name' => 'Backup', 'command' => 'backup.sh', 'frequency' => ScheduleFrequency::Weekly],
+];
+
+foreach ($tasks as $taskData) {
+    ServerScheduleTaskInstallerJob::dispatch($this->server, $taskData);  // One job per task ✅
+}
+```
+
+### Rule 5: commands() Generates SSH Commands, execute() Prepares Data
+
+**Clear separation of responsibilities:**
+
+- **`execute()` method:**
+  - Prepares and validates data
+  - Queries database
+  - Calls `$this->install($this->commands())`
+  - Handles high-level orchestration
+
+- **`commands()` method:**
+  - Returns array of SSH commands (strings)
+  - Returns milestone tracking closures
+  - Returns database operation closures
+  - Receives parameters from `execute()`
+
+```php
+// ✅ CORRECT - Clear separation (PhpInstaller.php:65-104)
+public function execute(PhpVersion $phpVersion): void
+{
+    // Data preparation in execute()
+    $isFirstPhp = $this->server->phps()->count() === 0;
+
+    // Database operations in execute()
+    ServerPhp::firstOrCreate([...]);
+
+    // Compose package list
+    $phpPackages = implode(' ', [
+        "php{$phpVersion->value}-fpm",
+        "php{$phpVersion->value}-cli",
+        // ... more packages
+    ]);
+
+    // Pass to commands() which generates SSH commands
+    $this->install($this->commands($phpVersion, $phpPackages));
+}
+
+protected function commands(PhpVersion $phpVersion, string $phpPackages): array
+{
+    // ONLY SSH commands and closures
+    return [
+        $this->track(PhpInstallerMilestones::INSTALL_PHP),
+        "apt-get install -y {$phpPackages}",
+        "systemctl enable php{$phpVersion->value}-fpm",
+    ];
+}
+```
+
+### Quick Reference: Correct Pattern Summary
+
+| Component | Responsibilities | What NOT to do |
+|-----------|------------------|----------------|
+| **Installer/Remover** | ALL logic, database ops, SSH commands, milestones, job dispatching | Don't use constructor for config |
+| **Job** | Resource limits, provision_status, logging, dispatching installer | Don't add package logic, milestones, or SSH commands |
+| **execute()** | Data prep, validation, orchestration, job dispatching, provision updates | Don't generate SSH commands here |
+| **commands()** | SSH command strings and closures | Don't query database or validate |
+| **Dispatch Pattern** | One job = one instance (loop and dispatch) | Don't batch multiple items in one job |
+
+### Reference Files (Study These Examples)
+
+**Perfect examples to study:**
+1. `app/Packages/Services/Nginx/NginxInstaller.php` + `NginxInstallerJob.php` - Complex installer with dependencies
+2. `app/Packages/Services/PHP/PhpInstaller.php` + `PhpInstallerJob.php` - Clean, minimal job pattern
+3. `app/Packages/Services/Firewall/FirewallRuleInstallerJob.php` - One-job-per-instance pattern
+
 ## Job Integration
+
+**⚠️ CRITICAL**: Before implementing job classes, review the **⚠️ CRITICAL ARCHITECTURAL RULES** section above (search for "CRITICAL ARCHITECTURAL RULES"). The patterns described there are MANDATORY for all job implementations. Violating these rules will cause runtime errors and architectural inconsistencies.
 
 ### Job Class Philosophy
 
-**IMPORTANT**: Job classes should be lightweight wrappers that only handle logging and error reporting. All business logic, database operations, and milestone tracking must be handled by the installer/remover classes themselves. Jobs should NOT:
-- Create or update database records directly
-- Use the `persist()` method (this belongs in installer/remover)
-- Track milestones (this belongs in installer/remover)
-- Contain installation/removal logic
+**MANDATORY PATTERN**: Job classes MUST be lightweight wrappers. They handle queue orchestration (timeouts, resource limits, high-level status) but ALL package-specific logic MUST be in the installer/remover.
+
+**What "Lightweight" Means:**
+Jobs handle orchestration concerns like:
+- ✅ Setting `set_time_limit(0)` and `$timeout` for long operations
+- ✅ Updating `provision_status` for UI feedback (NOT package-specific data)
+- ✅ Logging and error handling
+- ✅ Creating installer and calling `execute()`
+
+Jobs are FORBIDDEN from package-specific concerns:
+- ❌ Business logic or validation
+- ❌ SSH command generation
+- ❌ Creating package-specific database records (sites, firewall rules, scheduled tasks, etc.)
+- ❌ Tracking milestones (installer does this)
+- ❌ Using `persist()` method (installer does this)
+
+### The Core Job Pattern
+
+Every job's `handle()` method should follow this pattern from `NginxInstallerJob`:
+
+```php
+public function handle(): void
+{
+    // Set no time limit for long-running installation process
+    set_time_limit(0);
+
+    Log::info("Starting Nginx installation for server #{$this->server->id} with PHP {$this->phpVersion->value}");
+
+    try {
+        // Create installer instance
+        $installer = new NginxInstaller($this->server);
+
+        if ($this->isProvisioningServer) {
+            $this->server->update(['provision_status' => ProvisionStatus::Installing]);
+        }
+
+        // Execute installation - the installer handles all logic, database tracking, and dependencies
+        $installer->execute($this->phpVersion);
+
+        Log::info("Nginx installation completed for server #{$this->server->id}");
+
+        if ($this->isProvisioningServer) {
+            $this->server->update(['provision_status' => ProvisionStatus::Completed]);
+        }
+
+    } catch (Exception $e) {
+        if ($this->isProvisioningServer) {
+            $this->server->update(['provision_status' => ProvisionStatus::Failed]);
+        }
+        Log::error("Nginx installation failed for server #{$this->server->id}", [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString(),
+        ]);
+        throw $e;
+    }
+}
+```
+
+**Jobs ARE lightweight wrappers, but they handle:**
+1. ✅ Resource limits (`set_time_limit(0)` for long operations)
+2. ✅ High-level status tracking (provision_status for UI feedback)
+3. ✅ Logging start/completion
+4. ✅ Creating installer and dispatching
+5. ✅ Error handling and status updates
+
+**Jobs still NEVER:**
+- ❌ Contain business logic or validation
+- ❌ Generate SSH commands
+- ❌ Create package-specific database records (sites, firewall rules, etc.)
+- ❌ Track milestones (installer handles this)
+- ❌ Use the `persist()` method (installer handles this)
 
 ### Correct Job Class Structure
 
-Every installer should have a corresponding job for queue processing. Here's the correct pattern:
+Every installer should have a corresponding job for queue processing. Here's the correct pattern based on `NginxInstallerJob`:
 
 ```php
 <?php
@@ -1355,6 +1754,8 @@ namespace App\Packages\Services\{Category};
 
 use App\Models\Server;
 use App\Packages\Enums\{SpecificConfiguration};
+use App\Packages\Enums\ProvisionStatus;
+use Exception;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
@@ -1368,103 +1769,149 @@ class {ServiceName}InstallerJob implements ShouldQueue
 {
     use Queueable;
 
+    /**
+     * The number of seconds the job can run before timing out.
+     */
+    public $timeout = 600;
+
     public function __construct(
         public Server $server,
-        public {ConfigurationType} $configuration
+        public {ConfigurationType} $configuration,
+        public bool $isProvisioningServer = false
     ) {}
 
     public function handle(): void
     {
+        // Set no time limit for long-running installation process
+        set_time_limit(0);
+
         Log::info("Starting {service} installation for server #{$this->server->id}");
 
         try {
             // Create installer instance
             $installer = new {ServiceName}Installer($this->server);
 
-            // Execute installation - the installer's persist() method handles database tracking
+            if ($this->isProvisioningServer) {
+                $this->server->update(['provision_status' => ProvisionStatus::Installing]);
+            }
+
+            // Execute installation - the installer handles all logic, database tracking, and dependencies
             $installer->execute($this->configuration);
 
             Log::info("{Service} installation completed for server #{$this->server->id}");
-        } catch (\Exception $e) {
+
+            if ($this->isProvisioningServer) {
+                $this->server->update(['provision_status' => ProvisionStatus::Completed]);
+            }
+
+        } catch (Exception $e) {
+            if ($this->isProvisioningServer) {
+                $this->server->update(['provision_status' => ProvisionStatus::Failed]);
+            }
             Log::error("{Service} installation failed for server #{$this->server->id}", [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
-
             throw $e;
         }
     }
 }
 ```
 
-### Real-World Example: PHP Installer Job
+### Real-World Example: Nginx Installer Job
 
-This example demonstrates the correct pattern where the job is minimal and delegates everything to the installer:
+This example demonstrates the correct pattern from the actual codebase:
 
 ```php
 <?php
 
-namespace App\Packages\Services\PHP;
+namespace App\Packages\Services\Nginx;
 
 use App\Models\Server;
 use App\Packages\Enums\PhpVersion;
+use App\Packages\Enums\ProvisionStatus;
+use Exception;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
 
 /**
- * PHP Installation Job
+ * Nginx Installation Job
  *
- * Handles queued PHP installation on remote servers
+ * Handles queued Nginx web server installation on remote servers
  */
-class PhpInstallerJob implements ShouldQueue
+class NginxInstallerJob implements ShouldQueue
 {
     use Queueable;
 
+    /**
+     * The number of seconds the job can run before timing out.
+     */
+    public $timeout = 600;
+
     public function __construct(
         public Server $server,
-        public PhpVersion $phpVersion
+        public PhpVersion $phpVersion,
+        public bool $isProvisioningServer = false
     ) {}
 
     public function handle(): void
     {
-        Log::info("Starting PHP {$this->phpVersion->value} installation for server #{$this->server->id}");
+        // Set no time limit for long-running installation process
+        set_time_limit(0);
+
+        Log::info("Starting Nginx installation for server #{$this->server->id} with PHP {$this->phpVersion->value}");
 
         try {
             // Create installer instance
-            $installer = new PhpInstaller($this->server);
+            $installer = new NginxInstaller($this->server);
 
-            // Execute installation - the installer's persist() method handles database tracking
+            if ($this->isProvisioningServer) {
+                $this->server->update(['provision_status' => ProvisionStatus::Installing]);
+            }
+
+            // Execute installation - the installer handles all logic, database tracking, and dependencies
             $installer->execute($this->phpVersion);
 
-            Log::info("PHP {$this->phpVersion->value} installation completed for server #{$this->server->id}");
-        } catch (\Exception $e) {
-            Log::error("PHP {$this->phpVersion->value} installation failed for server #{$this->server->id}", [
+            Log::info("Nginx installation completed for server #{$this->server->id}");
+
+            if ($this->isProvisioningServer) {
+                $this->server->update(['provision_status' => ProvisionStatus::Completed]);
+            }
+
+        } catch (Exception $e) {
+            if ($this->isProvisioningServer) {
+                $this->server->update(['provision_status' => ProvisionStatus::Failed]);
+            }
+            Log::error("Nginx installation failed for server #{$this->server->id}", [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
-
             throw $e;
         }
     }
 }
 ```
 
-### Why Jobs Should Be Minimal
+### Why Jobs Should Be Lightweight (But Not Minimal)
 
-1. **Single Responsibility**: Jobs handle queueing and logging, installers handle installation
-2. **No Duplication**: Database persistence happens once in the installer via `persist()`
-3. **Consistency**: All database tracking is centralized in installer/remover classes
-4. **Testability**: Simpler jobs are easier to test
-5. **Maintainability**: Business logic stays in one place (the installer/remover)
+Jobs ARE lightweight wrappers, but they handle important orchestration:
+
+1. **Single Responsibility**: Jobs handle queue orchestration, installers handle installation logic
+2. **Resource Management**: Jobs set timeouts and time limits for long-running processes
+3. **High-Level Status**: Jobs update provision_status for UI feedback (NOT package-specific data)
+4. **Centralized Logic**: All business logic, database persistence, and SSH commands stay in installers
+5. **Testability**: Lightweight jobs are easier to test than fat jobs
+6. **Maintainability**: Installation logic stays in one place (the installer/remover)
 
 ### Job Integration Best Practices
 
-1. **Keep It Simple**: Jobs should only create the installer, execute it, and handle logging
-2. **No Database Operations**: Let the installer/remover handle all database updates via `persist()`
-3. **No Business Logic**: All installation/removal logic belongs in the installer/remover classes
-4. **Error Handling**: Log errors but let exceptions bubble up for Laravel's job retry mechanism
-5. **Configuration**: Pass configuration through constructor to the installer's `execute()` method
+1. **Set Resource Limits**: Use `set_time_limit(0)` and `$timeout` property for long-running installations
+2. **Track High-Level Status**: Update `provision_status` for UI feedback when `isProvisioningServer` is true
+3. **No Package Logic**: Let installers handle ALL business logic, database persistence, and SSH commands
+4. **No Milestone Tracking**: Installers track milestones, NOT jobs
+5. **Error Handling**: Update provision_status on failure, then re-throw for Laravel's retry mechanism
+6. **Configuration**: Pass configuration through constructor parameters to the installer's `execute()` method
 
 ## Service Type Classification
 

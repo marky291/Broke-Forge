@@ -3,7 +3,6 @@
 namespace App\Packages\Services\Firewall;
 
 use App\Models\Server;
-use App\Models\ServerFirewallRule;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
@@ -11,66 +10,55 @@ use Illuminate\Support\Facades\Log;
 /**
  * Firewall Rule Installation Job
  *
- * Handles queued firewall rule configuration on remote servers
+ * Handles queued firewall rule configuration on remote servers.
+ * Each job instance handles ONE firewall rule only.
+ * For multiple rules, dispatch multiple job instances.
  */
 class FirewallRuleInstallerJob implements ShouldQueue
 {
     use Queueable;
 
+    /**
+     * @param  Server  $server  The server to configure
+     * @param  array  $ruleData  Single firewall rule data (name, port, rule_type, from_ip_address)
+     */
     public function __construct(
         public Server $server,
-        public int $ruleId
+        public array $ruleData
     ) {}
 
     public function handle(): void
     {
-        // Get the rule that needs to be installed
-        $rule = ServerFirewallRule::find($this->ruleId);
-
-        if (! $rule) {
-            Log::warning('No firewall rule found for ID', ['rule_id' => $this->ruleId]);
-
-            return;
-        }
-
         Log::info("Starting firewall rule configuration for server #{$this->server->id}", [
-            'rule_id' => $this->ruleId,
+            'rule_name' => $this->ruleData['name'],
+            'port' => $this->ruleData['port'],
         ]);
-
-        // Update rule status to 'installing'
-        $rule->update(['status' => 'installing']);
 
         try {
             // Create installer instance
             $installer = new FirewallRuleInstaller($this->server);
 
-            // Convert rule to array format expected by installer
-            $ruleArray = [
-                'port' => $rule->port,
+            // Convert single rule data to installer format
+            $singleRule = [
+                'port' => $this->ruleData['port'],
                 'protocol' => 'tcp', // Default to TCP for MVP
-                'action' => $rule->rule_type, // 'allow' or 'deny'
-                'source' => $rule->from_ip_address,
-                'comment' => $rule->name,
+                'action' => $this->ruleData['rule_type'] ?? 'allow',
+                'source' => $this->ruleData['from_ip_address'] ?? null,
+                'comment' => $this->ruleData['name'],
             ];
 
-            // Execute rule configuration
-            $installer->execute([$ruleArray], 'custom');
+            // Execute rule configuration for this single rule
+            // (installer accepts array of rules, so we pass array with one rule)
+            $installer->execute([$singleRule], 'custom');
 
-            // Update rule status to 'active'
-            $rule->update(['status' => 'active']);
-
-            Log::info("Firewall rule configuration completed for server #{$this->server->id}", [
-                'rule_id' => $this->ruleId,
-            ]);
+            Log::info("Firewall rule '{$this->ruleData['name']}' configured successfully for server #{$this->server->id}");
         } catch (\Exception $e) {
             Log::error("Firewall rule configuration failed for server #{$this->server->id}", [
-                'rule_id' => $this->ruleId,
+                'rule_name' => $this->ruleData['name'],
+                'port' => $this->ruleData['port'],
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
-
-            // Update rule status to 'failed'
-            $rule->update(['status' => 'failed']);
 
             throw $e;
         }

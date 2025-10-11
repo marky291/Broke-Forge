@@ -4,6 +4,7 @@ namespace App\Packages\Services\Nginx;
 
 use App\Enums\ReverseProxyStatus;
 use App\Enums\ReverseProxyType;
+use App\Enums\ScheduleFrequency;
 use App\Models\ServerReverseProxy;
 use App\Packages\Base\Milestones;
 use App\Packages\Base\Package;
@@ -16,6 +17,8 @@ use App\Packages\Enums\ProvisionStatus;
 use App\Packages\Services\Firewall\FirewallInstallerJob;
 use App\Packages\Services\Firewall\FirewallRuleInstallerJob;
 use App\Packages\Services\PHP\PhpInstallerJob;
+use App\Packages\Services\Scheduler\ServerSchedulerInstallerJob;
+use App\Packages\Services\Scheduler\Task\ServerScheduleTaskInstallerJob;
 
 /**
  * Nginx Web Server Installation Class
@@ -58,10 +61,9 @@ class NginxInstaller extends PackageInstaller implements \App\Packages\Base\Serv
             ['port' => '443', 'name' => 'HTTPS', 'rule_type' => 'allow', 'from_ip_address' => null],
         ];
 
-        // Create and install each firewall rule
+        // Install each firewall rule (job will create DB record and install on remote server)
         foreach ($firewallRules as $ruleData) {
-            $rule = $this->server->firewall->rules()->create($ruleData);
-            FirewallRuleInstallerJob::dispatchSync($this->server, $rule->id);
+            FirewallRuleInstallerJob::dispatchSync($this->server, $ruleData);
         }
 
         $this->server->provision->put(5, ProvisionStatus::Completed->value);
@@ -80,7 +82,16 @@ class NginxInstaller extends PackageInstaller implements \App\Packages\Base\Serv
         $this->server->provision->put(8, ProvisionStatus::Installing->value);
         $this->server->save();
 
-        sleep(7);
+        // Install Task scheduler and default task schedule job.
+        ServerSchedulerInstallerJob::dispatchSync($this->server);
+
+        // Install default scheduled task (job will create DB record and install on remote server)
+        ServerScheduleTaskInstallerJob::dispatchSync($this->server, [
+            'name' => 'Remove unused packages',
+            'command' => 'apt-get autoremove && apt-get autoclean',
+            'frequency' => ScheduleFrequency::Weekly,
+        ]);
+
         $this->server->provision->put(8, ProvisionStatus::Completed->value);
         $this->server->save();
     }

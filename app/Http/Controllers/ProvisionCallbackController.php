@@ -56,8 +56,9 @@ class ProvisionCallbackController extends Controller
             $server->databases()->delete(); // delete all databases for this server
             $server->phps()->delete(); // delete all phps for this server
             $server->reverseProxy()->delete(); // delete all proxy (nginx) for this server
+            $server->firewall?->rules()->delete();
             $server->firewall()->delete(); // delete all firewall for this server
-            $server->provision = $server->attributesToArray(); // clear out the steps.
+            $server->provision = collect(); // clear out the steps.
             $server->provision->put(1, ProvisionStatus::Completed->value); // complete the connection step.
             $server->connection = Connection::CONNECTED;
             $server->provision_status = ProvisionStatus::Installing;

@@ -145,11 +145,13 @@ class ProvisionCallbackControllerTest extends TestCase
         $this->assertEquals('installing', $server->provision->get(1));
         $this->assertEquals('completed', $server->provision->get(2));
 
-        // Update Step 1
+        // Update Step 1 to completed - this triggers cleanup and resets provision steps
         $this->post($url, ['step' => 1, 'status' => 'completed'])->assertOk();
         $server->refresh();
         $this->assertEquals('completed', $server->provision->get(1));
-        $this->assertEquals('completed', $server->provision->get(2));
+        // Step 2 is wiped out by the cleanup logic when step 1 completes
+        $this->assertNull($server->provision->get(2));
+        $this->assertEquals(1, $server->provision->count());
     }
 
     public function test_it_marks_provisioning_as_failed_when_step_fails(): void
@@ -174,5 +176,70 @@ class ProvisionCallbackControllerTest extends TestCase
         $server->refresh();
         $this->assertEquals('failed', $server->provision->get(2));
         $this->assertEquals(ProvisionStatus::Failed, $server->provision_status);
+    }
+
+    public function test_it_cleans_up_server_resources_when_step_1_completes(): void
+    {
+        Log::shouldReceive('info')->once();
+
+        $server = Server::factory()->create([
+            'provision' => ['1' => 'installing', '2' => 'completed'],
+            'connection' => Connection::PENDING,
+            'provision_status' => ProvisionStatus::Pending,
+        ]);
+
+        // Create server resources using factories where available
+        \App\Models\ServerEvent::factory()->for($server)->create();
+        \App\Models\ServerDatabase::factory()->for($server)->create();
+        \App\Models\ServerPhp::factory()->for($server)->create();
+
+        // Create resources without factories
+        $server->reverseProxy()->create(['type' => 'nginx', 'status' => 'active']);
+
+        // Create firewall with rules
+        $firewall = $server->firewall()->create(['is_enabled' => true]);
+        $firewall->rules()->create([
+            'name' => 'HTTP',
+            'port' => '80',
+            'rule_type' => 'allow',
+            'status' => 'active',
+        ]);
+        $firewall->rules()->create([
+            'name' => 'HTTPS',
+            'port' => '443',
+            'rule_type' => 'allow',
+            'status' => 'active',
+        ]);
+
+        // Verify resources exist before cleanup
+        $this->assertEquals(1, $server->events()->count());
+        $this->assertEquals(1, $server->databases()->count());
+        $this->assertEquals(1, $server->phps()->count());
+        $this->assertNotNull($server->reverseProxy);
+        $this->assertNotNull($server->firewall);
+        $this->assertEquals(2, $server->firewall->rules()->count());
+
+        $url = URL::signedRoute('servers.provision.step', ['server' => $server->id]);
+
+        $this->post($url, [
+            'step' => 1,
+            'status' => ProvisionStatus::Completed->value,
+        ])
+            ->assertOk();
+
+        $server->refresh();
+
+        // Verify all resources were deleted
+        $this->assertEquals(0, $server->events()->count());
+        $this->assertEquals(0, $server->databases()->count());
+        $this->assertEquals(0, $server->phps()->count());
+        $this->assertNull($server->reverseProxy);
+        $this->assertNull($server->firewall);
+
+        // Verify provision state was reset
+        $this->assertEquals(ProvisionStatus::Completed->value, $server->provision->get(1));
+        $this->assertEquals(1, $server->provision->count());
+        $this->assertEquals(Connection::CONNECTED, $server->connection);
+        $this->assertEquals(ProvisionStatus::Installing, $server->provision_status);
     }
 }

@@ -21,18 +21,22 @@ trait ManagesFirewallRules
                 ['is_enabled' => true]
             );
 
-            // Add each rule to the firewall
+            // Add each rule to the firewall (updateOrCreate prevents duplicates)
             foreach ($rules as $rule) {
                 // Generate a descriptive name if not provided
                 $name = $rule['comment'] ?? $rule['name'] ?? "Port {$rule['port']} ({$context})";
 
-                $firewall->rules()->create([
-                    'name' => $name,
-                    'port' => $rule['port'],
-                    'from_ip_address' => $rule['source'] ?? $rule['from_ip_address'] ?? null,
-                    'rule_type' => $rule['action'] ?? $rule['rule_type'] ?? 'allow',
-                    'status' => 'active',
-                ]);
+                $firewall->rules()->updateOrCreate(
+                    [
+                        'name' => $name,
+                        'port' => $rule['port'],
+                    ],
+                    [
+                        'from_ip_address' => $rule['source'] ?? $rule['from_ip_address'] ?? null,
+                        'rule_type' => $rule['action'] ?? $rule['rule_type'] ?? 'allow',
+                        'status' => 'active',
+                    ]
+                );
             }
         };
     }

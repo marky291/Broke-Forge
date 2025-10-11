@@ -1,7 +1,7 @@
 # Guidelines
 
 - Always use Laravel boost MCP.
-- Use Context7 MCP for documentation where Laravel boost cannot provide one.
+- Always use and maintain /app/packages/README.me when working on packages for installer/remover classes.
 - Always maintain unit test suite when working on code.
 - Avoid using mocks when writing unit tests except for mocking $server->createSshConnection which you should always use partial mock.
 - Always maintain unit tests to be fast and to complete < 0.2s
