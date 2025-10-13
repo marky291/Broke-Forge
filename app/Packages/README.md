@@ -1334,6 +1334,233 @@ class CustomCredential implements SshCredential
 }
 ```
 
+## Real-Time Updates with Laravel Reverb
+
+### When to Broadcast in Packages
+
+Packages should broadcast real-time updates when:
+- **Long-running operations** complete or change state
+- **User-visible status** changes (provision_status, installation progress)
+- **Important milestones** are reached during execution
+- **Failures occur** that the user needs to know about immediately
+
+### Broadcasting Pattern in BrokeForge
+
+BrokeForge follows the **Broadcast Notification → Fetch Full Resource** pattern:
+1. Backend broadcasts a minimal notification event
+2. Frontend listens and fetches the full resource
+3. Resource class remains the single source of truth
+
+For complete documentation, see [docs/reverb-real-time-pattern.md](../docs/reverb-real-time-pattern.md)
+
+### Laravel 12 Broadcasting Best Practices
+
+#### Use ShouldBroadcastNow for Immediate Broadcasting
+
+```php
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
+
+class ServerProvisionUpdated implements ShouldBroadcastNow
+{
+    // Broadcasts immediately without queueing
+}
+```
+
+**Why `ShouldBroadcastNow`?**
+- ✅ Instant real-time updates (no queue delay)
+- ✅ Perfect for critical status changes
+- ✅ Laravel 12's recommended approach for real-time features
+- ❌ Avoid `ShouldBroadcast` for time-sensitive updates (uses queue, adds delay)
+
+#### Broadcasting in Controllers
+
+Controllers should broadcast after updating model state:
+
+```php
+use App\Events\ServerProvisionUpdated;
+
+public function step(Request $request, Server $server): JsonResponse
+{
+    // Update the model
+    $server->provision->put($step, $status);
+    $server->save();
+
+    // Broadcast the change
+    ServerProvisionUpdated::dispatch($server->id);
+
+    return response()->json(['ok' => true]);
+}
+```
+
+**Broadcasting Points in Controllers:**
+- After saving model changes
+- After state transitions (pending → installing → completed)
+- After failures or errors
+
+#### Broadcasting in Job Classes
+
+Jobs should broadcast when `isProvisioningServer` is true:
+
+```php
+use App\Events\ServerProvisionUpdated;
+
+class NginxInstallerJob implements ShouldQueue
+{
+    public function __construct(
+        public Server $server,
+        public PhpVersion $phpVersion,
+        public bool $isProvisioningServer = false
+    ) {}
+
+    public function handle(): void
+    {
+        try {
+            $installer = new NginxInstaller($this->server);
+
+            if ($this->isProvisioningServer) {
+                $this->server->update(['provision_status' => ProvisionStatus::Installing]);
+                ServerProvisionUpdated::dispatch($this->server->id);
+            }
+
+            $installer->execute($this->phpVersion);
+
+            if ($this->isProvisioningServer) {
+                $this->server->update(['provision_status' => ProvisionStatus::Completed]);
+                ServerProvisionUpdated::dispatch($this->server->id);
+            }
+
+        } catch (Exception $e) {
+            if ($this->isProvisioningServer) {
+                $this->server->update(['provision_status' => ProvisionStatus::Failed]);
+                ServerProvisionUpdated::dispatch($this->server->id);
+            }
+            throw $e;
+        }
+    }
+}
+```
+
+**Broadcasting Points in Jobs:**
+- After updating provision_status
+- On success: after completing installation
+- On failure: in the catch block
+- Only when `isProvisioningServer === true`
+
+#### Broadcasting in Installer/Remover Classes
+
+Generally, **do NOT broadcast in installer/remover classes**. Broadcasting should happen in:
+- ✅ Controllers (handle HTTP requests and state changes)
+- ✅ Jobs (orchestrate long-running operations)
+- ❌ Installers/Removers (focused on SSH commands and execution)
+
+**Why?**
+- Installers are called from jobs which already handle broadcasting
+- Avoids duplicate broadcasts
+- Keeps broadcasting logic at the orchestration layer
+- Maintains separation of concerns
+
+**Exception:** Broadcast in installers only when:
+- The installer is called directly from a controller (rare)
+- The installer manages its own provision_status updates
+- You need milestone-level real-time updates (not just start/complete)
+
+### Event Structure Example
+
+```php
+<?php
+
+namespace App\Events;
+
+use Illuminate\Broadcasting\InteractsWithSockets;
+use Illuminate\Broadcasting\PrivateChannel;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
+use Illuminate\Foundation\Events\Dispatchable;
+use Illuminate\Queue\SerializesModels;
+
+class ServerProvisionUpdated implements ShouldBroadcastNow
+{
+    use Dispatchable, InteractsWithSockets, SerializesModels;
+
+    public function __construct(
+        public int $serverId,
+    ) {}
+
+    public function broadcastOn(): array
+    {
+        return [
+            new PrivateChannel('servers.'.$this->serverId.'.provision'),
+        ];
+    }
+
+    public function broadcastWith(): array
+    {
+        return [
+            'server_id' => $this->serverId,
+            'timestamp' => now()->toIso8601String(),
+        ];
+    }
+}
+```
+
+**Key Elements:**
+- `ShouldBroadcastNow`: Immediate broadcasting
+- `PrivateChannel`: Security (requires authorization)
+- Minimal payload: Only IDs and timestamps
+- Simple constructor: PHP 8+ property promotion
+
+### Channel Authorization
+
+Define channel authorization in `routes/channels.php`:
+
+```php
+use App\Models\Server;
+
+Broadcast::channel('servers.{serverId}.provision', function ($user, int $serverId) {
+    return $user->id === Server::findOrNew($serverId)->user_id;
+});
+```
+
+**Security Checklist:**
+- ✅ Always use `PrivateChannel` for user-specific data
+- ✅ Verify resource ownership in channel callback
+- ✅ Return boolean: `true` for authorized, `false` for denied
+- ❌ Never broadcast sensitive data in the payload
+
+### Testing Broadcasts
+
+Always test that events are dispatched:
+
+```php
+use App\Events\ServerProvisionUpdated;
+use Illuminate\Support\Facades\Event;
+
+public function test_it_broadcasts_on_provision_update(): void
+{
+    Event::fake();
+
+    $server = Server::factory()->create();
+    $url = URL::signedRoute('servers.provision.step', ['server' => $server->id]);
+
+    $this->post($url, ['step' => 1, 'status' => 'installing'])->assertOk();
+
+    Event::assertDispatched(ServerProvisionUpdated::class, function ($event) use ($server) {
+        return $event->serverId === $server->id;
+    });
+}
+```
+
+### Broadcasting Guidelines Summary
+
+1. **Use `ShouldBroadcastNow`** for real-time features
+2. **Broadcast in Controllers and Jobs**, not in installers
+3. **Minimal payloads**: Only IDs and timestamps
+4. **Use `PrivateChannel`** for security
+5. **Broadcast after saving** model changes
+6. **Test broadcasts** with `Event::fake()`
+7. **Document the pattern** in your event class
+
+For complete examples and troubleshooting, see [docs/reverb-real-time-pattern.md](../docs/reverb-real-time-pattern.md)
+
 ## ⚠️ CRITICAL ARCHITECTURAL RULES
 
 **These rules are MANDATORY for all package implementations. Violating these patterns will cause runtime errors, job failures, and architectural inconsistencies.**

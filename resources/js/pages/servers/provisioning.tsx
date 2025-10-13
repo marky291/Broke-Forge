@@ -5,6 +5,7 @@ import { dashboard } from '@/routes';
 import { show as showServer } from '@/routes/servers';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router } from '@inertiajs/react';
+import { useEcho } from '@laravel/echo-react';
 import { AlertCircle, CheckCircle2, Circle, Clock, Loader2, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
@@ -67,30 +68,24 @@ export default function ProvisioningPage({ server, provision }: ProvisioningPage
         }
     };
 
-    // Auto-refresh while provisioning
-    useEffect(() => {
-        if (server.provision_status === 'completed') {
-            router.visit(showServer(server.id).url);
-            return;
-        }
-
-        const shouldPoll = server.provision_status === 'pending' || server.provision_status === 'connecting' || server.provision_status === 'installing';
-
-        if (!shouldPoll) {
-            return;
-        }
-
-        const intervalMs = server.provision_status === 'pending' ? 3000 : 2000;
-
-        const id = window.setInterval(() => {
+    // Listen for real-time provision updates via Reverb
+    useEcho(
+        `servers.${server.id}.provision`,
+        'ServerProvisionUpdated',
+        () => {
             router.reload({
-                only: ['server', 'provision'],
+                only: ['server'],
                 preserveScroll: true,
                 preserveState: true,
             });
-        }, intervalMs);
+        }
+    );
 
-        return () => window.clearInterval(id);
+    // Auto-redirect when provisioning completes
+    useEffect(() => {
+        if (server.provision_status === 'completed') {
+            router.visit(showServer(server.id).url);
+        }
     }, [server.provision_status, server.id]);
 
     // Calculate time since creation
