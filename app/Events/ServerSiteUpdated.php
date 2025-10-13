@@ -8,25 +8,25 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class ServerProvisionUpdated implements ShouldBroadcastNow
+class ServerSiteUpdated implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public function __construct(
-        public int $serverId,
+        public int $siteId,
     ) {}
 
     public function broadcastOn(): array
     {
         return [
-            new PrivateChannel('servers.'.$this->serverId.'.provision'),
+            new PrivateChannel('sites.'.$this->siteId),
         ];
     }
 
     public function broadcastWith(): array
     {
         return [
-            'server_id' => $this->serverId,
+            'site_id' => $this->siteId,
             'timestamp' => now()->toIso8601String(),
         ];
     }

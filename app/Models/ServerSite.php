@@ -202,6 +202,21 @@ class ServerSite extends Model
                     ])
                     ->log(sprintf('Site %s status changed to %s', $site->domain, $site->status));
             }
+
+            // Only broadcast if meaningful fields changed
+            $broadcastFields = [
+                'domain',
+                'status',
+                'health',
+                'git_status',
+                'ssl_enabled',
+                'auto_deploy_enabled',
+                'last_deployed_at',
+            ];
+
+            if ($site->wasChanged($broadcastFields)) {
+                \App\Events\ServerSiteUpdated::dispatch($site->id);
+            }
         });
 
         static::deleted(function (self $site): void {

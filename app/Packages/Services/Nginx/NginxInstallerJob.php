@@ -2,7 +2,6 @@
 
 namespace App\Packages\Services\Nginx;
 
-use App\Events\ServerProvisionUpdated;
 use App\Models\Server;
 use App\Packages\Enums\PhpVersion;
 use App\Packages\Enums\ProvisionStatus;
@@ -46,7 +45,6 @@ class NginxInstallerJob implements ShouldQueue
 
             if ($this->isProvisioningServer) {
                 $this->server->update(['provision_status' => ProvisionStatus::Installing]);
-                ServerProvisionUpdated::dispatch($this->server->id);
             }
 
             // Execute installation - the installer handles all logic, database tracking, and dependencies
@@ -56,13 +54,11 @@ class NginxInstallerJob implements ShouldQueue
 
             if ($this->isProvisioningServer) {
                 $this->server->update(['provision_status' => ProvisionStatus::Completed]);
-                ServerProvisionUpdated::dispatch($this->server->id);
             }
 
         } catch (Exception $e) {
             if ($this->isProvisioningServer) {
                 $this->server->update(['provision_status' => ProvisionStatus::Failed]);
-                ServerProvisionUpdated::dispatch($this->server->id);
             }
             Log::error("Nginx installation failed for server #{$this->server->id}", [
                 'error' => $e->getMessage(),

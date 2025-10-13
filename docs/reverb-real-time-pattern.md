@@ -26,6 +26,8 @@ Before implementing real-time features, ensure:
 
 Rather than broadcasting complete data payloads, we broadcast minimal notification events that trigger the frontend to fetch the latest data from its existing source of truth (API Resource).
 
+**Important:** Use model event listeners to automatically broadcast when models are updated. This eliminates the need to manually dispatch events after every `save()` call and ensures broadcasts are never forgotten.
+
 ### Benefits
 
 - ✅ **Single Source of Truth**: All data transformation stays in one place (the Resource class)
@@ -186,9 +188,40 @@ ServerProvisionUpdated::dispatch($server->id);
 - **Installer Classes**: After updating provision steps during installation
 - **Observers**: In model event listeners (be careful with recursion)
 
+### Broadcasting via Model Events (Recommended)
+
+**This is the preferred approach.** Add model event listeners to automatically broadcast when models update:
+
+```php
+// app/Models/Server.php
+protected static function booted(): void
+{
+    static::updated(function (self $server): void {
+        \App\Events\ServerUpdated::dispatch($server->id);
+    });
+}
+```
+
+**Benefits:**
+- ✅ Automatic - never forget to broadcast
+- ✅ Consistent - always broadcasts on update
+- ✅ Less code - no manual dispatch calls throughout codebase
+- ✅ Maintainable - broadcasting logic in one place
+
+**Usage:** Simply update the model and broadcasting happens automatically:
+
+```php
+// In controller, job, or anywhere else
+$server->provision->put(5, 'completed');
+$server->save(); // Broadcasts automatically!
+
+// No need for manual dispatch:
+// ServerUpdated::dispatch($server->id); ❌ Not needed!
+```
+
 ### Broadcasting from Jobs
 
-For long-running jobs, broadcast at meaningful milestones:
+For long-running jobs, rely on model events instead of manual dispatches:
 
 ```php
 class NginxInstallerJob implements ShouldQueue
@@ -203,21 +236,21 @@ class NginxInstallerJob implements ShouldQueue
     {
         try {
             if ($this->isProvisioningServer) {
+                // Model event handles broadcasting automatically
                 $this->server->update(['provision_status' => ProvisionStatus::Installing]);
-                ServerProvisionUpdated::dispatch($this->server->id);
             }
 
             $installer = new NginxInstaller($this->server);
             $installer->execute($this->phpVersion);
 
             if ($this->isProvisioningServer) {
+                // Model event handles broadcasting automatically
                 $this->server->update(['provision_status' => ProvisionStatus::Completed]);
-                ServerProvisionUpdated::dispatch($this->server->id);
             }
         } catch (Exception $e) {
             if ($this->isProvisioningServer) {
+                // Model event handles broadcasting automatically
                 $this->server->update(['provision_status' => ProvisionStatus::Failed]);
-                ServerProvisionUpdated::dispatch($this->server->id);
             }
             throw $e;
         }
@@ -227,7 +260,7 @@ class NginxInstallerJob implements ShouldQueue
 
 ### Broadcasting from Installer Classes
 
-When installer classes update provision steps, broadcast after each update:
+Model events handle broadcasting automatically when provision steps update:
 
 ```php
 class NginxInstaller extends PackageInstaller
@@ -237,18 +270,18 @@ class NginxInstaller extends PackageInstaller
         // Step 5: Firewall installation
         FirewallInstallerJob::dispatchSync($this->server);
 
+        // Model event broadcasts automatically on save
         $this->server->provision->put(5, ProvisionStatus::Completed->value);
         $this->server->provision->put(6, ProvisionStatus::Installing->value);
         $this->server->save();
-        ServerProvisionUpdated::dispatch($this->server->id);
 
         // Step 6: PHP installation
         PhpInstallerJob::dispatchSync($this->server, $phpVersion);
 
+        // Model event broadcasts automatically on save
         $this->server->provision->put(6, ProvisionStatus::Completed->value);
         $this->server->provision->put(7, ProvisionStatus::Installing->value);
         $this->server->save();
-        ServerProvisionUpdated::dispatch($this->server->id);
 
         // Continue with remaining steps...
     }
@@ -256,10 +289,10 @@ class NginxInstaller extends PackageInstaller
 ```
 
 **Key Points:**
-- Broadcast after saving the model changes
-- Broadcast at each meaningful step transition
-- Don't broadcast too frequently (avoid sub-second updates)
-- Each broadcast triggers a frontend refresh
+- No manual dispatch calls needed - model events handle it
+- Broadcast happens automatically on `save()`
+- Cleaner code with less repetition
+- Broadcasting logic centralized in model
 
 ### Frontend: Listening with useEcho
 
@@ -332,19 +365,15 @@ class ServerProvisionUpdated implements ShouldBroadcastNow
 
 ```php
 // app/Http/Controllers/ProvisionCallbackController.php
-use App\Events\ServerProvisionUpdated;
-
 public function step(Request $request, Server $server): JsonResponse
 {
     $step = (int) $request->input('step');
     $status = $request->input('status');
 
     // Update the provision step
+    // Model event broadcasts automatically on save
     $server->provision->put($step, $status);
     $server->save();
-
-    // Broadcast the change
-    ServerProvisionUpdated::dispatch($server->id);
 
     return response()->json(['ok' => true]);
 }
@@ -356,10 +385,12 @@ public function step(Request $request, Server $server): JsonResponse
 // routes/channels.php
 use App\Models\Server;
 
-Broadcast::channel('servers.{serverId}.provision', function ($user, int $serverId) {
+Broadcast::channel('servers.{serverId}', function ($user, int $serverId) {
     return $user->id === Server::findOrNew($serverId)->user_id;
 });
 ```
+
+**Note:** Use a single channel per resource instead of multiple topic-specific channels. The `ServerUpdated` event broadcasts for all types of server updates (provision, status, config, etc.).
 
 ### 4. Backend: API Resource (Single Source of Truth)
 
@@ -393,10 +424,10 @@ import { useEcho } from '@laravel/echo-react';
 import { router } from '@inertiajs/react';
 
 export default function ProvisioningPage({ server }) {
-    // Listen for provision updates
+    // Listen for any server updates (provision, status, config, etc.)
     useEcho(
-        `servers.${server.id}.provision`,
-        'ServerProvisionUpdated',
+        `servers.${server.id}`,
+        'ServerUpdated',
         () => {
             router.reload({
                 only: ['server'],
@@ -419,6 +450,8 @@ export default function ProvisioningPage({ server }) {
     );
 }
 ```
+
+**Note:** The single `servers.{id}` channel receives all server updates. The frontend re-fetches only what it needs using Inertia's `only` option.
 
 ## Alternative Pattern: Broadcasting Full Data
 

@@ -5,7 +5,6 @@ namespace App\Packages\Services\Nginx;
 use App\Enums\ReverseProxyStatus;
 use App\Enums\ReverseProxyType;
 use App\Enums\ScheduleFrequency;
-use App\Events\ServerProvisionUpdated;
 use App\Models\ServerReverseProxy;
 use App\Packages\Base\Milestones;
 use App\Packages\Base\Package;
@@ -71,21 +70,18 @@ class NginxInstaller extends PackageInstaller implements \App\Packages\Base\Serv
         $this->server->provision->put(5, ProvisionStatus::Completed->value);
         $this->server->provision->put(6, ProvisionStatus::Installing->value);
         $this->server->save();
-        ServerProvisionUpdated::dispatch($this->server->id);
 
         PhpInstallerJob::dispatchSync($this->server, $phpVersion);
 
         $this->server->provision->put(6, ProvisionStatus::Completed->value);
         $this->server->provision->put(7, ProvisionStatus::Installing->value);
         $this->server->save();
-        ServerProvisionUpdated::dispatch($this->server->id);
 
         $this->install($this->commands($phpVersion));
 
         $this->server->provision->put(7, ProvisionStatus::Completed->value);
         $this->server->provision->put(8, ProvisionStatus::Installing->value);
         $this->server->save();
-        ServerProvisionUpdated::dispatch($this->server->id);
 
         // Install Task scheduler and default task schedule job.
         ServerSchedulerInstallerJob::dispatchSync($this->server);
@@ -102,7 +98,6 @@ class NginxInstaller extends PackageInstaller implements \App\Packages\Base\Serv
 
         $this->server->provision->put(8, ProvisionStatus::Completed->value);
         $this->server->save();
-        ServerProvisionUpdated::dispatch($this->server->id);
     }
 
     protected function commands(PhpVersion $phpVersion): array

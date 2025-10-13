@@ -68,10 +68,10 @@ export default function ProvisioningPage({ server, provision }: ProvisioningPage
         }
     };
 
-    // Listen for real-time provision updates via Reverb
+    // Listen for real-time server updates via Reverb
     useEcho(
-        `servers.${server.id}.provision`,
-        'ServerProvisionUpdated',
+        `servers.${server.id}`,
+        'ServerUpdated',
         () => {
             router.reload({
                 only: ['server'],

@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Events\ServerProvisionUpdated;
 use App\Models\Server;
 use App\Packages\Enums\Connection;
 use App\Packages\Enums\CredentialType;
@@ -37,16 +36,12 @@ class ProvisionCallbackController extends Controller
         $server->provision->put($step, $status);
         $server->save();
 
-        ServerProvisionUpdated::dispatch($server->id);
-
         Log::info("Provision step {$step} updated to {$status} for server #{$server->id}");
 
         // If any step fails, mark the entire provisioning as failed
         if ($status === 'failed') {
             $server->provision_status = ProvisionStatus::Failed;
             $server->save();
-
-            ServerProvisionUpdated::dispatch($server->id);
 
             Log::error("Provision step {$step} failed for server #{$server->id}");
 
@@ -68,8 +63,6 @@ class ProvisionCallbackController extends Controller
             $server->connection = Connection::CONNECTED;
             $server->provision_status = ProvisionStatus::Installing;
             $server->save();
-
-            ServerProvisionUpdated::dispatch($server->id);
         }
 
         if ($step == 3 && $status == ProvisionStatus::Completed->value) {
@@ -111,8 +104,6 @@ class ProvisionCallbackController extends Controller
             if (! $rootUserSuccess || ! $brokeforgeUserSuccess) {
                 $server->provision_status = ProvisionStatus::Failed;
                 $server->save();
-
-                ServerProvisionUpdated::dispatch($server->id);
             } else {
                 // Connection successful - detect OS information before provisioning
                 $server->detectOsInfo();
@@ -122,8 +113,6 @@ class ProvisionCallbackController extends Controller
                 $server->provision->put(4, ProvisionStatus::Completed->value);
                 $server->provision->put(5, ProvisionStatus::Installing->value);
                 $server->save();
-
-                ServerProvisionUpdated::dispatch($server->id);
 
                 // Update status and dispatch web service provisioning job
                 NginxInstallerJob::dispatch($server, PhpVersion::PHP83, isProvisioningServer: true);

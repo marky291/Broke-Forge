@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Events\ServerProvisionUpdated;
+use App\Events\ServerUpdated;
 use App\Models\Server;
 use App\Packages\Enums\Connection;
 use App\Packages\Enums\ProvisionStatus;
@@ -28,7 +28,7 @@ class ProvisionCallbackControllerTest extends TestCase
 
     public function test_it_updates_provision_step_status_for_new_server(): void
     {
-        Event::fake();
+        Event::fake([ServerUpdated::class]);
         Log::shouldReceive('info')->once();
 
         $server = Server::factory()->create([
@@ -51,14 +51,14 @@ class ProvisionCallbackControllerTest extends TestCase
         $server->refresh();
         $this->assertEquals('installing', $server->provision->get(1));
 
-        Event::assertDispatched(ServerProvisionUpdated::class, function ($event) use ($server) {
+        Event::assertDispatched(ServerUpdated::class, function ($event) use ($server) {
             return $event->serverId === $server->id;
         });
     }
 
     public function test_it_handles_step_from_query_params(): void
     {
-        Event::fake();
+        Event::fake([ServerUpdated::class]);
         Log::shouldReceive('info')->once();
 
         $server = Server::factory()->create([
@@ -81,7 +81,7 @@ class ProvisionCallbackControllerTest extends TestCase
 
     public function test_it_updates_server_connection_when_step_1_completes(): void
     {
-        Event::fake();
+        Event::fake([ServerUpdated::class]);
         Log::shouldReceive('info')->once();
 
         $server = Server::factory()->create([
@@ -135,7 +135,7 @@ class ProvisionCallbackControllerTest extends TestCase
 
     public function test_it_stores_multiple_step_updates(): void
     {
-        Event::fake();
+        Event::fake([ServerUpdated::class]);
         Log::shouldReceive('info')->times(3);
 
         $server = Server::factory()->create([
@@ -166,7 +166,7 @@ class ProvisionCallbackControllerTest extends TestCase
 
     public function test_it_marks_provisioning_as_failed_when_step_fails(): void
     {
-        Event::fake();
+        Event::fake([ServerUpdated::class]);
         Log::shouldReceive('info')->once();
         Log::shouldReceive('error')->once();
 
@@ -189,12 +189,12 @@ class ProvisionCallbackControllerTest extends TestCase
         $this->assertEquals(ProvisionStatus::Failed, $server->provision_status);
 
         // Should dispatch event twice: once for step update, once for failed status
-        Event::assertDispatched(ServerProvisionUpdated::class, 2);
+        Event::assertDispatched(ServerUpdated::class, 2);
     }
 
     public function test_it_cleans_up_server_resources_when_step_1_completes(): void
     {
-        Event::fake();
+        Event::fake([ServerUpdated::class]);
         Log::shouldReceive('info')->once();
 
         $server = Server::factory()->create([

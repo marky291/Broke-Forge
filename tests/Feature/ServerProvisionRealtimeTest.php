@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Events\ServerProvisionUpdated;
+use App\Events\ServerUpdated;
 use App\Models\Server;
 use App\Models\User;
 use App\Packages\Enums\ProvisionStatus;
@@ -20,7 +20,7 @@ class ServerProvisionRealtimeTest extends TestCase
 
     public function test_provision_step_update_broadcasts_event(): void
     {
-        Event::fake();
+        Event::fake([ServerUpdated::class]);
         Log::shouldReceive('info')->once();
 
         $server = Server::factory()->create([
@@ -35,7 +35,7 @@ class ServerProvisionRealtimeTest extends TestCase
             'status' => 'installing',
         ])->assertOk();
 
-        Event::assertDispatched(ServerProvisionUpdated::class, function ($event) use ($server) {
+        Event::assertDispatched(ServerUpdated::class, function ($event) use ($server) {
             return $event->serverId === $server->id;
         });
     }
@@ -77,18 +77,18 @@ class ServerProvisionRealtimeTest extends TestCase
     public function test_event_broadcasts_on_correct_channel(): void
     {
         $serverId = 123;
-        $event = new ServerProvisionUpdated($serverId);
+        $event = new ServerUpdated($serverId);
 
         $channels = $event->broadcastOn();
 
         $this->assertCount(1, $channels);
         // PrivateChannel automatically prepends "private-" to the name
-        $this->assertEquals("private-servers.{$serverId}.provision", $channels[0]->name);
+        $this->assertEquals("private-servers.{$serverId}", $channels[0]->name);
     }
 
     public function test_multiple_step_updates_dispatch_multiple_events(): void
     {
-        Event::fake();
+        Event::fake([ServerUpdated::class]);
         Log::shouldReceive('info')->times(2);
 
         $server = Server::factory()->create([
@@ -105,6 +105,6 @@ class ServerProvisionRealtimeTest extends TestCase
         $this->post($url, ['step' => 2, 'status' => 'completed'])->assertOk();
 
         // Should dispatch event for each step update
-        Event::assertDispatched(ServerProvisionUpdated::class, 2);
+        Event::assertDispatched(ServerUpdated::class, 2);
     }
 }

@@ -2,16 +2,16 @@
 
 namespace Tests\Unit\Events;
 
-use App\Events\ServerProvisionUpdated;
+use App\Events\ServerUpdated;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Tests\TestCase;
 
-class ServerProvisionUpdatedTest extends TestCase
+class ServerUpdatedTest extends TestCase
 {
     public function test_implements_should_broadcast_now(): void
     {
-        $event = new ServerProvisionUpdated(1);
+        $event = new ServerUpdated(1);
 
         $this->assertInstanceOf(ShouldBroadcastNow::class, $event);
     }
@@ -19,20 +19,19 @@ class ServerProvisionUpdatedTest extends TestCase
     public function test_broadcasts_on_correct_private_channel(): void
     {
         $serverId = 123;
-        $event = new ServerProvisionUpdated($serverId);
+        $event = new ServerUpdated($serverId);
 
         $channels = $event->broadcastOn();
 
         $this->assertCount(1, $channels);
         $this->assertInstanceOf(PrivateChannel::class, $channels[0]);
-        // PrivateChannel automatically prepends "private-" to the name
-        $this->assertEquals("private-servers.{$serverId}.provision", $channels[0]->name);
+        $this->assertEquals("private-servers.{$serverId}", $channels[0]->name);
     }
 
     public function test_payload_structure(): void
     {
         $serverId = 456;
-        $event = new ServerProvisionUpdated($serverId);
+        $event = new ServerUpdated($serverId);
 
         $payload = $event->broadcastWith();
 
@@ -45,11 +44,10 @@ class ServerProvisionUpdatedTest extends TestCase
 
     public function test_timestamp_is_iso8601_format(): void
     {
-        $event = new ServerProvisionUpdated(1);
+        $event = new ServerUpdated(1);
 
         $payload = $event->broadcastWith();
 
-        // ISO 8601 format should parse correctly
         $timestamp = $payload['timestamp'];
         $this->assertMatchesRegularExpression('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/', $timestamp);
     }

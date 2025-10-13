@@ -396,6 +396,25 @@ class Server extends Model
                 ])
                 ->log(sprintf('Server %s created', $server->vanity_name ?? $server->public_ip));
         });
+
+        static::updated(function (self $server): void {
+            // Only broadcast if meaningful fields changed
+            $broadcastFields = [
+                'provision',
+                'provision_status',
+                'connection',
+                'monitoring_status',
+                'scheduler_status',
+                'supervisor_status',
+                'os_name',
+                'os_version',
+                'os_codename',
+            ];
+
+            if ($server->wasChanged($broadcastFields)) {
+                \App\Events\ServerUpdated::dispatch($server->id);
+            }
+        });
     }
 
     public static function generatePassword(int $length = 24): string
