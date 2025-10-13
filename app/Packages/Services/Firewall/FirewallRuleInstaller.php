@@ -43,7 +43,6 @@ class FirewallRuleInstaller extends PackageInstaller implements ServerPackage
      * Execute firewall rule configuration
      *
      * @param  array  $rules  Array of firewall rules to apply
-     * @param  string  $context  Context for these rules (e.g., 'nginx', 'mysql', 'custom')
      *
      * Example rules:
      * [
@@ -52,16 +51,16 @@ class FirewallRuleInstaller extends PackageInstaller implements ServerPackage
      *   ['port' => 3306, 'protocol' => 'tcp', 'action' => 'allow', 'source' => '10.0.0.0/8', 'comment' => 'MySQL'],
      * ]
      */
-    public function execute(array $rules, string $context = 'custom'): void
+    public function execute(array $rules): void
     {
         if (empty($rules)) {
             throw new \InvalidArgumentException('At least one firewall rule must be provided');
         }
 
-        $this->install($this->commands($rules, $context));
+        $this->install($this->commands($rules));
     }
 
-    protected function commands(array $rules, string $context): array
+    protected function commands(array $rules): array
     {
         $commands = [
             $this->track(FirewallRuleInstallerMilestones::VERIFY_FIREWALL),
@@ -87,9 +86,6 @@ class FirewallRuleInstaller extends PackageInstaller implements ServerPackage
 
             // Show current status
             'ufw status numbered',
-
-            // Save firewall rules to database
-            $this->createFirewallRules($rules, $context),
 
             $this->track(FirewallRuleInstallerMilestones::COMPLETE),
         ]);

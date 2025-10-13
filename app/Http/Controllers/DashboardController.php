@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\DashboardResource;
 use App\Models\Server;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -11,14 +12,26 @@ class DashboardController extends Controller
 {
     public function __invoke(): Response
     {
-        $servers = $this->getServers();
-        $sites = $this->getSites();
+        $servers = Server::query()
+            ->with(['defaultPhp', 'sites', 'supervisorTasks', 'scheduledTasks'])
+            ->latest()
+            ->limit(5)
+            ->get();
+
+        $sites = \App\Models\ServerSite::query()
+            ->with(['server'])
+            ->latest()
+            ->limit(5)
+            ->get();
+
         $activities = $this->getRecentActivities();
 
         return Inertia::render('dashboard', [
-            'servers' => $servers,
-            'sites' => $sites,
-            'activities' => $activities,
+            'dashboard' => new DashboardResource([
+                'servers' => $servers,
+                'sites' => $sites,
+                'activities' => $activities,
+            ]),
         ]);
     }
 

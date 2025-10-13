@@ -32,4 +32,15 @@ class ServerFirewall extends Model
     {
         return $this->hasMany(ServerFirewallRule::class);
     }
+
+    protected static function booted(): void
+    {
+        static::created(function (self $firewall): void {
+            \App\Events\ServerUpdated::dispatch($firewall->server_id);
+        });
+
+        static::updated(function (self $firewall): void {
+            \App\Events\ServerUpdated::dispatch($firewall->server_id);
+        });
+    }
 }

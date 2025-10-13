@@ -22,6 +22,9 @@ class NginxInstallerTest extends TestCase
 
         $server = Server::factory()->create();
 
+        // Create firewall (required by NginxInstaller)
+        \App\Models\ServerFirewall::factory()->for($server)->create();
+
         // Create a partial mock of NginxInstaller to prevent SSH connection
         $installer = $this->getMockBuilder(NginxInstaller::class)
             ->setConstructorArgs([$server])

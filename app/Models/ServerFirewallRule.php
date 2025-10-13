@@ -23,4 +23,19 @@ class ServerFirewallRule extends Model
     {
         return $this->belongsTo(ServerFirewall::class, 'server_firewall_id');
     }
+
+    protected static function booted(): void
+    {
+        static::created(function (self $rule): void {
+            \App\Events\ServerUpdated::dispatch($rule->firewall->server_id);
+        });
+
+        static::updated(function (self $rule): void {
+            \App\Events\ServerUpdated::dispatch($rule->firewall->server_id);
+        });
+
+        static::deleted(function (self $rule): void {
+            \App\Events\ServerUpdated::dispatch($rule->firewall->server_id);
+        });
+    }
 }

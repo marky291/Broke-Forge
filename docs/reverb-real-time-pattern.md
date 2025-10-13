@@ -28,7 +28,22 @@ Rather than broadcasting complete data payloads, we broadcast minimal notificati
 
 **Important:** Use model event listeners to automatically broadcast when models are updated. This eliminates the need to manually dispatch events after every `save()` call and ensures broadcasts are never forgotten.
 
-### Benefits
+### Two-Channel Broadcasting Pattern
+
+BrokeForge uses a **dual-channel broadcasting pattern** for maximum flexibility:
+
+1. **Specific Resource Channel** (`servers.{id}`, `sites.{id}`): For detail pages that show a single resource
+2. **Generic Type Channel** (`servers`, `sites`): For dashboard and list pages that show multiple resources
+
+When a model updates, events broadcast to BOTH channels simultaneously, allowing different pages to subscribe to the channel that fits their needs.
+
+**Benefits:**
+- ✅ Detail pages get updates for their specific resource
+- ✅ Dashboard/list pages get updates for all user's resources
+- ✅ No duplicate events needed - one event serves multiple use cases
+- ✅ Developers choose the right channel for their component
+
+### General Benefits
 
 - ✅ **Single Source of Truth**: All data transformation stays in one place (the Resource class)
 - ✅ **No Data Duplication**: Avoid repeating transformation logic in events
@@ -36,6 +51,7 @@ Rather than broadcasting complete data payloads, we broadcast minimal notificati
 - ✅ **Easy to Maintain**: Changes to data structure happen in one location
 - ✅ **Instant Updates**: Real-time without polling overhead
 - ✅ **Type Safety**: Resources provide consistent TypeScript interfaces
+- ✅ **Flexible Subscriptions**: Subscribe to specific resources or all resources
 
 ## When to Use This Pattern
 
@@ -107,7 +123,7 @@ createInertiaApp({
 
 ### Backend: Event Class
 
-Create an event that implements `ShouldBroadcastNow` for immediate broadcasting:
+Create an event that implements `ShouldBroadcastNow` for immediate broadcasting to BOTH channels:
 
 ```php
 <?php
@@ -120,7 +136,7 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class ServerProvisionUpdated implements ShouldBroadcastNow
+class ServerUpdated implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
@@ -131,7 +147,8 @@ class ServerProvisionUpdated implements ShouldBroadcastNow
     public function broadcastOn(): array
     {
         return [
-            new PrivateChannel('servers.'.$this->serverId.'.provision'),
+            new PrivateChannel('servers.'.$this->serverId),  // Specific: servers.5
+            new PrivateChannel('servers'),                    // Generic: all user's servers
         ];
     }
 
@@ -148,25 +165,46 @@ class ServerProvisionUpdated implements ShouldBroadcastNow
 **Key Points:**
 - Use `ShouldBroadcastNow` for immediate broadcasting (no queue delay)
 - Use `PrivateChannel` for security
+- Broadcast to TWO channels: specific (`servers.{id}`) and generic (`servers`)
 - Minimal payload: only IDs and timestamps
 - No complex data transformation
 
 ### Backend: Channel Authorization
 
-Define channel authorization in `routes/channels.php`:
+Define channel authorization in `routes/channels.php` for BOTH channel types:
 
 ```php
 use App\Models\Server;
+use App\Models\ServerSite;
+use Illuminate\Support\Facades\Broadcast;
 
-Broadcast::channel('servers.{serverId}.provision', function ($user, int $serverId) {
+// Specific server channel - authorize if user owns this server
+Broadcast::channel('servers.{serverId}', function ($user, int $serverId) {
     return $user->id === Server::findOrNew($serverId)->user_id;
+});
+
+// Generic servers channel - authorize if user is authenticated
+Broadcast::channel('servers', function ($user) {
+    return ['id' => $user->id];
+});
+
+// Specific site channel - authorize if user owns this site's server
+Broadcast::channel('sites.{siteId}', function ($user, int $siteId) {
+    $site = ServerSite::with('server')->find($siteId);
+    return $site && $user->id === $site->server->user_id;
+});
+
+// Generic sites channel - authorize if user is authenticated
+Broadcast::channel('sites', function ($user) {
+    return ['id' => $user->id];
 });
 ```
 
 **Key Points:**
-- Verify user owns the resource
-- Use model query to check ownership
-- Return `true` for authorized, `false` for denied
+- Specific channels (`servers.{id}`, `sites.{id}`): Verify user owns the specific resource
+- Generic channels (`servers`, `sites`): Authorize any authenticated user
+- Return user data or `true` for authorized, `false` for denied
+- Private channels prevent cross-user pollution automatically
 
 ### Backend: Broadcasting Events
 
@@ -296,17 +334,19 @@ class NginxInstaller extends PackageInstaller
 
 ### Frontend: Listening with useEcho
 
-Use the `useEcho` hook from `@laravel/echo-react`:
+#### Option 1: Detail Page (Specific Channel)
+
+For pages showing a single resource, subscribe to the specific channel:
 
 ```typescript
 import { useEcho } from '@laravel/echo-react';
 import { router } from '@inertiajs/react';
 
-export default function ProvisioningPage({ server }) {
-    // Listen for real-time updates
+export default function ServerDetailPage({ server }) {
+    // Listen to specific server updates
     useEcho(
-        `servers.${server.id}.provision`,
-        'ServerProvisionUpdated',
+        `servers.${server.id}`,
+        'ServerUpdated',
         () => {
             router.reload({
                 only: ['server'],  // Only reload server prop
@@ -316,12 +356,54 @@ export default function ProvisioningPage({ server }) {
         }
     );
 
-    // Auto-redirect when complete
+    return (
+        // Your component JSX
+    );
+}
+```
+
+#### Option 2: Dashboard/List Page (Generic Channel)
+
+For pages showing multiple resources, subscribe to the generic channel:
+
+```typescript
+import { useEffect } from 'react';
+import { router } from '@inertiajs/react';
+
+export default function Dashboard({ dashboard }) {
+    const { servers, sites, activities } = dashboard;
+
+    // Subscribe to generic servers channel for all server updates
     useEffect(() => {
-        if (server.provision_status === 'completed') {
-            router.visit(`/servers/${server.id}`);
-        }
-    }, [server.provision_status, server.id]);
+        const channel = window.Echo?.private('servers')
+            .listen('.ServerUpdated', () => {
+                router.reload({
+                    only: ['dashboard'],  // Reload entire dashboard
+                    preserveScroll: true,
+                    preserveState: true,
+                });
+            });
+
+        return () => {
+            window.Echo?.leave('servers');
+        };
+    }, []);
+
+    // Subscribe to generic sites channel for all site updates
+    useEffect(() => {
+        const channel = window.Echo?.private('sites')
+            .listen('.ServerSiteUpdated', () => {
+                router.reload({
+                    only: ['dashboard'],
+                    preserveScroll: true,
+                    preserveState: true,
+                });
+            });
+
+        return () => {
+            window.Echo?.leave('sites');
+        };
+    }, []);
 
     return (
         // Your component JSX
@@ -330,25 +412,184 @@ export default function ProvisioningPage({ server }) {
 ```
 
 **Key Points:**
-- Channel format: `servers.${id}.provision` (no "private-" prefix)
-- Event name: `ServerProvisionUpdated` (class name without namespace)
+- **Detail pages**: Use specific channel (`servers.${id}`) with `useEcho` hook
+- **Dashboard/list pages**: Use generic channel (`servers`) with `useEffect` + `window.Echo`
+- Channel format: no "private-" prefix (Echo adds it automatically)
+- Event name: Add `.` prefix when using `window.Echo.listen()` (e.g., `.ServerUpdated`)
 - Use `router.reload()` to fetch updated data
-- Use `only` option to reload specific props
+- Use `only` option to reload specific props efficiently
 - Use `preserveScroll` and `preserveState` for smooth UX
+- Clean up subscriptions in useEffect cleanup function
 
-## Complete Example: Server Provisioning
+## Complete Example 1: Real-Time Server Firewall Page
 
-### 1. Backend: Event
+This example shows how to implement a real-time firewall page that updates when firewall rules are installed, updated, or deleted.
+
+### 1. Backend: Resource for Data Transformation
 
 ```php
-// app/Events/ServerProvisionUpdated.php
-class ServerProvisionUpdated implements ShouldBroadcastNow
+// app/Http/Resources/ServerResource.php
+class ServerResource extends JsonResource
+{
+    public function toArray(Request $request): array
+    {
+        $firewall = $this->firewall;
+
+        return [
+            'id' => $this->id,
+            'vanity_name' => $this->vanity_name,
+            // ... other server fields
+            'isFirewallInstalled' => $firewall !== null,
+            'firewallStatus' => $this->getFirewallStatus($firewall),
+            'rules' => $this->transformFirewallRules($firewall),
+            'recentEvents' => $this->transformRecentEvents(),
+            'latestMetrics' => $this->getLatestMetrics(),
+        ];
+    }
+
+    protected function transformFirewallRules($firewall): array
+    {
+        if (! $firewall) {
+            return [];
+        }
+
+        return $firewall->rules()->latest()->get()->map(fn ($rule) => [
+            'id' => $rule->id,
+            'name' => $rule->name,
+            'port' => $rule->port,
+            'from_ip_address' => $rule->from_ip_address,
+            'rule_type' => $rule->rule_type,
+            'status' => $rule->status, // pending, installing, active, failed
+            'created_at' => $rule->created_at->toISOString(),
+        ])->toArray();
+    }
+}
+```
+
+### 2. Backend: Model Event Listeners
+
+```php
+// app/Models/ServerFirewall.php
+protected static function booted(): void
+{
+    static::created(function (self $firewall): void {
+        \App\Events\ServerUpdated::dispatch($firewall->server_id);
+    });
+
+    static::updated(function (self $firewall): void {
+        \App\Events\ServerUpdated::dispatch($firewall->server_id);
+    });
+}
+
+// app/Models/ServerFirewallRule.php
+protected static function booted(): void
+{
+    static::created(function (self $rule): void {
+        \App\Events\ServerUpdated::dispatch($rule->firewall->server_id);
+    });
+
+    static::updated(function (self $rule): void {
+        \App\Events\ServerUpdated::dispatch($rule->firewall->server_id);
+    });
+
+    static::deleted(function (self $rule): void {
+        \App\Events\ServerUpdated::dispatch($rule->firewall->server_id);
+    });
+}
+```
+
+### 3. Backend: Controller Using Resource
+
+```php
+// app/Http/Controllers/ServerFirewallController.php
+public function index(Server $server): Response
+{
+    // Load necessary relationships for the resource
+    $server->load(['firewall.rules', 'events', 'metrics']);
+
+    return Inertia::render('servers/firewall', [
+        'server' => new ServerResource($server),
+    ]);
+}
+
+public function store(FirewallRuleRequest $request, Server $server): RedirectResponse
+{
+    // Create rule - model events handle broadcasting automatically
+    FirewallRuleInstallerJob::dispatch($server, $request->validated());
+
+    return back()->with('success', 'Firewall rule is being applied.');
+}
+```
+
+### 4. Frontend: Firewall Page with useEcho
+
+```typescript
+// resources/js/pages/servers/firewall.tsx
+import { useEcho } from '@laravel/echo-react';
+import { router } from '@inertiajs/react';
+
+type Server = {
+    id: number;
+    vanity_name: string;
+    isFirewallInstalled: boolean;
+    firewallStatus: string;
+    rules: FirewallRule[];
+    recentEvents: FirewallEvent[];
+    latestMetrics?: any;
+};
+
+export default function Firewall({ server }: { server: Server }) {
+    // Listen for real-time server updates via Reverb
+    useEcho(`servers.${server.id}`, 'ServerUpdated', () => {
+        router.reload({
+            only: ['server'],
+            preserveScroll: true,
+            preserveState: true,
+        });
+    });
+
+    return (
+        <div>
+            {server.rules.map(rule => (
+                <div key={rule.id}>
+                    {rule.name} - {rule.status}
+                </div>
+            ))}
+        </div>
+    );
+}
+```
+
+**What Updates in Real-Time:**
+- Firewall rule status changes (pending → installing → active)
+- New firewall rules added
+- Firewall rules deleted
+- Firewall enabled/disabled state
+
+**Key Benefits:**
+- No polling - instant updates via WebSockets
+- Single source of truth in ServerResource
+- Clean separation of concerns
+- Model events ensure broadcasts never forgotten
+
+## Complete Example 2: Real-Time Dashboard
+
+This example shows how to implement a real-time dashboard that updates when ANY server or site changes.
+
+### 1. Backend: Events (Dual-Channel Broadcasting)
+
+```php
+// app/Events/ServerUpdated.php
+class ServerUpdated implements ShouldBroadcastNow
 {
     public function __construct(public int $serverId) {}
 
     public function broadcastOn(): array
     {
-        return [new PrivateChannel('servers.'.$this->serverId.'.provision')];
+        return [
+            new PrivateChannel('servers.'.$this->serverId),  // Specific
+            new PrivateChannel('servers'),                    // Generic
+        ];
     }
 
     public function broadcastWith(): array
@@ -359,99 +600,192 @@ class ServerProvisionUpdated implements ShouldBroadcastNow
         ];
     }
 }
-```
 
-### 2. Backend: Controller
-
-```php
-// app/Http/Controllers/ProvisionCallbackController.php
-public function step(Request $request, Server $server): JsonResponse
+// app/Events/ServerSiteUpdated.php
+class ServerSiteUpdated implements ShouldBroadcastNow
 {
-    $step = (int) $request->input('step');
-    $status = $request->input('status');
+    public function __construct(public int $siteId) {}
 
-    // Update the provision step
-    // Model event broadcasts automatically on save
-    $server->provision->put($step, $status);
-    $server->save();
-
-    return response()->json(['ok' => true]);
-}
-```
-
-### 3. Backend: Channel Authorization
-
-```php
-// routes/channels.php
-use App\Models\Server;
-
-Broadcast::channel('servers.{serverId}', function ($user, int $serverId) {
-    return $user->id === Server::findOrNew($serverId)->user_id;
-});
-```
-
-**Note:** Use a single channel per resource instead of multiple topic-specific channels. The `ServerUpdated` event broadcasts for all types of server updates (provision, status, config, etc.).
-
-### 4. Backend: API Resource (Single Source of Truth)
-
-```php
-// app/Http/Resources/ServerProvisioningResource.php
-class ServerProvisioningResource extends JsonResource
-{
-    public function toArray(Request $request): array
+    public function broadcastOn(): array
     {
         return [
-            'id' => $this->id,
-            'provision_status' => $this->provision_status->value,
-            'steps' => [
-                [
-                    'step' => 1,
-                    'name' => 'Waiting for connection',
-                    'status' => $this->getStepStatus($this->provision, 1),
-                ],
-                // ... more steps
-            ],
+            new PrivateChannel('sites.'.$this->siteId),  // Specific
+            new PrivateChannel('sites'),                  // Generic
+        ];
+    }
+
+    public function broadcastWith(): array
+    {
+        return [
+            'site_id' => $this->siteId,
+            'timestamp' => now()->toIso8601String(),
         ];
     }
 }
 ```
 
-### 5. Frontend: React Component
+### 2. Backend: Model Event Listeners
+
+```php
+// app/Models/Server.php
+protected static function booted(): void
+{
+    static::updated(function (self $server): void {
+        // Only broadcast if meaningful fields changed
+        $broadcastFields = ['provision', 'provision_status', 'connection',
+                           'monitoring_status', 'scheduler_status', 'supervisor_status'];
+
+        if ($server->wasChanged($broadcastFields)) {
+            \App\Events\ServerUpdated::dispatch($server->id);
+        }
+    });
+}
+
+// app/Models/ServerSite.php
+protected static function booted(): void
+{
+    static::updated(function (self $site): void {
+        // Only broadcast if meaningful fields changed
+        $broadcastFields = ['domain', 'status', 'health', 'git_status',
+                           'ssl_enabled', 'last_deployed_at'];
+
+        if ($site->wasChanged($broadcastFields)) {
+            \App\Events\ServerSiteUpdated::dispatch($site->id);
+        }
+    });
+}
+```
+
+### 3. Backend: Dashboard Resource
+
+```php
+// app/Http/Resources/DashboardResource.php
+class DashboardResource extends JsonResource
+{
+    public function toArray(Request $request): array
+    {
+        return [
+            'servers' => $this->transformServers($this->resource['servers']),
+            'sites' => $this->transformSites($this->resource['sites']),
+            'activities' => $this->transformActivities($this->resource['activities']),
+        ];
+    }
+
+    protected function transformServers($servers): array
+    {
+        return $servers->map(fn($server) => [
+            'id' => $server->id,
+            'name' => $server->vanity_name,
+            'provision_status' => $server->provision_status?->value,
+            'connection' => $server->connection?->value,
+            // ... more fields
+        ])->toArray();
+    }
+}
+```
+
+### 4. Backend: Controller
+
+```php
+// app/Http/Controllers/DashboardController.php
+public function __invoke(): Response
+{
+    $servers = Server::with(['defaultPhp', 'sites'])->latest()->limit(5)->get();
+    $sites = ServerSite::with(['server'])->latest()->limit(5)->get();
+    $activities = $this->getRecentActivities();
+
+    return Inertia::render('dashboard', [
+        'dashboard' => new DashboardResource([
+            'servers' => $servers,
+            'sites' => $sites,
+            'activities' => $activities,
+        ]),
+    ]);
+}
+```
+
+### 5. Frontend: Dashboard Component
 
 ```typescript
-// resources/js/pages/servers/provisioning.tsx
-import { useEcho } from '@laravel/echo-react';
+// resources/js/Pages/dashboard.tsx
+import { useEffect } from 'react';
 import { router } from '@inertiajs/react';
 
-export default function ProvisioningPage({ server }) {
-    // Listen for any server updates (provision, status, config, etc.)
-    useEcho(
-        `servers.${server.id}`,
-        'ServerUpdated',
-        () => {
-            router.reload({
-                only: ['server'],
-                preserveScroll: true,
-                preserveState: true,
-            });
-        }
-    );
+export default function Dashboard({ dashboard }) {
+    const { servers, sites, activities } = dashboard;
 
-    // Render provision steps
+    // Listen to generic servers channel
+    useEffect(() => {
+        window.Echo?.private('servers').listen('.ServerUpdated', () => {
+            router.reload({ only: ['dashboard'], preserveScroll: true });
+        });
+        return () => window.Echo?.leave('servers');
+    }, []);
+
+    // Listen to generic sites channel
+    useEffect(() => {
+        window.Echo?.private('sites').listen('.ServerSiteUpdated', () => {
+            router.reload({ only: ['dashboard'], preserveScroll: true });
+        });
+        return () => window.Echo?.leave('sites');
+    }, []);
+
     return (
         <div>
-            {server.steps.map((step, index) => (
-                <div key={index}>
-                    <h3>{step.name}</h3>
-                    <p>{step.status.isCompleted ? '✓ Complete' : 'In Progress'}</p>
-                </div>
+            {/* Render servers */}
+            {servers.map(server => (
+                <div key={server.id}>{server.name} - {server.provision_status}</div>
+            ))}
+
+            {/* Render sites */}
+            {sites.map(site => (
+                <div key={site.id}>{site.domain} - {site.status}</div>
             ))}
         </div>
     );
 }
 ```
 
-**Note:** The single `servers.{id}` channel receives all server updates. The frontend re-fetches only what it needs using Inertia's `only` option.
+**What Updates in Real-Time:**
+- Server provision status changes
+- Server connection status
+- Monitoring/Scheduler/Supervisor status
+- Site deployments and status
+- Site health checks
+- Git status updates
+
+## Complete Example 2: Server Detail Page
+
+This example shows a detail page that subscribes to a specific resource channel.
+
+### Frontend: Server Detail Component
+
+```typescript
+// resources/js/Pages/servers/show.tsx
+import { useEcho } from '@laravel/echo-react';
+import { router } from '@inertiajs/react';
+
+export default function ServerDetailPage({ server }) {
+    // Listen to specific server channel
+    useEcho(`servers.${server.id}`, 'ServerUpdated', () => {
+        router.reload({
+            only: ['server'],
+            preserveScroll: true,
+            preserveState: true,
+        });
+    });
+
+    return (
+        <div>
+            <h1>{server.name}</h1>
+            <p>Status: {server.provision_status}</p>
+            <p>Connection: {server.connection}</p>
+        </div>
+    );
+}
+```
+
+**Note:** The same `ServerUpdated` event broadcasts to BOTH `servers.{id}` (detail page) and `servers` (dashboard). One event serves multiple use cases.
 
 ## Alternative Pattern: Broadcasting Full Data
 

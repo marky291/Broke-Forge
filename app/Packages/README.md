@@ -1338,101 +1338,120 @@ class CustomCredential implements SshCredential
 
 ### When to Broadcast in Packages
 
-Packages should broadcast real-time updates when:
-- **Long-running operations** complete or change state
-- **User-visible status** changes (provision_status, installation progress)
-- **Important milestones** are reached during execution
-- **Failures occur** that the user needs to know about immediately
+Broadcasting is handled automatically by model events. You should focus on:
+- **Updating models** with meaningful state changes
+- **Using broadcast fields** that trigger events (provision, provision_status, connection, etc.)
+- **Letting model observers** handle the broadcasting
 
 ### Broadcasting Pattern in BrokeForge
 
-BrokeForge follows the **Broadcast Notification → Fetch Full Resource** pattern:
-1. Backend broadcasts a minimal notification event
-2. Frontend listens and fetches the full resource
-3. Resource class remains the single source of truth
+BrokeForge uses **Automatic Model-Based Broadcasting**:
+1. Models automatically broadcast when meaningful fields change
+2. Backend sends minimal notification events
+3. Frontend listens and fetches the full resource
+4. Resource class remains the single source of truth
 
 For complete documentation, see [docs/reverb-real-time-pattern.md](../docs/reverb-real-time-pattern.md)
 
-### Laravel 12 Broadcasting Best Practices
+### Automatic Broadcasting via Model Events
 
-#### Use ShouldBroadcastNow for Immediate Broadcasting
+**This is the preferred approach.** Broadcasting is handled automatically by model event listeners:
 
 ```php
-use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
-
-class ServerProvisionUpdated implements ShouldBroadcastNow
+// app/Models/Server.php
+protected static function booted(): void
 {
-    // Broadcasts immediately without queueing
+    static::updated(function (self $server): void {
+        // Only broadcast if meaningful fields changed
+        $broadcastFields = [
+            'provision',
+            'provision_status',
+            'connection',
+            'monitoring_status',
+            'scheduler_status',
+            'supervisor_status',
+        ];
+
+        if ($server->wasChanged($broadcastFields)) {
+            \App\Events\ServerUpdated::dispatch($server->id);
+        }
+    });
 }
 ```
 
-**Why `ShouldBroadcastNow`?**
-- ✅ Instant real-time updates (no queue delay)
-- ✅ Perfect for critical status changes
-- ✅ Laravel 12's recommended approach for real-time features
-- ❌ Avoid `ShouldBroadcast` for time-sensitive updates (uses queue, adds delay)
+**Benefits:**
+- ✅ Automatic - never forget to broadcast
+- ✅ Consistent - always broadcasts on meaningful changes
+- ✅ Less code - no manual dispatch calls
+- ✅ Maintainable - broadcasting logic in one place
+- ✅ Performance - only broadcasts when necessary
 
-#### Broadcasting in Controllers
+### Package Implementation
 
-Controllers should broadcast after updating model state:
+**In Controllers and Jobs, simply update the model:**
 
 ```php
-use App\Events\ServerProvisionUpdated;
-
+// NO manual broadcast needed!
 public function step(Request $request, Server $server): JsonResponse
 {
-    // Update the model
+    // Update the model - broadcasting happens automatically
     $server->provision->put($step, $status);
     $server->save();
-
-    // Broadcast the change
-    ServerProvisionUpdated::dispatch($server->id);
 
     return response()->json(['ok' => true]);
 }
 ```
 
-**Broadcasting Points in Controllers:**
-- After saving model changes
-- After state transitions (pending → installing → completed)
-- After failures or errors
-
-#### Broadcasting in Job Classes
-
-Jobs should broadcast when `isProvisioningServer` is true:
+**In Installers, update models as needed:**
 
 ```php
-use App\Events\ServerProvisionUpdated;
+class NginxInstaller extends PackageInstaller implements ServerPackage
+{
+    public function execute(PhpVersion $phpVersion): void
+    {
+        // Model automatically broadcasts on save
+        $this->server->provision->put(5, ProvisionStatus::Completed->value);
+        $this->server->provision->put(6, ProvisionStatus::Installing->value);
+        $this->server->save();
 
+        PhpInstallerJob::dispatchSync($this->server, $phpVersion);
+
+        // Model automatically broadcasts on save
+        $this->server->provision->put(6, ProvisionStatus::Completed->value);
+        $this->server->provision->put(7, ProvisionStatus::Installing->value);
+        $this->server->save();
+
+        // Continue with remaining steps...
+    }
+}
+```
+
+**In Jobs, update provision_status only:**
+
+```php
 class NginxInstallerJob implements ShouldQueue
 {
-    public function __construct(
-        public Server $server,
-        public PhpVersion $phpVersion,
-        public bool $isProvisioningServer = false
-    ) {}
-
     public function handle(): void
     {
         try {
             $installer = new NginxInstaller($this->server);
 
             if ($this->isProvisioningServer) {
+                // Model event handles broadcasting automatically
                 $this->server->update(['provision_status' => ProvisionStatus::Installing]);
-                ServerProvisionUpdated::dispatch($this->server->id);
             }
 
             $installer->execute($this->phpVersion);
 
             if ($this->isProvisioningServer) {
+                // Model event handles broadcasting automatically
                 $this->server->update(['provision_status' => ProvisionStatus::Completed]);
-                ServerProvisionUpdated::dispatch($this->server->id);
             }
 
         } catch (Exception $e) {
             if ($this->isProvisioningServer) {
+                // Model event handles broadcasting automatically
                 $this->server->update(['provision_status' => ProvisionStatus::Failed]);
-                ServerProvisionUpdated::dispatch($this->server->id);
             }
             throw $e;
         }
@@ -1440,31 +1459,9 @@ class NginxInstallerJob implements ShouldQueue
 }
 ```
 
-**Broadcasting Points in Jobs:**
-- After updating provision_status
-- On success: after completing installation
-- On failure: in the catch block
-- Only when `isProvisioningServer === true`
+### Event Structure
 
-#### Broadcasting in Installer/Remover Classes
-
-Generally, **do NOT broadcast in installer/remover classes**. Broadcasting should happen in:
-- ✅ Controllers (handle HTTP requests and state changes)
-- ✅ Jobs (orchestrate long-running operations)
-- ❌ Installers/Removers (focused on SSH commands and execution)
-
-**Why?**
-- Installers are called from jobs which already handle broadcasting
-- Avoids duplicate broadcasts
-- Keeps broadcasting logic at the orchestration layer
-- Maintains separation of concerns
-
-**Exception:** Broadcast in installers only when:
-- The installer is called directly from a controller (rare)
-- The installer manages its own provision_status updates
-- You need milestone-level real-time updates (not just start/complete)
-
-### Event Structure Example
+Events should use `ShouldBroadcastNow` for immediate broadcasting:
 
 ```php
 <?php
@@ -1477,7 +1474,7 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class ServerProvisionUpdated implements ShouldBroadcastNow
+class ServerUpdated implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
@@ -1488,7 +1485,7 @@ class ServerProvisionUpdated implements ShouldBroadcastNow
     public function broadcastOn(): array
     {
         return [
-            new PrivateChannel('servers.'.$this->serverId.'.provision'),
+            new PrivateChannel('servers.'.$this->serverId),
         ];
     }
 
@@ -1503,7 +1500,7 @@ class ServerProvisionUpdated implements ShouldBroadcastNow
 ```
 
 **Key Elements:**
-- `ShouldBroadcastNow`: Immediate broadcasting
+- `ShouldBroadcastNow`: Immediate broadcasting (no queue delay)
 - `PrivateChannel`: Security (requires authorization)
 - Minimal payload: Only IDs and timestamps
 - Simple constructor: PHP 8+ property promotion
@@ -1515,10 +1512,12 @@ Define channel authorization in `routes/channels.php`:
 ```php
 use App\Models\Server;
 
-Broadcast::channel('servers.{serverId}.provision', function ($user, int $serverId) {
+Broadcast::channel('servers.{serverId}', function ($user, int $serverId) {
     return $user->id === Server::findOrNew($serverId)->user_id;
 });
 ```
+
+**Important:** Use a single channel per resource, not multiple topic-specific channels.
 
 **Security Checklist:**
 - ✅ Always use `PrivateChannel` for user-specific data
@@ -1528,22 +1527,22 @@ Broadcast::channel('servers.{serverId}.provision', function ($user, int $serverI
 
 ### Testing Broadcasts
 
-Always test that events are dispatched:
+Test that model changes trigger broadcasts:
 
 ```php
-use App\Events\ServerProvisionUpdated;
+use App\Events\ServerUpdated;
 use Illuminate\Support\Facades\Event;
 
 public function test_it_broadcasts_on_provision_update(): void
 {
-    Event::fake();
+    Event::fake([ServerUpdated::class]);
 
     $server = Server::factory()->create();
     $url = URL::signedRoute('servers.provision.step', ['server' => $server->id]);
 
     $this->post($url, ['step' => 1, 'status' => 'installing'])->assertOk();
 
-    Event::assertDispatched(ServerProvisionUpdated::class, function ($event) use ($server) {
+    Event::assertDispatched(ServerUpdated::class, function ($event) use ($server) {
         return $event->serverId === $server->id;
     });
 }
@@ -1551,13 +1550,14 @@ public function test_it_broadcasts_on_provision_update(): void
 
 ### Broadcasting Guidelines Summary
 
-1. **Use `ShouldBroadcastNow`** for real-time features
-2. **Broadcast in Controllers and Jobs**, not in installers
-3. **Minimal payloads**: Only IDs and timestamps
-4. **Use `PrivateChannel`** for security
-5. **Broadcast after saving** model changes
-6. **Test broadcasts** with `Event::fake()`
-7. **Document the pattern** in your event class
+1. **Use Model Events** for automatic broadcasting
+2. **Update models** and let observers handle broadcasts
+3. **Conditional broadcasting** - only when meaningful fields change
+4. **Minimal payloads** - only IDs and timestamps
+5. **Use `PrivateChannel`** for security
+6. **Single channel per resource** - not topic-specific channels
+7. **Test model observers** with `Event::fake([SpecificEvent::class])`
+8. **No manual dispatches** in controllers, jobs, or installers
 
 For complete examples and troubleshooting, see [docs/reverb-real-time-pattern.md](../docs/reverb-real-time-pattern.md)
 
@@ -1874,6 +1874,554 @@ protected function commands(PhpVersion $phpVersion, string $phpPackages): array
     ];
 }
 ```
+
+### Rule 6: Reverb Package Lifecycle Pattern
+
+**⚠️ MANDATORY for packages that benefit from real-time status updates**
+
+The Reverb Package Lifecycle pattern creates database records FIRST with a status field, then updates that status through the installation/removal lifecycle. This provides immediate visibility and real-time progress updates to users via Laravel Reverb WebSocket broadcasting.
+
+**Why "Reverb Package Lifecycle"?**
+This pattern is specifically designed to leverage Laravel Reverb for real-time updates. By managing status in the database and broadcasting changes automatically, the frontend receives instant WebSocket notifications of progress without polling.
+
+#### Core Architecture: Event-Driven Real-Time Updates
+
+The Reverb Package Lifecycle uses an **event-driven architecture** where model changes automatically trigger broadcasts, and the frontend listens for these events to fetch updated data:
+
+```
+┌─────────────┐      ┌──────────────┐      ┌─────────────┐      ┌──────────────┐
+│  Database   │ ───> │ Model Events │ ───> │   Laravel   │ ───> │   Frontend   │
+│   Update    │      │  (created,   │      │   Reverb    │      │   useEcho    │
+│             │      │   updated,   │      │  WebSocket  │      │   Listener   │
+│             │      │   deleted)   │      │ Broadcasting│      │              │
+└─────────────┘      └──────────────┘      └─────────────┘      └──────────────┘
+                                                                         │
+                                                                         ▼
+                                                                  ┌──────────────┐
+                                                                  │   Inertia    │
+                                                                  │ router.reload│
+                                                                  │ Fetch Fresh  │
+                                                                  │ Resource Data│
+                                                                  └──────────────┘
+```
+
+**Key Principles:**
+1. **Model Events Drive Everything**: Every database change (create, update, delete) automatically triggers a broadcast
+2. **Minimal WebSocket Payload**: Events only contain resource ID and timestamp (no complex data)
+3. **Frontend Fetches Fresh Data**: On receiving event, Inertia reloads the resource from the API
+4. **Single Source of Truth**: All data transformation stays in the Resource class
+5. **No Polling Required**: Real-time updates via WebSocket connections eliminate the need for HTTP polling
+
+**Why This Architecture?**
+- ✅ **Automatic Broadcasting**: Model events ensure broadcasts are never forgotten
+- ✅ **Data Consistency**: Resource class remains the single source of truth
+- ✅ **Type Safety**: Frontend always receives properly typed, transformed data
+- ✅ **Performance**: Minimal WebSocket payloads, efficient partial page reloads
+- ✅ **Maintainability**: Broadcasting logic centralized in model observers
+
+#### When to Use This Pattern
+
+Use the Reverb Package Lifecycle pattern when:
+- ✅ Users need to see installation/removal progress in real-time
+- ✅ Operations take more than a few seconds to complete
+- ✅ The resource has meaningful status transitions (pending → installing → active/failed)
+- ✅ Users should see the resource immediately, even before installation completes
+
+**Examples:** Firewall rules, scheduled tasks, deployment configurations, SSL certificates, cron jobs
+
+#### Pattern Flow
+
+**Traditional Pattern (Old - Don't Use):**
+```
+User Action → Job Dispatched → SSH Commands Execute → Record Created on Success
+```
+Problem: No visibility until completion, no real-time updates, users see nothing until success/failure.
+
+**Reverb Package Lifecycle (New - Use This):**
+```
+User Action → Record Created (status: pending)
+→ Broadcast → Frontend Shows "Pending"
+→ Job Updates Status (status: installing)
+→ Broadcast → Frontend Shows "Installing"
+→ SSH Commands Execute
+→ Job Updates Status (status: active/failed)
+→ Broadcast → Frontend Shows Final Status
+```
+Benefits: Immediate visibility, real-time progress, automatic Reverb broadcasting.
+
+#### Implementation Steps
+
+**Step 1: Controller Creates Record First**
+
+The controller creates the database record with `status: 'pending'` BEFORE dispatching the job:
+
+```php
+// app/Http/Controllers/ServerFirewallController.php
+public function store(FirewallRuleRequest $request, Server $server): RedirectResponse
+{
+    try {
+        // Ensure parent resource exists
+        if (! $server->firewall) {
+            return back()->with('error', 'Firewall is not installed on this server.');
+        }
+
+        // ✅ CREATE RECORD FIRST with 'pending' status
+        $rule = ServerFirewallRule::create([
+            'server_firewall_id' => $server->firewall->id,
+            'name' => $request->validated('name'),
+            'port' => $request->validated('port'),
+            'from_ip_address' => $request->validated('from_ip_address'),
+            'rule_type' => $request->validated('rule_type', 'allow'),
+            'status' => 'pending',  // ← Initial status
+        ]);
+
+        // ✅ THEN dispatch job with the record ID
+        FirewallRuleInstallerJob::dispatch($server, $rule->id);
+
+        return back()->with('success', 'Firewall rule is being applied.');
+
+    } catch (\Exception $e) {
+        Log::error('Failed to create firewall rule', [
+            'server_id' => $server->id,
+            'error' => $e->getMessage(),
+        ]);
+
+        return back()->with('error', 'Failed to create firewall rules.');
+    }
+}
+```
+
+**Step 2: Job Manages Status Lifecycle**
+
+The job receives the record ID and manages status transitions:
+
+```php
+// app/Packages/Services/Firewall/FirewallRuleInstallerJob.php
+class FirewallRuleInstallerJob implements ShouldQueue
+{
+    use Queueable;
+
+    public function __construct(
+        public Server $server,
+        public int $ruleId  // ← Receives record ID, not data
+    ) {}
+
+    public function handle(): void
+    {
+        // Load the record
+        $rule = ServerFirewallRule::findOrFail($this->ruleId);
+
+        Log::info("Starting firewall rule configuration", [
+            'rule_id' => $rule->id,
+            'server_id' => $this->server->id,
+        ]);
+
+        try {
+            // ✅ UPDATE: pending → installing
+            $rule->update(['status' => 'installing']);
+            // Model event broadcasts automatically via Reverb
+
+            // Create installer and execute
+            $installer = new FirewallRuleInstaller($this->server);
+            $installer->execute([/* rule data */]);
+
+            // ✅ UPDATE: installing → active
+            $rule->update(['status' => 'active']);
+            // Model event broadcasts automatically via Reverb
+
+            Log::info("Firewall rule configured successfully", ['rule_id' => $rule->id]);
+
+        } catch (\Exception $e) {
+            // ✅ UPDATE: any → failed
+            $rule->update(['status' => 'failed']);
+            // Model event broadcasts automatically via Reverb
+
+            Log::error("Firewall rule configuration failed", [
+                'rule_id' => $rule->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            throw $e;  // Re-throw for Laravel's retry mechanism
+        }
+    }
+}
+```
+
+**Step 3: Model Events Automatically Broadcast Changes**
+
+**CRITICAL**: This is where the magic happens. Model event listeners automatically dispatch broadcast events whenever the model changes. This ensures broadcasts are **NEVER forgotten** and happen **consistently** across the entire application.
+
+```php
+// app/Models/ServerFirewallRule.php
+class ServerFirewallRule extends Model
+{
+    protected $fillable = [
+        'server_firewall_id',
+        'name',
+        'port',
+        'from_ip_address',
+        'rule_type',
+        'status',  // ← Status field for lifecycle
+    ];
+
+    protected static function booted(): void
+    {
+        // ✅ Broadcast on creation (status: pending)
+        // Triggers when: $rule = ServerFirewallRule::create([...])
+        static::created(function (self $rule): void {
+            \App\Events\ServerUpdated::dispatch($rule->firewall->server_id);
+        });
+
+        // ✅ Broadcast on status updates (pending → installing → active/failed)
+        // Triggers when: $rule->update(['status' => 'installing'])
+        static::updated(function (self $rule): void {
+            \App\Events\ServerUpdated::dispatch($rule->firewall->server_id);
+        });
+
+        // ✅ Broadcast on deletion
+        // Triggers when: $rule->delete()
+        static::deleted(function (self $rule): void {
+            \App\Events\ServerUpdated::dispatch($rule->firewall->server_id);
+        });
+    }
+
+    public function firewall(): BelongsTo
+    {
+        return $this->belongsTo(ServerFirewall::class, 'server_firewall_id');
+    }
+}
+```
+
+**What This Means:**
+- **Zero Manual Broadcasting**: No need to call `dispatch()` in controllers, jobs, or installers
+- **Automatic & Consistent**: Every model change triggers a broadcast automatically
+- **Lifecycle Coverage**: Creation, updates, and deletion all broadcast
+- **Immediate Delivery**: Events use `ShouldBroadcastNow` for instant WebSocket delivery
+
+**The Event Class:**
+
+```php
+// app/Events/ServerUpdated.php
+class ServerUpdated implements ShouldBroadcastNow  // ← Immediate broadcasting
+{
+    use Dispatchable, InteractsWithSockets, SerializesModels;
+
+    public function __construct(
+        public int $serverId,
+    ) {}
+
+    public function broadcastOn(): array
+    {
+        return [
+            new PrivateChannel('servers.'.$this->serverId),  // ← WebSocket channel
+        ];
+    }
+
+    public function broadcastWith(): array
+    {
+        return [
+            'server_id' => $this->serverId,          // ← Minimal payload
+            'timestamp' => now()->toIso8601String(),
+        ];
+    }
+}
+```
+
+**Why Minimal Payload?**
+- The event only sends the server ID and timestamp (no complex data)
+- Frontend uses this notification to **fetch the full resource** via Inertia
+- Resource class transforms the data with consistent formatting
+- Avoids data duplication and transformation logic in multiple places
+
+**Step 4: Frontend Listens and Fetches Fresh Data with useEcho + Inertia**
+
+**CRITICAL**: The frontend uses `useEcho` to listen for WebSocket events, then uses `router.reload()` to **fetch fresh resource data** from the server. This is a **"Broadcast Notification → Fetch Full Resource"** pattern.
+
+```typescript
+// resources/js/pages/servers/firewall.tsx
+import { useEcho } from '@laravel/echo-react';
+import { router } from '@inertiajs/react';
+
+export default function Firewall({ server }: Props) {
+    // ✅ Listen for real-time server updates via Reverb WebSocket
+    // This hook automatically:
+    // 1. Subscribes to the 'servers.{id}' private channel
+    // 2. Listens for 'ServerUpdated' events
+    // 3. Calls the callback when events are received
+    useEcho(`servers.${server.id}`, 'ServerUpdated', () => {
+        // ✅ Fetch fresh data from the server via Inertia
+        // This makes a partial page reload to get updated resource data
+        router.reload({
+            only: ['server'],        // ← Only reload 'server' prop (efficient!)
+            preserveScroll: true,    // ← Keep scroll position
+            preserveState: true,     // ← Keep other component state
+        });
+    });
+
+    return (
+        <div>
+            {server.rules.map(rule => (
+                <div key={rule.id}>
+                    <span>{rule.name}</span>
+                    <span>{rule.port}</span>
+                    {/* Status updates automatically via Reverb */}
+                    <Badge status={rule.status}>
+                        {rule.status}  {/* pending → installing → active/failed */}
+                    </Badge>
+                </div>
+            ))}
+        </div>
+    );
+}
+```
+
+**How the Complete Event-Driven Flow Works:**
+
+```
+User Creates Rule
+       ↓
+Controller creates DB record (status: pending)
+       ↓
+Model's created() event fires
+       ↓
+ServerUpdated event dispatched
+       ↓
+Reverb broadcasts to WebSocket channel 'servers.{id}'
+       ↓
+Frontend useEcho receives notification
+       ↓
+router.reload() fetches fresh server data via Inertia
+       ↓
+UI updates to show rule with "pending" status
+       ↓
+Job starts executing
+       ↓
+Job updates DB record (status: installing)
+       ↓
+Model's updated() event fires
+       ↓
+ServerUpdated event dispatched again
+       ↓
+Frontend receives notification and reloads
+       ↓
+UI updates to show "installing" status
+       ↓
+Job completes successfully
+       ↓
+Job updates DB record (status: active)
+       ↓
+Model's updated() event fires again
+       ↓
+ServerUpdated event dispatched again
+       ↓
+Frontend receives notification and reloads
+       ↓
+UI updates to show "active" status ✅
+```
+
+**Critical Points:**
+- **No Polling**: Frontend never polls the server for updates
+- **No Manual Broadcasts**: Developers never call `dispatch()` manually
+- **Automatic**: Model events handle everything automatically
+- **Efficient**: Inertia only reloads the 'server' prop, not the entire page
+- **Real-Time**: Updates appear instantly via WebSocket
+- **Reliable**: Every model change triggers a broadcast (impossible to forget)
+
+**The Resource Layer (Single Source of Truth):**
+
+When `router.reload()` fetches data, it goes through the Resource class:
+
+```php
+// app/Http/Resources/ServerResource.php
+class ServerResource extends JsonResource
+{
+    public function toArray(Request $request): array
+    {
+        return [
+            'id' => $this->id,
+            'vanity_name' => $this->vanity_name,
+            // ... other fields
+            'rules' => $this->firewall?->rules->map(fn ($rule) => [
+                'id' => $rule->id,
+                'name' => $rule->name,
+                'port' => $rule->port,
+                'from_ip_address' => $rule->from_ip_address,
+                'rule_type' => $rule->rule_type,
+                'status' => $rule->status,  // ← Always current from DB
+                'created_at' => $rule->created_at->toISOString(),
+            ])->toArray(),
+        ];
+    }
+}
+```
+
+**Benefits of This Architecture:**
+- ✅ **Single Source of Truth**: All data transformation in Resource class
+- ✅ **Type Safety**: Frontend receives consistent, typed data
+- ✅ **No Data Duplication**: Don't repeat transformation logic in events
+- ✅ **Maintainable**: Changes to data structure happen in one place
+- ✅ **Testable**: Can test model events, resource transformations separately
+
+#### Status Field Guidelines
+
+Define clear status values that represent the lifecycle:
+
+**Installation Statuses:**
+- `'pending'` - Record created, job not started yet
+- `'installing'` - Job is actively running SSH commands
+- `'active'` - Installation completed successfully
+- `'failed'` - Installation failed with errors
+
+**Removal Statuses:**
+- `'removing'` - Removal in progress
+- (deleted) - Record removed from database after successful removal
+
+#### Key Benefits
+
+1. **Immediate Visibility:** Users see the record instantly with 'pending' status
+2. **Real-Time Progress:** Status updates broadcast automatically via Reverb WebSockets
+3. **No Polling Required:** Frontend uses `useEcho` instead of polling endpoints
+4. **Automatic Broadcasting:** Model events handle all broadcasting, no manual dispatch
+5. **Granular Retry Logic:** Failed items can be retried individually
+6. **Better UX:** Users see progress rather than waiting for completion
+
+#### Complete Example: Firewall Rule Lifecycle
+
+Reference implementation: `app/Packages/Services/Firewall/FirewallRuleInstallerJob.php`
+
+```php
+// 1. Controller creates record first (app/Http/Controllers/ServerFirewallController.php:42-49)
+$rule = ServerFirewallRule::create([
+    'server_firewall_id' => $server->firewall->id,
+    'name' => 'Allow HTTP',
+    'port' => '80',
+    'rule_type' => 'allow',
+    'status' => 'pending',  // ✅ User sees this immediately
+]);
+
+FirewallRuleInstallerJob::dispatch($server, $rule->id);
+
+// 2. Job manages lifecycle (app/Packages/Services/Firewall/FirewallRuleInstallerJob.php:31-80)
+public function handle(): void
+{
+    $rule = ServerFirewallRule::findOrFail($this->ruleId);
+
+    try {
+        $rule->update(['status' => 'installing']);  // ✅ Broadcasts to frontend
+
+        $installer = new FirewallRuleInstaller($this->server);
+        $installer->execute($ruleData);
+
+        $rule->update(['status' => 'active']);      // ✅ Broadcasts to frontend
+    } catch (\Exception $e) {
+        $rule->update(['status' => 'failed']);      // ✅ Broadcasts to frontend
+        throw $e;
+    }
+}
+
+// 3. Model broadcasts automatically (app/Models/ServerFirewallRule.php:27-40)
+static::updated(function (self $rule): void {
+    \App\Events\ServerUpdated::dispatch($rule->firewall->server_id);
+    // ✅ Reverb sends WebSocket notification to frontend
+});
+
+// 4. Frontend updates in real-time (resources/js/pages/servers/firewall.tsx)
+useEcho(`servers.${server.id}`, 'ServerUpdated', () => {
+    router.reload({ only: ['server'] });
+    // ✅ UI shows: pending → installing → active/failed
+});
+```
+
+#### Testing the Reverb Package Lifecycle
+
+Test all three lifecycle stages:
+
+```php
+// tests/Feature/ServerFirewallRuleLifecycleTest.php
+public function test_controller_creates_rule_with_pending_status(): void
+{
+    Queue::fake();
+
+    $server = Server::factory()->create();
+    $firewall = ServerFirewall::factory()->for($server)->create();
+
+    $this->actingAs(User::factory()->create());
+
+    $this->post(route('servers.firewall.store', $server), [
+        'name' => 'Test Rule',
+        'port' => '8080',
+        'rule_type' => 'allow',
+    ]);
+
+    // ✅ Verify record created with pending status
+    $rule = ServerFirewallRule::where('name', 'Test Rule')->first();
+    $this->assertEquals('pending', $rule->status);
+}
+
+public function test_job_updates_status_to_active_on_success(): void
+{
+    $rule = ServerFirewallRule::factory()->create(['status' => 'pending']);
+
+    // Mock SSH for successful execution
+    $mockSsh = $this->mockSuccessfulSsh();
+
+    $job = new FirewallRuleInstallerJob($server, $rule->id);
+    $job->handle();
+
+    // ✅ Verify status updated to active
+    $rule->refresh();
+    $this->assertEquals('active', $rule->status);
+}
+
+public function test_job_updates_status_to_failed_on_error(): void
+{
+    $rule = ServerFirewallRule::factory()->create(['status' => 'pending']);
+
+    // Mock SSH for failure
+    $mockSsh = $this->mockFailedSsh();
+
+    $job = new FirewallRuleInstallerJob($server, $rule->id);
+
+    try {
+        $job->handle();
+    } catch (\Exception $e) {
+        // Expected to throw
+    }
+
+    // ✅ Verify status updated to failed
+    $rule->refresh();
+    $this->assertEquals('failed', $rule->status);
+}
+
+public function test_rule_status_update_dispatches_server_updated_event(): void
+{
+    Event::fake([ServerUpdated::class]);
+
+    $rule = ServerFirewallRule::factory()->create(['status' => 'pending']);
+
+    // Update status
+    $rule->update(['status' => 'installing']);
+
+    // ✅ Verify broadcast event dispatched
+    Event::assertDispatched(ServerUpdated::class, function ($event) use ($server) {
+        return $event->serverId === $server->id;
+    });
+}
+```
+
+#### Migration to Reverb Package Lifecycle
+
+To migrate existing packages to this pattern:
+
+1. **Add status field** to the model's migration and fillable array
+2. **Update controller** to create record first with 'pending' status
+3. **Modify job** to accept record ID instead of data array
+4. **Add status updates** in job's handle() method (installing, active, failed)
+5. **Add model events** for automatic broadcasting (created, updated, deleted)
+6. **Update frontend** to use `useEcho` instead of polling
+7. **Write tests** for all lifecycle stages
+
+For complete patterns and troubleshooting, see [docs/reverb-real-time-pattern.md](../docs/reverb-real-time-pattern.md)
 
 ### Quick Reference: Correct Pattern Summary
 

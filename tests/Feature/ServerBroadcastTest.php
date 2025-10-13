@@ -5,8 +5,11 @@ namespace Tests\Feature;
 use App\Events\ServerSiteUpdated;
 use App\Events\ServerUpdated;
 use App\Models\Server;
+use App\Models\ServerFirewall;
+use App\Models\ServerFirewallRule;
 use App\Models\ServerSite;
 use App\Models\User;
+use App\Packages\Enums\Connection;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Tests\TestCase;
@@ -19,10 +22,10 @@ class ServerBroadcastTest extends TestCase
     {
         Event::fake([ServerUpdated::class]);
 
-        $server = Server::factory()->create();
+        $server = Server::factory()->create(['connection' => Connection::PENDING]);
 
         // Update a broadcast field to trigger event
-        $server->update(['connection' => 'connected']);
+        $server->update(['connection' => Connection::CONNECTED]);
 
         Event::assertDispatched(ServerUpdated::class, function ($event) use ($server) {
             return $event->serverId === $server->id;
@@ -114,25 +117,96 @@ class ServerBroadcastTest extends TestCase
         Event::assertDispatched(ServerSiteUpdated::class, 2);
     }
 
-    public function test_server_event_broadcasts_on_correct_channel(): void
+    public function test_server_event_broadcasts_on_correct_channels(): void
     {
         $serverId = 123;
         $event = new ServerUpdated($serverId);
 
         $channels = $event->broadcastOn();
 
-        $this->assertCount(1, $channels);
+        $this->assertCount(2, $channels);
         $this->assertEquals("private-servers.{$serverId}", $channels[0]->name);
+        $this->assertEquals('private-servers', $channels[1]->name);
     }
 
-    public function test_site_event_broadcasts_on_correct_channel(): void
+    public function test_site_event_broadcasts_on_correct_channels(): void
     {
         $siteId = 456;
         $event = new ServerSiteUpdated($siteId);
 
         $channels = $event->broadcastOn();
 
-        $this->assertCount(1, $channels);
+        $this->assertCount(2, $channels);
         $this->assertEquals("private-sites.{$siteId}", $channels[0]->name);
+        $this->assertEquals('private-sites', $channels[1]->name);
+    }
+
+    public function test_firewall_creation_dispatches_server_updated_event(): void
+    {
+        Event::fake([ServerUpdated::class]);
+
+        $server = Server::factory()->create();
+        ServerFirewall::factory()->for($server)->create();
+
+        Event::assertDispatched(ServerUpdated::class, function ($event) use ($server) {
+            return $event->serverId === $server->id;
+        });
+    }
+
+    public function test_firewall_update_dispatches_server_updated_event(): void
+    {
+        Event::fake([ServerUpdated::class]);
+
+        $server = Server::factory()->create();
+        $firewall = ServerFirewall::factory()->for($server)->create(['is_enabled' => false]);
+
+        $firewall->update(['is_enabled' => true]);
+
+        Event::assertDispatched(ServerUpdated::class, function ($event) use ($server) {
+            return $event->serverId === $server->id;
+        });
+    }
+
+    public function test_firewall_rule_creation_dispatches_server_updated_event(): void
+    {
+        Event::fake([ServerUpdated::class]);
+
+        $server = Server::factory()->create();
+        $firewall = ServerFirewall::factory()->for($server)->create();
+        ServerFirewallRule::factory()->for($firewall, 'firewall')->create();
+
+        Event::assertDispatched(ServerUpdated::class, function ($event) use ($server) {
+            return $event->serverId === $server->id;
+        });
+    }
+
+    public function test_firewall_rule_update_dispatches_server_updated_event(): void
+    {
+        Event::fake([ServerUpdated::class]);
+
+        $server = Server::factory()->create();
+        $firewall = ServerFirewall::factory()->for($server)->create();
+        $rule = ServerFirewallRule::factory()->for($firewall, 'firewall')->create(['status' => 'pending']);
+
+        $rule->update(['status' => 'active']);
+
+        Event::assertDispatched(ServerUpdated::class, function ($event) use ($server) {
+            return $event->serverId === $server->id;
+        });
+    }
+
+    public function test_firewall_rule_deletion_dispatches_server_updated_event(): void
+    {
+        Event::fake([ServerUpdated::class]);
+
+        $server = Server::factory()->create();
+        $firewall = ServerFirewall::factory()->for($server)->create();
+        $rule = ServerFirewallRule::factory()->for($firewall, 'firewall')->create();
+
+        $rule->delete();
+
+        Event::assertDispatched(ServerUpdated::class, function ($event) use ($server) {
+            return $event->serverId === $server->id;
+        });
     }
 }

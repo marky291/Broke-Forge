@@ -19,7 +19,8 @@ class ServerUpdated implements ShouldBroadcastNow
     public function broadcastOn(): array
     {
         return [
-            new PrivateChannel('servers.'.$this->serverId),
+            new PrivateChannel('servers.'.$this->serverId),  // Specific: servers.5
+            new PrivateChannel('servers'),                    // Generic: all user's servers
         ];
     }
 

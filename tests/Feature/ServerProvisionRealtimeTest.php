@@ -81,9 +81,10 @@ class ServerProvisionRealtimeTest extends TestCase
 
         $channels = $event->broadcastOn();
 
-        $this->assertCount(1, $channels);
+        $this->assertCount(2, $channels);
         // PrivateChannel automatically prepends "private-" to the name
         $this->assertEquals("private-servers.{$serverId}", $channels[0]->name);
+        $this->assertEquals('private-servers', $channels[1]->name);
     }
 
     public function test_multiple_step_updates_dispatch_multiple_events(): void

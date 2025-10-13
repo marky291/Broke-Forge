@@ -17,3 +17,11 @@ Broadcast::channel('sites.{siteId}', function ($user, int $siteId) {
 
     return $site && $user->id === $site->server->user_id;
 });
+
+Broadcast::channel('servers', function ($user) {
+    return ['id' => $user->id];
+});
+
+Broadcast::channel('sites', function ($user) {
+    return ['id' => $user->id];
+});

@@ -8,24 +8,32 @@ import { CardTable, type CardTableColumn } from '@/components/ui/card-table';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PageHeader } from '@/components/ui/page-header';
-import { useStatusPolling } from '@/hooks/useStatusPolling';
 import ServerLayout from '@/layouts/server/layout';
 import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router, useForm } from '@inertiajs/react';
+import { useEcho } from '@laravel/echo-react';
 import { AlertCircle, CheckCircle2, Clock, Loader2, Shield, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
 type Server = {
     id: number;
     vanity_name: string;
+    provider?: string;
     public_ip: string;
-    ssh_port: number;
     private_ip?: string | null;
+    ssh_port: number;
     connection: string;
+    monitoring_status?: string;
+    provision_status?: string;
     created_at: string;
     updated_at: string;
+    isFirewallInstalled: boolean;
+    firewallStatus: string;
+    rules: FirewallRule[];
+    recentEvents: FirewallEvent[];
+    latestMetrics?: any;
 };
 
 type FirewallRule = {
@@ -50,24 +58,11 @@ type FirewallEvent = {
 
 interface FirewallProps {
     server: Server;
-    rules: FirewallRule[];
-    isFirewallInstalled: boolean;
-    firewallStatus: string;
-    recentEvents: FirewallEvent[];
 }
 
-export default function Firewall({
-    server,
-    rules: initialRules,
-    isFirewallInstalled,
-    firewallStatus: initialFirewallStatus,
-    recentEvents: initialRecentEvents,
-}: FirewallProps) {
+export default function Firewall({ server }: FirewallProps) {
     const [showAddRuleDialog, setShowAddRuleDialog] = useState(false);
     const [isDeletingRule, setIsDeletingRule] = useState<number | null>(null);
-    const [rules, setRules] = useState<FirewallRule[]>(initialRules);
-    const [firewallStatus, setFirewallStatus] = useState(initialFirewallStatus);
-    const [recentEvents, setRecentEvents] = useState<FirewallEvent[]>(initialRecentEvents);
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard.url() },
@@ -82,32 +77,13 @@ export default function Firewall({
         rule_type: 'allow',
     });
 
-    // Poll for status updates when there are pending or installing rules
-    const hasPendingRules = rules.some((r) => r.status === 'pending' || r.status === 'installing' || r.status === 'removing');
-
-    useStatusPolling({
-        url: `/servers/${server.id}/firewall/status`,
-        interval: 2000,
-        enabled: hasPendingRules,
-        onSuccess: (data) => {
-            setRules(data.rules);
-            setFirewallStatus(data.firewallStatus);
-
-            // Update recent events if provided
-            if (data.latestEvent) {
-                setRecentEvents((prev) => {
-                    const exists = prev.some((e) => e.id === data.latestEvent.id);
-                    if (!exists && data.latestEvent.id) {
-                        return [data.latestEvent, ...prev].slice(0, 5);
-                    }
-                    return prev;
-                });
-            }
-        },
-        stopCondition: (data) => {
-            // Stop polling if no more pending/installing rules
-            return !data.rules.some((r: FirewallRule) => r.status === 'pending' || r.status === 'installing');
-        },
+    // Listen for real-time server updates via Reverb
+    useEcho(`servers.${server.id}`, 'ServerUpdated', () => {
+        router.reload({
+            only: ['server'],
+            preserveScroll: true,
+            preserveState: true,
+        });
     });
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -140,10 +116,6 @@ export default function Firewall({
             setIsDeletingRule(index);
             router.delete(`/servers/${server.id}/firewall/${ruleId}`, {
                 onFinish: () => setIsDeletingRule(null),
-                onSuccess: () => {
-                    // Remove from local state immediately
-                    setRules((prev) => prev.filter((r) => r.id !== ruleId));
-                },
             });
         }
     };
@@ -239,7 +211,7 @@ export default function Firewall({
         },
     ];
 
-    if (!isFirewallInstalled) {
+    if (!server.isFirewallInstalled) {
         return (
             <ServerLayout server={server} breadcrumbs={breadcrumbs}>
                 <Head title={`${server.vanity_name} - Firewall`} />
@@ -284,7 +256,7 @@ export default function Firewall({
                 >
                     <CardTable
                         columns={columns}
-                        data={rules}
+                        data={server.rules}
                         getRowKey={(rule) => rule.id || Math.random()}
                         rowClassName={(rule) =>
                             cn(
@@ -310,7 +282,7 @@ export default function Firewall({
                 </CardContainer>
 
                 {/* Recent Events */}
-                {recentEvents.length > 0 && (
+                {server.recentEvents.length > 0 && (
                     <CardContainer
                         title="Recent Activity"
                         icon={
@@ -321,7 +293,7 @@ export default function Firewall({
                         }
                     >
                         <div className="space-y-2">
-                            {recentEvents.map((event) => (
+                            {server.recentEvents.map((event) => (
                                 <div key={event.id} className="flex items-center justify-between border-b py-2 last:border-0">
                                     <div className="flex items-center gap-3">
                                         {event.status === 'success' ? (

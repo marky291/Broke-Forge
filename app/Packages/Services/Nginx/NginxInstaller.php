@@ -56,15 +56,26 @@ class NginxInstaller extends PackageInstaller implements \App\Packages\Base\Serv
         // Ensure firewall is installed and configured first
         FirewallInstallerJob::dispatchSync($this->server);
 
+        // Get the firewall (should exist after FirewallInstallerJob)
+        $firewall = $this->server->firewall()->firstOrFail();
+
         // Configure firewall rules for HTTP and HTTPS
         $firewallRules = [
             ['port' => '80', 'name' => 'HTTP', 'rule_type' => 'allow', 'from_ip_address' => null],
             ['port' => '443', 'name' => 'HTTPS', 'rule_type' => 'allow', 'from_ip_address' => null],
         ];
 
-        // Install each firewall rule (job will create DB record and install on remote server)
+        // Create and install each firewall rule
         foreach ($firewallRules as $ruleData) {
-            FirewallRuleInstallerJob::dispatchSync($this->server, $ruleData);
+            $rule = $firewall->rules()->create([
+                'name' => $ruleData['name'],
+                'port' => $ruleData['port'],
+                'from_ip_address' => $ruleData['from_ip_address'],
+                'rule_type' => $ruleData['rule_type'],
+                'status' => 'pending',
+            ]);
+
+            FirewallRuleInstallerJob::dispatchSync($this->server, $rule->id);
         }
 
         $this->server->provision->put(5, ProvisionStatus::Completed->value);

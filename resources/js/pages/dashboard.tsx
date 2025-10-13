@@ -7,8 +7,9 @@ import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import { show as showServer } from '@/routes/servers';
 import { type BreadcrumbItem, type SharedData } from '@/types';
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Plus } from 'lucide-react';
+import { useEffect } from 'react';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -48,7 +49,14 @@ type Activity = {
     created_at_human: string;
 };
 
-export default function Dashboard({ servers, sites, activities }: { servers: Server[]; sites: Site[]; activities: Activity[] }) {
+type DashboardData = {
+    servers: Server[];
+    sites: Site[];
+    activities: Activity[];
+};
+
+export default function Dashboard({ dashboard }: { dashboard: DashboardData }) {
+    const { servers, sites, activities } = dashboard;
     const { auth } = usePage<SharedData>().props;
 
     const getTimeAgo = (dateString?: string) => {
@@ -91,6 +99,36 @@ export default function Dashboard({ servers, sites, activities }: { servers: Ser
             .toUpperCase()
             .slice(0, 2);
     };
+
+    // Subscribe to generic servers channel for real-time updates
+    useEffect(() => {
+        const channel = window.Echo?.private('servers').listen('.ServerUpdated', () => {
+            router.reload({
+                only: ['dashboard'],
+                preserveScroll: true,
+                preserveState: true,
+            });
+        });
+
+        return () => {
+            window.Echo?.leave('servers');
+        };
+    }, []);
+
+    // Subscribe to generic sites channel for real-time updates
+    useEffect(() => {
+        const channel = window.Echo?.private('sites').listen('.ServerSiteUpdated', () => {
+            router.reload({
+                only: ['dashboard'],
+                preserveScroll: true,
+                preserveState: true,
+            });
+        });
+
+        return () => {
+            window.Echo?.leave('sites');
+        };
+    }, []);
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>

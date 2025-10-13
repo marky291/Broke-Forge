@@ -1,12 +1,25 @@
 # Guidelines
 
 - Always use Laravel boost MCP.
-- Always use and maintain /app/packages/README.me when working on packages for installer/remover classes.
+- Always use and maintain /app/packages/README.md when working on packages for installer/remover classes.
 - Always maintain unit test suite when working on code.
 - Avoid using mocks when writing unit tests except for mocking $server->createSshConnection which you should always use partial mock.
 - Always maintain unit tests to be fast and to complete < 0.2s
 - Use spatie activity logging to create audit trail for the end user.
 - If a readme.md file exists in the directory we are working on, you should always read the readme.md before starting any work.
+
+## Reverb Package Lifecycle Pattern
+
+When building packages that require real-time status updates (firewall rules, scheduled tasks, deployments, etc.), use the **Reverb Package Lifecycle** pattern:
+
+1. **Create database record FIRST** with `status: 'pending'` before dispatching job
+2. **Job receives record ID** (not data array) and manages status lifecycle: pending → installing → active/failed
+3. **Model events automatically broadcast** changes via Laravel Reverb (never manually dispatch events)
+4. **Frontend uses useEcho + router.reload()** to fetch fresh data when WebSocket events arrive
+
+**Key principle:** Event-driven architecture where model changes automatically trigger broadcasts, and frontend fetches updated resource data via Inertia. No polling required.
+
+See @app/Packages/README.md Rule 6 for complete implementation details and examples.
 
 <laravel-boost-guidelines>
 === foundation rules ===

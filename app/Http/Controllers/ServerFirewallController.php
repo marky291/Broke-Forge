@@ -2,14 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Concerns\PreparesSiteData;
 use App\Http\Requests\Servers\FirewallRuleRequest;
+use App\Http\Resources\ServerResource;
 use App\Models\Server;
 use App\Models\ServerFirewallRule;
 use App\Packages\Services\Firewall\FirewallRuleInstallerJob;
 use App\Packages\Services\Firewall\FirewallRuleUninstallerJob;
 use App\Services\FirewallConfigurationService;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
@@ -17,97 +16,40 @@ use Inertia\Response;
 
 class ServerFirewallController extends Controller
 {
-    use PreparesSiteData;
-
     public function __construct(
         private readonly FirewallConfigurationService $firewallConfig
     ) {}
 
     public function index(Server $server): Response
     {
-        $firewall = $server->firewall;
-
-        // Check if firewall is actually installed on the server
-        $isFirewallInstalled = $firewall !== null;
-
-        if (! $isFirewallInstalled) {
-            return Inertia::render('servers/firewall', [
-                'server' => $server->only([
-                    'id',
-                    'vanity_name',
-                    'provider',
-                    'public_ip',
-                    'private_ip',
-                    'ssh_port',
-                    'connection', 'monitoring_status',
-                    'provision_status',
-                    'created_at',
-                    'updated_at',
-                ]),
-                'rules' => [],
-                'isFirewallInstalled' => false,
-                'firewallStatus' => 'not_installed',
-                'recentEvents' => [],
-                'latestMetrics' => $this->getLatestMetrics($server),
-            ]);
-        }
+        // Load necessary relationships for the resource
+        $server->load(['firewall.rules', 'events', 'metrics']);
 
         return Inertia::render('servers/firewall', [
-            'server' => $server->only([
-                'id',
-                'vanity_name',
-                'provider',
-                'public_ip',
-                'private_ip',
-                'ssh_port',
-                'connection', 'monitoring_status',
-                'provision_status',
-                'created_at',
-                'updated_at',
-            ]),
-            'rules' => $firewall->rules()->latest()->get()->map(fn ($rule) => [
-                'id' => $rule->id,
-                'name' => $rule->name,
-                'port' => $rule->port,
-                'from_ip_address' => $rule->from_ip_address,
-                'rule_type' => $rule->rule_type,
-                'status' => $rule->status,
-                'created_at' => $rule->created_at->toISOString(),
-            ]),
-            'isFirewallInstalled' => true,
-            'firewallStatus' => $firewall->is_enabled ? 'enabled' : 'disabled',
-            'recentEvents' => $server->events()
-                ->where('service_type', 'firewall')
-                ->latest()
-                ->take(5)
-                ->get()
-                ->map(fn ($event) => [
-                    'id' => $event->id,
-                    'milestone' => $event->milestone,
-                    'status' => $event->status,
-                    'current_step' => $event->current_step,
-                    'total_steps' => $event->total_steps,
-                    'progress' => $event->progressPercentage ?? null,
-                    'details' => $event->details,
-                    'created_at' => $event->created_at->toISOString(),
-                ]),
-            'latestMetrics' => $this->getLatestMetrics($server),
+            'server' => new ServerResource($server),
         ]);
     }
 
     public function store(FirewallRuleRequest $request, Server $server): RedirectResponse
     {
         try {
-            // Prepare rule data from validated request
-            $ruleData = [
+            // Ensure server has a firewall
+            if (! $server->firewall) {
+                return back()->with('error', 'Firewall is not installed on this server.');
+            }
+
+            // Create the firewall rule with 'pending' status
+            $rule = ServerFirewallRule::create([
+                'server_firewall_id' => $server->firewall->id,
                 'name' => $request->validated('name'),
                 'port' => $request->validated('port'),
                 'from_ip_address' => $request->validated('from_ip_address'),
                 'rule_type' => $request->validated('rule_type', 'allow'),
-            ];
+                'status' => 'pending',
+            ]);
 
-            // Dispatch job to create the rule in DB and configure it on the server
-            FirewallRuleInstallerJob::dispatch($server, $ruleData);
+            // Dispatch job to configure the rule on the server
+            FirewallRuleInstallerJob::dispatch($server, $rule->id);
 
             return back()->with('success', 'Firewall rule is being applied.');
 
@@ -147,46 +89,5 @@ class ServerFirewallController extends Controller
 
             return back()->with('error', 'Failed to remove firewall rule.');
         }
-    }
-
-    public function status(Server $server): JsonResponse
-    {
-        $firewall = $server->firewall;
-
-        if (! $firewall) {
-            return response()->json([
-                'rules' => [],
-                'firewallStatus' => 'not_installed',
-                'latestEvent' => null,
-            ]);
-        }
-
-        $latestEvent = $server->events()
-            ->where('service_type', 'firewall')
-            ->latest()
-            ->first();
-
-        return response()->json([
-            'rules' => $firewall->rules()->latest()->get()->map(fn ($rule) => [
-                'id' => $rule->id,
-                'name' => $rule->name,
-                'port' => $rule->port,
-                'from_ip_address' => $rule->from_ip_address,
-                'rule_type' => $rule->rule_type,
-                'status' => $rule->status,
-                'created_at' => $rule->created_at->toISOString(),
-            ]),
-            'firewallStatus' => $firewall->is_enabled ? 'enabled' : 'disabled',
-            'latestEvent' => $latestEvent ? [
-                'id' => $latestEvent->id,
-                'milestone' => $latestEvent->milestone,
-                'status' => $latestEvent->status,
-                'current_step' => $latestEvent->current_step,
-                'total_steps' => $latestEvent->total_steps,
-                'progress' => $latestEvent->progressPercentage ?? null,
-                'details' => $latestEvent->details,
-                'created_at' => $latestEvent->created_at->toISOString(),
-            ] : null,
-        ]);
     }
 }
