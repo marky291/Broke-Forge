@@ -19,6 +19,7 @@ use App\Packages\Services\Firewall\FirewallRuleInstallerJob;
 use App\Packages\Services\PHP\PhpInstallerJob;
 use App\Packages\Services\Scheduler\ServerSchedulerInstallerJob;
 use App\Packages\Services\Scheduler\Task\ServerScheduleTaskInstallerJob;
+use App\Packages\Services\Supervisor\SupervisorInstallerJob;
 
 /**
  * Nginx Web Server Installation Class
@@ -91,6 +92,9 @@ class NginxInstaller extends PackageInstaller implements \App\Packages\Base\Serv
             'command' => 'apt-get autoremove && apt-get autoclean',
             'frequency' => ScheduleFrequency::Weekly,
         ]);
+
+        // Install the supervisor as it has low overhead and provides benefit to user.
+        SupervisorInstallerJob::dispatchSync($this->server);
 
         $this->server->provision->put(8, ProvisionStatus::Completed->value);
         $this->server->save();
