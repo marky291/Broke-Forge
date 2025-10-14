@@ -46,39 +46,38 @@ export default function InvoicesList({ invoices }: InvoicesListProps) {
         <CardContainer title="Invoices" icon={<Receipt />}>
             <div className="space-y-3">
                 {invoices.map((invoice) => (
-                    <div
-                        key={invoice.id}
-                        className="flex items-center justify-between rounded-lg border border-border p-4 transition-colors hover:border-primary/50"
-                    >
+                    <div key={invoice.id} className="flex flex-col gap-3 rounded-lg border border-border p-4 transition-colors hover:border-primary/50 sm:flex-row sm:items-center sm:justify-between">
                         <div className="flex items-center gap-3">
-                            <div className="flex size-10 items-center justify-center rounded-full bg-muted">
+                            <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted">
                                 <Receipt className="size-5 text-muted-foreground" />
                             </div>
-                            <div>
-                                <div className="flex items-center gap-2">
-                                    <p className="font-medium">
-                                        {new Date(invoice.date).toLocaleDateString('en-US', {
-                                            year: 'numeric',
-                                            month: 'long',
-                                            day: 'numeric',
-                                        })}
-                                    </p>
-                                    {invoice.is_credit && (
-                                        <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
-                                            Credit
-                                        </span>
-                                    )}
-                                </div>
-                                <p className={cn('text-sm', invoice.is_credit ? 'text-blue-600 dark:text-blue-400' : 'text-muted-foreground')}>
-                                    {invoice.total}
+                            <div className="min-w-0 flex-1">
+                                <p className="font-medium">
+                                    {new Date(invoice.date).toLocaleDateString('en-US', {
+                                        year: 'numeric',
+                                        month: 'long',
+                                        day: 'numeric',
+                                    })}
                                 </p>
+                                <div className="mt-1 flex items-center gap-2">
+                                    <p className={cn('text-sm font-medium', invoice.is_credit ? 'text-blue-600 dark:text-blue-400' : 'text-foreground')}>
+                                        {invoice.total}
+                                    </p>
+                                </div>
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-3">
-                            {getStatusBadge(invoice.status)}
+                        <div className="flex items-center justify-between gap-3 sm:shrink-0 sm:justify-end">
+                            <div className="flex items-center gap-2">
+                                {invoice.is_credit && (
+                                    <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                                        Credit
+                                    </span>
+                                )}
+                                {getStatusBadge(invoice.status)}
+                            </div>
                             {invoice.invoice_pdf && (
-                                <Button variant="outline" size="sm" onClick={() => window.open(invoice.invoice_pdf!, '_blank')}>
+                                <Button variant="outline" size="sm" onClick={() => window.open(invoice.invoice_pdf!, '_blank')} className="sm:ml-3">
                                     <Download className="mr-2 size-4" />
                                     Download
                                 </Button>
