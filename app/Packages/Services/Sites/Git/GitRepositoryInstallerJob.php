@@ -62,9 +62,12 @@ class GitRepositoryInstallerJob implements ShouldQueue
 
             // ✅ UPDATE: installing → installed
             // Model event broadcasts automatically via Reverb
+            // Update git status to installed and site status to active on success
             $this->site->update([
                 'git_status' => GitStatus::Installed,
                 'git_installed_at' => now(),
+                'status' => 'active',
+                'provisioned_at' => now(),
             ]);
 
             Log::info("Git repository installation completed for site #{$this->site->id} on server #{$this->server->id}");

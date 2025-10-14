@@ -6,6 +6,7 @@ import { CardContainer } from '@/components/ui/card-container';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import { show as showServer } from '@/routes/servers';
+import { show as showSite } from '@/routes/servers/sites';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Plus } from 'lucide-react';
@@ -35,6 +36,7 @@ type Site = {
     domain: string;
     repository?: string;
     php_version?: string;
+    server_id: number;
     server_name: string;
     last_deployed_at?: string;
 };
@@ -216,8 +218,9 @@ export default function Dashboard({ dashboard }: { dashboard: DashboardData }) {
                     {sites && sites.length > 0 ? (
                         <div className="space-y-2">
                             {sites.map((site) => (
-                                <div
+                                <Link
                                     key={site.id}
+                                    href={showSite({ server: site.server_id, site: site.id })}
                                     className="group block rounded-lg border border-neutral-200 bg-white p-4 transition-all hover:border-neutral-300 hover:bg-neutral-50 dark:border-white/8 dark:bg-white/3 dark:hover:border-white/12 dark:hover:bg-white/5"
                                 >
                                     <div className="flex items-center justify-between">
@@ -240,7 +243,7 @@ export default function Dashboard({ dashboard }: { dashboard: DashboardData }) {
                                             <div className="text-sm text-muted-foreground">Deployed {getTimeAgo(site.last_deployed_at)}</div>
                                         )}
                                     </div>
-                                </div>
+                                </Link>
                             ))}
                         </div>
                     ) : (

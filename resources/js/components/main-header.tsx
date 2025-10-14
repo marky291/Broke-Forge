@@ -2,10 +2,11 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/compon
 import { UserMenuContent } from '@/components/user-menu-content';
 import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
+import { index as billing } from '@/routes/billing';
 import { edit } from '@/routes/profile';
 import { type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { ChevronsUpDown, Menu, Server, Settings, X } from 'lucide-react';
+import { ChevronsUpDown, CreditCard, Menu, Server, Settings, X } from 'lucide-react';
 import { useState } from 'react';
 import AppLogoIcon from './app-logo-icon';
 import { CommandSearch } from './command-search';
@@ -22,6 +23,12 @@ export function MainHeader() {
             href: dashboard(),
             icon: Server,
             isActive: path === dashboard() || path === '/',
+        },
+        {
+            title: 'Billing',
+            href: billing(),
+            icon: CreditCard,
+            isActive: path === billing(),
         },
         {
             title: 'Settings',
@@ -53,7 +60,7 @@ export function MainHeader() {
                     {/* Desktop Navigation - Main Items */}
                     <nav className="hidden items-center md:flex">
                         {mainNavItems
-                            .filter((item) => item.title !== 'Settings')
+                            .filter((item) => item.title !== 'Settings' && item.title !== 'Billing')
                             .map((item) => {
                                 const Icon = item.icon;
                                 return (

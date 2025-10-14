@@ -66,8 +66,15 @@ trait PreparesSiteData
             'last_deployed_at',
         ];
 
+        $data = $site->only(array_merge($baseFields, $additionalFields));
+
+        // Ensure git_status is serialized as string value, not enum object
+        if (isset($data['git_status'])) {
+            $data['git_status'] = $data['git_status']->value;
+        }
+
         return array_merge(
-            $site->only(array_merge($baseFields, $additionalFields)),
+            $data,
             [
                 'git_provider' => $gitConfig['provider'],
                 'git_repository' => $gitConfig['repository'],
