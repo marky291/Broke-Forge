@@ -77,9 +77,9 @@ class ServerSiteDeploymentTest extends TestCase
         $response->assertOk();
         $response->assertInertia(fn ($page) => $page
             ->component('servers/site-deployments')
-            ->has('deployments.data', 2)
-            ->where('deployments.data.0.id', $deployment2->id) // Latest first
-            ->where('deployments.data.1.id', $deployment1->id)
+            ->has('site.deployments.data', 2)
+            ->where('site.deployments.data.0.id', $deployment2->id) // Latest first
+            ->where('site.deployments.data.1.id', $deployment1->id)
         );
     }
 
@@ -103,8 +103,8 @@ class ServerSiteDeploymentTest extends TestCase
         $response->assertOk();
         $response->assertInertia(fn ($page) => $page
             ->component('servers/site-deployments')
-            ->where('deployments.data.0.output', 'Standard output content')
-            ->where('deployments.data.0.error_output', null)
+            ->where('site.deployments.data.0.output', 'Standard output content')
+            ->where('site.deployments.data.0.error_output', null)
         );
     }
 
@@ -127,10 +127,10 @@ class ServerSiteDeploymentTest extends TestCase
         $response->assertOk();
         $response->assertInertia(fn ($page) => $page
             ->component('servers/site-deployments')
-            ->where('deployments.data.0.status', 'failed')
-            ->where('deployments.data.0.output', 'Partial output')
-            ->where('deployments.data.0.error_output', 'Error: Connection failed')
-            ->where('deployments.data.0.exit_code', 1)
+            ->where('site.deployments.data.0.status', 'failed')
+            ->where('site.deployments.data.0.output', 'Partial output')
+            ->where('site.deployments.data.0.error_output', 'Error: Connection failed')
+            ->where('site.deployments.data.0.exit_code', 1)
         );
     }
 
@@ -154,7 +154,7 @@ class ServerSiteDeploymentTest extends TestCase
         $response->assertOk();
         $response->assertInertia(fn ($page) => $page
             ->component('servers/site-deployments')
-            ->has('deployments.data.0', fn ($deployment) => $deployment
+            ->has('site.deployments.data.0', fn ($deployment) => $deployment
                 ->has('id')
                 ->has('status')
                 ->has('output')
@@ -189,7 +189,7 @@ class ServerSiteDeploymentTest extends TestCase
         $response->assertOk();
         $response->assertInertia(fn ($page) => $page
             ->component('servers/site-deployments')
-            ->has('deployments.data', 10) // Only 10 per page
+            ->has('site.deployments.data', 10) // Only 10 per page
         );
     }
 }

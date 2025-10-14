@@ -94,4 +94,25 @@ class ServerScheduledTask extends Model
     {
         return $this->status === TaskStatus::Failed;
     }
+
+    /**
+     * Boot the model and dispatch broadcast events.
+     */
+    protected static function booted(): void
+    {
+        // Broadcast when task is created
+        static::created(function (self $task): void {
+            \App\Events\ServerUpdated::dispatch($task->server_id);
+        });
+
+        // Broadcast when task is updated
+        static::updated(function (self $task): void {
+            \App\Events\ServerUpdated::dispatch($task->server_id);
+        });
+
+        // Broadcast when task is deleted
+        static::deleted(function (self $task): void {
+            \App\Events\ServerUpdated::dispatch($task->server_id);
+        });
+    }
 }

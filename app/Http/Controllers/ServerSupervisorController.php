@@ -3,16 +3,19 @@
 namespace App\Http\Controllers;
 
 use App\Enums\SupervisorStatus;
+use App\Enums\SupervisorTaskStatus;
 use App\Http\Controllers\Concerns\PreparesSiteData;
 use App\Http\Requests\StoreSupervisorTaskRequest;
 use App\Http\Requests\UpdateSupervisorTaskRequest;
+use App\Http\Resources\ServerResource;
 use App\Models\Server;
 use App\Models\ServerSupervisor;
 use App\Models\ServerSupervisorTask;
 use App\Packages\Services\Supervisor\SupervisorInstallerJob;
 use App\Packages\Services\Supervisor\SupervisorRemoverJob;
 use App\Packages\Services\Supervisor\Task\SupervisorTaskInstaller;
-use App\Packages\Services\Supervisor\Task\SupervisorTaskRemover;
+use App\Packages\Services\Supervisor\Task\SupervisorTaskInstallerJob;
+use App\Packages\Services\Supervisor\Task\SupervisorTaskRemoverJob;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
@@ -31,13 +34,8 @@ class ServerSupervisorController extends Controller
         // Authorization
         Gate::authorize('view', [ServerSupervisor::class, $server]);
 
-        // Eager load relationships to avoid N+1 queries
-        $server->load(['supervisorTasks']);
-
         return Inertia::render('servers/supervisor', [
-            'server' => $server->only(['id', 'vanity_name', 'provider', 'public_ip', 'ssh_port', 'private_ip', 'connection', 'monitoring_status', 'supervisor_status', 'supervisor_installed_at', 'supervisor_uninstalled_at', 'created_at', 'updated_at']),
-            'tasks' => $server->supervisorTasks,
-            'latestMetrics' => $this->getLatestMetrics($server),
+            'server' => new ServerResource($server),
         ]);
     }
 
@@ -106,7 +104,7 @@ class ServerSupervisorController extends Controller
         // Authorization
         Gate::authorize('createTask', [ServerSupervisor::class, $server]);
 
-        // Create the task
+        // ✅ CREATE RECORD FIRST with 'pending' status (default from migration)
         $task = $server->supervisorTasks()->create($request->validated());
 
         // Audit log
@@ -119,13 +117,12 @@ class ServerSupervisorController extends Controller
             'ip_address' => request()->ip(),
         ]);
 
-        // Install task immediately
-        $installer = new SupervisorTaskInstaller($server, $task);
-        $installer->execute();
+        // ✅ THEN dispatch job with task ID
+        SupervisorTaskInstallerJob::dispatch($server, $task->id);
 
         return redirect()
             ->route('servers.supervisor', $server)
-            ->with('success', 'Supervisor task created and installed');
+            ->with('success', 'Supervisor task created and installation started');
     }
 
     /**
@@ -193,7 +190,7 @@ class ServerSupervisorController extends Controller
         Gate::authorize('deleteTask', [ServerSupervisor::class, $server]);
 
         // Audit log
-        Log::warning('Supervisor task deleted', [
+        Log::warning('Supervisor task deletion initiated', [
             'user_id' => auth()->id(),
             'server_id' => $server->id,
             'task_id' => $supervisorTask->id,
@@ -202,16 +199,15 @@ class ServerSupervisorController extends Controller
             'ip_address' => request()->ip(),
         ]);
 
-        // Remove task
-        $remover = new SupervisorTaskRemover($server, $supervisorTask);
-        $remover->execute();
+        // ✅ UPDATE status to 'removing' (broadcasts automatically via model event)
+        $supervisorTask->update(['status' => 'removing']);
 
-        // Delete from database
-        $supervisorTask->delete();
+        // ✅ THEN dispatch job with task ID
+        SupervisorTaskRemoverJob::dispatch($server, $supervisorTask->id);
 
         return redirect()
             ->route('servers.supervisor', $server)
-            ->with('success', 'Supervisor task removed');
+            ->with('success', 'Supervisor task removal started');
     }
 
     /**
@@ -270,6 +266,41 @@ class ServerSupervisorController extends Controller
         return redirect()
             ->route('servers.supervisor', $server)
             ->with('success', 'Task restarted');
+    }
+
+    /**
+     * Retry a failed supervisor task
+     */
+    public function retryTask(Server $server, ServerSupervisorTask $supervisorTask): RedirectResponse
+    {
+        // Authorization
+        Gate::authorize('updateTask', [ServerSupervisor::class, $server]);
+
+        // Only allow retry for failed tasks
+        if ($supervisorTask->status !== SupervisorTaskStatus::Failed) {
+            return redirect()
+                ->route('servers.supervisor', $server)
+                ->with('error', 'Only failed tasks can be retried');
+        }
+
+        // Audit log
+        Log::info('Supervisor task retry initiated', [
+            'user_id' => auth()->id(),
+            'server_id' => $server->id,
+            'task_id' => $supervisorTask->id,
+            'task_name' => $supervisorTask->name,
+            'ip_address' => request()->ip(),
+        ]);
+
+        // ✅ Reset status to 'pending' to trigger reinstallation
+        $supervisorTask->update(['status' => SupervisorTaskStatus::Pending]);
+
+        // ✅ Dispatch job with task ID
+        SupervisorTaskInstallerJob::dispatch($server, $supervisorTask->id);
+
+        return redirect()
+            ->route('servers.supervisor', $server)
+            ->with('success', 'Task retry started');
     }
 
     /**

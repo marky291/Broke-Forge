@@ -15,25 +15,11 @@ import { show as showServer } from '@/routes/servers';
 import { show as showSite } from '@/routes/servers/sites';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
+import { useEcho } from '@laravel/echo-react';
 import copyToClipboard from 'copy-to-clipboard';
 import { Check, CheckCircle, CheckCircle2, ChevronRight, Clock, Copy, GitBranch, Globe, Loader2, Lock, Plus, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-type ServerType = {
-    id: number;
-    vanity_name: string;
-    public_ip: string;
-    ssh_port: number;
-    private_ip?: string | null;
-    connection: string;
-    created_at: string;
-    updated_at: string;
-};
-
-/**
- * Represents a site hosted on a server.
- * Maps to the ServerSite model on the backend.
- */
 type ServerSite = {
     id: number;
     domain: string;
@@ -56,31 +42,34 @@ type ServerSite = {
     git_status?: string;
 };
 
-type SitesProps = {
-    server: ServerType;
-    sites: {
-        data: ServerSite[];
-        links: Record<string, string | null>;
-        meta: {
-            current_page: number;
-            from: number | null;
-            last_page: number;
-            links: Array<{
-                url: string | null;
-                label: string;
-                active: boolean;
-            }>;
-            path: string;
-            per_page: number;
-            to: number | null;
-            total: number;
-        };
-    };
+type ServerType = {
+    id: number;
+    vanity_name: string;
+    public_ip: string;
+    ssh_port: number;
+    private_ip?: string | null;
+    connection: string;
+    created_at: string;
+    updated_at: string;
+    sites: ServerSite[];
+    latestMetrics?: {
+        cpu_usage: number;
+        memory_total_mb: number;
+        memory_used_mb: number;
+        memory_usage_percentage: number;
+        storage_total_gb: number;
+        storage_used_gb: number;
+        storage_usage_percentage: number;
+        collected_at: string;
+    } | null;
 };
 
-export default function Sites({ server, sites }: SitesProps) {
+type SitesProps = {
+    server: ServerType;
+};
+
+export default function Sites({ server }: SitesProps) {
     const [showAddSiteDialog, setShowAddSiteDialog] = useState(false);
-    const [wasProvisioning, setWasProvisioning] = useState(false);
     const [deployKey, setDeployKey] = useState<string>('');
     const [copiedDeployKey, setCopiedDeployKey] = useState(false);
     const { flash } = usePage<{ flash: { success?: string; error?: string } }>().props;
@@ -98,25 +87,10 @@ export default function Sites({ server, sites }: SitesProps) {
         { title: 'Sites', href: '#' },
     ];
 
-    // Poll for updates when there are sites provisioning
-    useEffect(() => {
-        const hasProvisioningSites = sites.data.some((site) => site.status === 'provisioning');
-
-        if (hasProvisioningSites) {
-            setWasProvisioning(true);
-            const interval = setInterval(() => {
-                router.reload({ only: ['sites'], preserveScroll: true });
-            }, 3000); // Poll every 3 seconds
-
-            return () => clearInterval(interval);
-        } else if (wasProvisioning) {
-            // Sites finished provisioning, do one final reload to get fresh data
-            setWasProvisioning(false);
-            setTimeout(() => {
-                router.reload({ only: ['sites'], preserveScroll: true });
-            }, 500); // Small delay to ensure DB has been updated
-        }
-    }, [sites.data, wasProvisioning]);
+    // Listen for real-time site updates via Reverb WebSocket
+    useEcho('sites', 'ServerSiteUpdated', () => {
+        router.reload({ only: ['server'], preserveScroll: true });
+    });
 
     // Fetch deploy key when modal opens
     useEffect(() => {
@@ -267,9 +241,9 @@ export default function Sites({ server, sites }: SitesProps) {
                     action={<CardContainerAddButton label="Add Site" onClick={() => setShowAddSiteDialog(true)} aria-label="Add Site" />}
                     parentBorder={false}
                 >
-                    {sites.data.length > 0 ? (
+                    {server.sites.length > 0 ? (
                         <div className="space-y-2 md:space-y-3">
-                            {sites.data.map((site) => (
+                            {server.sites.map((site) => (
                                 <div
                                     key={site.id}
                                     className="divide-y divide-neutral-200 rounded-lg border border-neutral-200 bg-white dark:divide-white/8 dark:border-white/8 dark:bg-white/3"

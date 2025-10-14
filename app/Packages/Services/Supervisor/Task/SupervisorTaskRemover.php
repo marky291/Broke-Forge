@@ -76,12 +76,6 @@ class SupervisorTaskRemover extends PackageRemover implements ServerPackage
             'supervisorctl reread',
             'supervisorctl update',
 
-            // Mark task as removed
-            fn () => $this->task->update([
-                'status' => 'inactive',
-                'uninstalled_at' => now(),
-            ]),
-
             $this->track(SupervisorTaskRemoverMilestones::COMPLETE),
         ];
     }

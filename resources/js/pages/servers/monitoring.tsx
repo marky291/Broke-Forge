@@ -11,22 +11,13 @@ import ServerLayout from '@/layouts/server/layout';
 import { dashboard } from '@/routes';
 import { show as showServer } from '@/routes/servers';
 import { type BreadcrumbItem, type Server, type ServerMetric } from '@/types';
+import { useEcho } from '@laravel/echo-react';
 import { Head, router, useForm } from '@inertiajs/react';
 import { Activity, AlertCircle, CheckCircle, Cpu, HardDrive, Loader2, MemoryStick } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
-export default function Monitoring({
-    server,
-    latestMetrics,
-    recentMetrics,
-    selectedTimeframe = 24,
-}: {
-    server: Server;
-    latestMetrics: ServerMetric | null;
-    recentMetrics: ServerMetric[];
-    selectedTimeframe?: number;
-}) {
+export default function Monitoring({ server, selectedTimeframe = 24 }: { server: Server; selectedTimeframe?: number }) {
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard.url() },
         { title: server.vanity_name, href: showServer({ server: server.id }).url },
@@ -34,8 +25,8 @@ export default function Monitoring({
     ];
 
     const { post, processing } = useForm({});
-    const [localMetrics, setLocalMetrics] = useState<ServerMetric | null>(latestMetrics);
-    const [localRecentMetrics, setLocalRecentMetrics] = useState<ServerMetric[]>(recentMetrics);
+    const latestMetrics = server.latestMetrics;
+    const recentMetrics = server.recentMetrics || [];
 
     // Ensure timeframe is always valid (24, 72, or 168)
     const validTimeframe = [24, 72, 168].includes(selectedTimeframe) ? selectedTimeframe : 24;
@@ -44,7 +35,7 @@ export default function Monitoring({
     const [nextCollectionCountdown, setNextCollectionCountdown] = useState<string>('Calculating...');
 
     // Pagination for Recent Metrics table (latest first - already sorted by backend)
-    const { paginatedData: paginatedMetrics, paginationProps } = usePagination(localRecentMetrics, 5);
+    const { paginatedData: paginatedMetrics, paginationProps } = usePagination(recentMetrics, 5);
 
     const isActive = server.monitoring_status === 'active';
 
@@ -83,15 +74,24 @@ export default function Monitoring({
         }
     };
 
+    // Real-time updates via Reverb WebSocket - listens for new metrics
+    useEcho(`servers.${server.id}`, 'ServerUpdated', () => {
+        router.reload({
+            only: ['server'],
+            preserveScroll: true,
+            preserveState: true,
+        });
+    });
+
     // Calculate countdown to next metric collection
     useEffect(() => {
-        if (!isActive || !localMetrics) {
+        if (!isActive || !latestMetrics) {
             setNextCollectionCountdown('No metrics yet');
             return;
         }
 
         const updateCountdown = () => {
-            const lastCollectedAt = new Date(localMetrics.collected_at);
+            const lastCollectedAt = new Date(latestMetrics.collected_at);
             const intervalSeconds = parseInt(collectionInterval);
             const nextCollectionTime = new Date(lastCollectedAt.getTime() + intervalSeconds * 1000);
             const now = new Date();
@@ -112,45 +112,7 @@ export default function Monitoring({
         const interval = setInterval(updateCountdown, 1000);
 
         return () => clearInterval(interval);
-    }, [isActive, localMetrics?.collected_at, collectionInterval]);
-
-    // Poll for new metrics when monitoring is active
-    useEffect(() => {
-        if (!isActive) return;
-
-        // Poll every 10 seconds to check for new metrics (regardless of collection interval)
-        const pollingInterval = 10000; // 10 seconds
-        // Capture current timeframe value to avoid closure issues
-        const currentTimeframe = timeframe;
-
-        const fetchMetrics = async () => {
-            try {
-                const res = await fetch(`/servers/${server.id}/monitoring/metrics?hours=${currentTimeframe}`, {
-                    headers: { Accept: 'application/json' },
-                });
-                if (!res.ok) return;
-                const json = await res.json();
-                if (json.success && json.data && json.data.length > 0) {
-                    // Force new array reference to trigger React re-render
-                    const metrics = [...json.data];
-                    setLocalMetrics(metrics[0]); // First item is latest (desc order)
-                    setLocalRecentMetrics(metrics);
-                }
-            } catch (error) {
-                console.error('Failed to fetch metrics:', error);
-            }
-        };
-
-        // Fetch immediately on mount
-        fetchMetrics();
-
-        // Then poll at regular intervals
-        const interval = setInterval(fetchMetrics, pollingInterval);
-
-        return () => {
-            clearInterval(interval);
-        };
-    }, [isActive, server.id, timeframe]);
+    }, [isActive, latestMetrics?.collected_at, collectionInterval]);
 
     // Auto-reload when monitoring status is installing or uninstalling
     useEffect(() => {
@@ -201,8 +163,8 @@ export default function Monitoring({
 
     // Memoize chart data to prevent re-renders when countdown updates
     const chartData = useMemo(() => {
-        return localRecentMetrics.slice().reverse();
-    }, [localRecentMetrics]);
+        return recentMetrics.slice().reverse();
+    }, [recentMetrics]);
 
     return (
         <ServerLayout server={server} breadcrumbs={breadcrumbs}>
@@ -310,7 +272,7 @@ export default function Monitoring({
                 </CardContainer>
 
                 {/* Current Metrics */}
-                {isActive && localMetrics && (
+                {isActive && latestMetrics && (
                     <>
                         <CardContainer
                             title="Current Metrics"
@@ -330,13 +292,13 @@ export default function Monitoring({
                                         </div>
                                         <div>
                                             <p className="text-sm text-muted-foreground">CPU Usage</p>
-                                            <p className="text-2xl font-bold">{Number(localMetrics.cpu_usage).toFixed(1)}%</p>
+                                            <p className="text-2xl font-bold">{Number(latestMetrics.cpu_usage).toFixed(1)}%</p>
                                         </div>
                                     </div>
                                     <div className="h-2 w-full rounded-full bg-muted">
                                         <div
                                             className="h-2 rounded-full bg-blue-600 transition-all"
-                                            style={{ width: `${Math.min(localMetrics.cpu_usage, 100)}%` }}
+                                            style={{ width: `${Math.min(latestMetrics.cpu_usage, 100)}%` }}
                                         />
                                     </div>
                                 </div>
@@ -349,17 +311,17 @@ export default function Monitoring({
                                         </div>
                                         <div>
                                             <p className="text-sm text-muted-foreground">Memory Usage</p>
-                                            <p className="text-2xl font-bold">{Number(localMetrics.memory_usage_percentage).toFixed(1)}%</p>
+                                            <p className="text-2xl font-bold">{Number(latestMetrics.memory_usage_percentage).toFixed(1)}%</p>
                                         </div>
                                     </div>
                                     <div className="h-2 w-full rounded-full bg-muted">
                                         <div
                                             className="h-2 rounded-full bg-purple-600 transition-all"
-                                            style={{ width: `${Math.min(localMetrics.memory_usage_percentage, 100)}%` }}
+                                            style={{ width: `${Math.min(latestMetrics.memory_usage_percentage, 100)}%` }}
                                         />
                                     </div>
                                     <p className="text-xs text-muted-foreground">
-                                        {formatBytes(localMetrics.memory_used_mb)} / {formatBytes(localMetrics.memory_total_mb)}
+                                        {formatBytes(latestMetrics.memory_used_mb)} / {formatBytes(latestMetrics.memory_total_mb)}
                                     </p>
                                 </div>
 
@@ -371,24 +333,24 @@ export default function Monitoring({
                                         </div>
                                         <div>
                                             <p className="text-sm text-muted-foreground">Storage Usage</p>
-                                            <p className="text-2xl font-bold">{Number(localMetrics.storage_usage_percentage).toFixed(1)}%</p>
+                                            <p className="text-2xl font-bold">{Number(latestMetrics.storage_usage_percentage).toFixed(1)}%</p>
                                         </div>
                                     </div>
                                     <div className="h-2 w-full rounded-full bg-muted">
                                         <div
                                             className="h-2 rounded-full bg-orange-600 transition-all"
-                                            style={{ width: `${Math.min(localMetrics.storage_usage_percentage, 100)}%` }}
+                                            style={{ width: `${Math.min(latestMetrics.storage_usage_percentage, 100)}%` }}
                                         />
                                     </div>
                                     <p className="text-xs text-muted-foreground">
-                                        {localMetrics.storage_used_gb} GB / {localMetrics.storage_total_gb} GB
+                                        {latestMetrics.storage_used_gb} GB / {latestMetrics.storage_total_gb} GB
                                     </p>
                                 </div>
                             </div>
                         </CardContainer>
 
                         {/* Usage Chart */}
-                        {localRecentMetrics.length > 1 && (
+                        {recentMetrics.length > 1 && (
                             <CardContainer
                                 title={`Usage Over Time (${timeframeOptions.find((opt) => opt.value === timeframe)?.label || 'Last 24 Hours'})`}
                                 icon={
@@ -461,7 +423,7 @@ export default function Monitoring({
                         )}
 
                         {/* Recent Metrics Table */}
-                        {localRecentMetrics.length > 0 && (
+                        {recentMetrics.length > 0 && (
                             <CardContainer
                                 title={`Recent Metrics (${timeframeOptions.find((opt) => opt.value === timeframe)?.label || 'Last 24 Hours'})`}
                                 icon={

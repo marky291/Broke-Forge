@@ -10,21 +10,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import ServerLayout from '@/layouts/server/layout';
 import { dashboard } from '@/routes';
 import { show as showServer } from '@/routes/servers';
-import { type BreadcrumbItem } from '@/types';
+import { type BreadcrumbItem, type Server } from '@/types';
 import { Head, router, useForm } from '@inertiajs/react';
+import { useEcho } from '@laravel/echo-react';
 import { DatabaseIcon, Loader2 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-
-type Server = {
-    id: number;
-    vanity_name: string;
-    public_ip: string;
-    ssh_port: number;
-    private_ip?: string | null;
-    connection: string;
-    created_at: string;
-    updated_at: string;
-};
 
 type DatabaseVersion = {
     [key: string]: string;
@@ -68,17 +58,9 @@ type DatabaseItem = {
     created_at: string;
 };
 
-export default function Database({
-    server,
-    availableDatabases,
-    installedDatabase,
-    databases,
-}: {
-    server: Server;
-    availableDatabases?: AvailableDatabases;
-    installedDatabase: InstalledDatabase;
-    databases: DatabaseItem[];
-}) {
+export default function Database({ server, availableDatabases }: { server: Server; availableDatabases?: AvailableDatabases }) {
+    const installedDatabase = server.installedDatabase || null;
+    const databases = server.databases || [];
     const fallbackDefaults: Record<string, { version: string; port: number }> = useMemo(
         () => ({
             mysql: { version: '8.0', port: 3306 },
@@ -139,38 +121,14 @@ export default function Database({
     const isUpdating = installedDatabase?.status === 'updating';
     const isProcessing = isInstalling || isUninstalling || isUpdating;
 
-    useEffect(() => {
-        if (!isProcessing) return;
-        let cancelled = false;
-        const id = window.setInterval(async () => {
-            try {
-                const res = await fetch(`/servers/${server.id}/database/status`, { headers: { Accept: 'application/json' } });
-                if (!res.ok) return;
-                const json = await res.json();
-                if (cancelled) return;
-                if (json.progress_total) {
-                    setProgress({ step: json.progress_step ?? 0, total: json.progress_total ?? 0, label: json.progress_label ?? undefined });
-                }
-                if (json.status === 'active' || json.status === 'failed' || json.status === 'uninstalled') {
-                    window.clearInterval(id);
-
-                    // Show error message if operation failed
-                    if (json.status === 'failed' && json.error_message) {
-                        setErrorMessage(json.error_message);
-                    }
-
-                    // Reload both installedDatabase and databases to show completion state
-                    router.reload({ only: ['installedDatabase', 'databases'] });
-                }
-            } catch {
-                // ignore transient errors
-            }
-        }, 1500);
-        return () => {
-            cancelled = true;
-            window.clearInterval(id);
-        };
-    }, [isProcessing, server.id]);
+    // Real-time updates via Reverb WebSocket - listens for database changes
+    useEcho(`servers.${server.id}`, 'ServerUpdated', () => {
+        router.reload({
+            only: ['server'],
+            preserveScroll: true,
+            preserveState: true,
+        });
+    });
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard.url() },
@@ -435,7 +393,7 @@ export default function Database({
                                         router.delete(`/servers/${server.id}/database`, {
                                             preserveScroll: true,
                                             onSuccess: () => {
-                                                router.reload({ only: ['installedDatabase', 'databases'] });
+                                                router.reload({ only: ['server'] });
                                             },
                                         });
                                     }
@@ -456,7 +414,7 @@ export default function Database({
                                         {
                                             preserveScroll: true,
                                             onSuccess: () => {
-                                                router.reload({ only: ['installedDatabase', 'databases'] });
+                                                router.reload({ only: ['server'] });
                                             },
                                         },
                                     );

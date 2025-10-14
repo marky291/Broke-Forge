@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\PreparesSiteData;
+use App\Http\Resources\ServerResource;
 use App\Models\Server;
 use App\Models\ServerPhp;
 use App\Packages\Enums\PhpVersion;
@@ -10,7 +11,6 @@ use App\Packages\Services\PHP\PhpInstallerJob;
 use App\Packages\Services\PHP\Services\PhpConfigurationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -20,16 +20,8 @@ class ServerPhpController extends Controller
 
     public function index(Server $server): Response
     {
-        // Get installed PHP versions with eager loaded modules
-        $installedPhp = $server->phps()->with('modules')->get();
-
         return Inertia::render('servers/php', [
-            'server' => $server->only(['id', 'vanity_name', 'provider', 'public_ip', 'ssh_port', 'private_ip', 'connection', 'monitoring_status', 'created_at', 'updated_at']),
-            'availablePhpVersions' => PhpConfigurationService::getAvailableVersions(),
-            'phpExtensions' => PhpConfigurationService::getAvailableExtensions(),
-            'installedPhpVersions' => $installedPhp,
-            'defaultSettings' => PhpConfigurationService::getDefaultSettings(),
-            'latestMetrics' => $this->getLatestMetrics($server),
+            'server' => new ServerResource($server),
         ]);
     }
 
@@ -91,8 +83,10 @@ class ServerPhpController extends Controller
 
     public function install(Request $request, Server $server): RedirectResponse
     {
+        $availableVersions = PhpConfigurationService::getAvailableVersions();
+
         $validated = $request->validate([
-            'version' => ['required', 'string', Rule::in(array_column(PhpVersion::cases(), 'value'))],
+            'version' => 'required|string|in:'.implode(',', array_keys($availableVersions)),
         ]);
 
         // Map version string to PhpVersion enum

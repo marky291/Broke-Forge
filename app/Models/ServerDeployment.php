@@ -43,6 +43,22 @@ class ServerDeployment extends Model
     }
 
     /**
+     * Boot the model and dispatch broadcast events.
+     */
+    protected static function booted(): void
+    {
+        // Broadcast when new deployment is created (so deployments update in real-time)
+        static::created(function (self $deployment): void {
+            \App\Events\ServerSiteUpdated::dispatch($deployment->server_site_id);
+        });
+
+        // Broadcast when deployment status or output changes (for real-time progress)
+        static::updated(function (self $deployment): void {
+            \App\Events\ServerSiteUpdated::dispatch($deployment->server_site_id);
+        });
+    }
+
+    /**
      * Get the server that owns the deployment.
      */
     public function server(): BelongsTo

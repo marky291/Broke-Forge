@@ -85,6 +85,59 @@ export interface Server {
     monitoring_collection_interval?: number | null;
     monitoring_installed_at?: string | null;
     monitoring_uninstalled_at?: string | null;
+    isFirewallInstalled?: boolean;
+    firewallStatus?: string;
+    rules?: ServerFirewallRule[];
+    recentEvents?: ServerEvent[];
+    latestMetrics?: ServerMetric | null;
+    recentMetrics?: ServerMetric[];
+    scheduledTasks?: ServerScheduledTask[];
+    recentTaskRuns?: {
+        data: ServerScheduledTaskRun[];
+        links: {
+            first: string | null;
+            last: string | null;
+            prev: string | null;
+            next: string | null;
+        };
+        meta: {
+            current_page: number;
+            from: number | null;
+            last_page: number;
+            per_page: number;
+            to: number | null;
+            total: number;
+        };
+    };
+    supervisorTasks?: ServerSupervisorTask[];
+    installedDatabase?: {
+        id: number;
+        service_name: string;
+        configuration: {
+            type: string;
+            version: string;
+            root_password?: string;
+        };
+        status: string;
+        progress_step?: number | null;
+        progress_total?: number | null;
+        progress_label?: string | null;
+        installed_at?: string;
+    } | null;
+    databases?: {
+        id: number;
+        name: string;
+        type: string;
+        version: string;
+        port: number;
+        status: string;
+        created_at: string;
+    }[];
+    phps: ServerPhp[];
+    sites: ServerSite[];
+    availablePhpVersions: Record<string, string>;
+    phpExtensions: Record<string, string>;
+    defaultSettings: Record<string, string | number>;
     created_at: string;
     updated_at: string;
 }
@@ -233,9 +286,100 @@ export interface ServerSite {
     git_branch?: string | null;
     last_deployment_sha?: string | null;
     last_deployed_at?: string | null;
+    last_deployed_at_human?: string | null;
+    auto_deploy_enabled?: boolean;
     configuration?: Record<string, unknown> | null;
     provisioned_at?: string | null;
+    provisioned_at_human?: string | null;
     git_installed_at?: string | null;
     created_at: string;
     updated_at: string;
+    server?: {
+        id: number;
+        vanity_name: string;
+        provider?: string | null;
+        public_ip: string;
+        private_ip?: string | null;
+        connection: string;
+        monitoring_status?: string | null;
+        latestMetrics?: ServerMetric;
+    };
+    executionContext?: {
+        workingDirectory: string;
+        user: string | null;
+        timeout: number;
+    };
+    commandHistory?: {
+        data: {
+            id: number;
+            command: string;
+            output: string;
+            errorOutput: string;
+            exitCode: number | null;
+            ranAt: string;
+            durationMs: number;
+            success: boolean;
+        }[];
+        current_page: number;
+        last_page: number;
+        per_page: number;
+        total: number;
+    };
+    applicationType?: string | null;
+    gitRepository?: {
+        provider: string;
+        repository: string;
+        branch: string;
+        deployKey: string;
+        lastDeployedSha: string | null;
+        lastDeployedAt: string | null;
+    } | null;
+    deploymentScript?: string | null;
+    gitConfig?: {
+        provider: string | null;
+        repository: string | null;
+        branch: string | null;
+        deploy_key: string | null;
+    };
+    deployments?: {
+        data: {
+            id: number;
+            status: 'pending' | 'running' | 'success' | 'failed';
+            deployment_script: string;
+            output: string | null;
+            error_output: string | null;
+            exit_code: number | null;
+            commit_sha: string | null;
+            commit_message: string | null;
+            branch: string | null;
+            duration_ms: number | null;
+            duration_seconds: number | null;
+            started_at: string | null;
+            completed_at: string | null;
+            created_at: string;
+            created_at_human: string;
+        }[];
+        current_page: number;
+        last_page: number;
+        per_page: number;
+        total: number;
+        links: {
+            first: string | null;
+            last: string | null;
+            prev: string | null;
+            next: string | null;
+        };
+    };
+    latestDeployment?: {
+        id: number;
+        status: 'pending' | 'running' | 'success' | 'failed';
+        output: string | null;
+        error_output: string | null;
+        commit_sha: string | null;
+        commit_message: string | null;
+        branch: string | null;
+        duration_seconds: number | null;
+        started_at: string | null;
+        completed_at: string | null;
+    } | null;
 }

@@ -1,20 +1,20 @@
 <?php
 
-namespace App\Packages\Services\Scheduler\Task;
+namespace App\Packages\Services\Supervisor\Task;
 
 use App\Models\Server;
-use App\Models\ServerScheduledTask;
+use App\Models\ServerSupervisorTask;
 use Exception;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Server Scheduled Task Removal Job
+ * Supervisor Task Removal Job
  *
  * Handles queued task removal from remote servers with real-time status updates
  */
-class ServerScheduleTaskRemoverJob implements ShouldQueue
+class SupervisorTaskRemoverJob implements ShouldQueue
 {
     use Queueable;
 
@@ -35,24 +35,25 @@ class ServerScheduleTaskRemoverJob implements ShouldQueue
         set_time_limit(0);
 
         // Load the task from database
-        $task = ServerScheduledTask::findOrFail($this->taskId);
+        $task = ServerSupervisorTask::findOrFail($this->taskId);
 
         // Store original status for rollback on failure
         $originalStatus = $task->status;
 
-        Log::info('Starting scheduled task removal', [
+        Log::info('Starting supervisor task removal', [
             'task_id' => $task->id,
             'server_id' => $this->server->id,
+            'task_name' => $task->name,
         ]);
 
         try {
             // Create remover instance
-            $remover = new ServerScheduleTaskRemover($this->server, $task);
+            $remover = new SupervisorTaskRemover($this->server, $task);
 
             // Execute removal on remote server
             $remover->execute();
 
-            Log::info('Scheduled task removal completed successfully', [
+            Log::info('Supervisor task removal completed successfully', [
                 'task_id' => $task->id,
                 'server_id' => $this->server->id,
             ]);
@@ -65,7 +66,7 @@ class ServerScheduleTaskRemoverJob implements ShouldQueue
             $task->update(['status' => $originalStatus]);
             // Model event broadcasts automatically via Reverb
 
-            Log::error('Scheduled task removal failed', [
+            Log::error('Supervisor task removal failed', [
                 'task_id' => $task->id,
                 'server_id' => $this->server->id,
                 'error' => $e->getMessage(),

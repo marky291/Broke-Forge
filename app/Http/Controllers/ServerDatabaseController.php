@@ -6,6 +6,7 @@ use App\Enums\DatabaseStatus;
 use App\Enums\DatabaseType;
 use App\Http\Controllers\Concerns\PreparesSiteData;
 use App\Http\Requests\Servers\InstallDatabaseRequest;
+use App\Http\Resources\ServerResource;
 use App\Models\Server;
 use App\Packages\Services\Database\MariaDB\MariaDbInstallerJob;
 use App\Packages\Services\Database\MariaDB\MariaDbRemoverJob;
@@ -33,49 +34,11 @@ class ServerDatabaseController extends Controller
 
     public function index(Server $server): Response
     {
-        $database = $server->databases()->latest()->first();
-        $databases = $server->databases()->latest()->get();
-
         return Inertia::render('servers/database', [
-            'server' => $server->only([
-                'id',
-                'vanity_name',
-                'provider',
-                'public_ip',
-                'private_ip',
-                'ssh_port',
-                'connection', 'monitoring_status',
-                'provision_status',
-                'created_at',
-                'updated_at',
-            ]),
+            'server' => new ServerResource($server),
             'availableDatabases' => Inertia::defer(
                 fn () => $this->databaseConfig->getAvailableTypes($server->os_codename)
             ),
-            'installedDatabase' => $database ? [
-                'id' => $database->id,
-                'service_name' => $database->name,
-                'configuration' => [
-                    'type' => $database->type,
-                    'version' => $database->version,
-                    'root_password' => $database->root_password,
-                ],
-                'status' => $database->status,
-                'progress_step' => $database->current_step,
-                'progress_total' => $database->total_steps,
-                'progress_label' => $database->progress_label ?? null,
-                'installed_at' => $database->created_at?->toISOString(),
-            ] : null,
-            'databases' => $databases->map(fn ($db) => [
-                'id' => $db->id,
-                'name' => $db->name,
-                'type' => $db->type,
-                'version' => $db->version,
-                'port' => $db->port,
-                'status' => $db->status,
-                'created_at' => $db->created_at?->toISOString(),
-            ]),
-            'latestMetrics' => $this->getLatestMetrics($server),
         ]);
     }
 

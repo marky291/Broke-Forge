@@ -5,56 +5,11 @@ import { Separator } from '@/components/ui/separator';
 import SiteLayout from '@/layouts/server/site-layout';
 import { dashboard } from '@/routes';
 import { show as showServer } from '@/routes/servers';
-import { type BreadcrumbItem } from '@/types';
+import { type BreadcrumbItem, type ServerSite } from '@/types';
 import { Head, router, useForm } from '@inertiajs/react';
+import { useEcho } from '@laravel/echo-react';
 import { CheckCircle, Clock, GitBranch, Loader2, Lock, Trash2, XCircle } from 'lucide-react';
-import { type ReactNode, useEffect } from 'react';
-
-type ServerType = {
-    id: number;
-    vanity_name: string;
-    public_ip: string;
-    ssh_port: number;
-    private_ip?: string | null;
-    connection: string;
-    created_at: string;
-    updated_at: string;
-};
-
-/**
- * Represents a site hosted on a server.
- * Maps to the ServerSite model on the backend.
- */
-type ServerSite = {
-    id: number;
-    domain: string;
-    document_root: string;
-    php_version: string;
-    ssl_enabled: boolean;
-    status: string;
-    configuration: Record<string, unknown> | null;
-    provisioned_at: string | null;
-    git_status?: string;
-    last_deployed_at?: string;
-    created_at: string;
-    updated_at: string;
-};
-
-type GitRepository = {
-    provider: string;
-    repository: string;
-    branch: string;
-    deployKey: string;
-    lastDeployedSha: string | null;
-    lastDeployedAt: string | null;
-};
-
-type SiteApplicationProps = {
-    server: ServerType;
-    site: ServerSite;
-    applicationType: string | null;
-    gitRepository?: GitRepository | null;
-};
+import { type ReactNode } from 'react';
 
 const statusMeta: Record<string, { badgeClass: string; label: string; icon: ReactNode; description: string }> = {
     active: {
@@ -105,8 +60,11 @@ const formatDate = (dateString: string | null | undefined): string => {
 /**
  * Render the BrokeForge site application view.
  */
-export default function SiteApplication({ server, site, applicationType, gitRepository }: SiteApplicationProps) {
+export default function SiteApplication({ site }: { site: ServerSite }) {
     const { post, processing } = useForm();
+    const server = site.server!;
+    const applicationType = site.applicationType;
+    const gitRepository = site.gitRepository;
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard.url() },
@@ -126,16 +84,10 @@ export default function SiteApplication({ server, site, applicationType, gitRepo
         });
     };
 
-    // Auto-refresh while provisioning or installing
-    useEffect(() => {
-        if (site.status === 'provisioning' || site.git_status === 'installing') {
-            const interval = setInterval(() => {
-                router.reload({ only: ['site', 'applicationType', 'gitRepository'] });
-            }, 3000); // Poll every 3 seconds
-
-            return () => clearInterval(interval);
-        }
-    }, [site.status, site.git_status]);
+    // Listen for real-time site updates via Reverb WebSocket
+    useEcho(`sites.${site.id}`, 'ServerSiteUpdated', () => {
+        router.reload({ only: ['site'], preserveScroll: true, preserveState: true });
+    });
 
     const handleCancelInstallation = () => {
         router.post(

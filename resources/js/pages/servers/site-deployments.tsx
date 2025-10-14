@@ -8,37 +8,11 @@ import { Textarea } from '@/components/ui/textarea';
 import SiteLayout from '@/layouts/server/site-layout';
 import { dashboard } from '@/routes';
 import { show as showServer } from '@/routes/servers';
-import { type BreadcrumbItem } from '@/types';
+import { type BreadcrumbItem, type ServerSite } from '@/types';
 import { Head, router, useForm } from '@inertiajs/react';
+import { useEcho } from '@laravel/echo-react';
 import { CheckCircle2, Clock, Eye, GitCommitHorizontal, Loader2, Rocket, XCircle } from 'lucide-react';
-import { useEffect, useState } from 'react';
-
-type Server = {
-    id: number;
-    vanity_name: string;
-    connection: string;
-};
-
-type ServerSite = {
-    id: number;
-    domain: string;
-    document_root: string | null;
-    status: string;
-    git_status: string;
-    git_provider?: string | null;
-    git_repository?: string | null;
-    git_branch?: string | null;
-    last_deployment_sha?: string | null;
-    last_deployed_at?: string | null;
-    auto_deploy_enabled?: boolean;
-};
-
-type GitConfig = {
-    provider: string | null;
-    repository: string | null;
-    branch: string | null;
-    deploy_key: string | null;
-};
+import { useState } from 'react';
 
 type Deployment = {
     id: number;
@@ -58,21 +32,12 @@ type Deployment = {
     created_at_human: string;
 };
 
-export default function SiteDeployments({
-    server,
-    site,
-    deploymentScript,
-    gitConfig,
-    deployments,
-    latestDeployment,
-}: {
-    server: Server;
-    site: ServerSite;
-    deploymentScript: string;
-    gitConfig: GitConfig;
-    deployments: { data: Deployment[] };
-    latestDeployment: Deployment | null;
-}) {
+export default function SiteDeployments({ site }: { site: ServerSite }) {
+    const server = site.server!;
+    const deploymentScript = site.deploymentScript!;
+    const gitConfig = site.gitConfig!;
+    const deployments = site.deployments || { data: [] };
+    const latestDeployment = site.latestDeployment;
     const {
         data,
         setData,
@@ -114,11 +79,12 @@ export default function SiteDeployments({
             {
                 onSuccess: (page) => {
                     // Immediately set the new deployment to show live output
-                    const newDeployment = (page.props as any).latestDeployment;
+                    const updatedSite = (page.props as any).site as ServerSite;
+                    const newDeployment = updatedSite.latestDeployment;
                     if (newDeployment) {
-                        setLiveDeployment(newDeployment);
+                        setLiveDeployment(newDeployment as any);
                     }
-                    router.reload({ only: ['latestDeployment', 'deployments'] });
+                    router.reload({ only: ['site'] });
                 },
                 onFinish: () => setDeploying(false),
             },
@@ -140,23 +106,22 @@ export default function SiteDeployments({
         setOutputDialogOpen(true);
     };
 
-    // Poll for deployment status when pending or running
-    useEffect(() => {
-        if (liveDeployment?.status === 'pending' || liveDeployment?.status === 'running') {
-            const interval = setInterval(() => {
-                fetch(`/servers/${server.id}/sites/${site.id}/deployments/${liveDeployment.id}/status`)
-                    .then((res) => res.json())
-                    .then((deployment) => {
-                        setLiveDeployment(deployment);
-                        if (deployment.status !== 'pending' && deployment.status !== 'running') {
-                            router.reload({ only: ['latestDeployment', 'deployments'] });
-                        }
-                    });
-            }, 1000); // Poll every 1 second for faster updates
-
-            return () => clearInterval(interval);
-        }
-    }, [liveDeployment, server.id, site.id]);
+    // Listen for real-time deployment updates via Reverb WebSocket
+    useEcho(`sites.${site.id}`, 'ServerSiteUpdated', () => {
+        router.reload({
+            only: ['site'],
+            preserveScroll: true,
+            preserveState: true,
+            onSuccess: (page) => {
+                // Update live deployment if it's still active
+                const updatedSite = (page.props as any).site as ServerSite;
+                const updatedLatest = updatedSite.latestDeployment;
+                if (updatedLatest) {
+                    setLiveDeployment(updatedLatest as any);
+                }
+            },
+        });
+    });
 
     const getStatusBadge = (status: string) => {
         switch (status) {

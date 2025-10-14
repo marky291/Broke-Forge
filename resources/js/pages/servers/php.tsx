@@ -7,6 +7,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Label } from '@/components/ui/label';
 import { PageHeader } from '@/components/ui/page-header';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useEcho } from '@laravel/echo-react';
 import ServerLayout from '@/layouts/server/layout';
 import { dashboard } from '@/routes';
 import { show as showServer } from '@/routes/servers';
@@ -19,19 +20,21 @@ type AvailablePhpVersions = {
     [key: string]: string;
 };
 
-export default function Php({
-    server,
-    availablePhpVersions,
-    installedPhpVersions,
-}: {
-    server: Server;
-    availablePhpVersions: AvailablePhpVersions;
-    installedPhpVersions: ServerPhp[];
-}) {
+export default function Php({ server }: { server: Server }) {
+    // Listen for real-time server updates via Reverb
+    useEcho(`servers.${server.id}`, 'ServerUpdated', () => {
+        router.reload({ only: ['server'], preserveScroll: true });
+    });
+
     // Get the default PHP version or first installed version
-    const defaultPhp = installedPhpVersions.find((php) => php.is_cli_default) || installedPhpVersions[0];
+    const defaultPhp = server.phps.find((php) => php.is_cli_default) || server.phps[0];
 
     const [isAddVersionDialogOpen, setIsAddVersionDialogOpen] = useState(false);
+
+    const openAddVersionDialog = () => {
+        resetAddVersion();
+        setIsAddVersionDialogOpen(true);
+    };
 
     const { data, setData, post, processing, errors } = useForm({
         version: defaultPhp?.version || '8.3',
@@ -47,6 +50,7 @@ export default function Php({
         processing: addVersionProcessing,
         errors: addVersionErrors,
         reset: resetAddVersion,
+        clearErrors: clearAddVersionErrors,
     } = useForm({
         version: '',
     });
@@ -102,14 +106,14 @@ export default function Php({
         <ServerLayout server={server} breadcrumbs={breadcrumbs}>
             <Head title={`PHP — ${server.vanity_name}`} />
             <PageHeader
-                title={installedPhpVersions.length > 0 ? 'PHP Configuration' : 'PHP Installation'}
+                title={server.phps.length > 0 ? 'PHP Configuration' : 'PHP Installation'}
                 description={
-                    installedPhpVersions.length > 0
+                    server.phps.length > 0
                         ? 'Configure PHP version, extensions, and settings for your server.'
                         : 'Install and configure PHP for your server.'
                 }
             >
-                {installedPhpVersions.length === 0 && (
+                {server.phps.length === 0 && (
                     <>
                         <CardContainer
                             title="Install PHP"
@@ -125,7 +129,7 @@ export default function Php({
                                     <path d="M1.5 3.5L6 6L10.5 3.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
                                 </svg>
                             }
-                            action={<CardContainerAddButton label="Add Version" onClick={() => setIsAddVersionDialogOpen(true)} />}
+                            action={<CardContainerAddButton label="Add Version" onClick={openAddVersionDialog} />}
                         >
                             <div className="p-12 text-center">
                                 <svg
@@ -195,7 +199,7 @@ export default function Php({
                     </>
                 )}
 
-                {installedPhpVersions.length > 0 && (
+                {server.phps.length > 0 && (
                     <CardContainer
                         title="Versions"
                         icon={
@@ -211,12 +215,12 @@ export default function Php({
                             </svg>
                         }
                         action={
-                            <CardContainerAddButton label="Add Version" onClick={() => setIsAddVersionDialogOpen(true)} aria-label="Add Version" />
+                            <CardContainerAddButton label="Add Version" onClick={openAddVersionDialog} aria-label="Add Version" />
                         }
                         parentBorder={false}
                     >
                         <div className="space-y-3">
-                            {installedPhpVersions.map((php) => (
+                            {server.phps.map((php) => (
                                 <div
                                     key={php.id}
                                     className="divide-y divide-neutral-200 rounded-lg border border-neutral-200 bg-white dark:divide-white/8 dark:border-white/8 dark:bg-white/3"
@@ -336,13 +340,19 @@ export default function Php({
             >
                 <div className="space-y-2">
                     <Label htmlFor="add-version">PHP Version</Label>
-                    <Select value={addVersionData.version} onValueChange={(value) => setAddVersionData('version', value)}>
+                    <Select
+                        value={addVersionData.version}
+                        onValueChange={(value) => {
+                            clearAddVersionErrors('version');
+                            setAddVersionData('version', value);
+                        }}
+                    >
                         <SelectTrigger id="add-version">
                             <SelectValue placeholder="Select PHP version" />
                         </SelectTrigger>
                         <SelectContent>
-                            {Object.entries(availablePhpVersions).map(([value, label]) => (
-                                <SelectItem key={value} value={value}>
+                            {Object.entries(server.availablePhpVersions).map(([value, label]) => (
+                                <SelectItem key={value} value={String(value)}>
                                     {label}
                                 </SelectItem>
                             ))}

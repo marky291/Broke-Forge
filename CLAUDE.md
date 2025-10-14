@@ -10,16 +10,41 @@
 
 ## Reverb Package Lifecycle Pattern
 
-When building packages that require real-time status updates (firewall rules, scheduled tasks, deployments, etc.), use the **Reverb Package Lifecycle** pattern:
+**⚠️ MANDATORY for packages with real-time status updates** - When building packages that require real-time status updates (firewall rules, scheduled tasks, SSL certificates, deployments, etc.), you **MUST** use the **Reverb Package Lifecycle** pattern:
 
 1. **Create database record FIRST** with `status: 'pending'` before dispatching job
 2. **Job receives record ID** (not data array) and manages status lifecycle: pending → installing → active/failed
 3. **Model events automatically broadcast** changes via Laravel Reverb (never manually dispatch events)
 4. **Frontend uses useEcho + router.reload()** to fetch fresh data when WebSocket events arrive
 
-**Key principle:** Event-driven architecture where model changes automatically trigger broadcasts, and frontend fetches updated resource data via Inertia. No polling required.
+**Key principle:** Event-driven architecture where model changes automatically trigger broadcasts, and frontend fetches updated resource data via Inertia. **No polling required.**
 
-See @app/Packages/README.md Rule 6 for complete implementation details and examples.
+### When to Use This Pattern
+
+**✅ USE when:**
+- Users need to see progress in **real-time**
+- Operation takes **>2 seconds** to complete
+- Resource has status transitions (pending → installing → active/failed)
+- Creating **user-facing resources** (firewall rules, tasks, certificates)
+
+**❌ DON'T USE when:**
+- Initial server provisioning (one-time setup)
+- Operations complete in <2 seconds
+- Infrastructure-only packages with no user-facing resources
+
+### Quick Implementation Checklist
+
+1. Add `status` column to migration (string, default 'pending')
+2. Add `'status'` to model's `$fillable`
+3. Add model `booted()` with `created()`, `updated()`, `deleted()` event listeners
+4. Controller creates record with `status: 'pending'`, then dispatches job with record ID
+5. Job accepts record ID, updates status through lifecycle
+6. Frontend uses `useEcho()` + `router.reload()` for real-time updates
+7. Write tests for all status transitions
+
+**📖 Complete Implementation Guide:** See @app/Packages/README.md Rule 6 for complete implementation details, examples, testing guidelines, and the full decision guide.
+
+**Reference Implementation:** `app/Packages/Services/Firewall/FirewallRuleInstallerJob.php` + `app/Models/ServerFirewallRule.php`
 
 <laravel-boost-guidelines>
 === foundation rules ===

@@ -84,12 +84,6 @@ class SupervisorTaskInstaller extends PackageInstaller implements ServerPackage
             // Start the task using sanitized name
             "supervisorctl start {$sanitizedName} || true",
 
-            // Mark task as installed and active
-            fn () => $this->task->update([
-                'status' => 'active',
-                'installed_at' => now(),
-            ]),
-
             $this->track(SupervisorTaskInstallerMilestones::COMPLETE),
         ];
     }

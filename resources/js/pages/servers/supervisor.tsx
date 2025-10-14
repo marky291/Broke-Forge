@@ -12,10 +12,12 @@ import { dashboard } from '@/routes';
 import { show as showServer } from '@/routes/servers';
 import { type BreadcrumbItem, type Server } from '@/types';
 import { Head, router, useForm } from '@inertiajs/react';
-import { CheckCircle, Eye, Loader2, Pause, Pencil, Play, RefreshCw, Trash2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEcho } from '@laravel/echo-react';
+import { AlertCircle, CheckCircle, Eye, Loader2, Pause, Pencil, Play, RefreshCw, RotateCw, Trash2 } from 'lucide-react';
+import { useState } from 'react';
 
-export default function Supervisor({ server, tasks }: { server: Server; tasks: any[] }) {
+export default function Supervisor({ server }: { server: Server }) {
+    const tasks = server.supervisorTasks || [];
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard.url() },
         { title: server.vanity_name, href: showServer({ server: server.id }).url },
@@ -67,16 +69,14 @@ export default function Supervisor({ server, tasks }: { server: Server; tasks: a
         autorestart_unexpected: true,
     });
 
-    // Auto-reload when supervisor status is installing or uninstalling
-    useEffect(() => {
-        if (isInstalling || isUninstalling) {
-            const interval = setInterval(() => {
-                router.reload({ only: ['server'] });
-            }, 5000); // Check every 5 seconds
-
-            return () => clearInterval(interval);
-        }
-    }, [server.supervisor_status]);
+    // Real-time updates via Reverb WebSocket - listens for supervisor changes
+    useEcho(`servers.${server.id}`, 'ServerUpdated', () => {
+        router.reload({
+            only: ['server'],
+            preserveScroll: true,
+            preserveState: true,
+        });
+    });
 
     const handleInstall = () => {
         post(`/servers/${server.id}/supervisor/install`, {
@@ -113,6 +113,15 @@ export default function Supervisor({ server, tasks }: { server: Server; tasks: a
             return;
         }
         post(`/servers/${server.id}/supervisor/tasks/${task.id}/restart`, {
+            onSuccess: () => router.reload(),
+        });
+    };
+
+    const handleRetryTask = (task: any) => {
+        if (!confirm(`Retry installation of "${task.name}"?`)) {
+            return;
+        }
+        post(`/servers/${server.id}/supervisor/tasks/${task.id}/retry`, {
             onSuccess: () => router.reload(),
         });
     };
@@ -220,6 +229,18 @@ export default function Supervisor({ server, tasks }: { server: Server; tasks: a
                                                     <div className="min-w-0 flex-1">
                                                         <div className="flex items-center gap-2">
                                                             <h4 className="truncate text-sm font-medium text-foreground">{task.name}</h4>
+                                                            {task.status === 'pending' && (
+                                                                <span className="inline-flex items-center gap-1 rounded bg-slate-500/10 px-1.5 py-0.5 text-xs text-slate-600 dark:text-slate-400">
+                                                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                                                    Pending
+                                                                </span>
+                                                            )}
+                                                            {task.status === 'installing' && (
+                                                                <span className="inline-flex items-center gap-1 rounded bg-blue-500/10 px-1.5 py-0.5 text-xs text-blue-600 dark:text-blue-400">
+                                                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                                                    Installing
+                                                                </span>
+                                                            )}
                                                             {task.status === 'active' && (
                                                                 <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 px-1.5 py-0.5 text-xs text-emerald-600 dark:text-emerald-400">
                                                                     <CheckCircle className="h-3 w-3" />
@@ -230,6 +251,18 @@ export default function Supervisor({ server, tasks }: { server: Server; tasks: a
                                                                 <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 px-1.5 py-0.5 text-xs text-amber-600 dark:text-amber-400">
                                                                     <Pause className="h-3 w-3" />
                                                                     Inactive
+                                                                </span>
+                                                            )}
+                                                            {task.status === 'failed' && (
+                                                                <span className="inline-flex items-center gap-1 rounded bg-red-500/10 px-1.5 py-0.5 text-xs text-red-600 dark:text-red-400">
+                                                                    <AlertCircle className="h-3 w-3" />
+                                                                    Failed
+                                                                </span>
+                                                            )}
+                                                            {task.status === 'removing' && (
+                                                                <span className="inline-flex items-center gap-1 rounded bg-orange-500/10 px-1.5 py-0.5 text-xs text-orange-600 dark:text-orange-400">
+                                                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                                                    Removing
                                                                 </span>
                                                             )}
                                                         </div>
@@ -245,11 +278,23 @@ export default function Supervisor({ server, tasks }: { server: Server; tasks: a
                                                         </div>
                                                     </div>
                                                     <div className="flex flex-shrink-0 items-center gap-1.5">
+                                                        {task.status === 'failed' && (
+                                                            <Button
+                                                                size="sm"
+                                                                variant="ghost"
+                                                                onClick={() => handleRetryTask(task)}
+                                                                disabled={processing}
+                                                                className="h-8 w-8 p-0 text-blue-600 hover:text-blue-600"
+                                                                title="Retry installation"
+                                                            >
+                                                                <RotateCw className="h-4 w-4" />
+                                                            </Button>
+                                                        )}
                                                         <Button
                                                             size="sm"
                                                             variant="ghost"
                                                             onClick={() => handleOpenEditDialog(task)}
-                                                            disabled={processing}
+                                                            disabled={processing || task.status === 'pending' || task.status === 'installing' || task.status === 'removing'}
                                                             className="h-8 w-8 p-0"
                                                             title="Edit task"
                                                         >
@@ -269,7 +314,7 @@ export default function Supervisor({ server, tasks }: { server: Server; tasks: a
                                                             size="sm"
                                                             variant="ghost"
                                                             onClick={() => handleToggleTask(task)}
-                                                            disabled={processing}
+                                                            disabled={processing || task.status === 'pending' || task.status === 'installing' || task.status === 'failed' || task.status === 'removing'}
                                                             className="h-8 w-8 p-0"
                                                             title={task.status === 'active' ? 'Stop task' : 'Start task'}
                                                         >
@@ -279,7 +324,7 @@ export default function Supervisor({ server, tasks }: { server: Server; tasks: a
                                                             size="sm"
                                                             variant="ghost"
                                                             onClick={() => handleDeleteTask(task)}
-                                                            disabled={processing}
+                                                            disabled={processing || task.status === 'pending' || task.status === 'installing' || task.status === 'removing'}
                                                             className="h-8 w-8 p-0 text-destructive hover:text-destructive"
                                                             title="Delete task"
                                                         >

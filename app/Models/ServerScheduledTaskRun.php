@@ -69,4 +69,20 @@ class ServerScheduledTaskRun extends Model
     {
         return $this->exit_code !== 0;
     }
+
+    /**
+     * Boot the model and dispatch broadcast events.
+     */
+    protected static function booted(): void
+    {
+        // Broadcast when new task run is created (real-time task execution updates)
+        static::created(function (self $run): void {
+            \App\Events\ServerUpdated::dispatch($run->server_id);
+        });
+
+        // Broadcast when task run is updated
+        static::updated(function (self $run): void {
+            \App\Events\ServerUpdated::dispatch($run->server_id);
+        });
+    }
 }

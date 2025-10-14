@@ -82,6 +82,10 @@ Route::post('api/servers/{server}/scheduler/runs', [ServerSchedulerController::c
     ])
     ->name('api.servers.scheduler.runs.store');
 
+Route::get('/test', function () {
+    return \App\Http\Resources\ServerResource::make(\App\Models\Server::find(18));
+});
+
 /*
 |--------------------------------------------------------------------------
 | Authenticated Routes
@@ -273,6 +277,10 @@ Route::middleware('auth')->group(function () {
                 Route::post('{scheduledTask}/toggle', [ServerSchedulerController::class, 'toggleTask'])
                     ->name('scheduler.tasks.toggle');
 
+                Route::post('{scheduledTask}/retry', [ServerSchedulerController::class, 'retryTask'])
+                    ->name('scheduler.tasks.retry')
+                    ->middleware('throttle:10,1'); // Max 10 retries per minute
+
                 Route::post('{scheduledTask}/run', [ServerSchedulerController::class, 'runTask'])
                     ->name('scheduler.tasks.run')
                     ->middleware('throttle:10,1'); // Max 10 manual runs per minute
@@ -315,6 +323,10 @@ Route::middleware('auth')->group(function () {
 
                 Route::post('{supervisorTask}/restart', [ServerSupervisorController::class, 'restartTask'])
                     ->name('supervisor.tasks.restart');
+
+                Route::post('{supervisorTask}/retry', [ServerSupervisorController::class, 'retryTask'])
+                    ->name('supervisor.tasks.retry')
+                    ->middleware('throttle:10,1'); // Max 10 retries per minute
             });
         });
 
