@@ -106,7 +106,7 @@ export default function SiteGitRepository({ server, site, gitRepository, flash, 
     const handleSubmit = useCallback(
         (event: React.FormEvent<HTMLFormElement>) => {
             event.preventDefault();
-            post(`/servers/${server.id}/sites/${site.id}/application`, {
+            post(`/servers/${server.id}/sites/${site.id}/application/git/setup`, {
                 onSuccess: () => {
                     // Force reload to get updated status
                     router.reload();
