@@ -3,7 +3,9 @@
 namespace App\Packages\Services\PHP;
 
 use App\Models\Server;
+use App\Models\ServerPhp;
 use App\Packages\Enums\PhpVersion;
+use Exception;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
@@ -11,7 +13,7 @@ use Illuminate\Support\Facades\Log;
 /**
  * PHP Removal Job
  *
- * Handles queued PHP removal on remote servers
+ * Handles queued PHP removal on remote servers with lifecycle management
  */
 class PhpRemoverJob implements ShouldQueue
 {
@@ -26,8 +28,7 @@ class PhpRemoverJob implements ShouldQueue
 
     public function __construct(
         public Server $server,
-        public PhpVersion $phpVersion,
-        public int $phpId
+        public int $phpId  // ← Receives PHP record ID only
     ) {}
 
     public function handle(): void
@@ -35,14 +36,52 @@ class PhpRemoverJob implements ShouldQueue
         // Set no time limit for long-running removal process
         set_time_limit(0);
 
-        Log::info("Starting PHP {$this->phpVersion->value} removal for server #{$this->server->id}");
+        // Load the PHP record from database
+        $php = ServerPhp::findOrFail($this->phpId);
+        $originalStatus = $php->status; // Store for rollback on failure
 
-        // Create remover instance
-        $remover = new PhpRemover($this->server);
+        // Map version string to PhpVersion enum
+        $phpVersion = PhpVersion::from($php->version);
 
-        // Execute removal - base class handles failure marking automatically
-        $remover->execute($this->phpVersion, $this->phpId);
+        Log::info("Starting PHP {$phpVersion->value} removal", [
+            'php_id' => $php->id,
+            'server_id' => $this->server->id,
+            'version' => $phpVersion->value,
+        ]);
 
-        Log::info("PHP {$this->phpVersion->value} removal completed for server #{$this->server->id}");
+        try {
+            // ✅ UPDATE: active → removing
+            // Model event broadcasts automatically via Reverb
+            $php->update(['status' => 'removing']);
+
+            // Create remover instance
+            $remover = new PhpRemover($this->server);
+
+            // Execute removal
+            $remover->execute($phpVersion, $this->phpId);
+
+            // ✅ DELETE record from database on success
+            // Model's deleted() event broadcasts automatically via Reverb
+            $php->delete();
+
+            Log::info("PHP {$phpVersion->value} removal completed", [
+                'php_id' => $this->phpId,
+                'server_id' => $this->server->id,
+            ]);
+
+        } catch (Exception $e) {
+            // ✅ ROLLBACK: Restore original status on failure (allows retry)
+            // Model event broadcasts automatically via Reverb
+            $php->update(['status' => $originalStatus]);
+
+            Log::error("PHP {$phpVersion->value} removal failed", [
+                'php_id' => $php->id,
+                'server_id' => $this->server->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            throw $e;  // Re-throw for Laravel's retry mechanism
+        }
     }
 }

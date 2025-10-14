@@ -150,156 +150,6 @@ export default function SiteGitRepository({ server, site, gitRepository, flash, 
         );
     }
 
-    // Render failed state with retry option
-    if (site.git_status === GitStatus.Failed && gitRepository?.repository) {
-        return (
-            <SiteLayout server={server} site={site} breadcrumbs={breadcrumbs}>
-                <Head title={`Git Repository — ${site.domain}`} />
-
-                <div className="space-y-6">
-                    <div className="space-y-2">
-                        <h1 className="text-2xl font-semibold">Repository Installation Failed</h1>
-                        <p className="text-sm text-muted-foreground">Update your configuration below and retry the installation.</p>
-                    </div>
-
-                    <Alert variant="destructive">
-                        <XCircle className="h-4 w-4" />
-                        <AlertDescription>
-                            <div className="space-y-3">
-                                <p className="font-medium">Repository installation failed</p>
-                                {gitRepository?.latestEvent?.error_log ? (
-                                    <details className="mt-2">
-                                        <summary className="cursor-pointer text-sm hover:underline">View error details</summary>
-                                        <pre className="mt-2 max-h-48 overflow-y-auto rounded bg-destructive/10 p-3 font-mono text-xs whitespace-pre-wrap">
-                                            {gitRepository.latestEvent.error_log}
-                                        </pre>
-                                    </details>
-                                ) : (
-                                    <p className="text-sm">Please check your repository settings and SSH deploy key configuration, then try again.</p>
-                                )}
-                            </div>
-                        </AlertDescription>
-                    </Alert>
-
-                    {/* Editable Repository Configuration */}
-                    <Card>
-                        <CardHeader className="space-y-1">
-                            <CardTitle>Update Configuration</CardTitle>
-                            <CardDescription>Modify the settings below and retry the installation</CardDescription>
-                        </CardHeader>
-                        <Separator />
-                        <CardContent className="py-6">
-                            <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-                                <div className="space-y-3">
-                                    <Label htmlFor="failed-provider" className="text-sm text-muted-foreground">
-                                        Provider
-                                    </Label>
-                                    <Select value={data.provider} onValueChange={handleProviderChange}>
-                                        <SelectTrigger id="failed-provider" className="w-full md:w-1/2">
-                                            <SelectValue placeholder="Choose provider" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectGroup>
-                                                {GIT_PROVIDERS.map((provider) => (
-                                                    <SelectItem key={provider.value} value={provider.value}>
-                                                        {provider.label}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectGroup>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-
-                                <div className="space-y-3">
-                                    <Label htmlFor="failed-repository" className="text-sm text-muted-foreground">
-                                        Repository
-                                    </Label>
-                                    <Input
-                                        id="failed-repository"
-                                        value={data.repository}
-                                        onChange={(event) => setData('repository', event.target.value)}
-                                        placeholder="e.g. organisation/project"
-                                        className="w-full"
-                                        required
-                                    />
-                                    {(errors.repository || serverErrors?.repository) && (
-                                        <p className="text-xs text-destructive">{errors.repository || serverErrors?.repository}</p>
-                                    )}
-                                </div>
-
-                                <div className="space-y-3">
-                                    <Label htmlFor="failed-branch" className="text-sm text-muted-foreground">
-                                        Branch
-                                    </Label>
-                                    <Input
-                                        id="failed-branch"
-                                        value={data.branch}
-                                        onChange={(event) => setData('branch', event.target.value)}
-                                        placeholder="main"
-                                        className="w-full md:w-1/2"
-                                        required
-                                    />
-                                    {(errors.branch || serverErrors?.branch) && (
-                                        <p className="text-xs text-destructive">{errors.branch || serverErrors?.branch}</p>
-                                    )}
-                                    <p className="text-xs text-muted-foreground">
-                                        Common branch names: <span className="font-medium">main</span>, <span className="font-medium">master</span>
-                                    </p>
-                                </div>
-
-                                <div className="flex justify-end">
-                                    <Button type="submit" disabled={processing || !data.repository || !data.branch} variant="destructive">
-                                        {processing ? (
-                                            <>
-                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                                Retrying...
-                                            </>
-                                        ) : (
-                                            'Retry Installation'
-                                        )}
-                                    </Button>
-                                </div>
-                            </form>
-                        </CardContent>
-                    </Card>
-
-                    {/* SSH Deploy Key Card */}
-                    <CardContainer
-                        title="SSH Deploy Key"
-                        description="Ensure this key is added to your repository with read access"
-                        icon={
-                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path
-                                    d="M8.5 5.5H10.5M7 1.5L4.5 4L7 6.5M4.5 4H1.5M4.5 4C4.5 5.933 6.067 7.5 8 7.5H8.5V9.5L11 7L8.5 4.5V6.5H8C6.895 6.5 6 5.605 6 4.5"
-                                    stroke="currentColor"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                />
-                            </svg>
-                        }
-                    >
-                        <div className="space-y-4">
-                            <div className="rounded-md border border-blue-200 bg-blue-50 p-3 dark:border-blue-900 dark:bg-blue-950/20">
-                                <p className="text-xs text-blue-800 dark:text-blue-200">
-                                    <strong>Tip:</strong> Make sure this SSH key is properly configured in your repository settings before retrying.
-                                </p>
-                            </div>
-                            <div className="overflow-x-auto rounded-md border border-border bg-muted/60 p-4">
-                                <pre className="max-h-56 overflow-y-auto font-mono text-xs leading-relaxed break-all whitespace-pre-wrap">
-                                    {deployKey}
-                                </pre>
-                            </div>
-                            <Button type="button" variant="secondary" onClick={handleCopyDeployKey} className="inline-flex items-center gap-2">
-                                {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                                {copied ? 'Copied' : 'Copy Deploy Key'}
-                            </Button>
-                        </div>
-                    </CardContainer>
-                </div>
-            </SiteLayout>
-        );
-    }
-
     // Render installed state with application info
     if (site.git_status === GitStatus.Installed && gitRepository?.repository) {
         return (
@@ -407,7 +257,7 @@ export default function SiteGitRepository({ server, site, gitRepository, flash, 
         );
     }
 
-    // Render installation form (default state or failed state)
+    // Render installation form (default state)
     return (
         <SiteLayout server={server} site={site} breadcrumbs={breadcrumbs}>
             <Head title={`Git Repository — ${site.domain}`} />
@@ -419,13 +269,6 @@ export default function SiteGitRepository({ server, site, gitRepository, flash, 
                         Configure how BrokeForge should fetch your GitHub repository. Once connected we can deploy the tracked branch on demand.
                     </p>
                 </div>
-
-                {site.git_status === GitStatus.Failed && (
-                    <Alert variant="destructive">
-                        <XCircle className="h-4 w-4" />
-                        <AlertDescription>Repository installation failed. Please check your repository settings and try again.</AlertDescription>
-                    </Alert>
-                )}
 
                 {(errors.repository || serverErrors?.repository) && (
                     <Alert variant="destructive">

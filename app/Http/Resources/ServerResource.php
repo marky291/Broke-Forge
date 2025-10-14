@@ -189,6 +189,7 @@ class ServerResource extends JsonResource
             'last_deployed_at_human' => $site->last_deployed_at?->diffForHumans(),
             'configuration' => $site->configuration,
             'git_status' => $site->git_status?->value,
+            'error_log' => $site->error_log,
         ])->toArray();
     }
 

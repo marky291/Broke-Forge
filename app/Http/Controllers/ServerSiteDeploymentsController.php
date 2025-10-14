@@ -23,7 +23,7 @@ class ServerSiteDeploymentsController extends Controller
     {
         // Check if site has Git repository installed
         if (! $site->hasGitRepository()) {
-            return redirect()->route('servers.sites.git-repository', [$server, $site])
+            return redirect()->route('servers.sites.application.git.setup', [$server, $site])
                 ->with('error', 'Git repository must be installed before deploying.');
         }
 
@@ -55,14 +55,14 @@ class ServerSiteDeploymentsController extends Controller
     {
         // Check if site has Git repository installed
         if (! $site->hasGitRepository()) {
-            return redirect()->route('servers.sites.git-repository', [$server, $site])
+            return redirect()->route('servers.sites.application.git.setup', [$server, $site])
                 ->with('error', 'Git repository must be installed before deploying.');
         }
 
         // Get deployment script
         $deploymentScript = $site->getDeploymentScript();
 
-        // Create deployment record
+        // ✅ CREATE RECORD FIRST with 'pending' status
         $deployment = ServerDeployment::create([
             'server_id' => $server->id,
             'server_site_id' => $site->id,
@@ -70,8 +70,8 @@ class ServerSiteDeploymentsController extends Controller
             'deployment_script' => $deploymentScript,
         ]);
 
-        // Dispatch deployment job
-        SiteGitDeploymentJob::dispatch($server, $site, $deployment);
+        // ✅ THEN dispatch job with deployment record ID
+        SiteGitDeploymentJob::dispatch($server, $deployment->id);
 
         return redirect()
             ->route('servers.sites.deployments', [$server, $site])

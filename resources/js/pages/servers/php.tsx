@@ -13,7 +13,7 @@ import { dashboard } from '@/routes';
 import { show as showServer } from '@/routes/servers';
 import { type BreadcrumbItem, type Server, type ServerPhp } from '@/types';
 import { Head, router, useForm } from '@inertiajs/react';
-import { MoreHorizontal } from 'lucide-react';
+import { AlertCircle, CheckCircle, Loader2, MoreHorizontal } from 'lucide-react';
 import { useState } from 'react';
 
 type AvailablePhpVersions = {
@@ -240,7 +240,42 @@ export default function Php({ server }: { server: Server }) {
                                             )}
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <div className="text-sm text-muted-foreground capitalize">{php.status}</div>
+                                            {/* Status badges */}
+                                            {php.status === 'pending' && (
+                                                <span className="inline-flex items-center gap-1 rounded bg-slate-500/10 px-1.5 py-0.5 text-xs text-slate-600 dark:text-slate-400">
+                                                    <Loader2 className="size-3 animate-spin" />
+                                                    Pending
+                                                </span>
+                                            )}
+                                            {php.status === 'installing' && (
+                                                <span className="inline-flex items-center gap-1 rounded bg-blue-500/10 px-1.5 py-0.5 text-xs text-blue-600 dark:text-blue-400">
+                                                    <Loader2 className="size-3 animate-spin" />
+                                                    Installing
+                                                </span>
+                                            )}
+                                            {php.status === 'active' && (
+                                                <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 px-1.5 py-0.5 text-xs text-emerald-600 dark:text-emerald-400">
+                                                    <CheckCircle className="size-3" />
+                                                    Active
+                                                </span>
+                                            )}
+                                            {php.status === 'inactive' && (
+                                                <span className="inline-flex items-center gap-1 rounded bg-gray-500/10 px-1.5 py-0.5 text-xs text-gray-600 dark:text-gray-400">
+                                                    Inactive
+                                                </span>
+                                            )}
+                                            {php.status === 'failed' && (
+                                                <span className="inline-flex items-center gap-1 rounded bg-red-500/10 px-1.5 py-0.5 text-xs text-red-600 dark:text-red-400">
+                                                    <AlertCircle className="size-3" />
+                                                    Failed
+                                                </span>
+                                            )}
+                                            {php.status === 'removing' && (
+                                                <span className="inline-flex items-center gap-1 rounded bg-orange-500/10 px-1.5 py-0.5 text-xs text-orange-600 dark:text-orange-400">
+                                                    <Loader2 className="size-3 animate-spin" />
+                                                    Removing
+                                                </span>
+                                            )}
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
                                                     <Button variant="ghost" size="sm" className="size-8 p-0">

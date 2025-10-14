@@ -41,6 +41,7 @@ class ServerSite extends Model
         'webhook_id',
         'webhook_secret',
         'deprovisioned_at',
+        'error_log',
     ];
 
     protected $appends = [

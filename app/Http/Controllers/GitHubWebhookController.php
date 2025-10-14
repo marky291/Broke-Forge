@@ -73,7 +73,7 @@ class GitHubWebhookController extends Controller
         // Load server relationship
         $site->load('server');
 
-        // Create deployment record
+        // ✅ CREATE RECORD FIRST with 'pending' status
         $deployment = ServerDeployment::create([
             'server_id' => $site->server->id,
             'server_site_id' => $site->id,
@@ -84,8 +84,8 @@ class GitHubWebhookController extends Controller
             'branch' => $commitInfo['branch'],
         ]);
 
-        // Dispatch deployment job
-        SiteGitDeploymentJob::dispatch($site->server, $site, $deployment);
+        // ✅ THEN dispatch job with deployment record ID
+        SiteGitDeploymentJob::dispatch($site->server, $deployment->id);
 
         Log::info('Auto-deployment triggered via webhook', [
             'site_id' => $site->id,

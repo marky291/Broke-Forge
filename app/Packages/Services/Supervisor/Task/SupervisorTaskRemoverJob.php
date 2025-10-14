@@ -47,6 +47,10 @@ class SupervisorTaskRemoverJob implements ShouldQueue
         ]);
 
         try {
+            // ✅ UPDATE: active → removing
+            // Model event broadcasts automatically via Reverb
+            $task->update(['status' => 'removing']);
+
             // Create remover instance
             $remover = new SupervisorTaskRemover($this->server, $task);
 
@@ -63,8 +67,8 @@ class SupervisorTaskRemoverJob implements ShouldQueue
 
         } catch (Exception $e) {
             // ✅ ROLLBACK: Restore original status on failure (allows retry)
-            $task->update(['status' => $originalStatus]);
             // Model event broadcasts automatically via Reverb
+            $task->update(['status' => $originalStatus]);
 
             Log::error('Supervisor task removal failed', [
                 'task_id' => $task->id,

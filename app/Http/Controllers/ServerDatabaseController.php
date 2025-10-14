@@ -53,24 +53,26 @@ class ServerDatabaseController extends Controller
 
         $databaseType = DatabaseType::from($validated['type']);
 
+        // ✅ CREATE RECORD FIRST with 'pending' status
         $database = $server->databases()->create([
             'name' => $validated['name'] ?? $validated['type'],
             'type' => $validated['type'],
             'version' => $validated['version'],
             'port' => $validated['port'] ?? $this->databaseConfig->getDefaultPort($databaseType),
-            'status' => DatabaseStatus::Installing->value,
+            'status' => DatabaseStatus::Pending->value,
             'root_password' => $validated['root_password'],
         ]);
 
+        // ✅ THEN dispatch job with database record ID
         switch ($databaseType) {
             case DatabaseType::MariaDB:
-                MariaDbInstallerJob::dispatch($server);
+                MariaDbInstallerJob::dispatch($server, $database->id);
                 break;
             case DatabaseType::MySQL:
-                MySqlInstallerJob::dispatch($server);
+                MySqlInstallerJob::dispatch($server, $database->id);
                 break;
             case DatabaseType::PostgreSQL:
-                PostgreSqlInstallerJob::dispatch($server);
+                PostgreSqlInstallerJob::dispatch($server, $database->id);
                 break;
             default:
                 $database->update(['status' => DatabaseStatus::Failed->value]);
@@ -132,21 +134,23 @@ class ServerDatabaseController extends Controller
             return back()->with('error', 'No database found to uninstall.');
         }
 
+        // Update database record to uninstalling status
         $database->update(['status' => DatabaseStatus::Uninstalling->value]);
 
         $databaseType = $database->type instanceof DatabaseType
             ? $database->type
             : DatabaseType::from($database->type);
 
+        // Dispatch removal job with database record ID
         switch ($databaseType) {
             case DatabaseType::MariaDB:
-                MariaDbRemoverJob::dispatch($server);
+                MariaDbRemoverJob::dispatch($server, $database->id);
                 break;
             case DatabaseType::MySQL:
-                MySqlRemoverJob::dispatch($server);
+                MySqlRemoverJob::dispatch($server, $database->id);
                 break;
             case DatabaseType::PostgreSQL:
-                PostgreSqlRemoverJob::dispatch($server);
+                PostgreSqlRemoverJob::dispatch($server, $database->id);
                 break;
             default:
                 $database->update(['status' => DatabaseStatus::Failed->value]);

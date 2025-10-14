@@ -2,7 +2,10 @@
 
 namespace App\Packages\Services\Database\MariaDB;
 
+use App\Enums\DatabaseStatus;
 use App\Models\Server;
+use App\Models\ServerDatabase;
+use Exception;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
@@ -10,7 +13,7 @@ use Illuminate\Support\Facades\Log;
 /**
  * MariaDB Installation Job
  *
- * Handles queued MariaDB installation on remote servers
+ * Handles queued MariaDB installation on remote servers with real-time status updates
  */
 class MariaDbInstallerJob implements ShouldQueue
 {
@@ -24,21 +27,57 @@ class MariaDbInstallerJob implements ShouldQueue
     public $timeout = 600;
 
     public function __construct(
-        public Server $server
+        public Server $server,
+        public int $databaseId  // ← Receives database record ID
     ) {}
 
     public function handle(): void
     {
-        $database = $this->server->databases()->latest()->first();
+        // Set no time limit for long-running installation process
+        set_time_limit(0);
 
-        Log::info("Starting MariaDB installation for server #{$this->server->id}", [
-            'version' => $database?->version ?? 'unknown',
+        // Load the database record from database
+        $database = ServerDatabase::findOrFail($this->databaseId);
+
+        Log::info('Starting MariaDB installation', [
+            'database_id' => $database->id,
+            'server_id' => $this->server->id,
+            'version' => $database->version,
         ]);
 
-        $installer = new MariaDbInstaller($this->server);
-        // Execute installation - base class handles failure marking automatically
-        $installer->execute();
+        try {
+            // ✅ UPDATE: pending → installing
+            $database->update(['status' => DatabaseStatus::Installing]);
+            // Model event broadcasts automatically via Reverb
 
-        Log::info("MariaDB installation completed for server #{$this->server->id}");
+            // Create installer instance
+            $installer = new MariaDbInstaller($this->server);
+
+            // Execute installation
+            $installer->execute();
+
+            // ✅ UPDATE: installing → active
+            $database->update(['status' => DatabaseStatus::Active]);
+            // Model event broadcasts automatically via Reverb
+
+            Log::info('MariaDB installation completed', [
+                'database_id' => $database->id,
+                'server_id' => $this->server->id,
+            ]);
+
+        } catch (Exception $e) {
+            // ✅ UPDATE: any → failed
+            $database->update(['status' => DatabaseStatus::Failed]);
+            // Model event broadcasts automatically via Reverb
+
+            Log::error('MariaDB installation failed', [
+                'database_id' => $database->id,
+                'server_id' => $this->server->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            throw $e;  // Re-throw for Laravel's retry mechanism
+        }
     }
 }

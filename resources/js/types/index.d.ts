@@ -288,6 +288,7 @@ export interface ServerSite {
     last_deployed_at?: string | null;
     last_deployed_at_human?: string | null;
     auto_deploy_enabled?: boolean;
+    error_log?: string | null;
     configuration?: Record<string, unknown> | null;
     provisioned_at?: string | null;
     provisioned_at_human?: string | null;

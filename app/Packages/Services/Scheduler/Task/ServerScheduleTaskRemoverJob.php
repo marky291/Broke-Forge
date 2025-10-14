@@ -46,6 +46,10 @@ class ServerScheduleTaskRemoverJob implements ShouldQueue
         ]);
 
         try {
+            // ✅ UPDATE: active → removing
+            // Model event broadcasts automatically via Reverb
+            $task->update(['status' => 'removing']);
+
             // Create remover instance
             $remover = new ServerScheduleTaskRemover($this->server, $task);
 
@@ -62,8 +66,8 @@ class ServerScheduleTaskRemoverJob implements ShouldQueue
 
         } catch (Exception $e) {
             // ✅ ROLLBACK: Restore original status on failure (allows retry)
-            $task->update(['status' => $originalStatus]);
             // Model event broadcasts automatically via Reverb
+            $task->update(['status' => $originalStatus]);
 
             Log::error('Scheduled task removal failed', [
                 'task_id' => $task->id,

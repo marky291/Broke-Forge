@@ -36,6 +36,7 @@ class ServerSiteResource extends JsonResource
             'last_deployed_at_human' => $this->last_deployed_at_human,
             'last_deployment_sha' => $this->last_deployment_sha,
             'auto_deploy_enabled' => $this->auto_deploy_enabled,
+            'error_log' => $this->error_log,
             'created_at' => $this->created_at->toISOString(),
             'updated_at' => $this->updated_at->toISOString(),
             'server' => $this->transformServer(),

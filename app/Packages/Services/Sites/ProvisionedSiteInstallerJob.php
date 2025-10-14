@@ -51,8 +51,17 @@ class ProvisionedSiteInstallerJob implements ShouldQueue
 
             Log::info("Site installation completed for site #{$site->id} on server #{$this->server->id}");
         } catch (\Exception $e) {
-            // Update status to failed
-            $site->update(['status' => 'failed']);
+            // Update status to failed and capture error details
+            $site->update([
+                'status' => 'failed',
+                'error_log' => sprintf(
+                    "Error: %s\n\nFile: %s\nLine: %d\n\nStack Trace:\n%s",
+                    $e->getMessage(),
+                    $e->getFile(),
+                    $e->getLine(),
+                    $e->getTraceAsString()
+                ),
+            ]);
 
             Log::error("Site installation failed for site #{$site->id} on server #{$this->server->id}", [
                 'error' => $e->getMessage(),

@@ -2,6 +2,7 @@
 
 namespace App\Packages\Services\Scheduler\Task;
 
+use App\Enums\TaskStatus;
 use App\Models\Server;
 use App\Models\ServerScheduledTask;
 use Exception;
@@ -12,13 +13,20 @@ use Illuminate\Support\Facades\Log;
 /**
  * Server Scheduled Task Installation Job
  *
- * Handles queued task installation on remote servers.
+ * Handles queued task installation on remote servers with real-time status updates
  * Each job instance handles ONE scheduled task only.
  * For multiple tasks, dispatch multiple job instances.
  */
 class ServerScheduleTaskInstallerJob implements ShouldQueue
 {
     use Queueable;
+
+    /**
+     * The number of seconds the job can run before timing out.
+     *
+     * @var int
+     */
+    public $timeout = 600;
 
     /**
      * @param  Server  $server  The server to configure
@@ -31,20 +39,23 @@ class ServerScheduleTaskInstallerJob implements ShouldQueue
 
     public function handle(): void
     {
+        // Set no time limit for long-running installation process
         set_time_limit(0);
 
-        // Load the scheduled task
+        // Load the scheduled task from database
         $task = ServerScheduledTask::findOrFail($this->taskId);
 
-        Log::info("Starting scheduled task installation for server #{$this->server->id}", [
+        Log::info('Starting scheduled task installation', [
             'task_id' => $task->id,
+            'server_id' => $this->server->id,
             'task_name' => $task->name,
             'command' => $task->command,
         ]);
 
         try {
-            // Update status to 'installing'
-            $task->update(['status' => 'installing']);
+            // ✅ UPDATE: pending → installing
+            $task->update(['status' => TaskStatus::Installing]);
+            // Model event broadcasts automatically via Reverb
 
             // Create installer instance with existing task model
             $installer = new ServerScheduleTaskInstaller($this->server, $task);
@@ -52,23 +63,30 @@ class ServerScheduleTaskInstallerJob implements ShouldQueue
             // Execute installation
             $installer->execute();
 
-            // Update status to 'active' on success
-            $task->update(['status' => 'active']);
+            // ✅ UPDATE: installing → active
+            $task->update(['status' => TaskStatus::Active]);
+            // Model event broadcasts automatically via Reverb
 
-            Log::info("Scheduled task '{$task->name}' installed successfully on server #{$this->server->id}");
+            Log::info("Scheduled task '{$task->name}' installed successfully", [
+                'task_id' => $task->id,
+                'server_id' => $this->server->id,
+            ]);
 
         } catch (Exception $e) {
-            // Update status to 'failed' on error
-            $task->update(['status' => 'failed']);
+            // ✅ UPDATE: any → failed
+            $task->update(['status' => TaskStatus::Failed]);
+            // Model event broadcasts automatically via Reverb
 
-            Log::error("Scheduled task installation failed for server #{$this->server->id}", [
+            Log::error('Scheduled task installation failed', [
                 'task_id' => $task->id,
+                'server_id' => $this->server->id,
                 'task_name' => $task->name,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
 
-            throw $e;
+            throw $e;  // Re-throw for Laravel's retry mechanism
         }
     }
 }
+
