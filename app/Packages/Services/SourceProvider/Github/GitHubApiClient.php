@@ -126,4 +126,47 @@ class GitHubApiClient
     {
         return $this->client()->get("/repos/{$owner}/{$repo}/commits/{$branch}");
     }
+
+    /**
+     * Add a deploy key to a repository.
+     *
+     * @param  string  $owner  Repository owner
+     * @param  string  $repo  Repository name
+     * @param  string  $title  Deploy key title
+     * @param  string  $key  SSH public key content
+     * @param  bool  $readOnly  Whether key is read-only (default: true)
+     * @return Response GitHub API response with 'id' field
+     */
+    public function addDeployKey(string $owner, string $repo, string $title, string $key, bool $readOnly = true): Response
+    {
+        return $this->client()->post("/repos/{$owner}/{$repo}/keys", [
+            'title' => $title,
+            'key' => $key,
+            'read_only' => $readOnly,
+        ]);
+    }
+
+    /**
+     * Remove a deploy key from a repository.
+     *
+     * @param  string  $owner  Repository owner
+     * @param  string  $repo  Repository name
+     * @param  int  $keyId  The GitHub deploy key ID
+     */
+    public function removeDeployKey(string $owner, string $repo, int $keyId): Response
+    {
+        return $this->client()->delete("/repos/{$owner}/{$repo}/keys/{$keyId}");
+    }
+
+    /**
+     * List all deploy keys for a repository.
+     *
+     * @param  string  $owner  Repository owner
+     * @param  string  $repo  Repository name
+     * @return Response Array of deploy keys with id, key, title, read_only
+     */
+    public function getDeployKeys(string $owner, string $repo): Response
+    {
+        return $this->client()->get("/repos/{$owner}/{$repo}/keys");
+    }
 }

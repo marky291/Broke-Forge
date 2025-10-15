@@ -17,8 +17,7 @@ import { show as showSite } from '@/routes/servers/sites';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { useEcho } from '@laravel/echo-react';
-import copyToClipboard from 'copy-to-clipboard';
-import { AlertCircle, Check, CheckCircle, CheckCircle2, ChevronRight, Clock, Copy, Eye, GitBranch, Globe, Loader2, Lock, Plus, RefreshCw, Trash2, XCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle, CheckCircle2, ChevronRight, Clock, Eye, GitBranch, Globe, Loader2, Lock, Plus, RefreshCw, Trash2, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 type ServerSite = {
@@ -72,8 +71,6 @@ type SitesProps = {
 
 export default function Sites({ server }: SitesProps) {
     const [showAddSiteDialog, setShowAddSiteDialog] = useState(false);
-    const [deployKey, setDeployKey] = useState<string>('');
-    const [copiedDeployKey, setCopiedDeployKey] = useState(false);
     const [showErrorDialog, setShowErrorDialog] = useState(false);
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
     const [selectedSite, setSelectedSite] = useState<ServerSite | null>(null);
@@ -84,7 +81,7 @@ export default function Sites({ server }: SitesProps) {
     const [loadingBranches, setLoadingBranches] = useState(false);
     const [githubConnected, setGithubConnected] = useState(false);
     const [clearingCache, setClearingCache] = useState(false);
-    const { flash } = usePage<{ flash: { success?: string; error?: string } }>().props;
+    const { flash } = usePage<{ flash: { success?: string; error?: string; open_add_site_modal?: boolean } }>().props;
     const form = useForm({
         domain: '',
         php_version: '8.3',
@@ -104,15 +101,12 @@ export default function Sites({ server }: SitesProps) {
         router.reload({ only: ['server'], preserveScroll: true });
     });
 
-    // Fetch deploy key when modal opens
+    // Reopen modal after GitHub OAuth redirect
     useEffect(() => {
-        if (showAddSiteDialog && !deployKey) {
-            fetch(`/servers/${server.id}/deploy-key`)
-                .then((res) => res.json())
-                .then((data) => setDeployKey(data.deploy_key))
-                .catch((err) => console.error('Failed to fetch deploy key:', err));
+        if (flash?.open_add_site_modal) {
+            setShowAddSiteDialog(true);
         }
-    }, [showAddSiteDialog, server.id, deployKey]);
+    }, [flash?.open_add_site_modal]);
 
     // Fetch GitHub repositories when modal opens
     useEffect(() => {
@@ -185,14 +179,6 @@ export default function Sites({ server }: SitesProps) {
                 setGithubConnected(false);
             })
             .finally(() => setClearingCache(false));
-    };
-
-    const handleCopyDeployKey = () => {
-        const copiedOk = copyToClipboard(deployKey, { format: 'text/plain' });
-        if (!copiedOk) return;
-
-        setCopiedDeployKey(true);
-        setTimeout(() => setCopiedDeployKey(false), 2000);
     };
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -523,6 +509,32 @@ export default function Sites({ server }: SitesProps) {
                         </div>
                     </div>
 
+                    {/* GitHub Connection Alert */}
+                    {!githubConnected && !loadingRepositories && (
+                        <Alert variant="default" className="border-blue-200 bg-blue-50 dark:border-blue-900/50 dark:bg-blue-950/20">
+                            <AlertCircle className="h-4 w-4 text-blue-600 dark:text-blue-500" />
+                            <AlertDescription>
+                                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                    <div>
+                                        <p className="font-medium text-blue-900 dark:text-blue-100">Connect GitHub to continue</p>
+                                        <p className="mt-1 text-xs text-blue-700 dark:text-blue-300">
+                                            GitHub authentication is required to create sites with repositories.
+                                        </p>
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        onClick={() => {
+                                            window.location.href = `/servers/${server.id}/source-providers/github/connect`;
+                                        }}
+                                        className="shrink-0"
+                                    >
+                                        Connect GitHub
+                                    </Button>
+                                </div>
+                            </AlertDescription>
+                        </Alert>
+                    )}
+
                     {/* Git Repository Section */}
                     <div className="grid w-full min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
                         <div className="min-w-0 space-y-2">
@@ -549,7 +561,7 @@ export default function Sites({ server }: SitesProps) {
                                         // Fetch branches for the selected repository
                                         fetchBranches(value);
                                     }}
-                                    disabled={form.processing || loadingRepositories}
+                                    disabled={form.processing || loadingRepositories || !githubConnected}
                                 >
                                     <SelectTrigger id="git_repository">
                                         <SelectValue placeholder="Select repository" />
@@ -568,13 +580,10 @@ export default function Sites({ server }: SitesProps) {
                                     placeholder={loadingRepositories ? 'Loading repositories...' : githubConnected ? 'No repositories found' : 'owner/repo'}
                                     value={form.data.git_repository}
                                     onChange={(e) => form.setData('git_repository', e.target.value)}
-                                    disabled={form.processing || loadingRepositories}
+                                    disabled={form.processing || loadingRepositories || !githubConnected}
                                 />
                             )}
                             {form.errors.git_repository && <p className="text-sm text-red-500">{form.errors.git_repository}</p>}
-                            {!githubConnected && !loadingRepositories && (
-                                <p className="text-xs text-muted-foreground">Connect GitHub in server settings for automatic repository selection.</p>
-                            )}
                         </div>
 
                         <div className="min-w-0 space-y-2">
@@ -586,7 +595,7 @@ export default function Sites({ server }: SitesProps) {
                                 <Select
                                     value={form.data.git_branch}
                                     onValueChange={(value) => form.setData('git_branch', value)}
-                                    disabled={form.processing || loadingBranches}
+                                    disabled={form.processing || loadingBranches || !githubConnected}
                                 >
                                     <SelectTrigger id="git_branch">
                                         <SelectValue placeholder="Select branch" />
@@ -605,69 +614,11 @@ export default function Sites({ server }: SitesProps) {
                                     placeholder={loadingBranches ? 'Loading branches...' : 'main'}
                                     value={form.data.git_branch}
                                     onChange={(e) => form.setData('git_branch', e.target.value)}
-                                    disabled={form.processing || loadingBranches}
+                                    disabled={form.processing || loadingBranches || !githubConnected}
                                 />
                             )}
                             {form.errors.git_branch && <p className="text-sm text-red-500">{form.errors.git_branch}</p>}
                         </div>
-                    </div>
-
-                    {/* Deploy Key Section */}
-                    <div className="w-full min-w-0 space-y-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-4">
-                        <div className="flex items-start gap-3">
-                            <div className="mt-0.5 rounded-md bg-amber-500/10 p-2">
-                                <GitBranch className="h-4 w-4 text-amber-600 dark:text-amber-500" />
-                            </div>
-                            <div className="flex-1 space-y-1">
-                                <h4 className="text-sm leading-none font-semibold">Deploy Key Required</h4>
-                                <p className="text-xs text-muted-foreground">
-                                    Add this SSH key to your GitHub repository to allow BrokeForge to clone it.
-                                </p>
-                            </div>
-                        </div>
-
-                        {deployKey ? (
-                            <>
-                                <div className="w-full min-w-0 overflow-hidden rounded-md border border-border bg-background">
-                                    <pre className="max-h-24 w-full min-w-0 overflow-auto p-3 font-mono text-[10px] leading-relaxed break-all">
-                                        {deployKey}
-                                    </pre>
-                                </div>
-
-                                <div className="flex gap-2">
-                                    <Button type="button" variant="outline" size="sm" onClick={handleCopyDeployKey} className="flex-1">
-                                        {copiedDeployKey ? (
-                                            <>
-                                                <Check className="mr-2 h-3 w-3" />
-                                                Copied!
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Copy className="mr-2 h-3 w-3" />
-                                                Copy Key
-                                            </>
-                                        )}
-                                    </Button>
-                                </div>
-
-                                <details className="group">
-                                    <summary className="cursor-pointer text-xs font-medium text-muted-foreground hover:text-foreground">
-                                        How to add this key to GitHub
-                                    </summary>
-                                    <ol className="mt-2 space-y-1.5 pl-4 text-xs text-muted-foreground">
-                                        <li>1. Go to your repository on GitHub</li>
-                                        <li>2. Navigate to Settings → Deploy keys</li>
-                                        <li>3. Click "Add deploy key"</li>
-                                        <li>4. Paste the key and save</li>
-                                    </ol>
-                                </details>
-                            </>
-                        ) : (
-                            <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                                <span>Loading deploy key...</span>
-                            </div>
-                        )}
                     </div>
                 </div>
             </CardFormModal>

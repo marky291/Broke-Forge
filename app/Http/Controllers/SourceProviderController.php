@@ -42,8 +42,9 @@ class SourceProviderController extends Controller
 
             if ($serverId) {
                 return redirect()
-                    ->route('servers.settings', $serverId)
-                    ->with('success', 'GitHub connected successfully.');
+                    ->route('servers.sites', $serverId)
+                    ->with('success', 'GitHub connected successfully. You can now create sites.')
+                    ->with('open_add_site_modal', true);
             }
 
             return redirect()
@@ -56,7 +57,7 @@ class SourceProviderController extends Controller
 
             if ($serverId) {
                 return redirect()
-                    ->route('servers.settings', $serverId)
+                    ->route('servers.sites', $serverId)
                     ->with('error', 'Failed to connect GitHub: '.$e->getMessage());
             }
 
