@@ -299,6 +299,18 @@ export default function ProvisioningPage({ server, provision }: ProvisioningPage
                     >
                         {showInstructions ? 'Hide instructions' : 'Show instructions'}
                     </Button>
+                    {server.provision_status === 'failed' && (
+                        <Button
+                            variant="default"
+                            onClick={() => {
+                                if (confirm('Retry provisioning? This will reset all progress and start over.')) {
+                                    router.post(`/servers/${server.id}/provision/retry`);
+                                }
+                            }}
+                        >
+                            Retry Provisioning
+                        </Button>
+                    )}
                     <Button
                         variant="destructive"
                         onClick={handleCancelProvisioning}

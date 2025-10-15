@@ -2,10 +2,14 @@
 
 namespace App\Packages\Services\Nginx;
 
+use App\Enums\PhpStatus;
 use App\Enums\ReverseProxyStatus;
 use App\Enums\ReverseProxyType;
 use App\Enums\ScheduleFrequency;
+use App\Enums\TaskStatus;
+use App\Models\ServerPhp;
 use App\Models\ServerReverseProxy;
+use App\Models\ServerScheduledTask;
 use App\Packages\Base\Milestones;
 use App\Packages\Base\Package;
 use App\Packages\Base\PackageInstaller;
@@ -82,7 +86,21 @@ class NginxInstaller extends PackageInstaller implements \App\Packages\Base\Serv
         $this->server->provision->put(6, ProvisionStatus::Installing->value);
         $this->server->save();
 
-        PhpInstallerJob::dispatchSync($this->server, $phpVersion);
+        // ✅ Reverb Package Lifecycle: Create record FIRST with pending status
+        $php = ServerPhp::firstOrCreate(
+            [
+                'server_id' => $this->server->id,
+                'version' => $phpVersion->value,
+            ],
+            [
+                'status' => PhpStatus::Pending,  // ← Start with pending
+                'is_cli_default' => $this->server->phps()->count() === 0,
+                'is_site_default' => $this->server->phps()->count() === 0,
+            ]
+        );
+
+        // ✅ THEN dispatch job with record ID (not enum)
+        PhpInstallerJob::dispatchSync($this->server, $php->id);
 
         $this->server->provision->put(6, ProvisionStatus::Completed->value);
         $this->server->provision->put(7, ProvisionStatus::Installing->value);
@@ -97,12 +115,17 @@ class NginxInstaller extends PackageInstaller implements \App\Packages\Base\Serv
         // Install Task scheduler and default task schedule job.
         ServerSchedulerInstallerJob::dispatchSync($this->server);
 
-        // Install default scheduled task (job will create DB record and install on remote server)
-        ServerScheduleTaskInstallerJob::dispatchSync($this->server, [
+        // ✅ Reverb Package Lifecycle: Create task record FIRST with pending status
+        $task = ServerScheduledTask::create([
+            'server_id' => $this->server->id,
             'name' => 'Remove unused packages',
             'command' => 'apt-get autoremove && apt-get autoclean',
             'frequency' => ScheduleFrequency::Weekly,
+            'status' => TaskStatus::Pending,
         ]);
+
+        // ✅ THEN dispatch job with record ID (not data array)
+        ServerScheduleTaskInstallerJob::dispatchSync($this->server, $task->id);
 
         // Install the supervisor as it has low overhead and provides benefit to user.
         SupervisorInstallerJob::dispatchSync($this->server);
