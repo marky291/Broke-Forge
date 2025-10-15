@@ -38,4 +38,24 @@ class ServerPhp extends Model
     {
         return $this->hasMany(ServerPhpModule::class);
     }
+
+    protected static function booted(): void
+    {
+        static::created(function (self $php): void {
+            \App\Events\ServerUpdated::dispatch($php->server_id);
+        });
+
+        static::updated(function (self $php): void {
+            // Only broadcast if meaningful fields changed
+            $broadcastFields = ['status', 'is_cli_default', 'is_site_default', 'version'];
+
+            if ($php->wasChanged($broadcastFields)) {
+                \App\Events\ServerUpdated::dispatch($php->server_id);
+            }
+        });
+
+        static::deleted(function (self $php): void {
+            \App\Events\ServerUpdated::dispatch($php->server_id);
+        });
+    }
 }

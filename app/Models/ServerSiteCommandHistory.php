@@ -35,4 +35,15 @@ class ServerSiteCommandHistory extends Model
     {
         return $this->belongsTo(ServerSite::class, 'server_site_id');
     }
+
+    /**
+     * Boot the model and dispatch broadcast events.
+     */
+    protected static function booted(): void
+    {
+        // Broadcast when new command is executed (so history updates in real-time)
+        static::created(function (self $commandHistory): void {
+            \App\Events\ServerSiteUpdated::dispatch($commandHistory->server_site_id);
+        });
+    }
 }

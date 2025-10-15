@@ -14,34 +14,13 @@ import { dashboard } from '@/routes';
 import { show as showServer } from '@/routes/servers';
 import { type BreadcrumbItem, type Server, type ServerScheduledTask, type ServerScheduledTaskRun } from '@/types';
 import { Head, Link, router, useForm } from '@inertiajs/react';
-import { AlertCircle, CheckCircle, ChevronLeft, ChevronRight, Clock, Eye, Loader2, Pause, Play, Trash2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEcho } from '@laravel/echo-react';
+import { AlertCircle, CheckCircle, ChevronLeft, ChevronRight, Clock, Eye, Loader2, Pause, Play, RotateCw, Trash2 } from 'lucide-react';
+import { useState } from 'react';
 
-export default function Scheduler({
-    server,
-    tasks,
-    recentRuns,
-}: {
-    server: Server;
-    tasks: ServerScheduledTask[];
-    recentRuns: {
-        data: ServerScheduledTaskRun[];
-        links: {
-            first: string | null;
-            last: string | null;
-            prev: string | null;
-            next: string | null;
-        };
-        meta: {
-            current_page: number;
-            from: number | null;
-            last_page: number;
-            per_page: number;
-            to: number | null;
-            total: number;
-        };
-    };
-}) {
+export default function Scheduler({ server }: { server: Server }) {
+    const tasks = server.scheduledTasks || [];
+    const recentRuns = server.recentTaskRuns || { data: [], links: {}, meta: {} };
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard.url() },
         { title: server.vanity_name, href: showServer({ server: server.id }).url },
@@ -81,16 +60,14 @@ export default function Scheduler({
         setOutputDialogOpen(true);
     };
 
-    // Auto-reload when scheduler status is installing or uninstalling
-    useEffect(() => {
-        if (isInstalling || isUninstalling) {
-            const interval = setInterval(() => {
-                router.reload({ only: ['server'] });
-            }, 5000); // Check every 5 seconds
-
-            return () => clearInterval(interval);
-        }
-    }, [server.scheduler_status]);
+    // Real-time updates via Reverb WebSocket - listens for scheduler changes
+    useEcho(`servers.${server.id}`, 'ServerUpdated', () => {
+        router.reload({
+            only: ['server'],
+            preserveScroll: true,
+            preserveState: true,
+        });
+    });
 
     const handleInstall = () => {
         post(`/servers/${server.id}/scheduler/install`, {
@@ -127,6 +104,15 @@ export default function Scheduler({
             return;
         }
         post(`/servers/${server.id}/scheduler/tasks/${task.id}/run`, {
+            onSuccess: () => router.reload(),
+        });
+    };
+
+    const handleRetryTask = (task: ServerScheduledTask) => {
+        if (!confirm(`Retry installing "${task.name}"?`)) {
+            return;
+        }
+        post(`/servers/${server.id}/scheduler/tasks/${task.id}/retry`, {
             onSuccess: () => router.reload(),
         });
     };
@@ -220,6 +206,18 @@ export default function Scheduler({
                                                     <div className="min-w-0 flex-1">
                                                         <div className="flex items-center gap-2">
                                                             <h4 className="truncate text-sm font-medium text-foreground">{task.name}</h4>
+                                                            {task.status === 'pending' && (
+                                                                <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 px-1.5 py-0.5 text-xs text-amber-600 dark:text-amber-400">
+                                                                    <Loader2 className="h-3 w-3" />
+                                                                    Pending
+                                                                </span>
+                                                            )}
+                                                            {task.status === 'installing' && (
+                                                                <span className="inline-flex items-center gap-1 rounded bg-blue-500/10 px-1.5 py-0.5 text-xs text-blue-600 dark:text-blue-400">
+                                                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                                                    Installing
+                                                                </span>
+                                                            )}
                                                             {task.status === 'active' && (
                                                                 <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 px-1.5 py-0.5 text-xs text-emerald-600 dark:text-emerald-400">
                                                                     <CheckCircle className="h-3 w-3" />
@@ -230,6 +228,18 @@ export default function Scheduler({
                                                                 <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 px-1.5 py-0.5 text-xs text-amber-600 dark:text-amber-400">
                                                                     <Pause className="h-3 w-3" />
                                                                     Paused
+                                                                </span>
+                                                            )}
+                                                            {task.status === 'failed' && (
+                                                                <span className="inline-flex items-center gap-1 rounded bg-red-500/10 px-1.5 py-0.5 text-xs text-red-600 dark:text-red-400">
+                                                                    <AlertCircle className="h-3 w-3" />
+                                                                    Failed
+                                                                </span>
+                                                            )}
+                                                            {task.status === 'removing' && (
+                                                                <span className="inline-flex items-center gap-1 rounded bg-orange-500/10 px-1.5 py-0.5 text-xs text-orange-600 dark:text-orange-400">
+                                                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                                                    Removing
                                                                 </span>
                                                             )}
                                                             <span className="text-xs text-muted-foreground">{formatFrequency(task.frequency)}</span>
@@ -251,16 +261,30 @@ export default function Scheduler({
                                                         )}
                                                     </div>
                                                     <div className="flex flex-shrink-0 items-center gap-1.5">
-                                                        <Button
-                                                            size="sm"
-                                                            variant="ghost"
-                                                            onClick={() => handleToggleTask(task)}
-                                                            disabled={processing}
-                                                            className="h-8 w-8 p-0"
-                                                            title={task.status === 'active' ? 'Pause task' : 'Resume task'}
-                                                        >
-                                                            {task.status === 'active' ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                                                        </Button>
+                                                        {task.status === 'failed' && (
+                                                            <Button
+                                                                size="sm"
+                                                                variant="ghost"
+                                                                onClick={() => handleRetryTask(task)}
+                                                                disabled={processing}
+                                                                className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                                                                title="Retry task installation"
+                                                            >
+                                                                <RotateCw className="h-4 w-4" />
+                                                            </Button>
+                                                        )}
+                                                        {task.status !== 'failed' && (
+                                                            <Button
+                                                                size="sm"
+                                                                variant="ghost"
+                                                                onClick={() => handleToggleTask(task)}
+                                                                disabled={processing}
+                                                                className="h-8 w-8 p-0"
+                                                                title={task.status === 'active' ? 'Pause task' : 'Resume task'}
+                                                            >
+                                                                {task.status === 'active' ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                                                            </Button>
+                                                        )}
                                                         <Button
                                                             size="sm"
                                                             variant="ghost"

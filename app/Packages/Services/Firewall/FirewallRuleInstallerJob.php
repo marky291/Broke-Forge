@@ -2,8 +2,10 @@
 
 namespace App\Packages\Services\Firewall;
 
+use App\Enums\FirewallRuleStatus;
 use App\Models\Server;
 use App\Models\ServerFirewallRule;
+use Exception;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
@@ -11,13 +13,20 @@ use Illuminate\Support\Facades\Log;
 /**
  * Firewall Rule Installation Job
  *
- * Handles queued firewall rule configuration on remote servers.
+ * Handles queued firewall rule configuration on remote servers with real-time status updates
  * Each job instance handles ONE firewall rule only.
  * For multiple rules, dispatch multiple job instances.
  */
 class FirewallRuleInstallerJob implements ShouldQueue
 {
     use Queueable;
+
+    /**
+     * The number of seconds the job can run before timing out.
+     *
+     * @var int
+     */
+    public $timeout = 600;
 
     /**
      * @param  Server  $server  The server to configure
@@ -30,18 +39,23 @@ class FirewallRuleInstallerJob implements ShouldQueue
 
     public function handle(): void
     {
-        // Load the firewall rule
+        // Set no time limit for long-running installation process
+        set_time_limit(0);
+
+        // Load the firewall rule from database
         $rule = ServerFirewallRule::findOrFail($this->ruleId);
 
-        Log::info("Starting firewall rule configuration for server #{$this->server->id}", [
+        Log::info('Starting firewall rule configuration', [
             'rule_id' => $rule->id,
+            'server_id' => $this->server->id,
             'rule_name' => $rule->name,
             'port' => $rule->port,
         ]);
 
         try {
-            // Update status to 'installing'
-            $rule->update(['status' => 'installing']);
+            // ✅ UPDATE: pending → installing
+            $rule->update(['status' => FirewallRuleStatus::Installing]);
+            // Model event broadcasts automatically via Reverb
 
             // Create installer instance
             $installer = new FirewallRuleInstaller($this->server);
@@ -59,23 +73,31 @@ class FirewallRuleInstallerJob implements ShouldQueue
             // (installer accepts array of rules, so we pass array with one rule)
             $installer->execute([$singleRule]);
 
-            // Update status to 'active' on success
-            $rule->update(['status' => 'active']);
+            // ✅ UPDATE: installing → active
+            $rule->update(['status' => FirewallRuleStatus::Active]);
+            // Model event broadcasts automatically via Reverb
 
-            Log::info("Firewall rule '{$rule->name}' configured successfully for server #{$this->server->id}");
-        } catch (\Exception $e) {
-            // Update status to 'failed' on error
-            $rule->update(['status' => 'failed']);
-
-            Log::error("Firewall rule configuration failed for server #{$this->server->id}", [
+            Log::info("Firewall rule '{$rule->name}' configured successfully", [
                 'rule_id' => $rule->id,
+                'server_id' => $this->server->id,
+            ]);
+
+        } catch (Exception $e) {
+            // ✅ UPDATE: any → failed
+            $rule->update(['status' => FirewallRuleStatus::Failed]);
+            // Model event broadcasts automatically via Reverb
+
+            Log::error('Firewall rule configuration failed', [
+                'rule_id' => $rule->id,
+                'server_id' => $this->server->id,
                 'rule_name' => $rule->name,
                 'port' => $rule->port,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
 
-            throw $e;
+            throw $e;  // Re-throw for Laravel's retry mechanism
         }
     }
 }
+

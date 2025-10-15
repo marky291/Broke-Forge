@@ -40,4 +40,25 @@ class ServerDatabase extends Model
     {
         return $this->belongsTo(Server::class);
     }
+
+    /**
+     * Boot the model and dispatch broadcast events.
+     */
+    protected static function booted(): void
+    {
+        // Broadcast when database is created
+        static::created(function (self $database): void {
+            \App\Events\ServerUpdated::dispatch($database->server_id);
+        });
+
+        // Broadcast when database is updated (status changes, version updates, etc.)
+        static::updated(function (self $database): void {
+            \App\Events\ServerUpdated::dispatch($database->server_id);
+        });
+
+        // Broadcast when database is deleted
+        static::deleted(function (self $database): void {
+            \App\Events\ServerUpdated::dispatch($database->server_id);
+        });
+    }
 }

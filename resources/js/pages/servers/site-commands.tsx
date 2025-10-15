@@ -7,33 +7,11 @@ import { TablePagination } from '@/components/ui/table-pagination';
 import SiteLayout from '@/layouts/server/site-layout';
 import { dashboard } from '@/routes';
 import { show as showServer } from '@/routes/servers';
-import { type BreadcrumbItem } from '@/types';
+import { type BreadcrumbItem, type ServerSite } from '@/types';
 import { Head, router, useForm } from '@inertiajs/react';
+import { useEcho } from '@laravel/echo-react';
 import { CheckCircle2, Clock, Loader2, Terminal, XCircle } from 'lucide-react';
 import { useState } from 'react';
-
-type Server = {
-    id: number;
-    vanity_name: string;
-    connection: string;
-};
-
-/**
- * Represents a site hosted on a server.
- * Maps to the ServerSite model on the backend.
- */
-type ServerSite = {
-    id: number;
-    domain: string;
-    document_root: string | null;
-    status: string;
-};
-
-type ExecutionContext = {
-    workingDirectory: string;
-    user: string | null;
-    timeout: number;
-};
 
 type CommandResult = {
     id?: number;
@@ -46,42 +24,23 @@ type CommandResult = {
     success: boolean;
 } | null;
 
-type CommandHistoryItem = {
-    id: number;
-    command: string;
-    output: string;
-    errorOutput: string;
-    exitCode: number | null;
-    ranAt: string;
-    durationMs: number;
-    success: boolean;
-};
-
-type PaginatedCommandHistory = {
-    data: CommandHistoryItem[];
-    current_page: number;
-    last_page: number;
-    per_page: number;
-    total: number;
-};
-
-export default function SiteCommands({
-    server,
-    site,
-    executionContext,
-    commandResult,
-    commandHistory,
-}: {
-    server: Server;
-    site: ServerSite;
-    executionContext: ExecutionContext;
-    commandResult?: CommandResult;
-    commandHistory: PaginatedCommandHistory;
-}) {
+export default function SiteCommands({ site, commandResult }: { site: ServerSite; commandResult?: CommandResult }) {
+    const server = site.server!;
+    const executionContext = site.executionContext!;
+    const commandHistory = site.commandHistory || { data: [], current_page: 1, last_page: 1, per_page: 10, total: 0 };
     const { data, setData, post, processing, errors, reset } = useForm({
         command: '',
     });
     const [isRerunning, setIsRerunning] = useState(false);
+
+    // Real-time updates via Reverb WebSocket - listens for site changes
+    useEcho(`sites.${site.id}`, 'ServerSiteUpdated', () => {
+        router.reload({
+            only: ['site'],
+            preserveScroll: true,
+            preserveState: true,
+        });
+    });
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard.url() },

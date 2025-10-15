@@ -3,16 +3,15 @@
 namespace App\Enums;
 
 /**
- * PHP Installation Status Enum
+ * Firewall Rule Status Enum
  *
- * Represents the lifecycle states of a PHP installation
+ * Represents the lifecycle states of a firewall rule installation
  */
-enum PhpStatus: string
+enum FirewallRuleStatus: string
 {
     case Pending = 'pending';       // Record created, job not started
     case Installing = 'installing';  // Job actively running
     case Active = 'active';         // Installation completed successfully
-    case Inactive = 'inactive';     // Installation disabled/stopped
     case Failed = 'failed';         // Installation failed with errors
     case Removing = 'removing';     // Removal in progress
 }

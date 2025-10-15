@@ -8,6 +8,7 @@ use App\Http\Controllers\Concerns\PreparesSiteData;
 use App\Http\Requests\StoreScheduledTaskRequest;
 use App\Http\Requests\StoreTaskRunRequest;
 use App\Http\Requests\UpdateScheduledTaskRequest;
+use App\Http\Resources\ServerResource;
 use App\Http\Resources\ServerScheduledTaskRunResource;
 use App\Models\Server;
 use App\Models\ServerScheduledTask;
@@ -38,21 +39,8 @@ class ServerSchedulerController extends Controller
         // Authorization
         Gate::authorize('view', [ServerScheduler::class, $server]);
 
-        // Eager load relationships to avoid N+1 queries
-        $server->load(['scheduledTasks']);
-
-        // Get recent task runs (last 7 days) with eager loaded task relationship, paginated
-        $recentRuns = $server->scheduledTaskRuns()
-            ->with('task:id,server_id,name') // Only load needed columns
-            ->where('started_at', '>=', now()->subDays(7))
-            ->orderBy('started_at', 'desc')
-            ->paginate(5);
-
         return Inertia::render('servers/scheduler', [
-            'server' => $server->only(['id', 'vanity_name', 'provider', 'public_ip', 'ssh_port', 'private_ip', 'connection', 'monitoring_status', 'scheduler_status', 'scheduler_installed_at', 'scheduler_uninstalled_at', 'created_at', 'updated_at']),
-            'tasks' => $server->scheduledTasks,
-            'recentRuns' => $recentRuns,
-            'latestMetrics' => $this->getLatestMetrics($server),
+            'server' => new ServerResource($server),
         ]);
     }
 
@@ -107,7 +95,7 @@ class ServerSchedulerController extends Controller
 
         // Remove all tasks first
         foreach ($server->scheduledTasks as $task) {
-            ServerScheduleTaskRemoverJob::dispatch($server, $task);
+            ServerScheduleTaskRemoverJob::dispatch($server, $task->id);
         }
 
         // Dispatch scheduler framework removal job
@@ -126,7 +114,7 @@ class ServerSchedulerController extends Controller
         // Authorization
         Gate::authorize('createTask', [ServerScheduler::class, $server]);
 
-        // Create the task
+        // Create the task with 'pending' status (default from migration)
         $task = $server->scheduledTasks()->create($request->validated());
 
         // Audit log
@@ -140,8 +128,8 @@ class ServerSchedulerController extends Controller
             'ip_address' => request()->ip(),
         ]);
 
-        // Dispatch task installation job
-        ServerScheduleTaskInstallerJob::dispatch($server, $task);
+        // Dispatch task installation job with task ID
+        ServerScheduleTaskInstallerJob::dispatch($server, $task->id);
 
         return redirect()
             ->route('servers.scheduler', $server)
@@ -159,8 +147,8 @@ class ServerSchedulerController extends Controller
         // Capture old values for audit
         $oldCommand = $scheduledTask->command;
 
-        // Update the task
-        $scheduledTask->update($request->validated());
+        // Update the task and reset status to 'pending'
+        $scheduledTask->update(array_merge($request->validated(), ['status' => 'pending']));
 
         // Audit log
         Log::info('Scheduled task updated', [
@@ -173,9 +161,9 @@ class ServerSchedulerController extends Controller
             'ip_address' => request()->ip(),
         ]);
 
-        // Re-install the task with updated configuration
-        ServerScheduleTaskRemoverJob::dispatch($server, $scheduledTask);
-        ServerScheduleTaskInstallerJob::dispatch($server, $scheduledTask);
+        // Re-install the task with updated configuration (pass task ID)
+        ServerScheduleTaskRemoverJob::dispatch($server, $scheduledTask->id);
+        ServerScheduleTaskInstallerJob::dispatch($server, $scheduledTask->id);
 
         return redirect()
             ->route('servers.scheduler', $server)
@@ -191,7 +179,7 @@ class ServerSchedulerController extends Controller
         Gate::authorize('deleteTask', [ServerScheduler::class, $server]);
 
         // Audit log
-        Log::warning('Scheduled task deleted', [
+        Log::warning('Scheduled task deletion initiated', [
             'user_id' => auth()->id(),
             'server_id' => $server->id,
             'task_id' => $scheduledTask->id,
@@ -200,8 +188,11 @@ class ServerSchedulerController extends Controller
             'ip_address' => request()->ip(),
         ]);
 
-        // Dispatch task removal job
-        ServerScheduleTaskRemoverJob::dispatch($server, $scheduledTask);
+        // ✅ UPDATE status to 'removing' (broadcasts automatically via model event)
+        $scheduledTask->update(['status' => 'removing']);
+
+        // ✅ THEN dispatch job with task ID
+        ServerScheduleTaskRemoverJob::dispatch($server, $scheduledTask->id);
 
         return redirect()
             ->route('servers.scheduler', $server)
@@ -216,20 +207,57 @@ class ServerSchedulerController extends Controller
         // Toggle status
         $newStatus = $scheduledTask->status === TaskStatus::Active
             ? TaskStatus::Paused
-            : TaskStatus::Active;
+            : TaskStatus::Pending; // Use Pending instead of Active to trigger reinstallation
 
         $scheduledTask->update(['status' => $newStatus]);
 
         // Remove and reinstall to update cron state
         if ($newStatus === TaskStatus::Paused) {
-            ServerScheduleTaskRemoverJob::dispatch($server, $scheduledTask);
+            ServerScheduleTaskRemoverJob::dispatch($server, $scheduledTask->id);
         } else {
-            ServerScheduleTaskInstallerJob::dispatch($server, $scheduledTask);
+            // Pass task ID instead of task model
+            ServerScheduleTaskInstallerJob::dispatch($server, $scheduledTask->id);
         }
 
         return redirect()
             ->route('servers.scheduler', $server)
             ->with('success', "Task {$newStatus->value}");
+    }
+
+    /**
+     * Retry a failed scheduled task
+     */
+    public function retryTask(Server $server, ServerScheduledTask $scheduledTask): RedirectResponse
+    {
+        // Authorization
+        Gate::authorize('updateTask', [ServerScheduler::class, $server]);
+
+        // Only allow retry for failed tasks
+        if ($scheduledTask->status !== TaskStatus::Failed) {
+            return redirect()
+                ->route('servers.scheduler', $server)
+                ->with('error', 'Only failed tasks can be retried');
+        }
+
+        // Audit log
+        Log::info('Scheduled task retry initiated', [
+            'user_id' => auth()->id(),
+            'server_id' => $server->id,
+            'task_id' => $scheduledTask->id,
+            'task_name' => $scheduledTask->name,
+            'command' => $scheduledTask->command,
+            'ip_address' => request()->ip(),
+        ]);
+
+        // Reset status to 'pending' to trigger reinstallation
+        $scheduledTask->update(['status' => 'pending']);
+
+        // Dispatch task installation job with task ID
+        ServerScheduleTaskInstallerJob::dispatch($server, $scheduledTask->id);
+
+        return redirect()
+            ->route('servers.scheduler', $server)
+            ->with('success', 'Task retry started');
     }
 
     /**

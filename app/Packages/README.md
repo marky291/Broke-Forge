@@ -2,6 +2,26 @@
 
 This document establishes rules and best practices for structuring packages within the `@app/Packages/` directory. All packages must follow these guidelines to ensure consistency, maintainability, and integration with the BrokeForge provisioning system.
 
+## 🆕 NEW: Reverb Package Lifecycle Pattern (Mandatory for Real-Time Updates)
+
+**⚠️ CRITICAL FOR NEW PACKAGES**: When building packages that require real-time status updates (firewall rules, scheduled tasks, SSL certificates, deployments, etc.), you **MUST** use the **Reverb Package Lifecycle** pattern:
+
+1. **Create database record FIRST** with `status: 'pending'` before dispatching job
+2. **Job receives record ID** (not data array) and manages status lifecycle: pending → installing → active/failed
+3. **Model events automatically broadcast** changes via Laravel Reverb (never manually dispatch events)
+4. **Frontend uses useEcho + router.reload()** to fetch fresh data when WebSocket events arrive
+
+**Key principle:** Event-driven architecture where model changes automatically trigger broadcasts, and frontend fetches updated resource data via Inertia. **No polling required.**
+
+**📖 Quick Links:**
+- [Quick Decision Guide: Should You Use Reverb Package Lifecycle?](#-quick-decision-guide-should-you-use-reverb-package-lifecycle)
+- [Rule 6: Reverb Package Lifecycle Pattern (Full Implementation)](#rule-6-reverb-package-lifecycle-pattern)
+- [Complete Implementation Steps](#implementation-steps)
+- [Testing the Reverb Package Lifecycle](#testing-the-reverb-package-lifecycle)
+- [Migration to Reverb Package Lifecycle](#migration-to-reverb-package-lifecycle)
+
+---
+
 ## Package Architecture Overview
 
 The package system is built on a layered architecture that provides a consistent interface for remote server management. **All package classes, including single command executors, must follow the same `execute()` and `commands()` method pattern.**
@@ -1561,6 +1581,48 @@ public function test_it_broadcasts_on_provision_update(): void
 
 For complete examples and troubleshooting, see [docs/reverb-real-time-pattern.md](../docs/reverb-real-time-pattern.md)
 
+## 📋 Quick Decision Guide: Should You Use Reverb Package Lifecycle?
+
+Use this checklist to determine if your package should use the Reverb Package Lifecycle pattern:
+
+### ✅ USE Reverb Package Lifecycle When:
+- [ ] Users need to see installation/removal progress in **real-time**
+- [ ] Operation takes **more than a few seconds** to complete
+- [ ] Resource has meaningful **status transitions** (pending → installing → active/failed)
+- [ ] Users should see the resource **immediately**, even before installation completes
+- [ ] Package creates **user-facing resources** (firewall rules, scheduled tasks, SSL certificates, deployments)
+- [ ] Operation may **fail** and users need immediate feedback
+
+**Examples:** FirewallRuleInstaller, ServerScheduleTaskInstaller, SslCertificateInstaller, DeploymentConfigInstaller
+
+### ❌ DON'T USE Reverb Package Lifecycle When:
+- [ ] Installation happens as part of **initial server provisioning** (one-time setup)
+- [ ] Operation completes in **under 2 seconds**
+- [ ] Package is **infrastructure-only** with no user-facing resources
+- [ ] No meaningful status transitions (just success/failure)
+- [ ] Users don't need to monitor progress
+
+**Examples:** NginxInstaller (server provisioning), PhpInstaller (server provisioning), InitialServerSetup
+
+### Implementation Checklist (If Using Reverb Package Lifecycle):
+
+When you determine a package needs the Reverb Package Lifecycle, follow this checklist:
+
+- [ ] **Step 1 - Model Migration**: Add `status` column to model's migration (string, default 'pending')
+- [ ] **Step 2 - Model Fillable**: Add `'status'` to model's `$fillable` array
+- [ ] **Step 3 - Model Events**: Add `booted()` method with `created()`, `updated()`, `deleted()` event listeners that dispatch broadcast event
+- [ ] **Step 4 - Controller**: Create database record FIRST with `status: 'pending'`, THEN dispatch job with record ID
+- [ ] **Step 5 - Job Constructor**: Accept record ID (not data array) in job constructor
+- [ ] **Step 6 - Job Handle**: Load record, update status to 'installing', execute installer, update to 'active' on success or 'failed' on error
+- [ ] **Step 7 - Frontend useEcho**: Add `useEcho()` hook listening to server channel for broadcast events
+- [ ] **Step 8 - Frontend Reload**: Use `router.reload({ only: [...] })` in useEcho callback
+- [ ] **Step 9 - Resource Class**: Ensure ServerResource includes the new resource with status field
+- [ ] **Step 10 - Tests**: Write tests for: pending status creation, installing status update, active status on success, failed status on error, broadcast event dispatch
+
+**Reference Implementation**: `app/Packages/Services/Firewall/FirewallRuleInstallerJob.php` + `app/Models/ServerFirewallRule.php`
+
+---
+
 ## ⚠️ CRITICAL ARCHITECTURAL RULES
 
 **These rules are MANDATORY for all package implementations. Violating these patterns will cause runtime errors, job failures, and architectural inconsistencies.**
@@ -3090,19 +3152,20 @@ protected function commands(string $phpVersion, string $phpPackages): array
 1. **Review Existing Code First**: Always examine existing packages (`WebServiceInstaller`, `SiteInstaller`, etc.) to understand patterns and reuse solutions before creating anything new
 2. **Avoid Creating New Classes/Methods**: Do not create new methods or classes unless absolutely necessary - leverage existing base classes and established patterns
 3. **⚠️ ALWAYS Implement ServerPackage or SitePackage Interface**: EVERY installer AND remover MUST explicitly implement either `ServerPackage` or `SitePackage` interface. Forgetting this will cause "Unknown package type" runtime errors
-4. **Follow Naming Conventions**: Use consistent naming for classes and files
-5. **Implement All Required Methods**: Every package must implement the abstract methods (`execute()`, `commands()`, etc.)
-6. **Use Package Patterns Universally**: ALL packages, including single command executors, must follow the `execute()` and `commands()` pattern - no standalone `run()` methods
-7. **Use Parameters, Not Constructors**: Pass configuration via `execute()` and `commands()` parameters
-8. **Avoid Additional Methods**: Keep ALL logic within `execute()` and `commands()` methods - no helper methods
-9. **Use Appropriate Credentials**: Choose the right SSH credential type for the task (Root for server-level, BrokeForge for site-level)
-10. **Track Progress**: Implement comprehensive milestone tracking for all package types
-11. **Handle Errors Gracefully**: Use try-catch blocks and proper logging
-12. **Test Thoroughly**: Write both unit and feature tests
-13. **Document Well**: Use PHPDoc blocks to describe functionality
-14. **Keep It Simple**: Break complex operations into smaller, manageable steps
-15. **Use Enums**: Leverage type safety with enum constants
-16. **Follow Laravel Conventions**: Use Laravel best practices throughout
+4. **🆕 Use Reverb Package Lifecycle for Real-Time Status**: When building packages needing real-time updates (firewall rules, scheduled tasks, SSL certificates), **MUST** create database record FIRST with `status: 'pending'`, then job manages lifecycle (pending → installing → active/failed) with automatic Reverb broadcasting. See Rule 6 in Critical Architectural Rules.
+5. **Follow Naming Conventions**: Use consistent naming for classes and files
+6. **Implement All Required Methods**: Every package must implement the abstract methods (`execute()`, `commands()`, etc.)
+7. **Use Package Patterns Universally**: ALL packages, including single command executors, must follow the `execute()` and `commands()` pattern - no standalone `run()` methods
+8. **Use Parameters, Not Constructors**: Pass configuration via `execute()` and `commands()` parameters
+9. **Avoid Additional Methods**: Keep ALL logic within `execute()` and `commands()` methods - no helper methods
+10. **Use Appropriate Credentials**: Choose the right SSH credential type for the task (Root for server-level, BrokeForge for site-level)
+11. **Track Progress**: Implement comprehensive milestone tracking for all package types
+12. **Handle Errors Gracefully**: Use try-catch blocks and proper logging
+13. **Test Thoroughly**: Write both unit and feature tests (including lifecycle status transitions for Reverb packages)
+14. **Document Well**: Use PHPDoc blocks to describe functionality
+15. **Keep It Simple**: Break complex operations into smaller, manageable steps
+16. **Use Enums**: Leverage type safety with enum constants
+17. **Follow Laravel Conventions**: Use Laravel best practices throughout
 
 ## Integration with BrokeForge
 

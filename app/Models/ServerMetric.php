@@ -36,4 +36,15 @@ class ServerMetric extends Model
     {
         return $this->belongsTo(Server::class);
     }
+
+    /**
+     * Boot the model and dispatch broadcast events.
+     */
+    protected static function booted(): void
+    {
+        // Broadcast when new metric is created (real-time monitoring updates)
+        static::created(function (self $metric): void {
+            \App\Events\ServerUpdated::dispatch($metric->server_id);
+        });
+    }
 }

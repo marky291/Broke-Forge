@@ -2,6 +2,7 @@
 
 namespace App\Packages\Services\Firewall;
 
+use App\Enums\FirewallRuleStatus;
 use App\Models\Server;
 use App\Models\ServerFirewallRule;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -17,6 +18,11 @@ class FirewallRuleUninstallerJob implements ShouldQueue
 {
     use Queueable;
 
+    /**
+     * The number of seconds the job can run before timing out.
+     */
+    public $timeout = 600;
+
     public function __construct(
         public Server $server,
         public int $ruleId
@@ -24,6 +30,8 @@ class FirewallRuleUninstallerJob implements ShouldQueue
 
     public function handle(): void
     {
+        set_time_limit(0);
+
         // Get the rule that needs to be removed
         $rule = ServerFirewallRule::find($this->ruleId);
 
@@ -37,10 +45,14 @@ class FirewallRuleUninstallerJob implements ShouldQueue
             'rule_id' => $this->ruleId,
         ]);
 
-        // Update rule status to 'removing'
-        $rule->update(['status' => 'removing']);
+        // Store original status for rollback
+        $originalStatus = $rule->status;
 
         try {
+            // ✅ UPDATE: active → removing
+            // Model event broadcasts automatically via Reverb
+            $rule->update(['status' => FirewallRuleStatus::Removing]);
+
             // Create uninstaller instance
             $uninstaller = new FirewallRuleUninstaller($this->server);
 
@@ -55,7 +67,8 @@ class FirewallRuleUninstallerJob implements ShouldQueue
             // Execute rule removal
             $uninstaller->execute($ruleConfig);
 
-            // Delete the rule from database after successful removal
+            // ✅ DELETE: Remove from database after successful removal
+            // Model deleted event broadcasts automatically via Reverb
             $rule->delete();
 
             Log::info("Firewall rule removal completed for server #{$this->server->id}", [
@@ -68,8 +81,9 @@ class FirewallRuleUninstallerJob implements ShouldQueue
                 'trace' => $e->getTraceAsString(),
             ]);
 
-            // Update rule status back to 'active' if removal failed
-            $rule->update(['status' => 'active']);
+            // ✅ ROLLBACK: Restore original status on failure
+            // Model event broadcasts automatically via Reverb
+            $rule->update(['status' => $originalStatus]);
 
             // Mark job as failed without retrying
             $this->fail($e);

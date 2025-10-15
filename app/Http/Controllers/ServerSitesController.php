@@ -4,11 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\PreparesSiteData;
 use App\Http\Requests\Servers\StoreSiteRequest;
+use App\Http\Resources\ServerResource;
 use App\Models\Server;
 use App\Models\ServerSite;
 use App\Packages\Enums\CredentialType;
 use App\Packages\Enums\GitStatus;
-use App\Packages\Enums\ProvisionStatus;
 use App\Packages\Services\Sites\ProvisionedSiteInstallerJob;
 use App\Packages\Services\Sites\SiteRemoverJob;
 use Illuminate\Http\JsonResponse;
@@ -22,26 +22,8 @@ class ServerSitesController extends Controller
 
     public function index(Server $server): Response
     {
-        $sites = $server->sites()
-            ->latest()
-            ->paginate(10);
-
         return Inertia::render('servers/sites', [
-            'server' => $server->only([
-                'id',
-                'vanity_name',
-                'provider',
-                'public_ip',
-                'private_ip',
-                'ssh_port',
-                'connection',
-                'provision_status',
-                'monitoring_status',
-                'created_at',
-                'updated_at',
-            ]),
-            'sites' => $sites,
-            'latestMetrics' => $this->getLatestMetrics($server),
+            'server' => new ServerResource($server),
         ]);
     }
 
@@ -91,15 +73,8 @@ class ServerSitesController extends Controller
                 'git_status' => GitStatus::Installing,
             ]);
 
-            // Dispatch site installation job with git configuration
-            ProvisionedSiteInstallerJob::dispatch(
-                $server,
-                $validated['domain'],
-                $validated['php_version'],
-                $validated['ssl'],
-                $validated['git_repository'],
-                $validated['git_branch']
-            );
+            // Dispatch site installation job with site ID
+            ProvisionedSiteInstallerJob::dispatch($server, $site->id);
 
             return back()->with('success', 'Site provisioning started. Repository will be cloned automatically.');
         } catch (\Throwable $e) {
@@ -121,5 +96,25 @@ class ServerSitesController extends Controller
         return redirect()
             ->route('servers.sites', $server)
             ->with('success', 'Site uninstallation started');
+    }
+
+    /**
+     * Delete a site from the server (typically for failed installations)
+     */
+    public function destroy(Server $server, ServerSite $site): RedirectResponse
+    {
+        try {
+            // Set status to removing to indicate cleanup is in progress
+            $site->update(['status' => 'removing']);
+
+            // Dispatch site removal job to clean up any partial installation
+            SiteRemoverJob::dispatch($server, $site);
+
+            return redirect()
+                ->route('servers.sites', $server)
+                ->with('success', 'Site deletion started. Any partial installation will be cleaned up.');
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Failed to delete site: '.$e->getMessage());
+        }
     }
 }

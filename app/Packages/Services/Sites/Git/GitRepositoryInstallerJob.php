@@ -19,6 +19,11 @@ class GitRepositoryInstallerJob implements ShouldQueue
     use Queueable;
 
     /**
+     * The number of seconds the job can run before timing out.
+     */
+    public $timeout = 600;
+
+    /**
      * Create a new job instance.
      */
     public function __construct(
@@ -34,12 +39,18 @@ class GitRepositoryInstallerJob implements ShouldQueue
      */
     public function handle(): void
     {
+        set_time_limit(0);
+
         Log::info("Starting Git repository installation for site #{$this->site->id} on server #{$this->server->id}", [
             'repository' => $this->configuration['repository'] ?? 'unknown',
             'branch' => $this->configuration['branch'] ?? 'unknown',
         ]);
 
         try {
+            // ✅ UPDATE: pending/null → installing
+            // Model event broadcasts automatically via Reverb
+            $this->site->update(['git_status' => GitStatus::Installing]);
+
             // Create installer instance
             $installer = new GitRepositoryInstaller($this->server);
 
@@ -49,6 +60,8 @@ class GitRepositoryInstallerJob implements ShouldQueue
             // Execute installation - the installer handles all logic, validation, and database tracking
             $installer->execute($this->site, $this->configuration);
 
+            // ✅ UPDATE: installing → installed
+            // Model event broadcasts automatically via Reverb
             // Update git status to installed and site status to active on success
             $this->site->update([
                 'git_status' => GitStatus::Installed,
@@ -59,7 +72,8 @@ class GitRepositoryInstallerJob implements ShouldQueue
 
             Log::info("Git repository installation completed for site #{$this->site->id} on server #{$this->server->id}");
         } catch (\Exception $e) {
-            // Update git status to failed on error
+            // ✅ UPDATE: installing → failed
+            // Model event broadcasts automatically via Reverb
             $this->site->update([
                 'git_status' => GitStatus::Failed,
             ]);

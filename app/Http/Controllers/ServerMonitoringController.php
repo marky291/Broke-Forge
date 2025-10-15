@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreServerMetricsRequest;
 use App\Http\Resources\ServerMetricResource;
+use App\Http\Resources\ServerResource;
 use App\Models\Server;
 use App\Models\ServerMetric;
 use App\Packages\Services\Monitoring\ServerMonitoringInstallerJob;
@@ -27,21 +28,8 @@ class ServerMonitoringController extends Controller
             'hours' => 'nullable|integer|in:24,72,168',
         ])['hours'] ?? 24;
 
-        // Get recent metrics for the selected timeframe
-        $recentMetrics = $server->metrics()
-            ->where('collected_at', '>=', now()->subHours($hours))
-            ->orderBy('collected_at', 'desc')
-            ->get();
-
-        // Get latest metrics
-        $latestMetrics = $server->metrics()
-            ->latest('collected_at')
-            ->first();
-
         return Inertia::render('servers/monitoring', [
-            'server' => $server->only(['id', 'vanity_name', 'provider', 'public_ip', 'ssh_port', 'private_ip', 'connection', 'created_at', 'updated_at', 'monitoring_status', 'monitoring_token', 'monitoring_collection_interval', 'monitoring_installed_at', 'monitoring_uninstalled_at']),
-            'latestMetrics' => $latestMetrics,
-            'recentMetrics' => $recentMetrics,
+            'server' => new ServerResource($server),
             'selectedTimeframe' => $hours,
         ]);
     }

@@ -3,16 +3,16 @@
 namespace App\Enums;
 
 /**
- * PHP Installation Status Enum
+ * Supervisor Task Status Enum
  *
- * Represents the lifecycle states of a PHP installation
+ * Represents the lifecycle states of a supervisor task
  */
-enum PhpStatus: string
+enum SupervisorTaskStatus: string
 {
     case Pending = 'pending';       // Record created, job not started
     case Installing = 'installing';  // Job actively running
-    case Active = 'active';         // Installation completed successfully
-    case Inactive = 'inactive';     // Installation disabled/stopped
+    case Active = 'active';         // Installation completed successfully, task running
+    case Inactive = 'inactive';     // Task manually stopped
     case Failed = 'failed';         // Installation failed with errors
     case Removing = 'removing';     // Removal in progress
 }

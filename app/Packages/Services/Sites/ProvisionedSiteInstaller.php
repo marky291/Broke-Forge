@@ -20,44 +20,24 @@ class ProvisionedSiteInstaller extends PackageInstaller implements \App\Packages
     /**
      * Execute the site installation
      */
-    public function execute(array $config): ServerSite
+    public function execute(int $siteId): ServerSite
     {
-        // Validate required domain parameter
-        if (! isset($config['domain']) || empty($config['domain'])) {
-            throw new \InvalidArgumentException('Domain is required for site installation.');
-        }
+        // Load the existing site record
+        $site = ServerSite::findOrFail($siteId);
 
         // Get the app user that will own site directories
         $appUser = $this->server->credential('brokeforge')?->getUsername()
             ?: 'brokeforge';
 
-        $domain = $config['domain'];
-        $documentRoot = $config['document_root'] ?? "/home/{$appUser}/{$config['domain']}/public";
+        $domain = $site->domain;
+        $documentRoot = $site->document_root;
+        $phpVersion = $site->php_version;
+        $ssl = $site->ssl_enabled;
+        $sslCertPath = $site->ssl_cert_path;
+        $sslKeyPath = $site->ssl_key_path;
 
-        // Detect PHP version from server or use provided/default
-        $phpVersion = $config['php_version'] ?? $this->server->defaultPhp?->version ?? '8.3';
-
-        $ssl = $config['ssl'] ?? false;
-        $sslCertPath = $config['ssl_cert_path'] ?? null;
-        $sslKeyPath = $config['ssl_key_path'] ?? null;
-
-        // Create or update site record in database
-        $site = ServerSite::updateOrCreate(
-            [
-                'server_id' => $this->server->id,
-                'domain' => $domain,
-            ],
-            [
-                'document_root' => $documentRoot,
-                'php_version' => $phpVersion,
-                'ssl_enabled' => $ssl,
-                'ssl_cert_path' => $sslCertPath,
-                'ssl_key_path' => $sslKeyPath,
-                'nginx_config_path' => "/etc/nginx/sites-available/{$domain}",
-                'status' => 'provisioning',
-                'configuration' => $config,
-            ]
-        );
+        // Get git configuration from site configuration
+        $config = $site->configuration ?? [];
 
         $this->install($this->commands($domain, $documentRoot, $phpVersion, $ssl, $sslCertPath, $sslKeyPath, $site, $config));
 

@@ -6,6 +6,7 @@ use App\Enums\DatabaseStatus;
 use App\Enums\DatabaseType;
 use App\Http\Controllers\Concerns\PreparesSiteData;
 use App\Http\Requests\Servers\InstallDatabaseRequest;
+use App\Http\Resources\ServerResource;
 use App\Models\Server;
 use App\Packages\Services\Database\MariaDB\MariaDbInstallerJob;
 use App\Packages\Services\Database\MariaDB\MariaDbRemoverJob;
@@ -33,49 +34,11 @@ class ServerDatabaseController extends Controller
 
     public function index(Server $server): Response
     {
-        $database = $server->databases()->latest()->first();
-        $databases = $server->databases()->latest()->get();
-
         return Inertia::render('servers/database', [
-            'server' => $server->only([
-                'id',
-                'vanity_name',
-                'provider',
-                'public_ip',
-                'private_ip',
-                'ssh_port',
-                'connection', 'monitoring_status',
-                'provision_status',
-                'created_at',
-                'updated_at',
-            ]),
+            'server' => new ServerResource($server),
             'availableDatabases' => Inertia::defer(
                 fn () => $this->databaseConfig->getAvailableTypes($server->os_codename)
             ),
-            'installedDatabase' => $database ? [
-                'id' => $database->id,
-                'service_name' => $database->name,
-                'configuration' => [
-                    'type' => $database->type,
-                    'version' => $database->version,
-                    'root_password' => $database->root_password,
-                ],
-                'status' => $database->status,
-                'progress_step' => $database->current_step,
-                'progress_total' => $database->total_steps,
-                'progress_label' => $database->progress_label ?? null,
-                'installed_at' => $database->created_at?->toISOString(),
-            ] : null,
-            'databases' => $databases->map(fn ($db) => [
-                'id' => $db->id,
-                'name' => $db->name,
-                'type' => $db->type,
-                'version' => $db->version,
-                'port' => $db->port,
-                'status' => $db->status,
-                'created_at' => $db->created_at?->toISOString(),
-            ]),
-            'latestMetrics' => $this->getLatestMetrics($server),
         ]);
     }
 
@@ -90,24 +53,26 @@ class ServerDatabaseController extends Controller
 
         $databaseType = DatabaseType::from($validated['type']);
 
+        // ✅ CREATE RECORD FIRST with 'pending' status
         $database = $server->databases()->create([
             'name' => $validated['name'] ?? $validated['type'],
             'type' => $validated['type'],
             'version' => $validated['version'],
             'port' => $validated['port'] ?? $this->databaseConfig->getDefaultPort($databaseType),
-            'status' => DatabaseStatus::Installing->value,
+            'status' => DatabaseStatus::Pending->value,
             'root_password' => $validated['root_password'],
         ]);
 
+        // ✅ THEN dispatch job with database record ID
         switch ($databaseType) {
             case DatabaseType::MariaDB:
-                MariaDbInstallerJob::dispatch($server);
+                MariaDbInstallerJob::dispatch($server, $database->id);
                 break;
             case DatabaseType::MySQL:
-                MySqlInstallerJob::dispatch($server);
+                MySqlInstallerJob::dispatch($server, $database->id);
                 break;
             case DatabaseType::PostgreSQL:
-                PostgreSqlInstallerJob::dispatch($server);
+                PostgreSqlInstallerJob::dispatch($server, $database->id);
                 break;
             default:
                 $database->update(['status' => DatabaseStatus::Failed->value]);
@@ -169,21 +134,23 @@ class ServerDatabaseController extends Controller
             return back()->with('error', 'No database found to uninstall.');
         }
 
+        // Update database record to uninstalling status
         $database->update(['status' => DatabaseStatus::Uninstalling->value]);
 
         $databaseType = $database->type instanceof DatabaseType
             ? $database->type
             : DatabaseType::from($database->type);
 
+        // Dispatch removal job with database record ID
         switch ($databaseType) {
             case DatabaseType::MariaDB:
-                MariaDbRemoverJob::dispatch($server);
+                MariaDbRemoverJob::dispatch($server, $database->id);
                 break;
             case DatabaseType::MySQL:
-                MySqlRemoverJob::dispatch($server);
+                MySqlRemoverJob::dispatch($server, $database->id);
                 break;
             case DatabaseType::PostgreSQL:
-                PostgreSqlRemoverJob::dispatch($server);
+                PostgreSqlRemoverJob::dispatch($server, $database->id);
                 break;
             default:
                 $database->update(['status' => DatabaseStatus::Failed->value]);

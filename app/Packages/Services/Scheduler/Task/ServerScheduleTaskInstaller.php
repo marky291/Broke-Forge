@@ -15,24 +15,17 @@ use App\Packages\Enums\PackageType;
  * Server Scheduled Task Installation Class
  *
  * Handles installation of individual scheduled tasks on remote servers.
- * Accepts either array data (creates DB record) or existing task model (uses existing record).
+ * Accepts an existing ServerScheduledTask model only (task must be created first).
  */
 class ServerScheduleTaskInstaller extends PackageInstaller implements ServerPackage
 {
     protected ServerScheduledTask $task;
 
-    protected ?array $taskData = null;
-
-    public function __construct(Server $server, array|ServerScheduledTask $taskDataOrModel)
+    public function __construct(Server $server, ServerScheduledTask $task)
     {
         parent::__construct($server);
 
-        // If we received an existing task model, use it. Otherwise, store array data for later creation
-        if ($taskDataOrModel instanceof ServerScheduledTask) {
-            $this->task = $taskDataOrModel;
-        } else {
-            $this->taskData = $taskDataOrModel;
-        }
+        $this->task = $task;
     }
 
     public function packageName(): PackageName
@@ -57,15 +50,10 @@ class ServerScheduleTaskInstaller extends PackageInstaller implements ServerPack
 
     /**
      * Execute the task installation
-     * Creates database record (if needed) and installs on remote server
+     * Installs existing task on remote server
      */
     public function execute(): void
     {
-        // If we received array data, create the task in the database first
-        if ($this->taskData !== null) {
-            $this->task = $this->server->scheduledTasks()->create($this->taskData);
-        }
-
         // Install on remote server
         $this->install($this->commands());
     }

@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CardContainer } from '@/components/ui/card-container';
 import { CardFormModal } from '@/components/ui/card-form-modal';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PageHeader } from '@/components/ui/page-header';
@@ -15,25 +16,11 @@ import { show as showServer } from '@/routes/servers';
 import { show as showSite } from '@/routes/servers/sites';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
+import { useEcho } from '@laravel/echo-react';
 import copyToClipboard from 'copy-to-clipboard';
-import { Check, CheckCircle, CheckCircle2, ChevronRight, Clock, Copy, GitBranch, Globe, Loader2, Lock, Plus, XCircle } from 'lucide-react';
+import { AlertCircle, Check, CheckCircle, CheckCircle2, ChevronRight, Clock, Copy, Eye, GitBranch, Globe, Loader2, Lock, Plus, RefreshCw, Trash2, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-type ServerType = {
-    id: number;
-    vanity_name: string;
-    public_ip: string;
-    ssh_port: number;
-    private_ip?: string | null;
-    connection: string;
-    created_at: string;
-    updated_at: string;
-};
-
-/**
- * Represents a site hosted on a server.
- * Maps to the ServerSite model on the backend.
- */
 type ServerSite = {
     id: number;
     domain: string;
@@ -54,35 +41,49 @@ type ServerSite = {
         application_type?: string;
     };
     git_status?: string;
+    error_log?: string | null;
+};
+
+type ServerType = {
+    id: number;
+    vanity_name: string;
+    public_ip: string;
+    ssh_port: number;
+    private_ip?: string | null;
+    connection: string;
+    created_at: string;
+    updated_at: string;
+    sites: ServerSite[];
+    latestMetrics?: {
+        cpu_usage: number;
+        memory_total_mb: number;
+        memory_used_mb: number;
+        memory_usage_percentage: number;
+        storage_total_gb: number;
+        storage_used_gb: number;
+        storage_usage_percentage: number;
+        collected_at: string;
+    } | null;
 };
 
 type SitesProps = {
     server: ServerType;
-    sites: {
-        data: ServerSite[];
-        links: Record<string, string | null>;
-        meta: {
-            current_page: number;
-            from: number | null;
-            last_page: number;
-            links: Array<{
-                url: string | null;
-                label: string;
-                active: boolean;
-            }>;
-            path: string;
-            per_page: number;
-            to: number | null;
-            total: number;
-        };
-    };
 };
 
-export default function Sites({ server, sites }: SitesProps) {
+export default function Sites({ server }: SitesProps) {
     const [showAddSiteDialog, setShowAddSiteDialog] = useState(false);
-    const [wasProvisioning, setWasProvisioning] = useState(false);
     const [deployKey, setDeployKey] = useState<string>('');
     const [copiedDeployKey, setCopiedDeployKey] = useState(false);
+    const [showErrorDialog, setShowErrorDialog] = useState(false);
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+    const [selectedSite, setSelectedSite] = useState<ServerSite | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [repositories, setRepositories] = useState<string[]>([]);
+    const [loadingRepositories, setLoadingRepositories] = useState(false);
+    const [branches, setBranches] = useState<string[]>([]);
+    const [loadingBranches, setLoadingBranches] = useState(false);
+    const [githubConnected, setGithubConnected] = useState(false);
+    const [clearingCache, setClearingCache] = useState(false);
     const { flash } = usePage<{ flash: { success?: string; error?: string } }>().props;
     const form = useForm({
         domain: '',
@@ -98,25 +99,10 @@ export default function Sites({ server, sites }: SitesProps) {
         { title: 'Sites', href: '#' },
     ];
 
-    // Poll for updates when there are sites provisioning
-    useEffect(() => {
-        const hasProvisioningSites = sites.data.some((site) => site.status === 'provisioning');
-
-        if (hasProvisioningSites) {
-            setWasProvisioning(true);
-            const interval = setInterval(() => {
-                router.reload({ only: ['sites'], preserveScroll: true });
-            }, 3000); // Poll every 3 seconds
-
-            return () => clearInterval(interval);
-        } else if (wasProvisioning) {
-            // Sites finished provisioning, do one final reload to get fresh data
-            setWasProvisioning(false);
-            setTimeout(() => {
-                router.reload({ only: ['sites'], preserveScroll: true });
-            }, 500); // Small delay to ensure DB has been updated
-        }
-    }, [sites.data, wasProvisioning]);
+    // Listen for real-time site updates via Reverb WebSocket
+    useEcho('sites', 'ServerSiteUpdated', () => {
+        router.reload({ only: ['server'], preserveScroll: true });
+    });
 
     // Fetch deploy key when modal opens
     useEffect(() => {
@@ -127,6 +113,79 @@ export default function Sites({ server, sites }: SitesProps) {
                 .catch((err) => console.error('Failed to fetch deploy key:', err));
         }
     }, [showAddSiteDialog, server.id, deployKey]);
+
+    // Fetch GitHub repositories when modal opens
+    useEffect(() => {
+        if (showAddSiteDialog && repositories.length === 0) {
+            setLoadingRepositories(true);
+            fetch(`/servers/${server.id}/github/repositories`)
+                .then((res) => res.json())
+                .then((data) => {
+                    setRepositories(data.repositories || []);
+                    setGithubConnected(data.connected || false);
+                })
+                .catch((err) => {
+                    console.error('Failed to fetch GitHub repositories:', err);
+                    setGithubConnected(false);
+                })
+                .finally(() => setLoadingRepositories(false));
+        }
+    }, [showAddSiteDialog, server.id, repositories]);
+
+    // Fetch branches when repository is selected
+    const fetchBranches = (repository: string) => {
+        if (!repository) {
+            setBranches([]);
+            return;
+        }
+
+        // Parse owner and repo from "owner/repo" format
+        const [owner, repo] = repository.split('/');
+        if (!owner || !repo) {
+            console.error('Invalid repository format:', repository);
+            return;
+        }
+
+        setLoadingBranches(true);
+        fetch(`/servers/${server.id}/github/repositories/${owner}/${repo}/branches`)
+            .then((res) => res.json())
+            .then((data) => {
+                setBranches(data.branches || []);
+                // Auto-select first branch or default branch
+                if (data.branches && data.branches.length > 0) {
+                    const defaultBranch = data.branches.find((b: string) => b === 'main' || b === 'master') || data.branches[0];
+                    form.setData('git_branch', defaultBranch);
+                }
+            })
+            .catch((err) => {
+                console.error('Failed to fetch branches:', err);
+                setBranches([]);
+            })
+            .finally(() => setLoadingBranches(false));
+    };
+
+    // Clear cache and refresh repositories
+    const handleClearCache = () => {
+        setClearingCache(true);
+        // Clear local state
+        setRepositories([]);
+        setBranches([]);
+        form.setData('git_repository', '');
+        form.setData('git_branch', 'main');
+
+        // Fetch fresh data with cache-busting timestamp
+        fetch(`/servers/${server.id}/github/repositories?_=${Date.now()}`)
+            .then((res) => res.json())
+            .then((data) => {
+                setRepositories(data.repositories || []);
+                setGithubConnected(data.connected || false);
+            })
+            .catch((err) => {
+                console.error('Failed to fetch GitHub repositories:', err);
+                setGithubConnected(false);
+            })
+            .finally(() => setClearingCache(false));
+    };
 
     const handleCopyDeployKey = () => {
         const copiedOk = copyToClipboard(deployKey, { format: 'text/plain' });
@@ -147,30 +206,100 @@ export default function Sites({ server, sites }: SitesProps) {
         });
     };
 
-    const getStatusBadge = (status: string) => {
+    const handleViewError = (site: ServerSite) => {
+        setSelectedSite(site);
+        setShowErrorDialog(true);
+    };
+
+    const handleDeleteClick = (site: ServerSite) => {
+        setSelectedSite(site);
+        setShowDeleteDialog(true);
+    };
+
+    const handleDeleteConfirm = () => {
+        if (!selectedSite) return;
+
+        setIsDeleting(true);
+        router.delete(`/servers/${server.id}/sites/${selectedSite.id}`, {
+            preserveScroll: true,
+            onFinish: () => {
+                setIsDeleting(false);
+                setShowDeleteDialog(false);
+                setSelectedSite(null);
+            },
+        });
+    };
+
+    const isSiteClickable = (status: string) => {
+        return status === 'active';
+    };
+
+    const getStatusBadge = (site: ServerSite) => {
+        const status = site.status;
+
         switch (status) {
             case 'active':
                 return (
-                    <Badge variant="outline" className="border-green-200 bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700">
+                    <Badge variant="outline" className="inline-flex items-center gap-1.5 border-green-200 bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700">
+                        <CheckCircle className="h-3 w-3" />
                         Active
+                    </Badge>
+                );
+            case 'pending':
+                return (
+                    <Badge variant="outline" className="inline-flex items-center gap-1.5 border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700">
+                        <Clock className="h-3 w-3" />
+                        Pending
                     </Badge>
                 );
             case 'provisioning':
                 return (
-                    <Badge variant="outline" className="border-blue-200 bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700">
+                    <Badge variant="outline" className="inline-flex items-center gap-1.5 border-blue-200 bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700">
+                        <Loader2 className="h-3 w-3 animate-spin" />
                         Provisioning
                     </Badge>
+                );
+            case 'failed':
+                return (
+                    <div className="inline-flex items-center gap-2">
+                        <Badge variant="outline" className="inline-flex items-center gap-1.5 border-red-200 bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-700">
+                            <XCircle className="h-3 w-3" />
+                            Failed
+                        </Badge>
+                        <div className="inline-flex items-center gap-1.5">
+                            {site.error_log && (
+                                <button
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        handleViewError(site);
+                                    }}
+                                    className="inline-flex items-center gap-1 text-xs text-red-600 hover:text-red-700 hover:underline"
+                                    title="View error details"
+                                >
+                                    <Eye className="h-3.5 w-3.5" />
+                                    View Error
+                                </button>
+                            )}
+                            <button
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    handleDeleteClick(site);
+                                }}
+                                className="inline-flex items-center gap-1 text-xs text-red-600 hover:text-red-700 hover:underline"
+                                title="Delete site"
+                            >
+                                <Trash2 className="h-3.5 w-3.5" />
+                                Delete
+                            </button>
+                        </div>
+                    </div>
                 );
             case 'disabled':
                 return (
                     <Badge variant="outline" className="border-gray-200 bg-gray-50 px-2.5 py-0.5 text-xs font-medium text-gray-700">
                         Disabled
-                    </Badge>
-                );
-            case 'failed':
-                return (
-                    <Badge variant="outline" className="border-red-200 bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-700">
-                        Failed
                     </Badge>
                 );
             default:
@@ -182,53 +311,6 @@ export default function Sites({ server, sites }: SitesProps) {
         }
     };
 
-    const getStatusIcon = (status: string) => {
-        switch (status) {
-            case 'active':
-                return <CheckCircle className="h-4 w-4 text-green-500" />;
-            case 'provisioning':
-                return <Loader2 className="h-4 w-4 animate-spin text-blue-500" />;
-            case 'disabled':
-                return <XCircle className="h-4 w-4 text-gray-500" />;
-            case 'failed':
-                return <XCircle className="h-4 w-4 text-red-500" />;
-            default:
-                return <Clock className="h-4 w-4 text-gray-400" />;
-        }
-    };
-
-    const getApplicationTypeBadge = (type?: string) => {
-        switch (type?.toLowerCase()) {
-            case 'laravel':
-                return (
-                    <Badge variant="outline" className="border-orange-200 bg-orange-50 text-xs font-normal text-orange-700">
-                        Laravel
-                    </Badge>
-                );
-            case 'wordpress':
-                return (
-                    <Badge variant="outline" className="border-blue-200 bg-blue-50 text-xs font-normal text-blue-700">
-                        WordPress
-                    </Badge>
-                );
-            case 'static':
-            case 'static-html':
-                return (
-                    <Badge variant="outline" className="border-gray-200 bg-gray-50 text-xs font-normal text-gray-700">
-                        Static HTML
-                    </Badge>
-                );
-            default:
-                return null;
-        }
-    };
-
-    const formatGitRepository = (git?: { provider?: string; repository?: string; branch?: string }) => {
-        if (!git?.repository) return null;
-        const parts = git.repository.split('/');
-        const repoName = parts[parts.length - 1];
-        return `${repoName}${git.branch ? ` (${git.branch})` : ''}`;
-    };
 
     return (
         <ServerLayout server={server} breadcrumbs={breadcrumbs}>
@@ -267,79 +349,96 @@ export default function Sites({ server, sites }: SitesProps) {
                     action={<CardContainerAddButton label="Add Site" onClick={() => setShowAddSiteDialog(true)} aria-label="Add Site" />}
                     parentBorder={false}
                 >
-                    {sites.data.length > 0 ? (
+                    {server.sites.length > 0 ? (
                         <div className="space-y-2 md:space-y-3">
-                            {sites.data.map((site) => (
-                                <div
-                                    key={site.id}
-                                    className="divide-y divide-neutral-200 rounded-lg border border-neutral-200 bg-white dark:divide-white/8 dark:border-white/8 dark:bg-white/3"
-                                >
-                                    <Link href={showSite({ server: server.id, site: site.id }).url} className="group block">
-                                        <div className="px-3 py-3 transition-colors hover:bg-muted/30 md:px-6 md:py-6">
-                                            <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-6">
-                                                {/* Top row: Icon + Site Info + Arrow (on mobile) */}
-                                                <div className="flex items-center gap-3 md:min-w-0 md:flex-1 md:gap-6">
-                                                    {/* Icon */}
-                                                    <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-primary/10 md:h-11 md:w-11">
-                                                        <Globe className="h-4 w-4 text-primary md:h-5 md:w-5" />
-                                                    </div>
+                            {server.sites.map((site) => {
+                                const isClickable = isSiteClickable(site.status);
+                                const WrapperComponent = isClickable ? Link : 'div';
+                                const wrapperProps = isClickable
+                                    ? { href: showSite({ server: server.id, site: site.id }).url, className: 'group block' }
+                                    : { className: 'block cursor-default' };
 
-                                                    {/* Site Info */}
-                                                    <div className="min-w-0 flex-1">
-                                                        <h3 className="mb-0.5 truncate text-sm font-semibold text-foreground transition-colors group-hover:text-primary md:mb-1 md:text-base">
-                                                            {site.domain}
-                                                        </h3>
-                                                        {site.configuration?.git_repository?.repository ? (
-                                                            <div className="flex items-center gap-1.5">
-                                                                <GitBranch className="h-3 w-3 flex-shrink-0 text-muted-foreground/60 md:h-3.5 md:w-3.5" />
-                                                                <p className="truncate text-xs text-muted-foreground md:text-sm">
-                                                                    {site.configuration.git_repository.repository}
-                                                                    {site.configuration.git_repository.branch && (
-                                                                        <span className="text-muted-foreground/60">
-                                                                            {' '}
-                                                                            • {site.configuration.git_repository.branch}
-                                                                        </span>
-                                                                    )}
-                                                                </p>
+                                return (
+                                    <div
+                                        key={site.id}
+                                        className="divide-y divide-neutral-200 rounded-lg border border-neutral-200 bg-white dark:divide-white/8 dark:border-white/8 dark:bg-white/3"
+                                    >
+                                        <WrapperComponent {...wrapperProps}>
+                                            <div className={`px-3 py-3 transition-colors md:px-6 md:py-6 ${isClickable ? 'hover:bg-muted/30' : 'opacity-75'}`}>
+                                                <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-6">
+                                                    {/* Top row: Icon + Site Info + Arrow (on mobile) */}
+                                                    <div className="flex items-center gap-3 md:min-w-0 md:flex-1 md:gap-6">
+                                                        {/* Icon */}
+                                                        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-primary/10 md:h-11 md:w-11">
+                                                            <Globe className="h-4 w-4 text-primary md:h-5 md:w-5" />
+                                                        </div>
+
+                                                        {/* Site Info */}
+                                                        <div className="min-w-0 flex-1">
+                                                            <div className="mb-0.5 flex items-center gap-2 md:mb-1">
+                                                                <h3
+                                                                    className={`truncate text-sm font-semibold text-foreground md:text-base ${isClickable ? 'transition-colors group-hover:text-primary' : ''}`}
+                                                                >
+                                                                    {site.domain}
+                                                                </h3>
+                                                                {getStatusBadge(site)}
                                                             </div>
-                                                        ) : (
-                                                            <p className="text-xs text-muted-foreground/60 md:text-sm">No repository configured</p>
+                                                            {site.configuration?.git_repository?.repository ? (
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <GitBranch className="h-3 w-3 flex-shrink-0 text-muted-foreground/60 md:h-3.5 md:w-3.5" />
+                                                                    <p className="truncate text-xs text-muted-foreground md:text-sm">
+                                                                        {site.configuration.git_repository.repository}
+                                                                        {site.configuration.git_repository.branch && (
+                                                                            <span className="text-muted-foreground/60">
+                                                                                {' '}
+                                                                                • {site.configuration.git_repository.branch}
+                                                                            </span>
+                                                                        )}
+                                                                    </p>
+                                                                </div>
+                                                            ) : (
+                                                                <p className="text-xs text-muted-foreground/60 md:text-sm">No repository configured</p>
+                                                            )}
+                                                        </div>
+
+                                                        {/* Arrow - visible only on mobile */}
+                                                        {isClickable && (
+                                                            <ChevronRight className="h-4 w-4 flex-shrink-0 text-muted-foreground/40 transition-all group-hover:translate-x-0.5 group-hover:text-primary md:hidden md:h-5 md:w-5" />
                                                         )}
                                                     </div>
 
-                                                    {/* Arrow - visible only on mobile */}
-                                                    <ChevronRight className="h-4 w-4 flex-shrink-0 text-muted-foreground/40 transition-all group-hover:translate-x-0.5 group-hover:text-primary md:hidden md:h-5 md:w-5" />
-                                                </div>
+                                                    {/* Bottom row: Metadata (stacked on mobile, inline on desktop) */}
+                                                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 pl-12 text-xs md:flex-shrink-0 md:gap-6 md:pl-0 md:text-sm">
+                                                        {/* SSL */}
+                                                        <div className="flex items-center gap-1.5">
+                                                            <Lock
+                                                                className={`h-3.5 w-3.5 flex-shrink-0 md:h-4 md:w-4 ${site.ssl_enabled ? 'text-green-600' : 'text-muted-foreground/30'}`}
+                                                            />
+                                                            <span className="text-muted-foreground">{site.ssl_enabled ? 'SSL' : 'No SSL'}</span>
+                                                        </div>
 
-                                                {/* Bottom row: Metadata (stacked on mobile, inline on desktop) */}
-                                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 pl-12 text-xs md:flex-shrink-0 md:gap-6 md:pl-0 md:text-sm">
-                                                    {/* SSL */}
-                                                    <div className="flex items-center gap-1.5">
-                                                        <Lock
-                                                            className={`h-3.5 w-3.5 flex-shrink-0 md:h-4 md:w-4 ${site.ssl_enabled ? 'text-green-600' : 'text-muted-foreground/30'}`}
-                                                        />
-                                                        <span className="text-muted-foreground">{site.ssl_enabled ? 'SSL' : 'No SSL'}</span>
+                                                        {/* PHP Version */}
+                                                        <div>
+                                                            <span className="text-muted-foreground">PHP </span>
+                                                            <span className="font-medium text-foreground">{site.php_version}</span>
+                                                        </div>
+
+                                                        {/* Deployed Time */}
+                                                        <div className="text-muted-foreground">
+                                                            {site.last_deployed_at_human ? `Deployed ${site.last_deployed_at_human}` : 'Not deployed'}
+                                                        </div>
+
+                                                        {/* Arrow - visible only on desktop */}
+                                                        {isClickable && (
+                                                            <ChevronRight className="hidden h-5 w-5 flex-shrink-0 text-muted-foreground/40 transition-all group-hover:translate-x-0.5 group-hover:text-primary md:block" />
+                                                        )}
                                                     </div>
-
-                                                    {/* PHP Version */}
-                                                    <div>
-                                                        <span className="text-muted-foreground">PHP </span>
-                                                        <span className="font-medium text-foreground">{site.php_version}</span>
-                                                    </div>
-
-                                                    {/* Deployed Time */}
-                                                    <div className="text-muted-foreground">
-                                                        {site.last_deployed_at_human ? `Deployed ${site.last_deployed_at_human}` : 'Not deployed'}
-                                                    </div>
-
-                                                    {/* Arrow - visible only on desktop */}
-                                                    <ChevronRight className="hidden h-5 w-5 flex-shrink-0 text-muted-foreground/40 transition-all group-hover:translate-x-0.5 group-hover:text-primary md:block" />
                                                 </div>
                                             </div>
-                                        </div>
-                                    </Link>
-                                </div>
-                            ))}
+                                        </WrapperComponent>
+                                    </div>
+                                );
+                            })}
                         </div>
                     ) : (
                         <div className="divide-y divide-neutral-200 rounded-lg border border-neutral-200 bg-white dark:divide-white/8 dark:border-white/8 dark:bg-white/3">
@@ -427,26 +526,88 @@ export default function Sites({ server, sites }: SitesProps) {
                     {/* Git Repository Section */}
                     <div className="grid w-full min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
                         <div className="min-w-0 space-y-2">
-                            <Label htmlFor="git_repository">Git Repository</Label>
-                            <Input
-                                id="git_repository"
-                                placeholder="owner/repo"
-                                value={form.data.git_repository}
-                                onChange={(e) => form.setData('git_repository', e.target.value)}
-                                disabled={form.processing}
-                            />
+                            <div className="flex items-center gap-2">
+                                <Label htmlFor="git_repository">Git Repository</Label>
+                                {loadingRepositories && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+                                {githubConnected && !loadingRepositories && (
+                                    <button
+                                        type="button"
+                                        onClick={handleClearCache}
+                                        disabled={clearingCache}
+                                        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
+                                        title="Refresh repositories"
+                                    >
+                                        <RefreshCw className={`h-3 w-3 ${clearingCache ? 'animate-spin' : ''}`} />
+                                    </button>
+                                )}
+                            </div>
+                            {githubConnected && repositories.length > 0 ? (
+                                <Select
+                                    value={form.data.git_repository}
+                                    onValueChange={(value) => {
+                                        form.setData('git_repository', value);
+                                        // Fetch branches for the selected repository
+                                        fetchBranches(value);
+                                    }}
+                                    disabled={form.processing || loadingRepositories}
+                                >
+                                    <SelectTrigger id="git_repository">
+                                        <SelectValue placeholder="Select repository" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {repositories.map((repo) => (
+                                            <SelectItem key={repo} value={repo}>
+                                                {repo}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            ) : (
+                                <Input
+                                    id="git_repository"
+                                    placeholder={loadingRepositories ? 'Loading repositories...' : githubConnected ? 'No repositories found' : 'owner/repo'}
+                                    value={form.data.git_repository}
+                                    onChange={(e) => form.setData('git_repository', e.target.value)}
+                                    disabled={form.processing || loadingRepositories}
+                                />
+                            )}
                             {form.errors.git_repository && <p className="text-sm text-red-500">{form.errors.git_repository}</p>}
+                            {!githubConnected && !loadingRepositories && (
+                                <p className="text-xs text-muted-foreground">Connect GitHub in server settings for automatic repository selection.</p>
+                            )}
                         </div>
 
                         <div className="min-w-0 space-y-2">
-                            <Label htmlFor="git_branch">Branch</Label>
-                            <Input
-                                id="git_branch"
-                                placeholder="main"
-                                value={form.data.git_branch}
-                                onChange={(e) => form.setData('git_branch', e.target.value)}
-                                disabled={form.processing}
-                            />
+                            <div className="flex items-center gap-2">
+                                <Label htmlFor="git_branch">Branch</Label>
+                                {loadingBranches && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+                            </div>
+                            {form.data.git_repository && branches.length > 0 ? (
+                                <Select
+                                    value={form.data.git_branch}
+                                    onValueChange={(value) => form.setData('git_branch', value)}
+                                    disabled={form.processing || loadingBranches}
+                                >
+                                    <SelectTrigger id="git_branch">
+                                        <SelectValue placeholder="Select branch" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {branches.map((branch) => (
+                                            <SelectItem key={branch} value={branch}>
+                                                {branch}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            ) : (
+                                <Input
+                                    id="git_branch"
+                                    placeholder={loadingBranches ? 'Loading branches...' : 'main'}
+                                    value={form.data.git_branch}
+                                    onChange={(e) => form.setData('git_branch', e.target.value)}
+                                    disabled={form.processing || loadingBranches}
+                                />
+                            )}
                             {form.errors.git_branch && <p className="text-sm text-red-500">{form.errors.git_branch}</p>}
                         </div>
                     </div>
@@ -510,6 +671,81 @@ export default function Sites({ server, sites }: SitesProps) {
                     </div>
                 </div>
             </CardFormModal>
+
+            {/* Error Viewing Modal */}
+            <Dialog open={showErrorDialog} onOpenChange={setShowErrorDialog}>
+                <DialogContent className="max-w-3xl">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <AlertCircle className="h-5 w-5 text-red-600" />
+                            Site Installation Error
+                        </DialogTitle>
+                        <DialogDescription>
+                            {selectedSite && (
+                                <span>
+                                    Error details for <span className="font-semibold">{selectedSite.domain}</span>
+                                </span>
+                            )}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="mt-4">
+                        {selectedSite?.error_log ? (
+                            <div className="max-h-96 overflow-auto rounded-md border border-red-200 bg-red-50 p-4 dark:border-red-900/50 dark:bg-red-950/20">
+                                <pre className="whitespace-pre-wrap break-words font-mono text-xs text-red-900 dark:text-red-300">
+                                    {selectedSite.error_log}
+                                </pre>
+                            </div>
+                        ) : (
+                            <div className="rounded-md border border-neutral-200 bg-neutral-50 p-4 text-sm text-muted-foreground dark:border-neutral-800 dark:bg-neutral-900/50">
+                                No error details available.
+                            </div>
+                        )}
+                    </div>
+                    <div className="mt-6 flex justify-end">
+                        <Button variant="outline" onClick={() => setShowErrorDialog(false)}>
+                            Close
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Delete Confirmation Modal */}
+            <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <AlertCircle className="h-5 w-5 text-red-600" />
+                            Delete Failed Site
+                        </DialogTitle>
+                        <DialogDescription>
+                            {selectedSite && (
+                                <span>
+                                    Are you sure you want to delete <span className="font-semibold">{selectedSite.domain}</span>? This will clean up any
+                                    partial installation files from the server.
+                                </span>
+                            )}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="mt-6 flex justify-end gap-3">
+                        <Button variant="outline" onClick={() => setShowDeleteDialog(false)} disabled={isDeleting}>
+                            Cancel
+                        </Button>
+                        <Button variant="destructive" onClick={handleDeleteConfirm} disabled={isDeleting}>
+                            {isDeleting ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Deleting...
+                                </>
+                            ) : (
+                                <>
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Delete Site
+                                </>
+                            )}
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </ServerLayout>
     );
 }

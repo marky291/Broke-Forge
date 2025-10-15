@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Concerns\PreparesSiteData;
+use App\Http\Resources\ServerSiteResource;
 use App\Models\Server;
 use App\Models\ServerDeployment;
 use App\Models\ServerSite;
@@ -16,8 +16,6 @@ use Inertia\Response;
 
 class ServerSiteDeploymentsController extends Controller
 {
-    use PreparesSiteData;
-
     /**
      * Display the deployments page for a site.
      */
@@ -25,63 +23,12 @@ class ServerSiteDeploymentsController extends Controller
     {
         // Check if site has Git repository installed
         if (! $site->hasGitRepository()) {
-            return redirect()->route('servers.sites.git-repository', [$server, $site])
+            return redirect()->route('servers.sites.application.git.setup', [$server, $site])
                 ->with('error', 'Git repository must be installed before deploying.');
         }
 
-        $gitConfig = $site->getGitConfiguration();
-
-        // Get deployment script from configuration
-        $deploymentScript = $site->getDeploymentScript();
-
-        // Get deployment history
-        $deployments = $site->deployments()
-            ->latest()
-            ->paginate(10)
-            ->through(fn (ServerDeployment $deployment) => [
-                'id' => $deployment->id,
-                'status' => $deployment->status,
-                'deployment_script' => $deployment->deployment_script,
-                'output' => $deployment->output,
-                'error_output' => $deployment->error_output,
-                'exit_code' => $deployment->exit_code,
-                'commit_sha' => $deployment->commit_sha,
-                'commit_message' => $deployment->commit_message,
-                'branch' => $deployment->branch,
-                'duration_ms' => $deployment->duration_ms,
-                'duration_seconds' => $deployment->getDurationSeconds(),
-                'started_at' => $deployment->started_at,
-                'completed_at' => $deployment->completed_at,
-                'created_at' => $deployment->created_at,
-                'created_at_human' => $deployment->created_at->diffForHumans(),
-            ]);
-
-        // Get latest deployment
-        $latestDeployment = $site->latestDeployment;
-
         return Inertia::render('servers/site-deployments', [
-            'server' => $this->prepareServerData($server),
-            'site' => $this->prepareSiteData($site, [
-                'document_root',
-                'last_deployment_sha',
-                'last_deployed_at',
-                'auto_deploy_enabled',
-            ]),
-            'deploymentScript' => $deploymentScript,
-            'gitConfig' => $gitConfig,
-            'deployments' => $deployments,
-            'latestDeployment' => $latestDeployment ? [
-                'id' => $latestDeployment->id,
-                'status' => $latestDeployment->status,
-                'output' => $latestDeployment->output,
-                'error_output' => $latestDeployment->error_output,
-                'commit_sha' => $latestDeployment->commit_sha,
-                'commit_message' => $latestDeployment->commit_message,
-                'branch' => $latestDeployment->branch,
-                'duration_seconds' => $latestDeployment->getDurationSeconds(),
-                'started_at' => $latestDeployment->started_at,
-                'completed_at' => $latestDeployment->completed_at,
-            ] : null,
+            'site' => new ServerSiteResource($site),
         ]);
     }
 
@@ -108,14 +55,14 @@ class ServerSiteDeploymentsController extends Controller
     {
         // Check if site has Git repository installed
         if (! $site->hasGitRepository()) {
-            return redirect()->route('servers.sites.git-repository', [$server, $site])
+            return redirect()->route('servers.sites.application.git.setup', [$server, $site])
                 ->with('error', 'Git repository must be installed before deploying.');
         }
 
         // Get deployment script
         $deploymentScript = $site->getDeploymentScript();
 
-        // Create deployment record
+        // ✅ CREATE RECORD FIRST with 'pending' status
         $deployment = ServerDeployment::create([
             'server_id' => $server->id,
             'server_site_id' => $site->id,
@@ -123,8 +70,8 @@ class ServerSiteDeploymentsController extends Controller
             'deployment_script' => $deploymentScript,
         ]);
 
-        // Dispatch deployment job
-        SiteGitDeploymentJob::dispatch($server, $site, $deployment);
+        // ✅ THEN dispatch job with deployment record ID
+        SiteGitDeploymentJob::dispatch($server, $deployment->id);
 
         return redirect()
             ->route('servers.sites.deployments', [$server, $site])

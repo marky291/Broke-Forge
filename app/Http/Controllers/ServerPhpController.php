@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\PreparesSiteData;
+use App\Http\Resources\ServerResource;
 use App\Models\Server;
 use App\Models\ServerPhp;
 use App\Packages\Enums\PhpVersion;
@@ -10,7 +11,6 @@ use App\Packages\Services\PHP\PhpInstallerJob;
 use App\Packages\Services\PHP\Services\PhpConfigurationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -20,16 +20,8 @@ class ServerPhpController extends Controller
 
     public function index(Server $server): Response
     {
-        // Get installed PHP versions with eager loaded modules
-        $installedPhp = $server->phps()->with('modules')->get();
-
         return Inertia::render('servers/php', [
-            'server' => $server->only(['id', 'vanity_name', 'provider', 'public_ip', 'ssh_port', 'private_ip', 'connection', 'monitoring_status', 'created_at', 'updated_at']),
-            'availablePhpVersions' => PhpConfigurationService::getAvailableVersions(),
-            'phpExtensions' => PhpConfigurationService::getAvailableExtensions(),
-            'installedPhpVersions' => $installedPhp,
-            'defaultSettings' => PhpConfigurationService::getDefaultSettings(),
-            'latestMetrics' => $this->getLatestMetrics($server),
+            'server' => new ServerResource($server),
         ]);
     }
 
@@ -67,7 +59,7 @@ class ServerPhpController extends Controller
             $php = ServerPhp::create([
                 'server_id' => $server->id,
                 'version' => $validated['version'],
-                'status' => \App\Enums\PhpStatus::Installing,
+                'status' => \App\Enums\PhpStatus::Pending,
                 'is_cli_default' => $validated['is_cli_default'] ?? false,
             ]);
 
@@ -82,17 +74,20 @@ class ServerPhpController extends Controller
             }
         }
 
-        // TODO: Dispatch job to actually install PHP on the server
+        // Dispatch job to actually install PHP on the server
+        PhpInstallerJob::dispatch($server, $php->id);
 
         return redirect()
             ->route('servers.php', $server)
-            ->with('success', 'PHP configuration saved successfully');
+            ->with('success', 'PHP installation started');
     }
 
     public function install(Request $request, Server $server): RedirectResponse
     {
+        $availableVersions = PhpConfigurationService::getAvailableVersions();
+
         $validated = $request->validate([
-            'version' => ['required', 'string', Rule::in(array_column(PhpVersion::cases(), 'value'))],
+            'version' => 'required|string|in:'.implode(',', array_keys($availableVersions)),
         ]);
 
         // Map version string to PhpVersion enum
@@ -112,17 +107,17 @@ class ServerPhpController extends Controller
         // Check if this is the first PHP version
         $isFirstPhp = $server->phps()->count() === 0;
 
-        // Create PHP record with installing status
-        ServerPhp::create([
+        // ✅ CREATE RECORD FIRST with 'pending' status
+        $php = ServerPhp::create([
             'server_id' => $server->id,
             'version' => $validated['version'],
-            'status' => \App\Enums\PhpStatus::Installing,
+            'status' => \App\Enums\PhpStatus::Pending,
             'is_cli_default' => $isFirstPhp, // First PHP version becomes CLI default
             'is_site_default' => $isFirstPhp, // First PHP version becomes Site default
         ]);
 
-        // Dispatch installation job
-        PhpInstallerJob::dispatch($server, $phpVersion);
+        // ✅ THEN dispatch job with record ID
+        PhpInstallerJob::dispatch($server, $php->id);
 
         return redirect()
             ->route('servers.php', $server)
@@ -186,14 +181,11 @@ class ServerPhpController extends Controller
             abort(404);
         }
 
-        // Map version string to PhpVersion enum
-        $phpVersion = PhpVersion::from($php->version);
-
         // Update PHP record to removing status
         $php->update(['status' => \App\Enums\PhpStatus::Removing]);
 
-        // Dispatch removal job
-        \App\Packages\Services\PHP\PhpRemoverJob::dispatch($server, $phpVersion, $php->id);
+        // Dispatch removal job with PHP record ID
+        \App\Packages\Services\PHP\PhpRemoverJob::dispatch($server, $php->id);
 
         return redirect()
             ->route('servers.php', $server)
