@@ -70,7 +70,7 @@ class ServerProvisioningController extends Controller
         $server->events()->delete();
 
         // Generate new root password for the next attempt
-        $server->ssh_root_password = null;
+        $server->ssh_root_password = Server::generatePassword();
 
         $server->connection = Connection::PENDING;
         $server->provision_status = ProvisionStatus::Pending;
