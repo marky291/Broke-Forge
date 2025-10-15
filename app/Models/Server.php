@@ -9,6 +9,7 @@ use App\Enums\SupervisorStatus;
 use App\Packages\Enums\Connection;
 use App\Packages\Enums\CredentialType;
 use App\Packages\Enums\ProvisionStatus;
+use App\Packages\Services\Credential\ServerCredentialConnection;
 use Illuminate\Database\Eloquent\Casts\AsCollection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -59,6 +60,10 @@ class Server extends Model
         'supervisor_status',
         'supervisor_installed_at',
         'supervisor_uninstalled_at',
+        'source_provider_ssh_key_added',
+        'source_provider_ssh_key_id',
+        'source_provider_ssh_key_title',
+        'add_ssh_key_to_github',
     ];
 
     protected $attributes = [
@@ -87,6 +92,8 @@ class Server extends Model
             'supervisor_status' => SupervisorStatus::class,
             'supervisor_installed_at' => 'datetime',
             'supervisor_uninstalled_at' => 'datetime',
+            'source_provider_ssh_key_added' => 'boolean',
+            'add_ssh_key_to_github' => 'boolean',
         ];
     }
 
@@ -193,8 +200,8 @@ class Server extends Model
         // Convert string to enum if necessary
         $type = is_string($credentialType) ? CredentialType::fromString($credentialType) : $credentialType;
 
-        // Use the connection builder service
-        $builder = new \App\Packages\Services\Credential\SshConnectionBuilder;
+        // Resolve the connection builder from container (with factory injected)
+        $builder = app(ServerCredentialConnection::class);
 
         return $builder->build($this, $type);
     }

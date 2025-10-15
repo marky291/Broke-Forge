@@ -5,6 +5,7 @@ namespace App\Packages\Services\Nginx;
 use App\Enums\ReverseProxyStatus;
 use App\Enums\ReverseProxyType;
 use App\Enums\ScheduleFrequency;
+use App\Models\ServerPhp;
 use App\Models\ServerReverseProxy;
 use App\Packages\Base\Milestones;
 use App\Packages\Base\Package;
@@ -82,7 +83,18 @@ class NginxInstaller extends PackageInstaller implements \App\Packages\Base\Serv
         $this->server->provision->put(6, ProvisionStatus::Installing->value);
         $this->server->save();
 
-        PhpInstallerJob::dispatchSync($this->server, $phpVersion);
+        // Create ServerPhp record FIRST with 'pending' status (Reverb Package Lifecycle)
+        $isFirstPhp = $this->server->phps()->count() === 0;
+        $php = ServerPhp::create([
+            'server_id' => $this->server->id,
+            'version' => $phpVersion->value,
+            'status' => \App\Enums\PhpStatus::Pending,
+            'is_cli_default' => $isFirstPhp,
+            'is_site_default' => $isFirstPhp,
+        ]);
+
+        // Pass the record ID to the job (not the enum)
+        PhpInstallerJob::dispatchSync($this->server, $php->id);
 
         $this->server->provision->put(6, ProvisionStatus::Completed->value);
         $this->server->provision->put(7, ProvisionStatus::Installing->value);
@@ -97,12 +109,16 @@ class NginxInstaller extends PackageInstaller implements \App\Packages\Base\Serv
         // Install Task scheduler and default task schedule job.
         ServerSchedulerInstallerJob::dispatchSync($this->server);
 
-        // Install default scheduled task (job will create DB record and install on remote server)
-        ServerScheduleTaskInstallerJob::dispatchSync($this->server, [
+        // Create scheduled task record FIRST with 'pending' status (Reverb Package Lifecycle)
+        $task = $this->server->scheduledTasks()->create([
             'name' => 'Remove unused packages',
             'command' => 'apt-get autoremove && apt-get autoclean',
             'frequency' => ScheduleFrequency::Weekly,
+            'status' => \App\Enums\TaskStatus::Pending,
         ]);
+
+        // Pass the record ID to the job (not the array)
+        ServerScheduleTaskInstallerJob::dispatchSync($this->server, $task->id);
 
         // Install the supervisor as it has low overhead and provides benefit to user.
         SupervisorInstallerJob::dispatchSync($this->server);

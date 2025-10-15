@@ -1,6 +1,7 @@
 import InputError from '@/components/input-error';
 import { ServerProviderIcon, getAllProviders, type ServerProvider } from '@/components/server-provider-icon';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -62,6 +63,7 @@ export default function DeployServerModal({ trigger }: DeployServerModalProps) {
     const [defaultName, setDefaultName] = useState<string>('');
     const [phpVersion, setPhpVersion] = useState<string>('8.3');
     const [provider, setProvider] = useState<ServerProvider>('custom');
+    const [addSshKeyToGithub, setAddSshKeyToGithub] = useState<boolean>(true);
     const [open, setOpen] = useState(false);
 
     const providers = getAllProviders();
@@ -70,6 +72,7 @@ export default function DeployServerModal({ trigger }: DeployServerModalProps) {
         setDefaultName(generateFriendlyName());
         setPhpVersion('8.3');
         setProvider('custom');
+        setAddSshKeyToGithub(true);
     };
 
     return (
@@ -152,6 +155,28 @@ export default function DeployServerModal({ trigger }: DeployServerModalProps) {
                                 </Select>
                                 <input type="hidden" name="php_version" value={phpVersion} />
                                 <InputError className="mt-1" message={errors.php_version} />
+                            </div>
+                            <div className="grid gap-3 rounded-lg border bg-muted/30 p-4">
+                                <div className="flex items-start space-x-3">
+                                    <Checkbox
+                                        id="add_ssh_key_to_github"
+                                        name="add_ssh_key_to_github"
+                                        checked={addSshKeyToGithub}
+                                        onCheckedChange={(checked) => setAddSshKeyToGithub(checked === true)}
+                                    />
+                                    <div className="grid gap-1.5 leading-none">
+                                        <Label
+                                            htmlFor="add_ssh_key_to_github"
+                                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                        >
+                                            Add server's SSH key to my GitHub account
+                                        </Label>
+                                        <p className="text-xs text-muted-foreground">
+                                            When enabled, your server can clone any repository you have access to. Disable to use per-site deploy keys instead.
+                                        </p>
+                                    </div>
+                                </div>
+                                <input type="hidden" name="add_ssh_key_to_github" value={addSshKeyToGithub ? '1' : '0'} />
                             </div>
                             <div className="flex justify-end gap-3 pt-4">
                                 <Button variant="outline" onClick={() => setOpen(false)}>

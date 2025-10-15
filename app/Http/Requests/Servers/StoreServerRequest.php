@@ -22,6 +22,7 @@ class StoreServerRequest extends FormRequest
             'private_ip' => ['nullable', 'ip'],
             'ssh_port' => ['required', 'integer', 'min:1', 'max:65535'],
             'php_version' => ['required', Rule::in(['7.4', '8.0', '8.1', '8.2', '8.3', '8.4'])],
+            'add_ssh_key_to_github' => ['nullable', 'boolean'],
         ];
     }
 }

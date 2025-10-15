@@ -123,7 +123,7 @@ app/Packages/
 │   └── Milestones.php       # Progress tracking
 ├── Services/
 │   ├── Credential/         # SSH credential management services
-│   │   ├── SshConnectionBuilder.php  # Creates authenticated SSH connections
+│   │   ├── ServerCredentialConnection.php  # Creates authenticated SSH connections
 │   │   ├── SshKeyGenerator.php       # Generates SSH key pairs
 │   │   └── TempKeyFile.php           # Manages temp key file lifecycle
 │   ├── Nginx/              # Server-level (ServerPackage)
@@ -188,7 +188,7 @@ class NginxInstaller extends PackageInstaller implements ServerPackage
 
 **Credential Services** (`app/Packages/Services/Credential/`):
 - `SshKeyGenerator`: Generates SSH key pairs for server credentials
-- `SshConnectionBuilder`: Creates authenticated SSH connections using credentials
+- `ServerCredentialConnection`: Creates authenticated SSH connections using credentials
 - `TempKeyFile`: Value object managing temporary key file lifecycle (auto-cleanup via destructor)
 
 **SSH Connection Creation:**
@@ -331,7 +331,7 @@ NginxInstallerJob::dispatch($server, PhpVersion::PHP83);
 
 BrokeForge connects to remote server and executes package installations:
 ```php
-// PackageManager uses SshConnectionBuilder to create authenticated connections
+// PackageManager uses ServerCredentialConnection to create authenticated connections
 $ssh = $server->createSshConnection($this->credentialType());
 
 // Executes commands array sequentially
@@ -348,7 +348,7 @@ foreach ($this->commands() as $command) {
 - **MUST preserve trailing newline** in private keys - SSH will reject keys without it
 - `SshKeyGenerator` does NOT trim private keys (only public keys)
 - `TempKeyFile` writes keys to temp files with 0600 permissions
-- `SshConnectionBuilder` keeps temp files alive via static array until script ends
+- `ServerCredentialConnection` keeps temp files alive via static array until script ends
 
 **Common Provisioning Issues:**
 
@@ -412,7 +412,7 @@ const progress = server.events.latest;
 - `app/Packages/Base/PackageManager.php`: Core SSH execution and milestone tracking
 - `app/Packages/Services/Nginx/NginxInstaller.php`: Reference implementation
 - `app/Packages/Services/Credential/`: SSH credential management services
-  - `SshConnectionBuilder.php`: Creates authenticated SSH connections
+  - `ServerCredentialConnection.php`: Creates authenticated SSH connections
   - `SshKeyGenerator.php`: Generates SSH key pairs
   - `TempKeyFile.php`: Temp file lifecycle management
 - `app/Packages/Enums/CredentialType.php`: Credential type enum with username resolution

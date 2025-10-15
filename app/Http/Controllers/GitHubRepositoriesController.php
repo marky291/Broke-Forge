@@ -195,4 +195,88 @@ class GitHubRepositoriesController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Check repository permissions for the authenticated user.
+     *
+     * Returns permission details including whether the user can add deploy keys.
+     * Format: { can_add_deploy_keys: boolean, has_admin: boolean, has_push: boolean, has_pull: boolean }
+     */
+    public function permissions(Request $request, Server $server, string $owner, string $repo): JsonResponse
+    {
+        // Authorize: Ensure the authenticated user owns this server
+        if ($server->user_id !== $request->user()->id) {
+            abort(403, 'Unauthorized access to this server.');
+        }
+
+        $githubProvider = $request->user()->githubProvider();
+
+        // Return empty state if GitHub not connected
+        if (! $githubProvider) {
+            return response()->json([
+                'error' => 'GitHub not connected',
+                'can_add_deploy_keys' => false,
+            ], 400);
+        }
+
+        try {
+            $apiClient = new GitHubApiClient($githubProvider);
+
+            // Fetch repository details including permissions
+            $repoResponse = $apiClient->getRepository($owner, $repo);
+
+            if (! $repoResponse->successful()) {
+                $status = $repoResponse->status();
+
+                if ($status === 404) {
+                    return response()->json([
+                        'error' => 'Repository not found or you don\'t have access',
+                        'can_add_deploy_keys' => false,
+                    ], 404);
+                }
+
+                if ($status === 403) {
+                    return response()->json([
+                        'error' => 'Access denied to repository',
+                        'can_add_deploy_keys' => false,
+                    ], 403);
+                }
+
+                return response()->json([
+                    'error' => 'Failed to fetch repository permissions',
+                    'can_add_deploy_keys' => false,
+                ], 500);
+            }
+
+            $repoData = $repoResponse->json();
+            $permissions = $repoData['permissions'] ?? [];
+
+            $hasAdmin = $permissions['admin'] ?? false;
+            $hasPush = $permissions['push'] ?? false;
+            $hasPull = $permissions['pull'] ?? false;
+
+            // Can add deploy keys if user has admin or push permissions
+            $canAddDeployKeys = $hasAdmin || $hasPush;
+
+            return response()->json([
+                'can_add_deploy_keys' => $canAddDeployKeys,
+                'has_admin' => $hasAdmin,
+                'has_push' => $hasPush,
+                'has_pull' => $hasPull,
+                'repository' => $repoData['full_name'] ?? "{$owner}/{$repo}",
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error fetching repository permissions', [
+                'user_id' => $request->user()->id,
+                'repository' => "{$owner}/{$repo}",
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'error' => 'An error occurred while fetching permissions',
+                'can_add_deploy_keys' => false,
+            ], 500);
+        }
+    }
 }

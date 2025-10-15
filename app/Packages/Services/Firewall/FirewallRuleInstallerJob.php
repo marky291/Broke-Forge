@@ -100,4 +100,3 @@ class FirewallRuleInstallerJob implements ShouldQueue
         }
     }
 }
-

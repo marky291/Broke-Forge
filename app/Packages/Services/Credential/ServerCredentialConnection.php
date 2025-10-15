@@ -3,23 +3,27 @@
 namespace App\Packages\Services\Credential;
 
 use App\Models\Server;
+use App\Packages\Contracts\SshFactory;
 use App\Packages\Enums\CredentialType;
-use App\Packages\Services\WindowsCompatibleSsh;
 use Spatie\Ssh\Ssh;
 
 /**
- * SSH Connection Builder
+ * Server Credential Connection
  *
  * Service for creating authenticated SSH connections using server credentials.
  * Handles private key deployment and connection configuration.
  */
-class SshConnectionBuilder
+class ServerCredentialConnection
 {
     /**
      * Keeps temp key files alive until after SSH execution.
      * This prevents the destructor from deleting files before SSH reads them.
      */
     private static array $activeTempFiles = [];
+
+    public function __construct(
+        private readonly SshFactory $sshFactory
+    ) {}
 
     /**
      * Create an authenticated SSH connection for the server.
@@ -54,11 +58,8 @@ class SshConnectionBuilder
         // Will be cleaned up at script end
         self::$activeTempFiles[] = $tempKeyFile;
 
-        // Create SSH connection with private key
-        // Use Windows-compatible SSH wrapper on Windows to avoid heredoc issues
-        $sshClass = PHP_OS_FAMILY === 'Windows' ? WindowsCompatibleSsh::class : Ssh::class;
-
-        $ssh = $sshClass::create($credentialType->username(), $server->public_ip, $server->ssh_port)
+        // Create SSH connection with private key using injected factory
+        $ssh = $this->sshFactory->create($credentialType->username(), $server->public_ip, $server->ssh_port)
             ->usePrivateKey($tempKeyFile->path())
             ->disableStrictHostKeyChecking()
             ->enableQuietMode();

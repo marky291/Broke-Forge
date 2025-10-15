@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\GitHubRepositoriesController;
 use App\Http\Controllers\GitHubWebhookController;
 use App\Http\Controllers\ProvisionCallbackController;
 use App\Http\Controllers\ServerController;
@@ -20,7 +21,6 @@ use App\Http\Controllers\ServerSiteGitRepositoryController;
 use App\Http\Controllers\ServerSitesController;
 use App\Http\Controllers\ServerSupervisorController;
 use App\Http\Controllers\SourceProviderController;
-use App\Http\Controllers\GitHubRepositoriesController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -179,6 +179,8 @@ Route::middleware('auth')->group(function () {
             ->name('github.repositories');
         Route::get('github/repositories/{owner}/{repo}/branches', [GitHubRepositoriesController::class, 'branches'])
             ->name('github.branches');
+        Route::get('github/repositories/{owner}/{repo}/permissions', [GitHubRepositoriesController::class, 'permissions'])
+            ->name('github.permissions');
 
         // Sites management
         Route::prefix('sites')->scopeBindings()->group(function () {
@@ -186,6 +188,8 @@ Route::middleware('auth')->group(function () {
                 ->name('sites');
             Route::post('/', [ServerSitesController::class, 'store'])
                 ->name('sites.store');
+            Route::post('{site}/deploy-key', [ServerSitesController::class, 'generateDeployKey'])
+                ->name('sites.deploy-key.generate');
             Route::get('{site}/commands', ServerSiteCommandsController::class)
                 ->name('sites.commands');
             Route::post('{site}/commands', [ServerSiteCommandsController::class, 'store'])

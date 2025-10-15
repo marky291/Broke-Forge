@@ -169,4 +169,49 @@ class GitHubApiClient
     {
         return $this->client()->get("/repos/{$owner}/{$repo}/keys");
     }
+
+    /**
+     * List all SSH keys for the authenticated user.
+     *
+     * Retrieves all public SSH keys associated with the authenticated user's account.
+     * Each key includes an id, key content, title, and metadata.
+     *
+     * @return Response Array of SSH keys with id, key, title, created_at, read_only
+     */
+    public function getUserSshKeys(): Response
+    {
+        return $this->client()->get('/user/keys');
+    }
+
+    /**
+     * Add a new SSH key to the authenticated user's account.
+     *
+     * Creates a new public SSH key for the authenticated user. The key can be used
+     * for Git operations across all repositories the user has access to.
+     *
+     * @param  string  $title  Descriptive name for the SSH key
+     * @param  string  $key  SSH public key content (e.g., ssh-rsa AAAA...)
+     * @return Response GitHub API response with 'id', 'key', 'title', 'created_at'
+     */
+    public function addUserSshKey(string $title, string $key): Response
+    {
+        return $this->client()->post('/user/keys', [
+            'title' => $title,
+            'key' => $key,
+        ]);
+    }
+
+    /**
+     * Remove an SSH key from the authenticated user's account.
+     *
+     * Deletes a specific SSH key from the authenticated user's account using the key ID.
+     * This revokes the key's access to all repositories.
+     *
+     * @param  int  $keyId  The GitHub SSH key ID to remove
+     * @return Response GitHub API response (204 No Content on success)
+     */
+    public function removeUserSshKey(int $keyId): Response
+    {
+        return $this->client()->delete("/user/keys/{$keyId}");
+    }
 }

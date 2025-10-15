@@ -1,6 +1,7 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
 import SiteLayout from '@/layouts/server/site-layout';
 import { dashboard } from '@/routes';
@@ -8,8 +9,8 @@ import { show as showServer } from '@/routes/servers';
 import { type BreadcrumbItem, type ServerSite } from '@/types';
 import { Head, router, useForm } from '@inertiajs/react';
 import { useEcho } from '@laravel/echo-react';
-import { CheckCircle, Clock, GitBranch, Loader2, Lock, Trash2, XCircle } from 'lucide-react';
-import { type ReactNode } from 'react';
+import { CheckCircle, Clock, Copy, ExternalLink, GitBranch, Key, Loader2, Lock, Trash2, XCircle } from 'lucide-react';
+import { type ReactNode, useState } from 'react';
 
 const statusMeta: Record<string, { badgeClass: string; label: string; icon: ReactNode; description: string }> = {
     active: {
@@ -65,6 +66,11 @@ export default function SiteApplication({ site }: { site: ServerSite }) {
     const server = site.server!;
     const applicationType = site.applicationType;
     const gitRepository = site.gitRepository;
+    const [showDeployKeyDialog, setShowDeployKeyDialog] = useState(false);
+    const [generatedDeployKey, setGeneratedDeployKey] = useState<string | null>(null);
+    const [generatingDeployKey, setGeneratingDeployKey] = useState(false);
+    const [deployKeyError, setDeployKeyError] = useState<string | null>(null);
+    const [copiedDeployKey, setCopiedDeployKey] = useState(false);
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard.url() },
@@ -99,6 +105,55 @@ export default function SiteApplication({ site }: { site: ServerSite }) {
                 },
             },
         );
+    };
+
+    const handleGenerateDeployKey = async () => {
+        setGeneratingDeployKey(true);
+        setDeployKeyError(null);
+
+        try {
+            const response = await fetch(`/servers/${server.id}/sites/${site.id}/deploy-key`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                },
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to generate deploy key');
+            }
+
+            setGeneratedDeployKey(data.public_key);
+            setShowDeployKeyDialog(true);
+
+            // Reload the page to update the site data
+            router.reload({ only: ['site'], preserveScroll: true, preserveState: true });
+        } catch (error) {
+            setDeployKeyError(error instanceof Error ? error.message : 'An unknown error occurred');
+        } finally {
+            setGeneratingDeployKey(false);
+        }
+    };
+
+    const handleCopyDeployKey = () => {
+        if (generatedDeployKey) {
+            navigator.clipboard.writeText(generatedDeployKey);
+            setCopiedDeployKey(true);
+            setTimeout(() => setCopiedDeployKey(false), 2000);
+        }
+    };
+
+    const getRepositoryDeployKeysUrl = (): string | null => {
+        if (!gitRepository?.repository) return null;
+
+        // Assumes GitHub format: owner/repo
+        const [owner, repo] = gitRepository.repository.split('/');
+        if (!owner || !repo) return null;
+
+        return `https://github.com/${owner}/${repo}/settings/keys`;
     };
 
     // Show provisioning progress if site or Git is installing
@@ -156,13 +211,35 @@ export default function SiteApplication({ site }: { site: ServerSite }) {
                     {gitRepository && (
                         <Card>
                             <CardHeader>
-                                <div className="flex items-center gap-2.5">
-                                    <GitBranch className="h-5 w-5 text-muted-foreground" />
-                                    <CardTitle>Git Repository</CardTitle>
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2.5">
+                                        <GitBranch className="h-5 w-5 text-muted-foreground" />
+                                        <CardTitle>Git Repository</CardTitle>
+                                    </div>
+                                    {!site.has_dedicated_deploy_key && (
+                                        <Button variant="outline" size="sm" onClick={handleGenerateDeployKey} disabled={generatingDeployKey}>
+                                            {generatingDeployKey ? (
+                                                <>
+                                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                    Generating...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Key className="mr-2 h-4 w-4" />
+                                                    Generate Deploy Key
+                                                </>
+                                            )}
+                                        </Button>
+                                    )}
                                 </div>
                             </CardHeader>
                             <Separator />
                             <CardContent className="space-y-6">
+                                {deployKeyError && (
+                                    <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-300">
+                                        {deployKeyError}
+                                    </div>
+                                )}
                                 <div className="grid grid-cols-2 gap-6">
                                     <div>
                                         <div className="mb-1.5 text-xs text-muted-foreground">Repository</div>
@@ -223,6 +300,79 @@ export default function SiteApplication({ site }: { site: ServerSite }) {
                             {processing ? 'Uninstalling site...' : 'Uninstall Site'}
                         </button>
                     </div>
+
+                    {/* Deploy Key Modal */}
+                    <Dialog open={showDeployKeyDialog} onOpenChange={setShowDeployKeyDialog}>
+                        <DialogContent className="max-w-2xl">
+                            <DialogHeader>
+                                <DialogTitle className="flex items-center gap-2">
+                                    <Key className="h-5 w-5 text-primary" />
+                                    Deploy Key Generated
+                                </DialogTitle>
+                                <DialogDescription>Add this SSH key to your repository to enable deployments for this site.</DialogDescription>
+                            </DialogHeader>
+                            <div className="mt-4 space-y-4">
+                                {generatedDeployKey && (
+                                    <>
+                                        <div>
+                                            <label className="mb-2 block text-sm font-medium">SSH Public Key</label>
+                                            <div className="relative">
+                                                <pre className="overflow-x-auto rounded-md border bg-muted p-4 font-mono text-xs">
+                                                    {generatedDeployKey}
+                                                </pre>
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    className="absolute right-2 top-2"
+                                                    onClick={handleCopyDeployKey}
+                                                >
+                                                    {copiedDeployKey ? (
+                                                        <>
+                                                            <CheckCircle className="mr-2 h-4 w-4" />
+                                                            Copied!
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Copy className="mr-2 h-4 w-4" />
+                                                            Copy
+                                                        </>
+                                                    )}
+                                                </Button>
+                                            </div>
+                                        </div>
+
+                                        <div className="rounded-md border border-blue-200 bg-blue-50 p-4 dark:border-blue-900/50 dark:bg-blue-950/20">
+                                            <h4 className="mb-2 font-semibold text-blue-900 dark:text-blue-100">Next Steps</h4>
+                                            <ol className="list-inside list-decimal space-y-1 text-sm text-blue-700 dark:text-blue-300">
+                                                <li>Copy the SSH key above</li>
+                                                <li>Go to your repository's deploy keys settings</li>
+                                                <li>Add a new deploy key and paste the SSH key</li>
+                                                <li>Give it a title like "{site.dedicated_deploy_key_title || `BrokeForge Site - ${site.domain}`}"</li>
+                                                <li>Make sure "Allow write access" is unchecked (read-only)</li>
+                                                <li>Save the deploy key</li>
+                                            </ol>
+                                        </div>
+
+                                        {getRepositoryDeployKeysUrl() && (
+                                            <div className="flex justify-center">
+                                                <Button variant="outline" asChild>
+                                                    <a href={getRepositoryDeployKeysUrl()!} target="_blank" rel="noopener noreferrer">
+                                                        <ExternalLink className="mr-2 h-4 w-4" />
+                                                        Open Repository Deploy Keys
+                                                    </a>
+                                                </Button>
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+                            </div>
+                            <div className="mt-6 flex justify-end">
+                                <Button variant="outline" onClick={() => setShowDeployKeyDialog(false)}>
+                                    Close
+                                </Button>
+                            </div>
+                        </DialogContent>
+                    </Dialog>
                 </div>
             </SiteLayout>
         );

@@ -89,4 +89,3 @@ class ServerScheduleTaskInstallerJob implements ShouldQueue
         }
     }
 }
-

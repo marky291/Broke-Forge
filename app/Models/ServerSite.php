@@ -42,6 +42,9 @@ class ServerSite extends Model
         'webhook_secret',
         'deprovisioned_at',
         'error_log',
+        'has_dedicated_deploy_key',
+        'dedicated_deploy_key_id',
+        'dedicated_deploy_key_title',
     ];
 
     protected $appends = [
@@ -54,6 +57,7 @@ class ServerSite extends Model
         return [
             'ssl_enabled' => 'boolean',
             'auto_deploy_enabled' => 'boolean',
+            'has_dedicated_deploy_key' => 'boolean',
             'webhook_secret' => 'encrypted',
             'configuration' => 'array',
             'git_status' => GitStatus::class,

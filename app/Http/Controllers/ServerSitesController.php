@@ -10,6 +10,7 @@ use App\Models\ServerSite;
 use App\Packages\Enums\CredentialType;
 use App\Packages\Enums\GitStatus;
 use App\Packages\Services\Sites\ProvisionedSiteInstallerJob;
+use App\Packages\Services\Sites\SiteDeployKeyGenerator;
 use App\Packages\Services\Sites\SiteRemoverJob;
 use App\Packages\Services\SourceProvider\Github\GitHubApiClient;
 use Illuminate\Http\JsonResponse;
@@ -47,6 +48,48 @@ class ServerSitesController extends Controller
         ]);
     }
 
+    /**
+     * Generate a dedicated deploy key for a specific site.
+     */
+    public function generateDeployKey(Server $server, ServerSite $site): JsonResponse
+    {
+        try {
+            // Check if site already has a dedicated deploy key
+            if ($site->has_dedicated_deploy_key) {
+                return response()->json([
+                    'error' => 'This site already has a dedicated deploy key.',
+                ], 400);
+            }
+
+            // Generate the deploy key
+            $generator = new SiteDeployKeyGenerator($server);
+            $publicKey = $generator->execute($site);
+
+            Log::info('Deploy key generated for site', [
+                'server_id' => $server->id,
+                'site_id' => $site->id,
+                'domain' => $site->domain,
+            ]);
+
+            return response()->json([
+                'public_key' => $publicKey,
+                'title' => $site->dedicated_deploy_key_title,
+                'message' => 'Deploy key generated successfully. Add this key to your repository\'s deploy keys.',
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Failed to generate deploy key', [
+                'server_id' => $server->id,
+                'site_id' => $site->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'error' => 'Failed to generate deploy key: '.$e->getMessage(),
+            ], 500);
+        }
+    }
+
     public function store(StoreSiteRequest $request, Server $server): RedirectResponse
     {
         $validated = $request->validated();
@@ -65,46 +108,36 @@ class ServerSitesController extends Controller
 
             [$owner, $repo] = explode('/', $validated['git_repository'], 2);
 
-            // Get server's SSH public key for deploy key
-            $deployKey = $server->credential(CredentialType::BrokeForge)->public_key;
-            if (! $deployKey) {
-                return back()->with('error', 'Server SSH key not found. Please contact support.');
-            }
-
-            // Generate unique deploy key title
-            $deployKeyTitle = "BrokeForge - {$validated['domain']} - Server #{$server->id}";
-
-            // Add deploy key to GitHub repository
+            // Initialize GitHub API client
             $apiClient = new GitHubApiClient($githubProvider);
-            $deployKeyResponse = $apiClient->addDeployKey($owner, $repo, $deployKeyTitle, $deployKey, true);
 
-            if (! $deployKeyResponse->successful()) {
-                $errorMessage = 'Failed to add deploy key to GitHub repository';
-                $responseData = $deployKeyResponse->json();
-                if (isset($responseData['message'])) {
-                    $errorMessage .= ': '.$responseData['message'];
+            // Validate repository exists and user has access
+            $repoResponse = $apiClient->getRepository($owner, $repo);
+            if (! $repoResponse->successful()) {
+                $errorMessage = 'Cannot access repository';
+
+                if ($repoResponse->status() === 404) {
+                    $errorMessage = "Repository '{$validated['git_repository']}' not found or you don't have access. Please verify the repository exists and you have admin or write permissions.";
+                } elseif ($repoResponse->status() === 403) {
+                    $errorMessage = 'Access denied to repository. Please check your GitHub OAuth permissions.';
                 }
 
-                Log::error('GitHub deploy key addition failed', [
+                Log::warning('GitHub repository validation failed', [
                     'repository' => $validated['git_repository'],
-                    'status' => $deployKeyResponse->status(),
-                    'response' => $responseData,
+                    'status' => $repoResponse->status(),
+                    'response' => $repoResponse->json(),
                 ]);
 
                 return back()->with('error', $errorMessage);
             }
 
-            $deployKeyData = $deployKeyResponse->json();
-
-            // Build configuration with Git repository and deploy key metadata
+            // Build configuration with Git repository information
             $configuration = [
                 'application_type' => 'application',
                 'git_repository' => [
                     'provider' => 'github',
                     'repository' => $validated['git_repository'],
                     'branch' => $validated['git_branch'],
-                    'deploy_key_id' => $deployKeyData['id'],
-                    'deploy_key_title' => $deployKeyTitle,
                 ],
             ];
 
@@ -124,9 +157,9 @@ class ServerSitesController extends Controller
             // Dispatch site installation job with site ID
             ProvisionedSiteInstallerJob::dispatch($server, $site->id);
 
-            return back()->with('success', 'Site provisioning started. Deploy key added to repository automatically.');
+            return back()->with('success', 'Site provisioning started.');
         } catch (\Throwable $e) {
-            Log::error('Failed to create site with auto deploy key', [
+            Log::error('Failed to create site', [
                 'error' => $e->getMessage(),
                 'repository' => $validated['git_repository'] ?? 'unknown',
                 'trace' => $e->getTraceAsString(),
@@ -183,16 +216,22 @@ class ServerSitesController extends Controller
      *
      * This method gracefully handles failures (e.g., OAuth disconnected, insufficient permissions)
      * and logs warnings instead of blocking site deletion.
+     *
+     * Only handles dedicated per-site deploy keys stored in database fields.
      */
     private function removeDeployKeyFromGitHub(ServerSite $site): void
     {
         try {
-            // Check if site has deploy key metadata
-            $deployKeyId = $site->configuration['git_repository']['deploy_key_id'] ?? null;
+            // Only handle dedicated deploy keys (stored in database fields)
+            if (! $site->has_dedicated_deploy_key || ! $site->dedicated_deploy_key_id) {
+                return; // No dedicated deploy key to remove
+            }
+
+            $deployKeyId = $site->dedicated_deploy_key_id;
             $repository = $site->configuration['git_repository']['repository'] ?? null;
 
-            if (! $deployKeyId || ! $repository) {
-                return; // No deploy key to remove
+            if (! $repository) {
+                return;
             }
 
             // Check if GitHub is still connected

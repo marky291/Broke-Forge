@@ -8,6 +8,7 @@ use App\Packages\Enums\CredentialType;
 use App\Packages\Enums\PhpVersion;
 use App\Packages\Enums\ProvisionStatus;
 use App\Packages\Services\Nginx\NginxInstallerJob;
+use App\Packages\Services\SourceProvider\ServerSshKeyManager;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -110,8 +111,34 @@ class ProvisionCallbackController extends Controller
 
                 Log::info("Detected OS for server #{$server->id}: {$server->os_name} {$server->os_version} ({$server->os_codename})");
 
+                // Add server SSH key to GitHub if user opted in and has GitHub connected
+                $user = $server->user;
+                $githubProvider = $user->githubProvider();
+
+                if ($server->add_ssh_key_to_github && $githubProvider) {
+                    try {
+                        $keyManager = new ServerSshKeyManager($server, $githubProvider);
+                        $success = $keyManager->addServerKeyToGitHub();
+
+                        if ($success) {
+                            Log::info("Successfully added server SSH key to GitHub for server #{$server->id}");
+                        } else {
+                            Log::warning("Failed to add server SSH key to GitHub for server #{$server->id} - provisioning continues");
+                        }
+                    } catch (\Exception $e) {
+                        Log::warning("Error adding server SSH key to GitHub for server #{$server->id}: {$e->getMessage()} - provisioning continues");
+                    }
+                } else {
+                    if (! $server->add_ssh_key_to_github) {
+                        Log::debug("User opted out of adding server SSH key to GitHub for server #{$server->id}");
+                    } elseif (! $githubProvider) {
+                        Log::debug("User does not have GitHub connected, skipping SSH key addition for server #{$server->id}");
+                    }
+                }
+
                 $server->provision->put(4, ProvisionStatus::Completed->value);
                 $server->provision->put(5, ProvisionStatus::Installing->value);
+                $server->provision_status = ProvisionStatus::Installing;
                 $server->save();
 
                 // Update status and dispatch web service provisioning job

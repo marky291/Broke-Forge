@@ -61,27 +61,14 @@ class PhpInstaller extends PackageInstaller implements ServerPackage
 
     /**
      * Execute PHP installation with the specified version
+     *
+     * Note: ServerPhp record should already exist with 'pending' status
+     * (created by caller before dispatching PhpInstallerJob)
      */
     public function execute(PhpVersion $phpVersion): void
     {
         // Store the version for packageName() method
         $this->installingVersion = $phpVersion;
-
-        // Check if this is the first PHP version being installed
-        $isFirstPhp = $this->server->phps()->count() === 0;
-
-        // Create ServerPhp record before installation if it doesn't exist
-        ServerPhp::firstOrCreate(
-            [
-                'server_id' => $this->server->id,
-                'version' => $phpVersion->value,
-            ],
-            [
-                'status' => PhpStatus::Installing,
-                'is_cli_default' => $isFirstPhp,
-                'is_site_default' => $isFirstPhp,
-            ]
-        );
 
         // Compose common PHP packages for the chosen version
         $phpPackages = implode(' ', [
@@ -140,13 +127,8 @@ class PhpInstaller extends PackageInstaller implements ServerPackage
             "systemctl enable php{$phpVersion->value}-fpm || systemctl enable php-fpm",
             "systemctl restart php{$phpVersion->value}-fpm || systemctl restart php-fpm",
 
-            // Save PHP installation to database
-            function () use ($phpVersion) {
-                // Only update status - preserve is_cli_default and is_site_default set by controller
-                ServerPhp::where('server_id', $this->server->id)
-                    ->where('version', $phpVersion->value)
-                    ->update(['status' => PhpStatus::Active->value]);
-            },
+            // Note: Status updates are managed by PhpInstallerJob (Reverb Package Lifecycle)
+            // Job updates: pending → installing → active/failed
 
             $this->track(PhpInstallerMilestones::VERIFY_INSTALLATION),
 

@@ -194,7 +194,7 @@ return [
             'maxJobs' => 0,
             'memory' => 128,
             'tries' => 1,
-            'timeout' => 60,
+            'timeout' => 900,  // 15 minutes for long-running provision jobs
             'nice' => 0,
         ],
     ],
