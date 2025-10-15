@@ -24,7 +24,7 @@ class GitHubOAuthHandler
     public function redirect()
     {
         return Socialite::driver('github')
-            ->scopes(['repo', 'admin:repo_hook'])
+            ->scopes(['repo', 'admin:repo_hook', 'admin:public_key'])
             ->redirect();
     }
 

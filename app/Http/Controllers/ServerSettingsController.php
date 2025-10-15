@@ -15,7 +15,6 @@ class ServerSettingsController extends Controller
     {
         return Inertia::render('servers/settings', [
             'server' => $server,
-            'githubProvider' => $request->user()->githubProvider(),
             'latestMetrics' => $this->getLatestMetrics($server),
         ]);
     }

@@ -118,14 +118,6 @@ Route::middleware('auth')->group(function () {
 
     // Server-specific routes grouped by prefix with scoped bindings
     Route::prefix('servers/{server}')->name('servers.')->scopeBindings()->group(function () {
-        // Source Provider Management
-        Route::prefix('source-providers')->name('source-providers.')->group(function () {
-            Route::get('github/connect', [SourceProviderController::class, 'connectGitHub'])
-                ->name('github.connect');
-            Route::delete('github', [SourceProviderController::class, 'disconnectGitHub'])
-                ->name('github.disconnect');
-        });
-
         // Provisioning workflow
         Route::get('provisioning/setup', [ServerProvisioningController::class, 'show'])
             ->name('provisioning');

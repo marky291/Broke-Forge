@@ -21,6 +21,11 @@ const sidebarNavItems: NavItem[] = [
         icon: null,
     },
     {
+        title: 'Source Providers',
+        href: '/settings/source-providers',
+        icon: null,
+    },
+    {
         title: 'Appearance',
         href: editAppearance(),
         icon: null,

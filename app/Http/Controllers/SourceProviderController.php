@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Server;
 use App\Packages\Services\SourceProvider\Github\GitHubOAuthHandler;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 /**
  * Manages source provider OAuth connections (GitHub, GitLab, etc.).
@@ -16,13 +16,20 @@ use Illuminate\Http\Request;
 class SourceProviderController extends Controller
 {
     /**
+     * Display the source providers settings page.
+     */
+    public function index(Request $request): \Inertia\Response
+    {
+        return Inertia::render('settings/source-providers', [
+            'githubProvider' => $request->user()->githubProvider(),
+        ]);
+    }
+
+    /**
      * Redirect to GitHub for OAuth authorization.
      */
-    public function connectGitHub(Request $request, Server $server): RedirectResponse
+    public function connectGitHub(Request $request): RedirectResponse
     {
-        // Store the server ID in the session to redirect back after OAuth
-        $request->session()->put('source_provider_server_id', $server->id);
-
         $handler = new GitHubOAuthHandler;
 
         return $handler->redirect();
@@ -38,31 +45,14 @@ class SourceProviderController extends Controller
         try {
             $handler->handleCallback($request->user());
 
-            $serverId = $request->session()->pull('source_provider_server_id');
-
-            if ($serverId) {
-                return redirect()
-                    ->route('servers.sites', $serverId)
-                    ->with('success', 'GitHub connected successfully. You can now create sites.')
-                    ->with('open_add_site_modal', true);
-            }
-
             return redirect()
-                ->route('dashboard')
+                ->route('source-providers.edit')
                 ->with('success', 'GitHub connected successfully.');
         } catch (\Exception $e) {
             report($e);
 
-            $serverId = $request->session()->pull('source_provider_server_id');
-
-            if ($serverId) {
-                return redirect()
-                    ->route('servers.sites', $serverId)
-                    ->with('error', 'Failed to connect GitHub: '.$e->getMessage());
-            }
-
             return redirect()
-                ->route('dashboard')
+                ->route('source-providers.edit')
                 ->with('error', 'Failed to connect GitHub.');
         }
     }
@@ -70,7 +60,7 @@ class SourceProviderController extends Controller
     /**
      * Disconnect GitHub source provider.
      */
-    public function disconnectGitHub(Request $request, Server $server): RedirectResponse
+    public function disconnectGitHub(Request $request): RedirectResponse
     {
         $handler = new GitHubOAuthHandler;
 
@@ -78,13 +68,13 @@ class SourceProviderController extends Controller
             $handler->disconnect($request->user());
 
             return redirect()
-                ->route('servers.settings', $server)
+                ->route('source-providers.edit')
                 ->with('success', 'GitHub disconnected successfully.');
         } catch (\Exception $e) {
             report($e);
 
             return redirect()
-                ->route('servers.settings', $server)
+                ->route('source-providers.edit')
                 ->with('error', 'Failed to disconnect GitHub.');
         }
     }
