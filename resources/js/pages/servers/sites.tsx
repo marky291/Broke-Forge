@@ -18,7 +18,7 @@ import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { useEcho } from '@laravel/echo-react';
 import copyToClipboard from 'copy-to-clipboard';
-import { AlertCircle, Check, CheckCircle, CheckCircle2, ChevronRight, Clock, Copy, Eye, GitBranch, Globe, Loader2, Lock, Plus, XCircle } from 'lucide-react';
+import { AlertCircle, Check, CheckCircle, CheckCircle2, ChevronRight, Clock, Copy, Eye, GitBranch, Globe, Loader2, Lock, Plus, RefreshCw, Trash2, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 type ServerSite = {
@@ -75,7 +75,15 @@ export default function Sites({ server }: SitesProps) {
     const [deployKey, setDeployKey] = useState<string>('');
     const [copiedDeployKey, setCopiedDeployKey] = useState(false);
     const [showErrorDialog, setShowErrorDialog] = useState(false);
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
     const [selectedSite, setSelectedSite] = useState<ServerSite | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [repositories, setRepositories] = useState<string[]>([]);
+    const [loadingRepositories, setLoadingRepositories] = useState(false);
+    const [branches, setBranches] = useState<string[]>([]);
+    const [loadingBranches, setLoadingBranches] = useState(false);
+    const [githubConnected, setGithubConnected] = useState(false);
+    const [clearingCache, setClearingCache] = useState(false);
     const { flash } = usePage<{ flash: { success?: string; error?: string } }>().props;
     const form = useForm({
         domain: '',
@@ -106,6 +114,79 @@ export default function Sites({ server }: SitesProps) {
         }
     }, [showAddSiteDialog, server.id, deployKey]);
 
+    // Fetch GitHub repositories when modal opens
+    useEffect(() => {
+        if (showAddSiteDialog && repositories.length === 0) {
+            setLoadingRepositories(true);
+            fetch(`/servers/${server.id}/github/repositories`)
+                .then((res) => res.json())
+                .then((data) => {
+                    setRepositories(data.repositories || []);
+                    setGithubConnected(data.connected || false);
+                })
+                .catch((err) => {
+                    console.error('Failed to fetch GitHub repositories:', err);
+                    setGithubConnected(false);
+                })
+                .finally(() => setLoadingRepositories(false));
+        }
+    }, [showAddSiteDialog, server.id, repositories]);
+
+    // Fetch branches when repository is selected
+    const fetchBranches = (repository: string) => {
+        if (!repository) {
+            setBranches([]);
+            return;
+        }
+
+        // Parse owner and repo from "owner/repo" format
+        const [owner, repo] = repository.split('/');
+        if (!owner || !repo) {
+            console.error('Invalid repository format:', repository);
+            return;
+        }
+
+        setLoadingBranches(true);
+        fetch(`/servers/${server.id}/github/repositories/${owner}/${repo}/branches`)
+            .then((res) => res.json())
+            .then((data) => {
+                setBranches(data.branches || []);
+                // Auto-select first branch or default branch
+                if (data.branches && data.branches.length > 0) {
+                    const defaultBranch = data.branches.find((b: string) => b === 'main' || b === 'master') || data.branches[0];
+                    form.setData('git_branch', defaultBranch);
+                }
+            })
+            .catch((err) => {
+                console.error('Failed to fetch branches:', err);
+                setBranches([]);
+            })
+            .finally(() => setLoadingBranches(false));
+    };
+
+    // Clear cache and refresh repositories
+    const handleClearCache = () => {
+        setClearingCache(true);
+        // Clear local state
+        setRepositories([]);
+        setBranches([]);
+        form.setData('git_repository', '');
+        form.setData('git_branch', 'main');
+
+        // Fetch fresh data with cache-busting timestamp
+        fetch(`/servers/${server.id}/github/repositories?_=${Date.now()}`)
+            .then((res) => res.json())
+            .then((data) => {
+                setRepositories(data.repositories || []);
+                setGithubConnected(data.connected || false);
+            })
+            .catch((err) => {
+                console.error('Failed to fetch GitHub repositories:', err);
+                setGithubConnected(false);
+            })
+            .finally(() => setClearingCache(false));
+    };
+
     const handleCopyDeployKey = () => {
         const copiedOk = copyToClipboard(deployKey, { format: 'text/plain' });
         if (!copiedOk) return;
@@ -128,6 +209,25 @@ export default function Sites({ server }: SitesProps) {
     const handleViewError = (site: ServerSite) => {
         setSelectedSite(site);
         setShowErrorDialog(true);
+    };
+
+    const handleDeleteClick = (site: ServerSite) => {
+        setSelectedSite(site);
+        setShowDeleteDialog(true);
+    };
+
+    const handleDeleteConfirm = () => {
+        if (!selectedSite) return;
+
+        setIsDeleting(true);
+        router.delete(`/servers/${server.id}/sites/${selectedSite.id}`, {
+            preserveScroll: true,
+            onFinish: () => {
+                setIsDeleting(false);
+                setShowDeleteDialog(false);
+                setSelectedSite(null);
+            },
+        });
     };
 
     const isSiteClickable = (status: string) => {
@@ -166,20 +266,34 @@ export default function Sites({ server }: SitesProps) {
                             <XCircle className="h-3 w-3" />
                             Failed
                         </Badge>
-                        {site.error_log && (
+                        <div className="inline-flex items-center gap-1.5">
+                            {site.error_log && (
+                                <button
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        handleViewError(site);
+                                    }}
+                                    className="inline-flex items-center gap-1 text-xs text-red-600 hover:text-red-700 hover:underline"
+                                    title="View error details"
+                                >
+                                    <Eye className="h-3.5 w-3.5" />
+                                    View Error
+                                </button>
+                            )}
                             <button
                                 onClick={(e) => {
                                     e.preventDefault();
                                     e.stopPropagation();
-                                    handleViewError(site);
+                                    handleDeleteClick(site);
                                 }}
                                 className="inline-flex items-center gap-1 text-xs text-red-600 hover:text-red-700 hover:underline"
-                                title="View error details"
+                                title="Delete site"
                             >
-                                <Eye className="h-3.5 w-3.5" />
-                                View Error
+                                <Trash2 className="h-3.5 w-3.5" />
+                                Delete
                             </button>
-                        )}
+                        </div>
                     </div>
                 );
             case 'disabled':
@@ -412,26 +526,88 @@ export default function Sites({ server }: SitesProps) {
                     {/* Git Repository Section */}
                     <div className="grid w-full min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
                         <div className="min-w-0 space-y-2">
-                            <Label htmlFor="git_repository">Git Repository</Label>
-                            <Input
-                                id="git_repository"
-                                placeholder="owner/repo"
-                                value={form.data.git_repository}
-                                onChange={(e) => form.setData('git_repository', e.target.value)}
-                                disabled={form.processing}
-                            />
+                            <div className="flex items-center gap-2">
+                                <Label htmlFor="git_repository">Git Repository</Label>
+                                {loadingRepositories && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+                                {githubConnected && !loadingRepositories && (
+                                    <button
+                                        type="button"
+                                        onClick={handleClearCache}
+                                        disabled={clearingCache}
+                                        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
+                                        title="Refresh repositories"
+                                    >
+                                        <RefreshCw className={`h-3 w-3 ${clearingCache ? 'animate-spin' : ''}`} />
+                                    </button>
+                                )}
+                            </div>
+                            {githubConnected && repositories.length > 0 ? (
+                                <Select
+                                    value={form.data.git_repository}
+                                    onValueChange={(value) => {
+                                        form.setData('git_repository', value);
+                                        // Fetch branches for the selected repository
+                                        fetchBranches(value);
+                                    }}
+                                    disabled={form.processing || loadingRepositories}
+                                >
+                                    <SelectTrigger id="git_repository">
+                                        <SelectValue placeholder="Select repository" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {repositories.map((repo) => (
+                                            <SelectItem key={repo} value={repo}>
+                                                {repo}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            ) : (
+                                <Input
+                                    id="git_repository"
+                                    placeholder={loadingRepositories ? 'Loading repositories...' : githubConnected ? 'No repositories found' : 'owner/repo'}
+                                    value={form.data.git_repository}
+                                    onChange={(e) => form.setData('git_repository', e.target.value)}
+                                    disabled={form.processing || loadingRepositories}
+                                />
+                            )}
                             {form.errors.git_repository && <p className="text-sm text-red-500">{form.errors.git_repository}</p>}
+                            {!githubConnected && !loadingRepositories && (
+                                <p className="text-xs text-muted-foreground">Connect GitHub in server settings for automatic repository selection.</p>
+                            )}
                         </div>
 
                         <div className="min-w-0 space-y-2">
-                            <Label htmlFor="git_branch">Branch</Label>
-                            <Input
-                                id="git_branch"
-                                placeholder="main"
-                                value={form.data.git_branch}
-                                onChange={(e) => form.setData('git_branch', e.target.value)}
-                                disabled={form.processing}
-                            />
+                            <div className="flex items-center gap-2">
+                                <Label htmlFor="git_branch">Branch</Label>
+                                {loadingBranches && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+                            </div>
+                            {form.data.git_repository && branches.length > 0 ? (
+                                <Select
+                                    value={form.data.git_branch}
+                                    onValueChange={(value) => form.setData('git_branch', value)}
+                                    disabled={form.processing || loadingBranches}
+                                >
+                                    <SelectTrigger id="git_branch">
+                                        <SelectValue placeholder="Select branch" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {branches.map((branch) => (
+                                            <SelectItem key={branch} value={branch}>
+                                                {branch}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            ) : (
+                                <Input
+                                    id="git_branch"
+                                    placeholder={loadingBranches ? 'Loading branches...' : 'main'}
+                                    value={form.data.git_branch}
+                                    onChange={(e) => form.setData('git_branch', e.target.value)}
+                                    disabled={form.processing || loadingBranches}
+                                />
+                            )}
                             {form.errors.git_branch && <p className="text-sm text-red-500">{form.errors.git_branch}</p>}
                         </div>
                     </div>
@@ -528,6 +704,44 @@ export default function Sites({ server }: SitesProps) {
                     <div className="mt-6 flex justify-end">
                         <Button variant="outline" onClick={() => setShowErrorDialog(false)}>
                             Close
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Delete Confirmation Modal */}
+            <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <AlertCircle className="h-5 w-5 text-red-600" />
+                            Delete Failed Site
+                        </DialogTitle>
+                        <DialogDescription>
+                            {selectedSite && (
+                                <span>
+                                    Are you sure you want to delete <span className="font-semibold">{selectedSite.domain}</span>? This will clean up any
+                                    partial installation files from the server.
+                                </span>
+                            )}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="mt-6 flex justify-end gap-3">
+                        <Button variant="outline" onClick={() => setShowDeleteDialog(false)} disabled={isDeleting}>
+                            Cancel
+                        </Button>
+                        <Button variant="destructive" onClick={handleDeleteConfirm} disabled={isDeleting}>
+                            {isDeleting ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Deleting...
+                                </>
+                            ) : (
+                                <>
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Delete Site
+                                </>
+                            )}
                         </Button>
                     </div>
                 </DialogContent>

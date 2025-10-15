@@ -20,6 +20,7 @@ use App\Http\Controllers\ServerSiteGitRepositoryController;
 use App\Http\Controllers\ServerSitesController;
 use App\Http\Controllers\ServerSupervisorController;
 use App\Http\Controllers\SourceProviderController;
+use App\Http\Controllers\GitHubRepositoriesController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -173,6 +174,12 @@ Route::middleware('auth')->group(function () {
         Route::get('deploy-key', [ServerSitesController::class, 'deployKey'])
             ->name('deploy-key');
 
+        // GitHub repositories
+        Route::get('github/repositories', [GitHubRepositoriesController::class, 'index'])
+            ->name('github.repositories');
+        Route::get('github/repositories/{owner}/{repo}/branches', [GitHubRepositoriesController::class, 'branches'])
+            ->name('github.branches');
+
         // Sites management
         Route::prefix('sites')->scopeBindings()->group(function () {
             Route::get('/', [ServerSitesController::class, 'index'])
@@ -203,6 +210,9 @@ Route::middleware('auth')->group(function () {
                 ->name('sites.git.cancel');
             Route::post('{site}/uninstall', [ServerSitesController::class, 'uninstall'])
                 ->name('sites.uninstall')
+                ->middleware('throttle:5,1');
+            Route::delete('{site}', [ServerSitesController::class, 'destroy'])
+                ->name('sites.destroy')
                 ->middleware('throttle:5,1');
             Route::get('{site}/explorer', [ServerFileExplorerController::class, 'show'])
                 ->name('sites.explorer');

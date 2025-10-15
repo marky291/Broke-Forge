@@ -97,4 +97,24 @@ class ServerSitesController extends Controller
             ->route('servers.sites', $server)
             ->with('success', 'Site uninstallation started');
     }
+
+    /**
+     * Delete a site from the server (typically for failed installations)
+     */
+    public function destroy(Server $server, ServerSite $site): RedirectResponse
+    {
+        try {
+            // Set status to removing to indicate cleanup is in progress
+            $site->update(['status' => 'removing']);
+
+            // Dispatch site removal job to clean up any partial installation
+            SiteRemoverJob::dispatch($server, $site);
+
+            return redirect()
+                ->route('servers.sites', $server)
+                ->with('success', 'Site deletion started. Any partial installation will be cleaned up.');
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Failed to delete site: '.$e->getMessage());
+        }
+    }
 }
