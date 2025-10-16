@@ -1,6 +1,8 @@
 # Guidelines
 
 - Always use Laravel boost MCP.
+- When writing unit tests always use 'php artisan make:test --unit'
+- When writing http tests always use 'php artisan make:test'
 - Always use and maintain /app/packages/README.md when working on packages for installer/remover classes.
 - Always maintain unit test suite when working on code.
 - Avoid using mocks when writing unit tests except for mocking $server->createSshConnection which you should always use partial mock.
