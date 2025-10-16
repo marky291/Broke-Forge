@@ -10,6 +10,7 @@ use App\Packages\Enums\Connection;
 use App\Packages\Enums\CredentialType;
 use App\Packages\Enums\ProvisionStatus;
 use App\Packages\Services\Credential\ServerCredentialConnection;
+use App\Packages\Services\SourceProvider\ServerSshKeyManager;
 use Illuminate\Database\Eloquent\Casts\AsCollection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -17,6 +18,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 /**
  * @method static firstOrCreate(array $attributes, array $values = [])
@@ -244,7 +246,7 @@ class Server extends Model
 
             return true;
         } catch (\Exception $e) {
-            \Log::warning("Failed to detect OS info for server #{$this->id}: {$e->getMessage()}");
+            Log::warning("Failed to detect OS info for server #{$this->id}: {$e->getMessage()}");
 
             return false;
         }
@@ -421,6 +423,48 @@ class Server extends Model
             if ($server->wasChanged($broadcastFields)) {
                 \App\Events\ServerUpdated::dispatch($server->id);
             }
+        });
+
+        static::deleting(function (self $server): void {
+            // Only attempt removal if key was added to GitHub
+            if (! $server->source_provider_ssh_key_added) {
+                return;
+            }
+
+            // Get user's GitHub provider
+            $githubProvider = $server->user?->githubProvider();
+            if (! $githubProvider) {
+                return; // User doesn't have GitHub connected
+            }
+
+            try {
+                $keyManager = new ServerSshKeyManager($server, $githubProvider);
+                $keyManager->removeServerKeyFromGitHub();
+
+                Log::info('Removed server SSH key from GitHub during deletion', [
+                    'server_id' => $server->id,
+                    'key_id' => $server->source_provider_ssh_key_id,
+                ]);
+            } catch (\Exception $e) {
+                // Log error but don't block server deletion
+                Log::warning('Failed to remove server SSH key from GitHub during deletion', [
+                    'server_id' => $server->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        });
+
+        static::deleted(function (self $server): void {
+            activity()
+                ->causedBy(Auth::user())
+                ->performedOn($server)
+                ->event('server.deleted')
+                ->withProperties([
+                    'vanity_name' => $server->vanity_name,
+                    'public_ip' => $server->public_ip,
+                    'ssh_key_was_on_github' => $server->source_provider_ssh_key_added,
+                ])
+                ->log(sprintf('Server %s deleted', $server->vanity_name ?? $server->public_ip));
         });
     }
 
