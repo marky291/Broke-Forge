@@ -832,7 +832,6 @@ class ServerSiteResource extends JsonResource
                 'output' => $deployment->output,
                 'error_output' => $deployment->error_output,
                 'commit_sha' => $deployment->commit_sha,
-                'commit_message' => $deployment->commit_message,
                 'branch' => $deployment->branch,
                 'duration_seconds' => $deployment->getDurationSeconds(),
                 'started_at' => $deployment->started_at,

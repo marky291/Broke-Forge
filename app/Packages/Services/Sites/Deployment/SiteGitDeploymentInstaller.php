@@ -25,8 +25,6 @@ class SiteGitDeploymentInstaller extends PackageInstaller implements \App\Packag
 
     protected ?string $commitSha = null;
 
-    protected ?string $commitMessage = null;
-
     /**
      * Execute deployment for a site
      */
@@ -57,7 +55,6 @@ class SiteGitDeploymentInstaller extends PackageInstaller implements \App\Packag
                 'error_output' => null, // Don't show stderr for successful deployments
                 'exit_code' => 0,
                 'commit_sha' => $this->commitSha,
-                'commit_message' => $this->commitMessage,
                 'branch' => $site->getGitConfiguration()['branch'] ?? null,
                 'duration_ms' => $duration,
                 'completed_at' => now(),
@@ -150,20 +147,6 @@ class SiteGitDeploymentInstaller extends PackageInstaller implements \App\Packag
                     ->execute($remoteCommand);
 
                 $this->commitSha = trim($process->getOutput()) ?: null;
-            },
-
-            // Capture current Git commit message
-            function () use ($documentRoot) {
-                $remoteCommand = sprintf(
-                    'git config --global --add safe.directory %s && cd %s && git log -1 --pretty=%%B 2>/dev/null || echo ""',
-                    escapeshellarg($documentRoot),
-                    escapeshellarg($documentRoot)
-                );
-
-                $process = $this->server->createSshConnection(CredentialType::BrokeForge)
-                    ->execute($remoteCommand);
-
-                $this->commitMessage = trim($process->getOutput()) ?: null;
             },
 
             $this->track(SiteGitDeploymentInstallerMilestones::COMPLETE),

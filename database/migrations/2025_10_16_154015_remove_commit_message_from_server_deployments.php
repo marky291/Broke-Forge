@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('server_deployments', function (Blueprint $table) {
-            $table->string('commit_message')->nullable()->after('commit_sha');
+            $table->dropColumn('commit_message');
         });
     }
 
@@ -21,8 +21,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('server_deployments', function (Blueprint $table) {
-            $table->dropColumn('commit_message');
-        });
+        // No rollback - commit_message column has been permanently removed
     }
 };

@@ -22,7 +22,6 @@ type Deployment = {
     error_output: string | null;
     exit_code: number | null;
     commit_sha: string | null;
-    commit_message: string | null;
     branch: string | null;
     duration_ms: number | null;
     duration_seconds: number | null;
@@ -322,7 +321,7 @@ export default function SiteDeployments({ site }: { site: ServerSite }) {
                                                 <span className={`text-sm ${deployment.status === 'failed' ? 'text-red-600 dark:text-red-400' : 'text-muted-foreground'}`}>
                                                     {deployment.status === 'failed'
                                                         ? (deployment.error_output?.split('\n')[0] || 'Deployment failed')
-                                                        : (deployment.commit_message || 'No commit message')}
+                                                        : (deployment.branch ? `Deployed from ${deployment.branch}` : 'Deployment successful')}
                                                 </span>
                                             </div>
                                             <div className="flex items-center gap-3">
@@ -415,12 +414,6 @@ export default function SiteDeployments({ site }: { site: ServerSite }) {
                                     <div>
                                         <h4 className="mb-2 text-sm font-medium text-foreground">Deployment Details</h4>
                                         <div className="space-y-1 rounded-md bg-muted p-4 text-sm">
-                                            {selectedDeployment.commit_message && (
-                                                <div className="flex justify-between">
-                                                    <span className="text-muted-foreground">Commit Message:</span>
-                                                    <span className="text-right">{selectedDeployment.commit_message}</span>
-                                                </div>
-                                            )}
                                             {selectedDeployment.branch && (
                                                 <div className="flex justify-between">
                                                     <span className="text-muted-foreground">Branch:</span>

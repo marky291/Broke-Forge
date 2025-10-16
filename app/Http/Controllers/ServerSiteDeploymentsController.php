@@ -90,7 +90,6 @@ class ServerSiteDeploymentsController extends Controller
             'error_output' => $deployment->error_output,
             'exit_code' => $deployment->exit_code,
             'commit_sha' => $deployment->commit_sha,
-            'commit_message' => $deployment->commit_message,
             'branch' => $deployment->branch,
             'duration_ms' => $deployment->duration_ms,
             'duration_seconds' => $deployment->getDurationSeconds(),

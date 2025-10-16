@@ -354,7 +354,6 @@ export interface ServerSite {
             error_output: string | null;
             exit_code: number | null;
             commit_sha: string | null;
-            commit_message: string | null;
             branch: string | null;
             duration_ms: number | null;
             duration_seconds: number | null;
@@ -380,7 +379,6 @@ export interface ServerSite {
         output: string | null;
         error_output: string | null;
         commit_sha: string | null;
-        commit_message: string | null;
         branch: string | null;
         duration_seconds: number | null;
         started_at: string | null;
