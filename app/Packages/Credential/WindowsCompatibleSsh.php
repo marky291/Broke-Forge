@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Packages\Services;
+namespace App\Packages\Credential;
 
 use Spatie\Ssh\Ssh;
 

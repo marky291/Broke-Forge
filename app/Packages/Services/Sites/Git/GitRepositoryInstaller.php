@@ -5,7 +5,6 @@ namespace App\Packages\Services\Sites\Git;
 use App\Models\ServerSite;
 use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageInstaller;
-use App\Packages\Enums\CredentialType;
 use App\Packages\Enums\PackageName;
 use App\Packages\Enums\PackageType;
 use Illuminate\Support\Arr;
@@ -150,7 +149,9 @@ class GitRepositoryInstaller extends PackageInstaller implements \App\Packages\B
                 $configuration = $site->configuration ?? [];
 
                 // Get server-specific brokeforge credential from database
-                $brokeforgeCredential = $this->server->credential('brokeforge');
+                $brokeforgeCredential = $this->server->credentials()
+                    ->where('user', 'brokeforge')
+                    ->first();
                 $deployKey = $brokeforgeCredential?->public_key;
 
                 $configuration['application_type'] = 'application';
@@ -179,11 +180,6 @@ class GitRepositoryInstaller extends PackageInstaller implements \App\Packages\B
     public function milestones(): Milestones
     {
         return new GitRepositoryInstallerMilestones;
-    }
-
-    public function credentialType(): CredentialType
-    {
-        return CredentialType::BrokeForge;
     }
 
     /**

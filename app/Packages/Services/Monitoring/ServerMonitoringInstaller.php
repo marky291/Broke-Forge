@@ -6,7 +6,6 @@ use App\Enums\MonitoringStatus;
 use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageInstaller;
 use App\Packages\Base\ServerPackage;
-use App\Packages\Enums\CredentialType;
 use App\Packages\Enums\PackageName;
 use App\Packages\Enums\PackageType;
 
@@ -30,11 +29,6 @@ class ServerMonitoringInstaller extends PackageInstaller implements ServerPackag
     public function milestones(): Milestones
     {
         return new ServerMonitoringInstallerMilestones;
-    }
-
-    public function credentialType(): CredentialType
-    {
-        return CredentialType::Root;
     }
 
     /**

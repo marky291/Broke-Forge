@@ -5,7 +5,6 @@ namespace App\Packages\Services\Database\PostgreSQL;
 use App\Enums\DatabaseStatus;
 use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageInstaller;
-use App\Packages\Enums\CredentialType;
 use App\Packages\Enums\PackageName;
 use App\Packages\Enums\PackageType;
 
@@ -14,11 +13,6 @@ class PostgreSqlInstaller extends PackageInstaller implements \App\Packages\Base
     public function milestones(): Milestones
     {
         return new PostgreSqlInstallerMilestones;
-    }
-
-    public function credentialType(): CredentialType
-    {
-        return CredentialType::Root;
     }
 
     public function packageName(): PackageName

@@ -16,11 +16,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        // Bind SSH factory for creating SSH connections (mockable in tests)
-        $this->app->singleton(\App\Packages\Contracts\SshFactory::class, \App\Packages\Ssh\SpatieFactory::class);
-
-        // Bind server credential connection (automatically receives factory injection)
-        $this->app->singleton(\App\Packages\Services\Credential\ServerCredentialConnection::class);
+        //
     }
 
     /**

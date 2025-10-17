@@ -7,7 +7,6 @@ use App\Models\ServerMetric;
 use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageRemover;
 use App\Packages\Base\ServerPackage;
-use App\Packages\Enums\CredentialType;
 use App\Packages\Enums\PackageName;
 use App\Packages\Enums\PackageType;
 
@@ -31,11 +30,6 @@ class ServerMonitoringRemover extends PackageRemover implements ServerPackage
     public function milestones(): Milestones
     {
         return new ServerMonitoringRemoverMilestones;
-    }
-
-    public function credentialType(): CredentialType
-    {
-        return CredentialType::Root;
     }
 
     /**

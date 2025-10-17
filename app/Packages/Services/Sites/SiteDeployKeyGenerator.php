@@ -7,7 +7,6 @@ use App\Models\ServerSite;
 use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageInstaller;
 use App\Packages\Base\SitePackage;
-use App\Packages\Enums\CredentialType;
 use App\Packages\Enums\PackageName;
 use App\Packages\Enums\PackageType;
 use Illuminate\Support\Facades\Log;
@@ -115,10 +114,5 @@ class SiteDeployKeyGenerator extends PackageInstaller implements SitePackage
     public function milestones(): Milestones
     {
         return new SiteDeployKeyGeneratorMilestones;
-    }
-
-    public function credentialType(): CredentialType
-    {
-        return CredentialType::BrokeForge;
     }
 }

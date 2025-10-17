@@ -6,7 +6,6 @@ use App\Models\ServerDeployment;
 use App\Models\ServerSite;
 use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageInstaller;
-use App\Packages\Enums\CredentialType;
 use App\Packages\Enums\PackageName;
 use App\Packages\Enums\PackageType;
 use Illuminate\Support\Facades\Log;
@@ -114,7 +113,7 @@ class SiteGitDeploymentInstaller extends PackageInstaller implements \App\Packag
                     $deploymentScript
                 );
 
-                $process = $this->server->createSshConnection(CredentialType::BrokeForge)
+                $process = $this->server->ssh('brokeforge')
                     ->setTimeout(300) // 5 minute timeout for deployments
                     ->execute($remoteCommand);
 
@@ -143,7 +142,7 @@ class SiteGitDeploymentInstaller extends PackageInstaller implements \App\Packag
                     escapeshellarg($documentRoot)
                 );
 
-                $process = $this->server->createSshConnection(CredentialType::BrokeForge)
+                $process = $this->server->ssh('brokeforge')
                     ->execute($remoteCommand);
 
                 $this->commitSha = trim($process->getOutput()) ?: null;
@@ -166,10 +165,5 @@ class SiteGitDeploymentInstaller extends PackageInstaller implements \App\Packag
     public function milestones(): Milestones
     {
         return new SiteGitDeploymentInstallerMilestones;
-    }
-
-    public function credentialType(): CredentialType
-    {
-        return CredentialType::BrokeForge;
     }
 }

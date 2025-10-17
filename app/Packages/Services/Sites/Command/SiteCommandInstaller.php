@@ -7,7 +7,6 @@ use App\Models\ServerSite;
 use App\Models\ServerSiteCommandHistory;
 use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageInstaller;
-use App\Packages\Enums\CredentialType;
 use App\Packages\Enums\PackageName;
 use App\Packages\Enums\PackageType;
 use Illuminate\Support\Facades\Log;
@@ -106,7 +105,11 @@ class SiteCommandInstaller extends PackageInstaller implements \App\Packages\Bas
     protected function commands(string $command, int $timeout): array
     {
         // Get app user for working directory resolution
-        $appUser = $this->server->credential('user')?->getUsername()
+        $brokeforgeCredential = $this->server->credentials()
+            ->where('user', 'brokeforge')
+            ->first();
+
+        $appUser = $brokeforgeCredential?->getUsername()
             ?: str_replace(' ', '', strtolower(config('app.name')));
 
         // Resolve working directory to site root (parent of document_root)
@@ -124,7 +127,7 @@ class SiteCommandInstaller extends PackageInstaller implements \App\Packages\Bas
             function () use ($command, $workingDirectory, $timeout) {
                 $remoteCommand = sprintf('cd %s && %s', escapeshellarg($workingDirectory), $command);
 
-                $process = $this->server->createSshConnection('brokeforge')
+                $process = $this->server->ssh('brokeforge')
                     ->setTimeout($timeout)
                     ->execute($remoteCommand);
 
@@ -162,11 +165,6 @@ class SiteCommandInstaller extends PackageInstaller implements \App\Packages\Bas
     public function milestones(): Milestones
     {
         return new SiteCommandInstallerMilestones;
-    }
-
-    public function credentialType(): CredentialType
-    {
-        return CredentialType::User;
     }
 
     /**

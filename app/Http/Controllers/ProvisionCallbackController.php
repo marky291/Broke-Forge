@@ -3,8 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Server;
-use App\Packages\Enums\Connection;
-use App\Packages\Enums\CredentialType;
+use App\Packages\Enums\ConnectionStatus;
 use App\Packages\Enums\PhpVersion;
 use App\Packages\Enums\ProvisionStatus;
 use App\Packages\Services\Nginx\NginxInstallerJob;
@@ -61,7 +60,7 @@ class ProvisionCallbackController extends Controller
             $server->firewall()->delete(); // delete all firewall for this server
             $server->provision = collect(); // clear out the steps.
             $server->provision->put(1, ProvisionStatus::Completed->value); // complete the connection step.
-            $server->connection = Connection::CONNECTED;
+            $server->connection = ConnectionStatus::CONNECTED;
             $server->provision_status = ProvisionStatus::Installing;
             $server->save();
         }
@@ -75,29 +74,32 @@ class ProvisionCallbackController extends Controller
             $rootUserSuccess = true;
             $brokeforgeUserSuccess = true;
 
-            foreach (CredentialType::cases() as $credentialType) {
-                $credential = $server->credential($credentialType);
+            foreach (['root', 'brokeforge'] as $user) {
+                $credential = $server->credentials()
+                    ->where('user', $user)
+                    ->first();
+
                 $expectedUsername = $credential?->getUsername();
 
                 if (! $credential || ! $expectedUsername) {
-                    Log::error("Missing {$credentialType->value} credential for server", ['server' => $server]);
+                    Log::error("Missing {$user} credential for server", ['server' => $server]);
 
                     continue;
                 }
 
-                $result = $server->createSshConnection($credentialType)->execute('whoami');
+                $result = $server->ssh($user)->execute('whoami');
                 $actualUsername = trim($result->getOutput());
                 $errorOutput = trim($result->getErrorOutput());
                 $exitCode = $result->getExitCode();
 
                 if ($actualUsername !== $expectedUsername) {
-                    Log::error("{$credentialType->value} SSH access failed, Found '{$actualUsername}' expected '{$expectedUsername}'", [
+                    Log::error("{$user} SSH access failed, Found '{$actualUsername}' expected '{$expectedUsername}'", [
                         'server' => $server,
                         'exit_code' => $exitCode,
                         'error_output' => $errorOutput,
                         'stdout' => $actualUsername,
                     ]);
-                    ${$credentialType->value.'UserSuccess'} = false;
+                    ${$user.'UserSuccess'} = false;
                 }
             }
 

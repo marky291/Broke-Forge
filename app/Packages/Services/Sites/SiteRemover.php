@@ -6,7 +6,6 @@ use App\Models\ServerSite;
 use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageRemover;
 use App\Packages\Base\SitePackage;
-use App\Packages\Enums\CredentialType;
 use App\Packages\Enums\PackageName;
 use App\Packages\Enums\PackageType;
 
@@ -79,11 +78,6 @@ class SiteRemover extends PackageRemover implements SitePackage
     public function milestones(): Milestones
     {
         return new SiteRemoverMilestones;
-    }
-
-    public function credentialType(): CredentialType
-    {
-        return CredentialType::Root;
     }
 
     public function packageName(): PackageName

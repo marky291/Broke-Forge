@@ -5,9 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Concerns\PreparesSiteData;
 use App\Http\Requests\Servers\InstallSiteGitRepositoryRequest;
 use App\Models\Server;
-use App\Models\ServerCredential;
 use App\Models\ServerSite;
-use App\Packages\Enums\CredentialType;
 use App\Packages\Enums\GitStatus;
 use App\Packages\Services\Sites\Git\GitRepositoryInstallerJob;
 use Illuminate\Http\RedirectResponse;
@@ -157,8 +155,9 @@ class ServerSiteGitRepositoryController extends Controller
     protected function resolveDeployKey(Server $server): ?string
     {
         // Get or generate brokeforge credential for this specific server
-        $brokeforgeCredential = $server->credential(CredentialType::BrokeForge)
-            ?? ServerCredential::generateKeyPair($server, CredentialType::BrokeForge);
+        $brokeforgeCredential = $server->credentials()
+            ->where('user', 'brokeforge')
+            ->first() ?? \App\Models\ServerCredential::generateKeyPair($server, 'brokeforge');
 
         return $brokeforgeCredential->public_key;
     }

@@ -4,7 +4,6 @@ namespace App\Packages\Services\SourceProvider;
 
 use App\Models\Server;
 use App\Models\SourceProvider;
-use App\Packages\Enums\CredentialType;
 use App\Packages\Services\SourceProvider\Github\GitHubApiClient;
 use Illuminate\Support\Facades\Log;
 
@@ -28,7 +27,10 @@ class ServerSshKeyManager
     {
         try {
             // Get server's BrokeForge SSH public key
-            $credential = $this->server->credential(CredentialType::BrokeForge);
+            $credential = $this->server->credentials()
+                ->where('user', 'brokeforge')
+                ->first();
+
             if (! $credential || ! $credential->public_key) {
                 Log::error('Server SSH key not found', ['server_id' => $this->server->id]);
 
@@ -36,7 +38,7 @@ class ServerSshKeyManager
             }
 
             $publicKey = $credential->public_key;
-            $title = "BrokeForge Server - {$this->server->vanity_name}";
+            $title = "{$this->server->vanity_name} (".config('app.name').')';
 
             // Add key to GitHub user account
             $apiClient = new GitHubApiClient($this->sourceProvider);
@@ -140,7 +142,10 @@ class ServerSshKeyManager
     public function hasServerKeyOnGitHub(): bool
     {
         try {
-            $credential = $this->server->credential(CredentialType::BrokeForge);
+            $credential = $this->server->credentials()
+                ->where('user', 'brokeforge')
+                ->first();
+
             if (! $credential || ! $credential->public_key) {
                 return false;
             }

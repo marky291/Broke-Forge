@@ -5,7 +5,6 @@ namespace App\Packages\Services\Database\MariaDB;
 use App\Enums\DatabaseStatus;
 use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageInstaller;
-use App\Packages\Enums\CredentialType;
 use App\Packages\Enums\PackageName;
 use App\Packages\Enums\PackageType;
 
@@ -19,11 +18,6 @@ class MariaDbInstaller extends PackageInstaller implements \App\Packages\Base\Se
     public function milestones(): Milestones
     {
         return new MariaDbInstallerMilestones;
-    }
-
-    public function credentialType(): CredentialType
-    {
-        return CredentialType::Root;
     }
 
     public function packageName(): PackageName

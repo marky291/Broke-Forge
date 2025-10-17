@@ -3,8 +3,6 @@
 namespace App\Packages;
 
 use App\Models\Server;
-use App\Models\ServerCredential;
-use App\Packages\Enums\CredentialType;
 use Illuminate\Support\Facades\URL;
 
 class ProvisionAccess
@@ -19,15 +17,17 @@ class ProvisionAccess
     public function makeScriptFor(Server $server, string $rootPassword): string
     {
         // Generate unique SSH credentials for this server
-        // Two credential types:
+        // Two SSH users:
         // - Root: for system-level operations (package installs, service management)
         // - BrokeForge: for site-level operations (Git, deployments, app code)
 
-        $rootCredential = $server->credential(CredentialType::Root)
-            ?? ServerCredential::generateKeyPair($server, CredentialType::Root);
+        $rootCredential = $server->credentials()
+            ->where('user', 'root')
+            ->first() ?? \App\Models\ServerCredential::generateKeyPair($server, 'root');
 
-        $brokeforgeCredential = $server->credential(CredentialType::BrokeForge)
-            ?? ServerCredential::generateKeyPair($server, CredentialType::BrokeForge);
+        $brokeforgeCredential = $server->credentials()
+            ->where('user', 'brokeforge')
+            ->first() ?? \App\Models\ServerCredential::generateKeyPair($server, 'brokeforge');
 
         $appName = config('app.name');
 

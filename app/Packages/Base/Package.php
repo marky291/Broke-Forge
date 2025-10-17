@@ -2,7 +2,6 @@
 
 namespace App\Packages\Base;
 
-use App\Packages\Enums\CredentialType;
 use App\Packages\Enums\PackageName;
 use App\Packages\Enums\PackageType;
 
@@ -24,12 +23,9 @@ interface Package
     public function milestones(): Milestones;
 
     /**
-     * Credential type used to run the package on SSH.
-     *
-     * Returns the credential type (Root or BrokeForge) which maps
-     * to ServerCredential records with unique per-server SSH keys.
-     *
-     * @return CredentialType Root for server-level operations, BrokeForge for site operations and Git
+     * Note: SSH user is auto-detected by convention via PackageManager::user():
+     * - ServerPackage implementations automatically use 'root'
+     * - SitePackage implementations automatically use 'brokeforge'
+     * Override user() in PackageManager if custom behavior needed (rare)
      */
-    public function credentialType(): CredentialType;
 }

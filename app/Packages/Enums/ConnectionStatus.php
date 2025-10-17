@@ -2,7 +2,7 @@
 
 namespace App\Packages\Enums;
 
-enum Connection: string
+enum ConnectionStatus: string
 {
     case PENDING = 'pending';
 

@@ -6,7 +6,6 @@ use App\Enums\SupervisorStatus;
 use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageInstaller;
 use App\Packages\Base\ServerPackage;
-use App\Packages\Enums\CredentialType;
 use App\Packages\Enums\PackageName;
 use App\Packages\Enums\PackageType;
 
@@ -31,11 +30,6 @@ class SupervisorInstaller extends PackageInstaller implements ServerPackage
     public function milestones(): Milestones
     {
         return new SupervisorInstallerMilestones;
-    }
-
-    public function credentialType(): CredentialType
-    {
-        return CredentialType::Root;
     }
 
     /**

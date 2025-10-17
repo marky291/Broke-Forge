@@ -3,7 +3,6 @@
 namespace Database\Factories;
 
 use App\Models\Server;
-use App\Packages\Enums\CredentialType;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -24,7 +23,7 @@ class ServerCredentialFactory extends Factory
 
         return [
             'server_id' => Server::factory(),
-            'credential_type' => CredentialType::Root->value,
+            'user' => 'root',
             'private_key' => $privateKey,
             'public_key' => $publicKey,
         ];
@@ -33,14 +32,14 @@ class ServerCredentialFactory extends Factory
     public function root(): static
     {
         return $this->state(fn (array $attributes) => [
-            'credential_type' => CredentialType::Root->value,
+            'user' => 'root',
         ]);
     }
 
     public function brokeforge(): static
     {
         return $this->state(fn (array $attributes) => [
-            'credential_type' => CredentialType::BrokeForge->value,
+            'user' => 'brokeforge',
         ]);
     }
 }

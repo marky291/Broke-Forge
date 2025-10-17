@@ -11,10 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('server_deployments', function (Blueprint $table) {
-            if (Schema::hasColumn('server_deployments', 'commit_message')) {
-                $table->dropColumn('commit_message');
-            }
+        Schema::table('server_credentials', function (Blueprint $table) {
+            $table->renameColumn('credential_type', 'user');
         });
     }
 
@@ -23,6 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        // No rollback - commit_message column has been permanently removed
+        Schema::table('server_credentials', function (Blueprint $table) {
+            $table->renameColumn('user', 'credential_type');
+        });
     }
 };

@@ -1,6 +1,6 @@
 <?php
 
-use App\Packages\Enums\Connection;
+use App\Packages\Enums\ConnectionStatus;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -14,7 +14,7 @@ return new class extends Migration
             $table->string('vanity_name');
             $table->string('public_ip'); // IP address
             $table->string('private_ip')->nullable();
-            $table->string('connection')->default(Connection::PENDING);
+            $table->string('connection_status')->default(ConnectionStatus::PENDING);
             $table->string('user')->nullable(); // optional SSH username, kept for compatibility
             $table->timestamps();
 

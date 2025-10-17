@@ -3,7 +3,6 @@
 namespace App\Packages\Services\Sites\Explorer;
 
 use App\Models\ServerSite;
-use App\Packages\Enums\CredentialType;
 use App\Packages\Services\Sites\Explorer\Exceptions\ServerFileExplorerException;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Str;
@@ -295,7 +294,7 @@ class SiteFileExplorer
 
     protected function makeSsh(): Ssh
     {
-        return $this->site->server->createSshConnection(CredentialType::BrokeForge);
+        return $this->site->server->ssh('brokeforge');
     }
 
     protected function runCommand(string $command, int $timeout): Process

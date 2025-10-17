@@ -99,9 +99,13 @@ class ServerSiteResource extends JsonResource
         $siteIdentifier = $this->domain ?: (string) $this->id;
         $workingDirectory = $this->document_root ?: sprintf('/home/brokeforge/%s', $siteIdentifier);
 
+        $brokeforgeCredential = $server->credentials()
+            ->where('user', 'brokeforge')
+            ->first();
+
         return [
             'workingDirectory' => $workingDirectory,
-            'user' => $server->credential('brokeforge')?->getUsername() ?: 'brokeforge',
+            'user' => $brokeforgeCredential?->getUsername() ?: 'brokeforge',
             'timeout' => 120,
         ];
     }

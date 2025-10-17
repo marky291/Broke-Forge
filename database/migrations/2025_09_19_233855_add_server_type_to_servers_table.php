@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('servers', function (Blueprint $table) {
-            $table->string('server_type')->nullable()->after('connection');
+            $table->string('server_type')->nullable()->after('connection_status');
         });
     }
 

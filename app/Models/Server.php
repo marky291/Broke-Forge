@@ -6,10 +6,9 @@ use App\Enums\MonitoringStatus;
 use App\Enums\SchedulerStatus;
 use App\Enums\ServerProvider;
 use App\Enums\SupervisorStatus;
-use App\Packages\Enums\Connection;
-use App\Packages\Enums\CredentialType;
+use App\Packages\Credential\Ssh;
+use App\Packages\Enums\ConnectionStatus;
 use App\Packages\Enums\ProvisionStatus;
-use App\Packages\Services\Credential\ServerCredentialConnection;
 use App\Packages\Services\SourceProvider\ServerSshKeyManager;
 use Illuminate\Database\Eloquent\Casts\AsCollection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -43,7 +42,7 @@ class Server extends Model
         'public_ip',
         'private_ip',
         'ssh_port',
-        'connection',
+        'connection_status',
         'provision_status',
         'provision',
         'ssh_root_password',
@@ -77,7 +76,7 @@ class Server extends Model
     {
         return [
             'ssh_port' => 'integer',
-            'connection' => Connection::class,
+            'connection_status' => ConnectionStatus::class,
             'provider' => ServerProvider::class,
             'provision_status' => ProvisionStatus::class,
             'provision' => AsCollection::class,
@@ -124,7 +123,8 @@ class Server extends Model
     public static function register(string $publicIp): self
     {
         return static::firstOrCreate(
-            ['public_ip' => $publicIp]
+            ['public_ip' => $publicIp],
+            ['vanity_name' => $publicIp]
         );
     }
 
@@ -133,7 +133,7 @@ class Server extends Model
      */
     public function isConnected(): bool
     {
-        return $this->connection === 'connected';
+        return $this->connection_status === ConnectionStatus::CONNECTED;
     }
 
     /**
@@ -166,46 +166,16 @@ class Server extends Model
     }
 
     /**
-     * Get a specific credential type for this server.
+     * Create an authenticated SSH connection to this server.
      *
-     * @param  CredentialType|string  $type  The credential type
-     * @return ServerCredential|null The credential or null if not found
+     * @param  string  $user  The SSH user ('root' or 'brokeforge')
+     * @return \Spatie\Ssh\Ssh Configured SSH connection ready to execute commands
+     *
+     * @throws \RuntimeException If credential not found
      */
-    public function credential(CredentialType|string $type): ?ServerCredential
+    public function ssh(string $user = 'root'): \Spatie\Ssh\Ssh
     {
-        $credentialType = is_string($type) ? $type : $type->value;
-
-        return $this->credentials()->where('credential_type', $credentialType)->first();
-    }
-
-    /**
-     * Get the SSH username for a specific credential type.
-     *
-     * @param  CredentialType  $type  The credential type
-     * @return string The SSH username
-     */
-    public function getUsernameFor(CredentialType $type): string
-    {
-        return $type->username();
-    }
-
-    /**
-     * Create an authenticated SSH connection using server-specific credentials.
-     *
-     * @param  CredentialType|string  $credentialType  The credential type
-     * @return \Spatie\Ssh\Ssh Configured SSH connection
-     *
-     * @throws \RuntimeException If credential not found or connection cannot be created
-     */
-    public function createSshConnection(CredentialType|string $credentialType): \Spatie\Ssh\Ssh
-    {
-        // Convert string to enum if necessary
-        $type = is_string($credentialType) ? CredentialType::fromString($credentialType) : $credentialType;
-
-        // Resolve the connection builder from container (with factory injected)
-        $builder = app(ServerCredentialConnection::class);
-
-        return $builder->build($this, $type);
+        return Ssh::connect($this, $user);
     }
 
     /**
@@ -214,7 +184,7 @@ class Server extends Model
     public function detectOsInfo(): bool
     {
         try {
-            $ssh = $this->createSshConnection(CredentialType::Root);
+            $ssh = $this->ssh('root');
 
             // Get OS information using lsb_release
             $result = $ssh->execute('lsb_release -a 2>/dev/null');
@@ -411,7 +381,7 @@ class Server extends Model
             $broadcastFields = [
                 'provision',
                 'provision_status',
-                'connection',
+                'connection_status',
                 'monitoring_status',
                 'scheduler_status',
                 'supervisor_status',

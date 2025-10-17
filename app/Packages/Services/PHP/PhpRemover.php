@@ -7,7 +7,6 @@ use App\Models\ServerPhp;
 use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageRemover;
 use App\Packages\Base\ServerPackage;
-use App\Packages\Enums\CredentialType;
 use App\Packages\Enums\PackageName;
 use App\Packages\Enums\PackageType;
 use App\Packages\Enums\PhpVersion;
@@ -47,11 +46,6 @@ class PhpRemover extends PackageRemover implements ServerPackage
     public function milestones(): Milestones
     {
         return new PhpRemoverMilestones;
-    }
-
-    public function credentialType(): CredentialType
-    {
-        return CredentialType::Root;
     }
 
     /**

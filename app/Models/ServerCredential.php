@@ -2,8 +2,7 @@
 
 namespace App\Models;
 
-use App\Packages\Enums\CredentialType;
-use App\Packages\Services\Credential\SshKeyGenerator;
+use App\Packages\Credential\SshKeyGenerator;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -13,16 +12,29 @@ use Illuminate\Support\Facades\Crypt;
 /**
  * Server Credential Model
  *
- * Stores encrypted SSH credentials per server for different access types.
- * Each server can have multiple credential types (root, brokeforge).
+ * Stores encrypted SSH credentials per server for different users.
+ * Each server can have multiple SSH users (root, brokeforge).
  */
 class ServerCredential extends Model
 {
     use HasFactory;
 
+    /**
+     * Root user - for server-level operations requiring elevated privileges.
+     * Used for: System package installation, service management, server configuration.
+     */
+    public const ROOT = 'root';
+
+    /**
+     * BrokeForge user - for site-level operations and Git management.
+     * Used for: Site deployments, Git operations, application code management.
+     * Has full permissions only on /home/brokeforge/ directory.
+     */
+    public const BROKEFORGE = 'brokeforge';
+
     protected $fillable = [
         'server_id',
-        'credential_type',
+        'user',
         'private_key',
         'public_key',
     ];
@@ -47,42 +59,35 @@ class ServerCredential extends Model
     }
 
     /**
-     * Get the credential type as an enum.
-     */
-    public function type(): CredentialType
-    {
-        return CredentialType::from($this->credential_type);
-    }
-
-    /**
-     * Get the SSH username for this credential type.
+     * Get the SSH username for this credential.
+     *
+     * For our use case, the username IS the user field.
+     * - 'root' user → 'root' username
+     * - 'brokeforge' user → 'brokeforge' username
      */
     public function getUsername(): string
     {
-        return $this->type()->username();
+        return $this->user;
     }
 
     /**
      * Generate a new SSH key pair for this credential.
      *
      * @param  Server  $server  The server to generate keys for
-     * @param  CredentialType|string  $credentialType  The credential type
+     * @param  string  $user  The SSH user ('root' or 'brokeforge')
      * @return self The created/updated credential
      */
-    public static function generateKeyPair(Server $server, CredentialType|string $credentialType): self
+    public static function generateKeyPair(Server $server, string $user): self
     {
-        // Convert string to enum if necessary
-        $type = is_string($credentialType) ? CredentialType::fromString($credentialType) : $credentialType;
-
         // Generate key pair using the service
         $generator = new SshKeyGenerator;
-        $keys = $generator->generate($server->id, $type);
+        $keys = $generator->generate($server->id, $user);
 
         // Create or update credential
         return self::updateOrCreate(
             [
                 'server_id' => $server->id,
-                'credential_type' => $type->value,
+                'user' => $user,
             ],
             [
                 'private_key' => $keys['private_key'],

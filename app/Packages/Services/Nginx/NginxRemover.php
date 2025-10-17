@@ -4,7 +4,6 @@ namespace App\Packages\Services\Nginx;
 
 use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageRemover;
-use App\Packages\Enums\CredentialType;
 use App\Packages\Enums\PackageName;
 use App\Packages\Enums\PackageType;
 
@@ -28,11 +27,6 @@ class NginxRemover extends PackageRemover
     public function milestones(): Milestones
     {
         return new NginxRemoverMilestones;
-    }
-
-    public function credentialType(): CredentialType
-    {
-        return CredentialType::Root;
     }
 
     /**

@@ -45,6 +45,20 @@ abstract class PackageManager implements Package
     protected ?Model $currentEvent = null;
 
     /**
+     * Get the SSH user for this package's operations.
+     *
+     * Convention over configuration:
+     * - ServerPackage implementations automatically use 'root'
+     * - SitePackage implementations automatically use 'brokeforge'
+     *
+     * Override this method if custom behavior is needed (rare).
+     */
+    protected function user(): string
+    {
+        return $this instanceof SitePackage ? 'brokeforge' : 'root';
+    }
+
+    /**
      * Track all events created during this execution
      */
     protected array $allEvents = [];
@@ -176,12 +190,12 @@ abstract class PackageManager implements Package
 
                 // Only execute SSH commands for strings
                 if (is_string($command)) {
-                    // Get server-specific credential for this package's operations
-                    $credentialType = $this->credentialType();
+                    // Get server-specific user for this package's operations
+                    $user = $this->user();
 
                     // Execute SSH commands with timeout to prevent hanging
                     // 570 seconds (9.5 min) allows 30s buffer before 600s job timeout
-                    $process = $this->server->createSshConnection($credentialType)
+                    $process = $this->server->ssh($user)
                         ->setTimeout(570)
                         ->execute($command);
 
@@ -199,7 +213,7 @@ abstract class PackageManager implements Package
                             ]);
                         }
 
-                        Log::error($fullError, ['credential_type' => $credentialType, 'server' => $this->server]);
+                        Log::error($fullError, ['user' => $user, 'server' => $this->server]);
 
                         // Include error output in exception message for better debugging
                         $errorMessage = $errorOutput ? "$command - $errorOutput" : $command;
@@ -221,7 +235,7 @@ abstract class PackageManager implements Package
             Log::error('SSH command timeout in PackageManager', [
                 'server_id' => $this->server->id,
                 'service' => $this->packageType()->value,
-                'credential_type' => $this->credentialType()->value,
+                'user' => $this->user(),
                 'timeout_seconds' => $timeoutDuration,
                 'current_milestone' => $this->currentEvent?->milestone,
                 'exception' => $e->getMessage(),

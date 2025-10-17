@@ -7,7 +7,6 @@ use App\Http\Requests\Servers\StoreSiteRequest;
 use App\Http\Resources\ServerResource;
 use App\Models\Server;
 use App\Models\ServerSite;
-use App\Packages\Enums\CredentialType;
 use App\Packages\Enums\GitStatus;
 use App\Packages\Services\Sites\ProvisionedSiteInstallerJob;
 use App\Packages\Services\Sites\SiteDeployKeyGenerator;
@@ -41,7 +40,9 @@ class ServerSitesController extends Controller
      */
     public function deployKey(Server $server): JsonResponse
     {
-        $credential = $server->credential(CredentialType::BrokeForge);
+        $credential = $server->credentials()
+            ->where('user', 'brokeforge')
+            ->first();
 
         return response()->json([
             'deploy_key' => $credential?->public_key ?? 'Deploy key not available',

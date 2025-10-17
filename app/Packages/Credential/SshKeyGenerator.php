@@ -1,8 +1,6 @@
 <?php
 
-namespace App\Packages\Services\Credential;
-
-use App\Packages\Enums\CredentialType;
+namespace App\Packages\Credential;
 
 /**
  * SSH Key Generator
@@ -16,29 +14,29 @@ class SshKeyGenerator
      * Generate a new RSA 4096-bit SSH key pair.
      *
      * @param  int  $serverId  Server ID for key comment
-     * @param  CredentialType  $credentialType  Credential type for key comment
+     * @param  string  $user  SSH user for key comment ('root' or 'brokeforge')
      * @return array{private_key: string, public_key: string} The generated key pair
      *
      * @throws \RuntimeException If key generation fails
      */
-    public function generate(int $serverId, CredentialType $credentialType): array
+    public function generate(int $serverId, string $user): array
     {
         $tempDir = sys_get_temp_dir();
-        $keyName = sprintf('server_%d_%s_%d', $serverId, $credentialType->value, time());
+        $keyName = sprintf('server_%d_%s_%d', $serverId, $user, time());
         $keyPath = $tempDir.'/'.$keyName;
 
         // Generate RSA 4096-bit key pair
         $command = sprintf(
             'ssh-keygen -t rsa -b 4096 -f %s -N "" -C "%s@server-%d"',
             escapeshellarg($keyPath),
-            $credentialType->value,
+            $user,
             $serverId
         );
 
         exec($command, $output, $resultCode);
 
         if ($resultCode !== 0) {
-            throw new \RuntimeException("Failed to generate SSH key pair for {$credentialType->value} credential");
+            throw new \RuntimeException("Failed to generate SSH key pair for {$user} credential");
         }
 
         // Read generated keys

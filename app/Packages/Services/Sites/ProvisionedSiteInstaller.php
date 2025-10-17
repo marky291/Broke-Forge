@@ -5,7 +5,6 @@ namespace App\Packages\Services\Sites;
 use App\Models\ServerSite;
 use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageInstaller;
-use App\Packages\Enums\CredentialType;
 use App\Packages\Enums\PackageName;
 use App\Packages\Enums\PackageType;
 
@@ -26,8 +25,10 @@ class ProvisionedSiteInstaller extends PackageInstaller implements \App\Packages
         $site = ServerSite::findOrFail($siteId);
 
         // Get the app user that will own site directories
-        $appUser = $this->server->credential('brokeforge')?->getUsername()
-            ?: 'brokeforge';
+        $brokeforgeCredential = $this->server->credentials()
+            ->where('user', 'brokeforge')
+            ->first();
+        $appUser = $brokeforgeCredential?->getUsername() ?: 'brokeforge';
 
         $domain = $site->domain;
         $documentRoot = $site->document_root;
@@ -57,8 +58,10 @@ class ProvisionedSiteInstaller extends PackageInstaller implements \App\Packages
         ])->render();
 
         // Get the app user for ownership
-        $appUser = $this->server->credential('brokeforge')?->getUsername()
-            ?: 'brokeforge';
+        $brokeforgeCredential = $this->server->credentials()
+            ->where('user', 'brokeforge')
+            ->first();
+        $appUser = $brokeforgeCredential?->getUsername() ?: 'brokeforge';
 
         return [
             $this->track(ProvisionedSiteInstallerMilestones::PREPARE_DIRECTORIES),
@@ -259,10 +262,5 @@ EOF;
     public function milestones(): Milestones
     {
         return new ProvisionedSiteInstallerMilestones;
-    }
-
-    public function credentialType(): CredentialType
-    {
-        return CredentialType::Root;
     }
 }

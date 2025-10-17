@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Resources\ServerProvisioningResource;
 use App\Models\Server;
-use App\Packages\Enums\Connection;
+use App\Packages\Enums\ConnectionStatus;
 use App\Packages\Enums\ProvisionStatus;
 use App\Packages\ProvisionAccess;
 use Illuminate\Http\RedirectResponse;
@@ -72,7 +72,7 @@ class ServerProvisioningController extends Controller
         // Generate new root password for the next attempt
         $server->ssh_root_password = Server::generatePassword();
 
-        $server->connection = Connection::PENDING;
+        $server->connection = ConnectionStatus::PENDING;
         $server->provision_status = ProvisionStatus::Pending;
         $server->save();
 

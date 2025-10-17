@@ -7,7 +7,6 @@ use App\Models\ServerSupervisorTask;
 use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageRemover;
 use App\Packages\Base\ServerPackage;
-use App\Packages\Enums\CredentialType;
 use App\Packages\Enums\PackageName;
 use App\Packages\Enums\PackageType;
 
@@ -39,11 +38,6 @@ class SupervisorTaskRemover extends PackageRemover implements ServerPackage
     public function milestones(): Milestones
     {
         return new SupervisorTaskRemoverMilestones;
-    }
-
-    public function credentialType(): CredentialType
-    {
-        return CredentialType::Root;
     }
 
     /**

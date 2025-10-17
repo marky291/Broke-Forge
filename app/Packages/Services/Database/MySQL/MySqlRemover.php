@@ -5,7 +5,6 @@ namespace App\Packages\Services\Database\MySQL;
 use App\Enums\DatabaseStatus;
 use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageRemover;
-use App\Packages\Enums\CredentialType;
 use App\Packages\Enums\PackageName;
 use App\Packages\Enums\PackageType;
 
@@ -16,11 +15,6 @@ use App\Packages\Enums\PackageType;
  */
 class MySqlRemover extends PackageRemover implements \App\Packages\Base\ServerPackage
 {
-    public function credentialType(): CredentialType
-    {
-        return CredentialType::Root;
-    }
-
     /**
      * Mark MySQL removal as failed in database
      */

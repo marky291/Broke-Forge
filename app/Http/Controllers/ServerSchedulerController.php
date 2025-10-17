@@ -14,7 +14,6 @@ use App\Models\Server;
 use App\Models\ServerScheduledTask;
 use App\Models\ServerScheduledTaskRun;
 use App\Models\ServerScheduler;
-use App\Packages\Enums\CredentialType;
 use App\Packages\Services\Scheduler\ServerSchedulerInstallerJob;
 use App\Packages\Services\Scheduler\ServerSchedulerRemoverJob;
 use App\Packages\Services\Scheduler\Task\ServerScheduleTaskInstallerJob;
@@ -280,7 +279,7 @@ class ServerSchedulerController extends Controller
 
         // Execute the task wrapper script on the remote server
         try {
-            $ssh = $server->createSshConnection(CredentialType::Root);
+            $ssh = $server->ssh('root');
 
             // Run the task wrapper script (which handles heartbeat and logging)
             $result = $ssh->execute("/opt/brokeforge/scheduler/tasks/{$scheduledTask->id}.sh");

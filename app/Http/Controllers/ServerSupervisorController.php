@@ -158,7 +158,7 @@ class ServerSupervisorController extends Controller
 
             // Remove old config file if name changed
             if ($oldSanitizedName !== $newSanitizedName) {
-                $ssh = $server->createSshConnection(\App\Packages\Enums\CredentialType::Root);
+                $ssh = $server->ssh('root');
                 $ssh->disableStrictHostKeyChecking()->execute("rm -f /etc/supervisor/conf.d/{$oldSanitizedName}.conf");
             }
 
@@ -308,7 +308,7 @@ class ServerSupervisorController extends Controller
      */
     private function executeSupervisorctl(Server $server, string $command): void
     {
-        $ssh = $server->createSshConnection(\App\Packages\Enums\CredentialType::Root);
+        $ssh = $server->ssh('root');
         $ssh->disableStrictHostKeyChecking()->execute("supervisorctl {$command}");
     }
 

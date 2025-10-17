@@ -22,7 +22,7 @@ return new class extends Migration
             $table
                 ->foreignIdFor(User::class)
                 ->nullable()
-                ->after('connection')
+                ->after('connection_status')
                 ->constrained()
                 ->cascadeOnDelete();
         });
@@ -38,7 +38,7 @@ return new class extends Migration
         });
 
         Schema::table('servers', function (Blueprint $table): void {
-            $table->string('user')->nullable()->after('connection');
+            $table->string('user')->nullable()->after('connection_status');
         });
     }
 };
