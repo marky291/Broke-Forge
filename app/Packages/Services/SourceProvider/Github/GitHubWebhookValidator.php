@@ -62,8 +62,7 @@ class GitHubWebhookValidator
      */
     public function getRepositoryInfo(Request $request): ?array
     {
-        $payload = $request->json();
-        $repository = $payload->get('repository');
+        $repository = $request->input('repository');
 
         if (! $repository) {
             return null;
@@ -87,9 +86,8 @@ class GitHubWebhookValidator
             return null;
         }
 
-        $payload = $request->json();
-        $headCommit = $payload->get('head_commit');
-        $ref = $payload->get('ref');
+        $headCommit = $request->input('head_commit');
+        $ref = $request->input('ref');
 
         if (! $headCommit || ! $ref) {
             return null;
