@@ -22,7 +22,7 @@ class ServerSiteFactory extends Factory
     {
         return [
             'server_id' => Server::factory(),
-            'domain' => $this->faker->domainName(),
+            'domain' => $this->faker->unique()->domainName(),
             'document_root' => '/var/www/'.$this->faker->slug(2).'/public',
             'php_version' => $this->faker->randomElement(['8.1', '8.2', '8.3']),
             'ssl_enabled' => $this->faker->boolean(70),

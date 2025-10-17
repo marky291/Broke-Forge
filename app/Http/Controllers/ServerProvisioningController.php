@@ -17,6 +17,9 @@ class ServerProvisioningController extends Controller
 {
     public function show(Server $server): Response|\Illuminate\Http\RedirectResponse
     {
+        // Authorize user can view this server
+        $this->authorize('view', $server);
+
         // Redirect to server page if fully provisioned
         if ($server->provision_status === ProvisionStatus::Completed) {
             return redirect()->route('servers.show', $server);
@@ -42,6 +45,9 @@ class ServerProvisioningController extends Controller
 
     public function services(Server $server): Response
     {
+        // Authorize user can view this server
+        $this->authorize('view', $server);
+
         return Inertia::render('servers/provision/services', [
             'server' => $server->only(['id', 'vanity_name', 'provider', 'public_ip', 'ssh_port', 'private_ip', 'connection', 'created_at', 'updated_at']),
         ]);
@@ -49,6 +55,9 @@ class ServerProvisioningController extends Controller
 
     public function storeServices(Server $server): RedirectResponse
     {
+        // Authorize user can update this server
+        $this->authorize('update', $server);
+
         // TODO: Implement service provisioning logic
         return redirect()
             ->route('servers.provision.services', $server)
@@ -60,6 +69,9 @@ class ServerProvisioningController extends Controller
      */
     public function retry(Server $server): RedirectResponse
     {
+        // Authorize user can update this server
+        $this->authorize('update', $server);
+
         if ($server->provision_status !== ProvisionStatus::Failed) {
             return redirect()
                 ->route('servers.provisioning', $server)
@@ -72,7 +84,7 @@ class ServerProvisioningController extends Controller
         // Generate new root password for the next attempt
         $server->ssh_root_password = Server::generatePassword();
 
-        $server->connection = ConnectionStatus::PENDING;
+        $server->connection_status = ConnectionStatus::PENDING;
         $server->provision_status = ProvisionStatus::Pending;
         $server->save();
 

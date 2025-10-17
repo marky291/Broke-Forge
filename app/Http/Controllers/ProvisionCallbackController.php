@@ -60,7 +60,7 @@ class ProvisionCallbackController extends Controller
             $server->firewall()->delete(); // delete all firewall for this server
             $server->provision = collect(); // clear out the steps.
             $server->provision->put(1, ProvisionStatus::Completed->value); // complete the connection step.
-            $server->connection = ConnectionStatus::CONNECTED;
+            $server->connection_status = ConnectionStatus::CONNECTED;
             $server->provision_status = ProvisionStatus::Installing;
             $server->save();
         }

@@ -24,6 +24,9 @@ class ServerSitesController extends Controller
 
     public function index(Server $server): Response
     {
+        // Authorize user can view this server
+        $this->authorize('view', $server);
+
         return Inertia::render('servers/sites', [
             'server' => new ServerResource($server),
         ]);
@@ -31,6 +34,9 @@ class ServerSitesController extends Controller
 
     public function show(Server $server, ServerSite $site): RedirectResponse
     {
+        // Authorize user can view this server
+        $this->authorize('view', $server);
+
         // Always redirect to the application page
         return redirect()->route('servers.sites.application', [$server, $site]);
     }
@@ -40,6 +46,9 @@ class ServerSitesController extends Controller
      */
     public function deployKey(Server $server): JsonResponse
     {
+        // Authorize user can view this server
+        $this->authorize('view', $server);
+
         $credential = $server->credentials()
             ->where('user', 'brokeforge')
             ->first();
@@ -54,6 +63,9 @@ class ServerSitesController extends Controller
      */
     public function generateDeployKey(Server $server, ServerSite $site): JsonResponse
     {
+        // Authorize user can update this server
+        $this->authorize('update', $server);
+
         try {
             // Check if site already has a dedicated deploy key
             if ($site->has_dedicated_deploy_key) {
@@ -93,6 +105,9 @@ class ServerSitesController extends Controller
 
     public function store(StoreSiteRequest $request, Server $server): RedirectResponse
     {
+        // Authorize user can update this server
+        $this->authorize('update', $server);
+
         $validated = $request->validated();
 
         try {
@@ -175,6 +190,9 @@ class ServerSitesController extends Controller
      */
     public function uninstall(Server $server, ServerSite $site): RedirectResponse
     {
+        // Authorize user can update this server
+        $this->authorize('update', $server);
+
         // Attempt to remove deploy key from GitHub before uninstalling
         $this->removeDeployKeyFromGitHub($site);
 
@@ -194,6 +212,9 @@ class ServerSitesController extends Controller
      */
     public function destroy(Server $server, ServerSite $site): RedirectResponse
     {
+        // Authorize user can delete this server
+        $this->authorize('delete', $server);
+
         try {
             // Attempt to remove deploy key from GitHub before deleting
             $this->removeDeployKeyFromGitHub($site);

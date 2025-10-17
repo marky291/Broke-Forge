@@ -23,6 +23,9 @@ class ServerMonitoringController extends Controller
      */
     public function index(Request $request, Server $server): Response
     {
+        // Authorize user can view this server
+        $this->authorize('view', $server);
+
         // Validate and get timeframe in hours (default 24)
         $hours = $request->validate([
             'hours' => 'nullable|integer|in:24,72,168',
@@ -30,7 +33,7 @@ class ServerMonitoringController extends Controller
 
         return Inertia::render('servers/monitoring', [
             'server' => new ServerResource($server),
-            'selectedTimeframe' => $hours,
+            'selectedTimeframe' => (int) $hours,
         ]);
     }
 
@@ -39,6 +42,9 @@ class ServerMonitoringController extends Controller
      */
     public function install(Server $server): RedirectResponse
     {
+        // Authorize user can update this server
+        $this->authorize('update', $server);
+
         // Check if monitoring already exists
         if ($server->monitoringIsActive()) {
             return redirect()
@@ -62,6 +68,9 @@ class ServerMonitoringController extends Controller
      */
     public function uninstall(Server $server): RedirectResponse
     {
+        // Authorize user can update this server
+        $this->authorize('update', $server);
+
         // Check if monitoring exists
         if (! $server->monitoringIsActive()) {
             return redirect()
@@ -103,6 +112,9 @@ class ServerMonitoringController extends Controller
      */
     public function getMetrics(Request $request, Server $server): JsonResponse
     {
+        // Authorize user can view this server
+        $this->authorize('view', $server);
+
         // Validate timeframe parameter
         $hours = $request->validate([
             'hours' => 'nullable|integer|in:1,24,72,168',
@@ -124,6 +136,9 @@ class ServerMonitoringController extends Controller
      */
     public function updateInterval(Request $request, Server $server): RedirectResponse
     {
+        // Authorize user can update this server
+        $this->authorize('update', $server);
+
         // Validate interval (in seconds: 1min, 5min, 10min, 20min, 30min, 1hour)
         // Also validate the hours parameter to preserve viewing timeframe
         $validated = $request->validate([

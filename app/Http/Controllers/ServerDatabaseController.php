@@ -34,6 +34,9 @@ class ServerDatabaseController extends Controller
 
     public function index(Server $server): Response
     {
+        // Authorize user can view this server
+        $this->authorize('view', $server);
+
         return Inertia::render('servers/database', [
             'server' => new ServerResource($server),
             'availableDatabases' => Inertia::defer(
@@ -44,11 +47,16 @@ class ServerDatabaseController extends Controller
 
     public function store(InstallDatabaseRequest $request, Server $server): RedirectResponse
     {
+        // Authorize user can update this server
+        $this->authorize('update', $server);
+
         $validated = $request->validated();
 
         $existingDatabase = $server->databases()->exists();
         if ($existingDatabase) {
-            return back()->with('error', 'A database is already installed on this server.');
+            return redirect()
+                ->route('servers.database', $server)
+                ->with('error', 'A database is already installed on this server.');
         }
 
         $databaseType = DatabaseType::from($validated['type']);
@@ -77,18 +85,27 @@ class ServerDatabaseController extends Controller
             default:
                 $database->update(['status' => DatabaseStatus::Failed->value]);
 
-                return back()->with('error', 'Selected database type is not supported yet.');
+                return redirect()
+                    ->route('servers.database', $server)
+                    ->with('error', 'Selected database type is not supported yet.');
         }
 
-        return back()->with('success', 'Database installation started.');
+        return redirect()
+            ->route('servers.database', $server)
+            ->with('success', 'Database installation started.');
     }
 
     public function update(Request $request, Server $server): RedirectResponse
     {
+        // Authorize user can update this server
+        $this->authorize('update', $server);
+
         $database = $server->databases()->first();
 
         if (! $database) {
-            return back()->with('error', 'No database found to update.');
+            return redirect()
+                ->route('servers.database', $server)
+                ->with('error', 'No database found to update.');
         }
 
         $validated = $request->validate([
@@ -98,7 +115,9 @@ class ServerDatabaseController extends Controller
         if ($database->status === DatabaseStatus::Installing ||
             $database->status === DatabaseStatus::Uninstalling ||
             $database->status === DatabaseStatus::Updating) {
-            return back()->with('error', 'Database is currently being modified. Please wait.');
+            return redirect()
+                ->route('servers.database', $server)
+                ->with('error', 'Database is currently being modified. Please wait.');
         }
 
         $databaseType = $database->type instanceof DatabaseType
@@ -120,18 +139,27 @@ class ServerDatabaseController extends Controller
             default:
                 $database->update(['status' => DatabaseStatus::Failed->value]);
 
-                return back()->with('error', 'Selected database type cannot be updated automatically yet.');
+                return redirect()
+                    ->route('servers.database', $server)
+                    ->with('error', 'Selected database type cannot be updated automatically yet.');
         }
 
-        return back()->with('success', 'Database update started.');
+        return redirect()
+            ->route('servers.database', $server)
+            ->with('success', 'Database update started.');
     }
 
     public function destroy(Server $server): RedirectResponse
     {
+        // Authorize user can delete this server
+        $this->authorize('delete', $server);
+
         $database = $server->databases()->first();
 
         if (! $database) {
-            return back()->with('error', 'No database found to uninstall.');
+            return redirect()
+                ->route('servers.database', $server)
+                ->with('error', 'No database found to uninstall.');
         }
 
         // Update database record to uninstalling status
@@ -155,14 +183,21 @@ class ServerDatabaseController extends Controller
             default:
                 $database->update(['status' => DatabaseStatus::Failed->value]);
 
-                return back()->with('error', 'Selected database type cannot be uninstalled automatically yet.');
+                return redirect()
+                    ->route('servers.database', $server)
+                    ->with('error', 'Selected database type cannot be uninstalled automatically yet.');
         }
 
-        return back()->with('success', 'Database uninstallation started.');
+        return redirect()
+            ->route('servers.database', $server)
+            ->with('success', 'Database uninstallation started.');
     }
 
     public function status(Server $server): JsonResponse
     {
+        // Authorize user can view this server
+        $this->authorize('view', $server);
+
         $database = $server->databases()->latest()->first();
 
         // If no database exists, it was uninstalled

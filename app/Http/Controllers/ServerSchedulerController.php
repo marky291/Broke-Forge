@@ -13,7 +13,6 @@ use App\Http\Resources\ServerScheduledTaskRunResource;
 use App\Models\Server;
 use App\Models\ServerScheduledTask;
 use App\Models\ServerScheduledTaskRun;
-use App\Models\ServerScheduler;
 use App\Packages\Services\Scheduler\ServerSchedulerInstallerJob;
 use App\Packages\Services\Scheduler\ServerSchedulerRemoverJob;
 use App\Packages\Services\Scheduler\Task\ServerScheduleTaskInstallerJob;
@@ -21,7 +20,6 @@ use App\Packages\Services\Scheduler\Task\ServerScheduleTaskRemoverJob;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -35,8 +33,7 @@ class ServerSchedulerController extends Controller
      */
     public function index(Server $server): Response
     {
-        // Authorization
-        Gate::authorize('view', [ServerScheduler::class, $server]);
+        $this->authorize('view', $server);
 
         return Inertia::render('servers/scheduler', [
             'server' => new ServerResource($server),
@@ -48,8 +45,12 @@ class ServerSchedulerController extends Controller
      */
     public function install(Server $server): RedirectResponse
     {
-        // Authorization
-        Gate::authorize('install', [ServerScheduler::class, $server]);
+        $this->authorize('update', $server);
+
+        // Prevent installation if already installing/active
+        if ($server->scheduler_status && in_array($server->scheduler_status->value, ['installing', 'active'])) {
+            abort(403, 'Scheduler is already installed or being installed on this server.');
+        }
 
         // Audit log
         Log::info('Scheduler installation initiated', [
@@ -76,8 +77,12 @@ class ServerSchedulerController extends Controller
      */
     public function uninstall(Server $server): RedirectResponse
     {
-        // Authorization
-        Gate::authorize('uninstall', [ServerScheduler::class, $server]);
+        $this->authorize('update', $server);
+
+        // Can only uninstall if active
+        if (! $server->scheduler_status || $server->scheduler_status->value !== 'active') {
+            abort(403, 'Scheduler must be active to uninstall.');
+        }
 
         // Audit log
         Log::warning('Scheduler uninstallation initiated', [
@@ -110,8 +115,7 @@ class ServerSchedulerController extends Controller
      */
     public function storeTask(StoreScheduledTaskRequest $request, Server $server): RedirectResponse
     {
-        // Authorization
-        Gate::authorize('createTask', [ServerScheduler::class, $server]);
+        $this->authorize('update', $server);
 
         // Create the task with 'pending' status (default from migration)
         $task = $server->scheduledTasks()->create($request->validated());
@@ -140,8 +144,7 @@ class ServerSchedulerController extends Controller
      */
     public function updateTask(UpdateScheduledTaskRequest $request, Server $server, ServerScheduledTask $scheduledTask): RedirectResponse
     {
-        // Authorization
-        Gate::authorize('updateTask', [ServerScheduler::class, $server]);
+        $this->authorize('update', $server);
 
         // Capture old values for audit
         $oldCommand = $scheduledTask->command;
@@ -174,8 +177,7 @@ class ServerSchedulerController extends Controller
      */
     public function destroyTask(Server $server, ServerScheduledTask $scheduledTask): RedirectResponse
     {
-        // Authorization
-        Gate::authorize('deleteTask', [ServerScheduler::class, $server]);
+        $this->authorize('update', $server);
 
         // Audit log
         Log::warning('Scheduled task deletion initiated', [
@@ -228,8 +230,7 @@ class ServerSchedulerController extends Controller
      */
     public function retryTask(Server $server, ServerScheduledTask $scheduledTask): RedirectResponse
     {
-        // Authorization
-        Gate::authorize('updateTask', [ServerScheduler::class, $server]);
+        $this->authorize('update', $server);
 
         // Only allow retry for failed tasks
         if ($scheduledTask->status !== TaskStatus::Failed) {
@@ -264,8 +265,12 @@ class ServerSchedulerController extends Controller
      */
     public function runTask(Server $server, ServerScheduledTask $scheduledTask): RedirectResponse
     {
-        // Authorization
-        Gate::authorize('runTask', [ServerScheduler::class, $server]);
+        $this->authorize('update', $server);
+
+        // Scheduler must be active
+        if (! $server->schedulerIsActive()) {
+            abort(403, 'Scheduler must be active to run tasks.');
+        }
 
         // Audit log
         Log::info('Scheduled task manually triggered', [

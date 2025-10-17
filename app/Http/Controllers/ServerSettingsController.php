@@ -13,6 +13,8 @@ class ServerSettingsController extends Controller
 
     public function index(Request $request, Server $server): \Inertia\Response
     {
+        $this->authorize('view', $server);
+
         return Inertia::render('servers/settings', [
             'server' => $server,
             'latestMetrics' => $this->getLatestMetrics($server),
@@ -21,6 +23,8 @@ class ServerSettingsController extends Controller
 
     public function update(Request $request, Server $server): \Illuminate\Http\RedirectResponse
     {
+        $this->authorize('update', $server);
+
         $validated = $request->validate([
             'vanity_name' => ['required', 'string', 'max:255'],
             'public_ip' => ['required', 'ip'],

@@ -2,9 +2,12 @@
 
 - Always use Laravel boost MCP.
 - Always write tests when working on code.
+- Always use claude skill for test related prompts.
 - Always maintain test suite.
 - Always use claude skill for laravel testing when writing tests.
-
+- Always ensure authorization gates on controllers - Users can only view and manage their own servers and sites, protecting user data and preventing unauthorized access.
+- Always ensure the React frontend matches the backend structure and naming for consistency.
+- 
 ## Reverb Package Lifecycle Pattern
 
 **⚠️ MANDATORY for packages with real-time status updates** - When building packages that require real-time status updates (firewall rules, scheduled tasks, SSL certificates, deployments, etc.), you **MUST** use the **Reverb Package Lifecycle** pattern:
@@ -26,8 +29,6 @@
 
 **❌ DON'T USE when:**
 - Initial server provisioning (one-time setup)
-- Operations complete in <2 seconds
-- Infrastructure-only packages with no user-facing resources
 
 ### Quick Implementation Checklist
 

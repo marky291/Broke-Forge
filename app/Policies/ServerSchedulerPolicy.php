@@ -14,8 +14,9 @@ class ServerSchedulerPolicy
     public function view(User $user, Server $server): Response
     {
         // Check if user owns the server
-        // TODO: Replace with actual ownership check when multi-tenancy is implemented
-        return Response::allow();
+        return $user->id === $server->user_id
+            ? Response::allow()
+            : Response::deny('You do not have permission to view this server\'s scheduler.');
     }
 
     /**
@@ -24,7 +25,9 @@ class ServerSchedulerPolicy
     public function install(User $user, Server $server): Response
     {
         // Check server ownership
-        // TODO: Replace with actual ownership check when multi-tenancy is implemented
+        if ($user->id !== $server->user_id) {
+            return Response::deny('You do not have permission to install scheduler on this server.');
+        }
 
         // Prevent installation if already installing/active
         if ($server->scheduler_status && in_array($server->scheduler_status->value, ['installing', 'active'])) {
@@ -40,7 +43,9 @@ class ServerSchedulerPolicy
     public function uninstall(User $user, Server $server): Response
     {
         // Check server ownership
-        // TODO: Replace with actual ownership check when multi-tenancy is implemented
+        if ($user->id !== $server->user_id) {
+            return Response::deny('You do not have permission to uninstall scheduler on this server.');
+        }
 
         // Can only uninstall if active
         if (! $server->scheduler_status || $server->scheduler_status->value !== 'active') {
@@ -56,7 +61,9 @@ class ServerSchedulerPolicy
     public function createTask(User $user, Server $server): Response
     {
         // Check server ownership
-        // TODO: Replace with actual ownership check when multi-tenancy is implemented
+        if ($user->id !== $server->user_id) {
+            return Response::deny('You do not have permission to create tasks on this server.');
+        }
 
         // Scheduler must be active
         if (! $server->schedulerIsActive()) {
@@ -78,7 +85,9 @@ class ServerSchedulerPolicy
     public function updateTask(User $user, Server $server): Response
     {
         // Check server ownership
-        // TODO: Replace with actual ownership check when multi-tenancy is implemented
+        if ($user->id !== $server->user_id) {
+            return Response::deny('You do not have permission to update tasks on this server.');
+        }
 
         // Scheduler must be active
         if (! $server->schedulerIsActive()) {
@@ -94,9 +103,9 @@ class ServerSchedulerPolicy
     public function deleteTask(User $user, Server $server): Response
     {
         // Check server ownership
-        // TODO: Replace with actual ownership check when multi-tenancy is implemented
-
-        return Response::allow();
+        return $user->id === $server->user_id
+            ? Response::allow()
+            : Response::deny('You do not have permission to delete tasks on this server.');
     }
 
     /**
@@ -105,7 +114,9 @@ class ServerSchedulerPolicy
     public function runTask(User $user, Server $server): Response
     {
         // Check server ownership
-        // TODO: Replace with actual ownership check when multi-tenancy is implemented
+        if ($user->id !== $server->user_id) {
+            return Response::deny('You do not have permission to run tasks on this server.');
+        }
 
         // Scheduler must be active
         if (! $server->schedulerIsActive()) {

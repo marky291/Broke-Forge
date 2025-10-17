@@ -22,6 +22,8 @@ class ServerFirewallController extends Controller
 
     public function index(Server $server): Response
     {
+        $this->authorize('view', $server);
+
         // Load necessary relationships for the resource
         $server->load(['firewall.rules', 'events', 'metrics']);
 
@@ -32,6 +34,8 @@ class ServerFirewallController extends Controller
 
     public function store(FirewallRuleRequest $request, Server $server): RedirectResponse
     {
+        $this->authorize('update', $server);
+
         try {
             // Ensure server has a firewall
             if (! $server->firewall) {
@@ -65,6 +69,8 @@ class ServerFirewallController extends Controller
 
     public function destroy(Server $server, $ruleId): RedirectResponse
     {
+        $this->authorize('update', $server);
+
         try {
             $rule = ServerFirewallRule::findOrFail($ruleId);
 

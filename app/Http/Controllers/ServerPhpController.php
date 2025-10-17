@@ -20,6 +20,9 @@ class ServerPhpController extends Controller
 
     public function index(Server $server): Response
     {
+        // Authorize user can view this server
+        $this->authorize('view', $server);
+
         return Inertia::render('servers/php', [
             'server' => new ServerResource($server),
         ]);
@@ -27,6 +30,9 @@ class ServerPhpController extends Controller
 
     public function store(Request $request, Server $server): RedirectResponse
     {
+        // Authorize user can update this server
+        $this->authorize('update', $server);
+
         $validated = $request->validate(PhpConfigurationService::getValidationRules());
 
         // Check if this PHP version already exists
@@ -54,6 +60,8 @@ class ServerPhpController extends Controller
                     );
                 }
             }
+
+            $php = $existingPhp;
         } else {
             // Create new PHP version
             $php = ServerPhp::create([
@@ -84,6 +92,9 @@ class ServerPhpController extends Controller
 
     public function install(Request $request, Server $server): RedirectResponse
     {
+        // Authorize user can update this server
+        $this->authorize('update', $server);
+
         $availableVersions = PhpConfigurationService::getAvailableVersions();
 
         $validated = $request->validate([
@@ -126,6 +137,9 @@ class ServerPhpController extends Controller
 
     public function setCliDefault(Server $server, ServerPhp $php): RedirectResponse
     {
+        // Authorize user can update this server
+        $this->authorize('update', $server);
+
         // Verify the PHP version belongs to this server
         if ($php->server_id !== $server->id) {
             abort(404);
@@ -144,6 +158,9 @@ class ServerPhpController extends Controller
 
     public function setSiteDefault(Server $server, ServerPhp $php): RedirectResponse
     {
+        // Authorize user can update this server
+        $this->authorize('update', $server);
+
         // Verify the PHP version belongs to this server
         if ($php->server_id !== $server->id) {
             abort(404);
@@ -162,6 +179,9 @@ class ServerPhpController extends Controller
 
     public function destroy(Server $server, ServerPhp $php): RedirectResponse
     {
+        // Authorize user can delete this server
+        $this->authorize('delete', $server);
+
         // Prevent removal if PHP is CLI default
         if ($php->is_cli_default) {
             return redirect()

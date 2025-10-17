@@ -38,9 +38,12 @@ class ServerResource extends JsonResource
             'provision_status' => $this->provision_status?->value,
             'created_at' => $this->created_at->toISOString(),
             'updated_at' => $this->updated_at->toISOString(),
-            'isFirewallInstalled' => $isFirewallInstalled,
-            'firewallStatus' => $this->getFirewallStatus($firewall),
-            'rules' => $this->transformFirewallRules($firewall),
+            'firewall' => [
+                'isInstalled' => $isFirewallInstalled,
+                'status' => $this->getFirewallStatus($firewall),
+                'is_enabled' => $firewall?->is_enabled ?? false,
+                'rules' => $this->transformFirewallRules($firewall),
+            ],
             'recentEvents' => $this->transformRecentEvents(),
             'latestMetrics' => $this->getLatestMetrics(),
             'recentMetrics' => $this->transformRecentMetrics($request),
@@ -78,7 +81,7 @@ class ServerResource extends JsonResource
             return [];
         }
 
-        return $firewall->rules()->latest()->get()->map(fn ($rule) => [
+        return $firewall->rules()->latest('id')->get()->map(fn ($rule) => [
             'id' => $rule->id,
             'name' => $rule->name,
             'port' => $rule->port,
@@ -219,7 +222,7 @@ class ServerResource extends JsonResource
      */
     protected function transformScheduledTasks(): array
     {
-        return $this->scheduledTasks()->latest()->get()->map(fn ($task) => [
+        return $this->scheduledTasks()->orderBy('id')->get()->map(fn ($task) => [
             'id' => $task->id,
             'server_id' => $task->server_id,
             'name' => $task->name,
@@ -299,7 +302,7 @@ class ServerResource extends JsonResource
      */
     protected function transformSupervisorTasks(): array
     {
-        return $this->supervisorTasks()->latest()->get()->map(fn ($task) => [
+        return $this->supervisorTasks()->orderBy('id')->get()->map(fn ($task) => [
             'id' => $task->id,
             'server_id' => $task->server_id,
             'name' => $task->name,

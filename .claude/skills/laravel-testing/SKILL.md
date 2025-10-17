@@ -1,7 +1,7 @@
 ---
 name: Laravel 12 Test Writer
-description: Use this skill when creating tests, writing tests, creating test coverage, or testing code. Automatically invoked for creating and maintaining unit tests and HTTP tests following Laravel 12 and PHPUnit best practices for BrokeForge.
-allowed-tools: Bash(php artisan*), Bash(vendor/bin/pint*), Read, Write, Edit, Glob, Grep, mcp__laravel-boost__*
+description: Use this skill when creating tests, writing tests, creating test coverage, or testing code. Automatically invoked for creating and maintaining unit tests, HTTP tests, and Inertia tests following Laravel 12 and PHPUnit best practices for BrokeForge. Also triggered by prompts like "write tests for [URL]", "test [URL/endpoint]", "write inertia tests for modal [ModalName]", "create tests for [component/page/controller]", or any variation requesting test creation for URLs, pages, controllers, services, or frontend components.
+allowed-tools: Bash(php artisan*), Bash(vendor/bin/pint*), Read, Writyese, Edit, Glob, Grep, mcp__laravel-boost__*
 ---
 
 # Laravel 12 Test Writer
@@ -13,6 +13,7 @@ You are writing tests for BrokeForge, a Laravel 12 application using PHPUnit. Th
 
 ### Test Framework
 - **ALWAYS use PHPUnit** - Never use Pest
+- **NEVER write performance tests** - Only write unit, feature/HTTP, and Inertia tests
 - Create unit tests: `php artisan make:test --unit --no-interaction ClassName/MethodTest`
 - Create HTTP/feature tests: `php artisan make:test --no-interaction FeatureNameTest`
 - All tests extend `Tests\TestCase`
@@ -20,10 +21,12 @@ You are writing tests for BrokeForge, a Laravel 12 application using PHPUnit. Th
 
 ### Test Types
 - **Unit Tests** (`tests/Unit/`): Test isolated classes/methods (services, models, helpers)
-- **HTTP Tests** (`tests/Feature/`): Test frontend-facing URLs and what users see, controllers, API endpoints, routes
-- **HTTP tests can test what is seen on the frontend for a specific URL** - use `assertSee()`, `assertViewHas()`, Inertia assertions
-- **Always create and maintain BOTH types** when working on the codebase
-- Most tests should be feature tests as they provide greater confidence
+- **HTTP Tests** (`tests/Feature/`): Test backend HTTP logic - controllers, API endpoints, routes, validation
+- **Inertia Tests** (`tests/Inertia/`): Test frontend pages and what users see - Inertia props, component rendering, user experience
+- **HTTP tests focus on backend behavior** - status codes, database changes, redirects, validation
+- **Inertia tests focus on frontend data** - component props, form submissions through Inertia, user-facing data structures
+- **Always create and maintain ALL THREE types** when working on the codebase
+- Most tests should be feature/Inertia tests as they provide greater confidence
 
 ### Database Configuration
 - **ALWAYS use the real test database** - Configuration in `phpunit.xml`
@@ -49,7 +52,9 @@ You are writing tests for BrokeForge, a Laravel 12 application using PHPUnit. Th
 
 ### 1. Analyze Code Under Test
 - Read the class/method/endpoint being tested
-- **If it's a URL/page users visit → Create HTTP test to verify what's displayed**
+- **If it's a URL/page users visit:**
+  - Create **HTTP test** (`tests/Feature/`) for backend behavior (validation, database, redirects)
+  - Create **Inertia test** (`tests/Inertia/`) for frontend data (props, components, user experience)
 - **If it's backend logic (service, model method, helper) → Create unit test**
 - Identify all code paths (happy, failure, edge cases)
 - Check for SSH usage (look for `$server->ssh()`)
@@ -61,30 +66,63 @@ You are writing tests for BrokeForge, a Laravel 12 application using PHPUnit. Th
 ### 3. Create Test Files
 
 **IMPORTANT: Directory Structure Matching**
+
+#### Unit Tests
 - Test directory structure must mirror the class directory structure (excluding `app/` root)
 - Example: `/app/Packages/Services/Firewall/FirewallService.php` → `tests/Unit/Packages/Services/Firewall/FirewallServiceTest.php`
-- Example: `/app/Http/Controllers/ServerController.php` → `tests/Feature/Http/Controllers/ServerControllerTest.php`
 - The `app/` folder is the root - do not include it in the test path
+
+#### HTTP/Feature Tests
+- Test directory structure mirrors controller structure
+- Example: `/app/Http/Controllers/ServerController.php` → `tests/Feature/Http/Controllers/ServerControllerTest.php`
+- Focus on backend behavior: validation, database changes, redirects, status codes
+
+#### Inertia Tests
+- **Test directory structure must mirror the URL path**
+- URL: `/dashboard` → `tests/Inertia/DashboardTest.php`
+- URL: `/settings/profile` → `tests/Inertia/Settings/ProfileTest.php`
+- URL: `/servers/{id}` → `tests/Inertia/Servers/ShowTest.php`
+- URL: `/servers` → `tests/Inertia/Servers/IndexTest.php`
+- Focus on frontend data: Inertia props, component rendering, user-facing data structures
 
 **For Unit Tests (backend logic):**
 ```bash
 php artisan make:test --unit --no-interaction Path/To/ClassNameTest
 ```
 
-**For HTTP/Feature Tests (URLs, frontend content, API endpoints):**
+**For HTTP/Feature Tests (backend behavior):**
 ```bash
-php artisan make:test --no-interaction Feature/FeatureNameTest
+php artisan make:test --no-interaction Http/Controllers/ControllerNameTest
+```
+
+**For Inertia Tests (frontend pages):**
+```bash
+php artisan make:test --no-interaction Inertia/PageNameTest
+# OR for nested routes
+php artisan make:test --no-interaction Inertia/Section/PageNameTest
 ```
 
 ### 4. Write Comprehensive Tests
+
+#### For HTTP Tests
 Cover:
-- ✅ Happy path (expected success scenarios)
+- ✅ Happy path (successful responses)
 - ❌ Failure paths (error handling, validation errors)
-- 🤔 Edge cases (boundary conditions, null values, empty arrays)
-- 🔗 Relationships and dependencies
-- 🔒 Authorization (user can/cannot access)
-- 👁️ Frontend content (what users see on the page)
-- ✨ All public methods and endpoints
+- 🔒 Authorization (guest/user access control)
+- 💾 Database operations (creates, updates, deletes)
+- 🔄 Redirects and status codes
+- ⚠️ Server limits and business rules
+
+#### For Inertia Tests
+Cover:
+- 📄 Component rendering (correct Inertia component)
+- 📊 Props structure (required data present)
+- 👤 User authentication state
+- 📝 Form submissions through Inertia
+- ❌ Validation error display
+- 🎨 Empty states (no data scenarios)
+- 🔗 Data relationships (nested objects, counts)
+- ✅ Success/error flash messages
 
 ### 5. Run Tests
 ```bash
@@ -287,6 +325,231 @@ class ServerManagementTest extends TestCase
 }
 ```
 
+## Inertia Test Structure
+
+**Use for testing Inertia pages and frontend data structures**
+
+```php
+<?php
+
+namespace Tests\Inertia;
+
+use App\Models\Server;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+class DashboardTest extends TestCase
+{
+    use RefreshDatabase;
+
+    /**
+     * Test dashboard renders correct Inertia component.
+     */
+    public function test_dashboard_renders_correct_component(): void
+    {
+        // Arrange
+        $user = User::factory()->create(['email_verified_at' => now()]);
+
+        // Act
+        $response = $this->actingAs($user)->get('/dashboard');
+
+        // Assert - verify Inertia component
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('dashboard')
+        );
+    }
+
+    /**
+     * Test dashboard provides server data in Inertia props.
+     */
+    public function test_dashboard_provides_server_data_in_props(): void
+    {
+        // Arrange
+        $user = User::factory()->create(['email_verified_at' => now()]);
+        Server::factory()->create([
+            'user_id' => $user->id,
+            'vanity_name' => 'Test Server',
+            'public_ip' => '192.168.1.100',
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)->get('/dashboard');
+
+        // Assert - verify Inertia props structure
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('dashboard')
+            ->has('dashboard.servers', 1)
+            ->where('dashboard.servers.0.name', 'Test Server')
+            ->where('dashboard.servers.0.public_ip', '192.168.1.100')
+        );
+    }
+
+    /**
+     * Test Inertia form submission creates resource.
+     */
+    public function test_inertia_form_submission_creates_server(): void
+    {
+        // Arrange
+        $user = User::factory()->create(['email_verified_at' => now()]);
+
+        // Act - simulate Inertia form POST
+        $response = $this->actingAs($user)
+            ->post('/servers', [
+                'vanity_name' => 'New Server',
+                'public_ip' => '10.0.0.1',
+                'ssh_port' => 22,
+                'php_version' => '8.4',
+            ]);
+
+        // Assert - redirects with success message
+        $response->assertStatus(302);
+        $response->assertSessionHas('success', 'Server created');
+
+        // Verify database
+        $this->assertDatabaseHas('servers', [
+            'vanity_name' => 'New Server',
+            'user_id' => $user->id,
+        ]);
+    }
+
+    /**
+     * Test Inertia form validation errors are returned.
+     */
+    public function test_inertia_form_validation_errors_returned(): void
+    {
+        // Arrange
+        $user = User::factory()->create(['email_verified_at' => now()]);
+
+        // Act - submit invalid data
+        $response = $this->actingAs($user)
+            ->post('/servers', [
+                'vanity_name' => '',
+                'public_ip' => 'invalid-ip',
+            ]);
+
+        // Assert - validation errors in session
+        $response->assertStatus(302);
+        $response->assertSessionHasErrors(['vanity_name', 'public_ip', 'ssh_port', 'php_version']);
+    }
+
+    /**
+     * Test Inertia receives user authentication state.
+     */
+    public function test_inertia_receives_user_authentication_state(): void
+    {
+        // Arrange
+        $user = User::factory()->create([
+            'name' => 'John Doe',
+            'email' => 'john@example.com',
+            'email_verified_at' => now(),
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)->get('/dashboard');
+
+        // Assert - user data shared with Inertia
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->has('auth.user')
+            ->where('auth.user.name', 'John Doe')
+            ->where('auth.user.email', 'john@example.com')
+        );
+    }
+
+    /**
+     * Test empty state when no data exists.
+     */
+    public function test_dashboard_shows_empty_state(): void
+    {
+        // Arrange
+        $user = User::factory()->create(['email_verified_at' => now()]);
+
+        // Act
+        $response = $this->actingAs($user)->get('/dashboard');
+
+        // Assert - empty arrays for empty state
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('dashboard')
+            ->has('dashboard.servers', 0)
+            ->has('dashboard.sites', 0)
+        );
+    }
+}
+```
+
+## Common Inertia Test Assertions
+
+### Testing Inertia Components
+```php
+// Test correct component is rendered
+$response->assertInertia(fn ($page) => $page
+    ->component('dashboard')
+);
+
+// Test component with path
+$response->assertInertia(fn ($page) => $page
+    ->component('servers/show')
+);
+```
+
+### Testing Inertia Props
+```php
+// Test prop exists
+$response->assertInertia(fn ($page) => $page
+    ->has('servers')
+);
+
+// Test prop value
+$response->assertInertia(fn ($page) => $page
+    ->where('server.name', 'Production Server')
+);
+
+// Test nested prop
+$response->assertInertia(fn ($page) => $page
+    ->where('dashboard.servers.0.name', 'Test Server')
+);
+
+// Test array count
+$response->assertInertia(fn ($page) => $page
+    ->has('servers', 5)
+);
+
+// Test prop structure
+$response->assertInertia(fn ($page) => $page
+    ->has('server', fn ($server) => $server
+        ->has('id')
+        ->has('name')
+        ->has('public_ip')
+        ->etc()
+    )
+);
+```
+
+### Testing Authentication State
+```php
+// Test auth user is shared
+$response->assertInertia(fn ($page) => $page
+    ->has('auth.user')
+    ->where('auth.user.email', 'user@example.com')
+);
+```
+
+### Testing Flash Messages
+```php
+// Test success flash message
+$response->assertSessionHas('success', 'Server created');
+
+// Test error flash message
+$response->assertSessionHas('error', 'Server limit reached');
+
+// Test validation errors
+$response->assertSessionHasErrors(['field']);
+```
+
 ## Common HTTP Test Assertions
 
 ### Testing Frontend Content (What Users See)
@@ -394,10 +657,11 @@ $response->assertJson([
 2. ✅ All existing tests still pass
 3. ✅ Tests complete in < 1s
 4. ✅ Code formatted with Pint
-5. ✅ Both unit AND feature tests written (when applicable)
+5. ✅ All three test types created (Unit, HTTP, Inertia when applicable)
 6. ✅ All paths covered (happy, failure, edge, authorization)
-7. ✅ Frontend content tested (what users see)
+7. ✅ Frontend content tested (Inertia props, components, UX)
 8. ✅ No setUp() or tearDown() methods used
+9. ✅ Inertia tests in correct directory matching URL structure
 
 ## Complete Example: Service + Controller + Frontend Tests
 
@@ -571,10 +835,16 @@ class FirewallManagementTest extends TestCase
 
 ## Remember
 
-- **HTTP tests for URLs and frontend content** - test what users see on specific URLs
-- **Unit tests for backend logic** - services, models, helpers
+- **Three test types required:**
+  - **Unit tests** (`tests/Unit/`) - backend logic (services, models, helpers)
+  - **HTTP tests** (`tests/Feature/`) - backend behavior (validation, database, redirects)
+  - **Inertia tests** (`tests/Inertia/`) - frontend data (props, components, UX)
+- **Inertia test organization:**
+  - Directory structure mirrors URL path: `/dashboard` → `tests/Inertia/DashboardTest.php`
+  - Nested routes: `/settings/profile` → `tests/Inertia/Settings/ProfileTest.php`
+  - Test component rendering, props structure, form submissions, user authentication
 - **NEVER use setUp() or tearDown()** - handle setup inline in each test
-- **Both unit AND feature tests** - maintain both types when applicable
+- **Create all three test types** when working on user-facing pages
 - **Tests must pass** before work is 100% complete
 - **Speed limit** - tests must complete in < 1s
 - **Real database always** - use factories, never mock DB
@@ -582,4 +852,4 @@ class FirewallManagementTest extends TestCase
 - **Cover all paths** - happy, failure, edge, authorization, frontend display
 - **Run tests immediately** after writing
 - **Format with Pint** before completion
-- **Most tests should be feature tests** - they provide greater confidence
+- **Most tests should be feature/Inertia tests** - they provide greater confidence

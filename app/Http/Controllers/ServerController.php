@@ -85,6 +85,8 @@ class ServerController extends Controller
 
     public function destroy(Server $server): RedirectResponse
     {
+        $this->authorize('delete', $server);
+
         $server->delete();
 
         return redirect()->route('dashboard')->with('success', 'Server deleted');
