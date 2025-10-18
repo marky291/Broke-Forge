@@ -24,7 +24,7 @@ class ServerDatabaseControllerTest extends TestCase
         $server = Server::factory()->create(['user_id' => $user->id]);
 
         // Act
-        $response = $this->get("/servers/{$server->id}/database");
+        $response = $this->get("/servers/{$server->id}/databases");
 
         // Assert - guests should be redirected to login
         $response->assertStatus(302);
@@ -42,7 +42,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         // Act
         $response = $this->actingAs($user)
-            ->get("/servers/{$server->id}/database");
+            ->get("/servers/{$server->id}/databases");
 
         // Assert
         $response->assertStatus(200);
@@ -60,7 +60,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         // Act
         $response = $this->actingAs($user)
-            ->get("/servers/{$server->id}/database");
+            ->get("/servers/{$server->id}/databases");
 
         // Assert
         $response->assertStatus(403);
@@ -77,12 +77,12 @@ class ServerDatabaseControllerTest extends TestCase
 
         // Act
         $response = $this->actingAs($user)
-            ->get("/servers/{$server->id}/database");
+            ->get("/servers/{$server->id}/databases");
 
         // Assert
         $response->assertStatus(200);
         $response->assertInertia(fn ($page) => $page
-            ->component('servers/database')
+            ->component('servers/databases')
             ->has('server')
         );
     }
@@ -101,41 +101,42 @@ class ServerDatabaseControllerTest extends TestCase
 
         // Act
         $response = $this->actingAs($user)
-            ->get("/servers/{$server->id}/database");
+            ->get("/servers/{$server->id}/databases");
 
         // Assert
         $response->assertStatus(200);
         $response->assertInertia(fn ($page) => $page
-            ->component('servers/database')
+            ->component('servers/databases')
             ->where('server.id', $server->id)
             ->where('server.vanity_name', 'Database Server')
         );
     }
 
     /**
-     * Test database page includes installed database.
+     * Test database page includes installed databases.
      */
-    public function test_database_page_includes_installed_database(): void
+    public function test_database_page_includes_installed_databases(): void
     {
         // Arrange
         $user = User::factory()->create();
         $server = Server::factory()->create(['user_id' => $user->id]);
 
-        $database = ServerDatabase::factory()->create([
+        ServerDatabase::factory()->create([
             'server_id' => $server->id,
             'type' => DatabaseType::MySQL,
             'version' => '8.0',
+            'port' => 3306,
             'status' => DatabaseStatus::Active,
         ]);
 
         // Act
         $response = $this->actingAs($user)
-            ->get("/servers/{$server->id}/database");
+            ->get("/servers/{$server->id}/databases");
 
         // Assert
         $response->assertStatus(200);
         $response->assertInertia(fn ($page) => $page
-            ->component('servers/database')
+            ->component('servers/databases')
             ->has('server.databases', 1)
         );
     }
@@ -151,12 +152,12 @@ class ServerDatabaseControllerTest extends TestCase
 
         // Act
         $response = $this->actingAs($user)
-            ->get("/servers/{$server->id}/database");
+            ->get("/servers/{$server->id}/databases");
 
         // Assert
         $response->assertStatus(200);
         $response->assertInertia(fn ($page) => $page
-            ->component('servers/database')
+            ->component('servers/databases')
             ->has('server.databases', 0)
         );
     }
@@ -178,12 +179,12 @@ class ServerDatabaseControllerTest extends TestCase
 
         // Act
         $response = $this->actingAs($user)
-            ->get("/servers/{$server->id}/database");
+            ->get("/servers/{$server->id}/databases");
 
         // Assert
         $response->assertStatus(200);
         $response->assertInertia(fn ($page) => $page
-            ->component('servers/database')
+            ->component('servers/databases')
             ->has('server.databases', 1)
             ->where('server.databases.0.status', DatabaseStatus::Installing->value)
         );
@@ -202,7 +203,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         // Act
         $response = $this->actingAs($user)
-            ->post("/servers/{$server->id}/database", [
+            ->post("/servers/{$server->id}/databases", [
                 'name' => 'MySQL',
                 'type' => 'mysql',
                 'version' => '8.0',
@@ -212,7 +213,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         // Assert
         $response->assertStatus(302);
-        $response->assertRedirect("/servers/{$server->id}/database");
+        $response->assertRedirect("/servers/{$server->id}/databases");
         $response->assertSessionHas('success', 'Database installation started.');
 
         $this->assertDatabaseHas('server_databases', [
@@ -240,7 +241,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         // Act
         $response = $this->actingAs($user)
-            ->post("/servers/{$server->id}/database", [
+            ->post("/servers/{$server->id}/databases", [
                 'type' => 'mariadb',
                 'version' => '10.11',
                 'root_password' => 'SecurePass456',
@@ -273,7 +274,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         // Act
         $response = $this->actingAs($user)
-            ->post("/servers/{$server->id}/database", [
+            ->post("/servers/{$server->id}/databases", [
                 'type' => 'postgresql',
                 'version' => '15',
                 'root_password' => 'PostgresPass789',
@@ -296,34 +297,6 @@ class ServerDatabaseControllerTest extends TestCase
     }
 
     /**
-     * Test cannot install duplicate database.
-     */
-    public function test_cannot_install_duplicate_database(): void
-    {
-        // Arrange
-        $user = User::factory()->create();
-        $server = Server::factory()->create(['user_id' => $user->id]);
-
-        ServerDatabase::factory()->create([
-            'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
-        ]);
-
-        // Act
-        $response = $this->actingAs($user)
-            ->post("/servers/{$server->id}/database", [
-                'type' => 'mysql',
-                'version' => '8.0',
-                'root_password' => 'SecurePassword123',
-            ]);
-
-        // Assert
-        $response->assertStatus(302);
-        $response->assertRedirect("/servers/{$server->id}/database");
-        $response->assertSessionHas('error', 'A database is already installed on this server.');
-    }
-
-    /**
      * Test install validates required type field.
      */
     public function test_install_validates_required_type_field(): void
@@ -334,7 +307,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         // Act
         $response = $this->actingAs($user)
-            ->post("/servers/{$server->id}/database", [
+            ->post("/servers/{$server->id}/databases", [
                 'version' => '8.0',
                 'root_password' => 'SecurePassword123',
             ]);
@@ -355,7 +328,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         // Act
         $response = $this->actingAs($user)
-            ->post("/servers/{$server->id}/database", [
+            ->post("/servers/{$server->id}/databases", [
                 'type' => 'mysql',
                 'root_password' => 'SecurePassword123',
             ]);
@@ -376,7 +349,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         // Act
         $response = $this->actingAs($user)
-            ->post("/servers/{$server->id}/database", [
+            ->post("/servers/{$server->id}/databases", [
                 'type' => 'mysql',
                 'version' => '8.0',
             ]);
@@ -397,7 +370,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         // Act
         $response = $this->actingAs($user)
-            ->post("/servers/{$server->id}/database", [
+            ->post("/servers/{$server->id}/databases", [
                 'type' => 'invalid_database',
                 'version' => '8.0',
                 'root_password' => 'SecurePassword123',
@@ -419,7 +392,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         // Act
         $response = $this->actingAs($user)
-            ->post("/servers/{$server->id}/database", [
+            ->post("/servers/{$server->id}/databases", [
                 'type' => 'mysql',
                 'version' => '8.0',
                 'root_password' => 'short',
@@ -441,7 +414,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         // Act
         $response = $this->actingAs($user)
-            ->post("/servers/{$server->id}/database", [
+            ->post("/servers/{$server->id}/databases", [
                 'type' => 'mysql',
                 'version' => '8.0',
                 'root_password' => 'SecurePassword123',
@@ -464,7 +437,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         // Act
         $response = $this->actingAs($user)
-            ->post("/servers/{$server->id}/database", [
+            ->post("/servers/{$server->id}/databases", [
                 'type' => 'mysql',
                 'version' => '8.0',
                 'root_password' => 'SecurePassword123',
@@ -489,7 +462,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         // Act
         $response = $this->actingAs($user)
-            ->post("/servers/{$server->id}/database", [
+            ->post("/servers/{$server->id}/databases", [
                 'type' => 'mysql',
                 'version' => '8.0',
                 'root_password' => 'SecurePassword123',
@@ -514,7 +487,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         // Act
         $response = $this->actingAs($user)
-            ->post("/servers/{$server->id}/database", [
+            ->post("/servers/{$server->id}/databases", [
                 'type' => 'mysql',
                 'version' => '8.0',
                 'root_password' => 'SecurePassword123',
@@ -534,7 +507,7 @@ class ServerDatabaseControllerTest extends TestCase
         $server = Server::factory()->create(['user_id' => $user->id]);
 
         // Act
-        $response = $this->post("/servers/{$server->id}/database", [
+        $response = $this->post("/servers/{$server->id}/databases", [
             'type' => 'mysql',
             'version' => '8.0',
             'root_password' => 'SecurePassword123',
@@ -558,7 +531,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         // Act
         $response = $this->actingAs($user)
-            ->post("/servers/{$server->id}/database", [
+            ->post("/servers/{$server->id}/databases", [
                 'type' => 'mysql',
                 'version' => '8.0',
                 'root_password' => 'SecurePassword123',
@@ -593,13 +566,13 @@ class ServerDatabaseControllerTest extends TestCase
 
         // Act
         $response = $this->actingAs($user)
-            ->patch("/servers/{$server->id}/database", [
+            ->patch("/servers/{$server->id}/databases/{$database->id}", [
                 'version' => '8.4',
             ]);
 
         // Assert
         $response->assertStatus(302);
-        $response->assertRedirect("/servers/{$server->id}/database");
+        $response->assertRedirect("/servers/{$server->id}/databases");
         $response->assertSessionHas('success', 'Database update started.');
 
         $database->refresh();
@@ -628,7 +601,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         // Act
         $response = $this->actingAs($user)
-            ->patch("/servers/{$server->id}/database", [
+            ->patch("/servers/{$server->id}/databases/{$database->id}", [
                 'version' => '8.4',
             ]);
 
@@ -658,7 +631,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         // Act
         $response = $this->actingAs($user)
-            ->patch("/servers/{$server->id}/database", [
+            ->patch("/servers/{$server->id}/databases/{$database->id}", [
                 'version' => '8.4',
             ]);
 
@@ -680,16 +653,14 @@ class ServerDatabaseControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create(['user_id' => $user->id]);
 
-        // Act
+        // Act - attempt to update non-existent database
         $response = $this->actingAs($user)
-            ->patch("/servers/{$server->id}/database", [
+            ->patch("/servers/{$server->id}/databases/999", [
                 'version' => '8.4',
             ]);
 
-        // Assert
-        $response->assertStatus(302);
-        $response->assertRedirect("/servers/{$server->id}/database");
-        $response->assertSessionHas('error', 'No database found to update.');
+        // Assert - Should get 404 when database doesn't exist
+        $response->assertStatus(404);
     }
 
     /**
@@ -701,7 +672,7 @@ class ServerDatabaseControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create(['user_id' => $user->id]);
 
-        ServerDatabase::factory()->create([
+        $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
             'type' => DatabaseType::MySQL,
             'status' => DatabaseStatus::Installing,
@@ -709,13 +680,13 @@ class ServerDatabaseControllerTest extends TestCase
 
         // Act
         $response = $this->actingAs($user)
-            ->patch("/servers/{$server->id}/database", [
+            ->patch("/servers/{$server->id}/databases/{$database->id}", [
                 'version' => '8.4',
             ]);
 
         // Assert
         $response->assertStatus(302);
-        $response->assertRedirect("/servers/{$server->id}/database");
+        $response->assertRedirect("/servers/{$server->id}/databases");
         $response->assertSessionHas('error', 'Database is currently being modified. Please wait.');
     }
 
@@ -728,7 +699,7 @@ class ServerDatabaseControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create(['user_id' => $user->id]);
 
-        ServerDatabase::factory()->create([
+        $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
             'type' => DatabaseType::MySQL,
             'status' => DatabaseStatus::Uninstalling,
@@ -736,13 +707,13 @@ class ServerDatabaseControllerTest extends TestCase
 
         // Act
         $response = $this->actingAs($user)
-            ->patch("/servers/{$server->id}/database", [
+            ->patch("/servers/{$server->id}/databases/{$database->id}", [
                 'version' => '8.4',
             ]);
 
         // Assert
         $response->assertStatus(302);
-        $response->assertRedirect("/servers/{$server->id}/database");
+        $response->assertRedirect("/servers/{$server->id}/databases");
         $response->assertSessionHas('error', 'Database is currently being modified. Please wait.');
     }
 
@@ -755,7 +726,7 @@ class ServerDatabaseControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create(['user_id' => $user->id]);
 
-        ServerDatabase::factory()->create([
+        $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
             'type' => DatabaseType::MySQL,
             'status' => DatabaseStatus::Updating,
@@ -763,13 +734,13 @@ class ServerDatabaseControllerTest extends TestCase
 
         // Act
         $response = $this->actingAs($user)
-            ->patch("/servers/{$server->id}/database", [
+            ->patch("/servers/{$server->id}/databases/{$database->id}", [
                 'version' => '8.4',
             ]);
 
         // Assert
         $response->assertStatus(302);
-        $response->assertRedirect("/servers/{$server->id}/database");
+        $response->assertRedirect("/servers/{$server->id}/databases");
         $response->assertSessionHas('error', 'Database is currently being modified. Please wait.');
     }
 
@@ -782,7 +753,7 @@ class ServerDatabaseControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create(['user_id' => $user->id]);
 
-        ServerDatabase::factory()->create([
+        $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
             'type' => DatabaseType::MySQL,
             'status' => DatabaseStatus::Active,
@@ -790,7 +761,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         // Act
         $response = $this->actingAs($user)
-            ->patch("/servers/{$server->id}/database", []);
+            ->patch("/servers/{$server->id}/databases/{$database->id}", []);
 
         // Assert
         $response->assertStatus(302);
@@ -807,7 +778,7 @@ class ServerDatabaseControllerTest extends TestCase
         $otherUser = User::factory()->create();
         $server = Server::factory()->create(['user_id' => $otherUser->id]);
 
-        ServerDatabase::factory()->create([
+        $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
             'type' => DatabaseType::MySQL,
             'status' => DatabaseStatus::Active,
@@ -815,7 +786,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         // Act
         $response = $this->actingAs($user)
-            ->patch("/servers/{$server->id}/database", [
+            ->patch("/servers/{$server->id}/databases/{$database->id}", [
                 'version' => '8.4',
             ]);
 
@@ -832,14 +803,14 @@ class ServerDatabaseControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create(['user_id' => $user->id]);
 
-        ServerDatabase::factory()->create([
+        $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
             'type' => DatabaseType::MySQL,
             'status' => DatabaseStatus::Active,
         ]);
 
         // Act
-        $response = $this->patch("/servers/{$server->id}/database", [
+        $response = $this->patch("/servers/{$server->id}/databases/{$database->id}", [
             'version' => '8.4',
         ]);
 
@@ -867,11 +838,11 @@ class ServerDatabaseControllerTest extends TestCase
 
         // Act
         $response = $this->actingAs($user)
-            ->delete("/servers/{$server->id}/database");
+            ->delete("/servers/{$server->id}/databases/{$database->id}");
 
         // Assert
         $response->assertStatus(302);
-        $response->assertRedirect("/servers/{$server->id}/database");
+        $response->assertRedirect("/servers/{$server->id}/databases");
         $response->assertSessionHas('success', 'Database uninstallation started.');
 
         $database->refresh();
@@ -889,14 +860,12 @@ class ServerDatabaseControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create(['user_id' => $user->id]);
 
-        // Act
+        // Act - attempt to delete non-existent database
         $response = $this->actingAs($user)
-            ->delete("/servers/{$server->id}/database");
+            ->delete("/servers/{$server->id}/databases/999");
 
-        // Assert
-        $response->assertStatus(302);
-        $response->assertRedirect("/servers/{$server->id}/database");
-        $response->assertSessionHas('error', 'No database found to uninstall.');
+        // Assert - Should get 404 when database doesn't exist
+        $response->assertStatus(404);
     }
 
     /**
@@ -909,7 +878,7 @@ class ServerDatabaseControllerTest extends TestCase
         $otherUser = User::factory()->create();
         $server = Server::factory()->create(['user_id' => $otherUser->id]);
 
-        ServerDatabase::factory()->create([
+        $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
             'type' => DatabaseType::MySQL,
             'status' => DatabaseStatus::Active,
@@ -917,7 +886,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         // Act
         $response = $this->actingAs($user)
-            ->delete("/servers/{$server->id}/database");
+            ->delete("/servers/{$server->id}/databases/{$database->id}");
 
         // Assert
         $response->assertStatus(403);
@@ -932,138 +901,156 @@ class ServerDatabaseControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create(['user_id' => $user->id]);
 
-        ServerDatabase::factory()->create([
-            'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
-            'status' => DatabaseStatus::Active,
-        ]);
-
-        // Act
-        $response = $this->delete("/servers/{$server->id}/database");
-
-        // Assert
-        $response->assertStatus(302);
-        $response->assertRedirect('/login');
-    }
-
-    /**
-     * Test status endpoint returns database status JSON.
-     */
-    public function test_status_endpoint_returns_database_status_json(): void
-    {
-        // Arrange
-        $user = User::factory()->create();
-        $server = Server::factory()->create(['user_id' => $user->id]);
-
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
             'type' => DatabaseType::MySQL,
-            'version' => '8.0',
             'status' => DatabaseStatus::Active,
         ]);
 
         // Act
-        $response = $this->actingAs($user)
-            ->get("/servers/{$server->id}/database/status");
-
-        // Assert
-        $response->assertStatus(200);
-        $response->assertJson([
-            'status' => DatabaseStatus::Active->value,
-            'database' => [
-                'id' => $database->id,
-                'type' => DatabaseType::MySQL->value,
-                'version' => '8.0',
-                'status' => DatabaseStatus::Active->value,
-            ],
-        ]);
-    }
-
-    /**
-     * Test status endpoint returns uninstalled when no database exists.
-     */
-    public function test_status_endpoint_returns_uninstalled_when_no_database_exists(): void
-    {
-        // Arrange
-        $user = User::factory()->create();
-        $server = Server::factory()->create(['user_id' => $user->id]);
-
-        // Act
-        $response = $this->actingAs($user)
-            ->get("/servers/{$server->id}/database/status");
-
-        // Assert
-        $response->assertStatus(200);
-        $response->assertJson([
-            'status' => 'uninstalled',
-            'database' => null,
-        ]);
-    }
-
-    /**
-     * Test user can check status of their server database.
-     */
-    public function test_user_can_check_status_of_their_server_database(): void
-    {
-        // Arrange
-        $user = User::factory()->create();
-        $server = Server::factory()->create(['user_id' => $user->id]);
-
-        ServerDatabase::factory()->create([
-            'server_id' => $server->id,
-            'status' => DatabaseStatus::Active,
-        ]);
-
-        // Act
-        $response = $this->actingAs($user)
-            ->get("/servers/{$server->id}/database/status");
-
-        // Assert
-        $response->assertStatus(200);
-    }
-
-    /**
-     * Test user cannot check status of other users server database.
-     */
-    public function test_user_cannot_check_status_of_other_users_server_database(): void
-    {
-        // Arrange
-        $user = User::factory()->create();
-        $otherUser = User::factory()->create();
-        $server = Server::factory()->create(['user_id' => $otherUser->id]);
-
-        ServerDatabase::factory()->create([
-            'server_id' => $server->id,
-            'status' => DatabaseStatus::Active,
-        ]);
-
-        // Act
-        $response = $this->actingAs($user)
-            ->get("/servers/{$server->id}/database/status");
-
-        // Assert
-        $response->assertStatus(403);
-    }
-
-    /**
-     * Test guest cannot check database status.
-     */
-    public function test_guest_cannot_check_database_status(): void
-    {
-        // Arrange
-        $user = User::factory()->create();
-        $server = Server::factory()->create(['user_id' => $user->id]);
-
-        ServerDatabase::factory()->create([
-            'server_id' => $server->id,
-            'status' => DatabaseStatus::Active,
-        ]);
-
-        // Act
-        $response = $this->get("/servers/{$server->id}/database/status");
+        $response = $this->delete("/servers/{$server->id}/databases/{$database->id}");
 
         // Assert
         $response->assertStatus(302);
         $response->assertRedirect('/login');
+    }
+
+    /**
+     * Test user can install multiple databases with different types.
+     */
+    public function test_user_can_install_multiple_databases_with_different_types(): void
+    {
+        // Arrange
+        \Illuminate\Support\Facades\Queue::fake();
+
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        // Act - Install MySQL
+        $this->actingAs($user)
+            ->post("/servers/{$server->id}/databases", [
+                'type' => 'mysql',
+                'version' => '8.0',
+                'root_password' => 'SecurePassword123',
+                'port' => 3306,
+            ]);
+
+        // Act - Install PostgreSQL
+        $response = $this->actingAs($user)
+            ->post("/servers/{$server->id}/databases", [
+                'type' => 'postgresql',
+                'version' => '16',
+                'root_password' => 'PostgresPass789',
+                'port' => 5432,
+            ]);
+
+        // Assert - both should be created
+        $response->assertStatus(302);
+        $this->assertDatabaseCount('server_databases', 2);
+        $this->assertDatabaseHas('server_databases', [
+            'server_id' => $server->id,
+            'type' => DatabaseType::MySQL->value,
+        ]);
+        $this->assertDatabaseHas('server_databases', [
+            'server_id' => $server->id,
+            'type' => DatabaseType::PostgreSQL->value,
+        ]);
+    }
+
+    /**
+     * Test cannot install database with duplicate port.
+     */
+    public function test_cannot_install_database_with_duplicate_port(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        ServerDatabase::factory()->create([
+            'server_id' => $server->id,
+            'type' => DatabaseType::MySQL,
+            'port' => 3306,
+        ]);
+
+        // Act - try to install another database on same port
+        $response = $this->actingAs($user)
+            ->post("/servers/{$server->id}/databases", [
+                'type' => 'mariadb',
+                'version' => '11.4',
+                'root_password' => 'SecurePassword123',
+                'port' => 3306,
+            ]);
+
+        // Assert - should fail validation
+        $response->assertStatus(302);
+        $response->assertSessionHasErrors(['port']);
+    }
+
+    /**
+     * Test auto-assigns unique port when not provided.
+     */
+    public function test_auto_assigns_unique_port_when_not_provided(): void
+    {
+        // Arrange
+        \Illuminate\Support\Facades\Queue::fake();
+
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        // Install first MySQL database on default port
+        $this->actingAs($user)
+            ->post("/servers/{$server->id}/databases", [
+                'type' => 'mysql',
+                'version' => '8.0',
+                'root_password' => 'Password1',
+                'port' => 3306,
+            ]);
+
+        // Act - install second MySQL without specifying port
+        $response = $this->actingAs($user)
+            ->post("/servers/{$server->id}/databases", [
+                'type' => 'mysql',
+                'version' => '8.4',
+                'root_password' => 'Password2',
+            ]);
+
+        // Assert - should auto-assign a different port
+        $response->assertStatus(302);
+        $databases = $server->databases()->get();
+        $this->assertEquals(2, $databases->count());
+        $this->assertNotEquals($databases[0]->port, $databases[1]->port);
+    }
+
+    /**
+     * Test database page displays multiple databases.
+     */
+    public function test_database_page_displays_multiple_databases(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        ServerDatabase::factory()->create([
+            'server_id' => $server->id,
+            'type' => DatabaseType::MySQL,
+            'port' => 3306,
+        ]);
+
+        ServerDatabase::factory()->create([
+            'server_id' => $server->id,
+            'type' => DatabaseType::PostgreSQL,
+            'port' => 5432,
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/databases");
+
+        // Assert
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('servers/databases')
+            ->has('server.databases', 2)
+        );
     }
 }

@@ -3,6 +3,12 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { CardContainer } from '@/components/ui/card-container';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PageHeader } from '@/components/ui/page-header';
@@ -13,7 +19,7 @@ import { show as showServer } from '@/routes/servers';
 import { type BreadcrumbItem, type Server } from '@/types';
 import { Head, router, useForm } from '@inertiajs/react';
 import { useEcho } from '@laravel/echo-react';
-import { AlertCircle, CheckCircle, DatabaseIcon, Loader2 } from 'lucide-react';
+import { AlertCircle, CheckCircle, DatabaseIcon, Loader2, MoreVertical, Pencil, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 type DatabaseVersion = {
@@ -33,21 +39,6 @@ type AvailableDatabases = {
     [key: string]: AvailableDatabase;
 };
 
-type InstalledDatabase = {
-    id: number;
-    service_name: string;
-    configuration: {
-        type: string;
-        version: string;
-        root_password?: string;
-    };
-    status: string;
-    progress_step?: number | null;
-    progress_total?: number | null;
-    progress_label?: string | null;
-    installed_at?: string;
-} | null;
-
 type DatabaseItem = {
     id: number;
     name: string;
@@ -58,8 +49,7 @@ type DatabaseItem = {
     created_at: string;
 };
 
-export default function Database({ server, availableDatabases }: { server: Server; availableDatabases?: AvailableDatabases }) {
-    const installedDatabase = server.installedDatabase || null;
+export default function Databases({ server, availableDatabases }: { server: Server; availableDatabases?: AvailableDatabases }) {
     const databases = server.databases || [];
     const fallbackDefaults: Record<string, { version: string; port: number }> = useMemo(
         () => ({
@@ -89,37 +79,24 @@ export default function Database({ server, availableDatabases }: { server: Serve
         [availableDatabases, fallbackDefaults],
     );
 
-    const initialType = installedDatabase?.configuration?.type || availableTypeKeys[0] || 'mariadb';
+    const initialType = availableTypeKeys[0] || 'mariadb';
     const initialDefaults = resolveDefaults(initialType);
 
     const [selectedType, setSelectedType] = useState<string>(initialType);
+    const [isInstallDialogOpen, setIsInstallDialogOpen] = useState(false);
+    const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
+    const [selectedDatabase, setSelectedDatabase] = useState<DatabaseItem | null>(null);
 
     const { data, setData, post, processing, errors, reset } = useForm({
         name: '',
-        type: installedDatabase?.configuration?.type || initialType,
-        version: installedDatabase?.configuration?.version || initialDefaults.version,
-        port: installedDatabase?.port ?? initialDefaults.port,
+        type: initialType,
+        version: initialDefaults.version,
+        port: initialDefaults.port,
         root_password: '',
     });
 
+    const [updateVersion, setUpdateVersion] = useState<string>('');
     const [submitError, setSubmitError] = useState<string | null>(null);
-    const [isDialogOpen, setIsDialogOpen] = useState(false);
-    const [errorMessage, setErrorMessage] = useState<string | null>(null);
-    const [progress, setProgress] = useState<{ step: number; total: number; label?: string } | null>(
-        (installedDatabase?.status === 'installing' || installedDatabase?.status === 'uninstalling' || installedDatabase?.status === 'updating') &&
-            installedDatabase?.progress_total
-            ? {
-                  step: installedDatabase.progress_step ?? 0,
-                  total: installedDatabase.progress_total ?? 0,
-                  label: installedDatabase.progress_label ?? undefined,
-              }
-            : null,
-    );
-
-    const isInstalling = installedDatabase?.status === 'installing';
-    const isUninstalling = installedDatabase?.status === 'uninstalling';
-    const isUpdating = installedDatabase?.status === 'updating';
-    const isProcessing = isInstalling || isUninstalling || isUpdating;
 
     // Real-time updates via Reverb WebSocket - listens for database changes
     useEcho(`servers.${server.id}`, 'ServerUpdated', () => {
@@ -133,16 +110,8 @@ export default function Database({ server, availableDatabases }: { server: Serve
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard.url() },
         { title: `Server #${server.id}`, href: showServer(server.id).url },
-        { title: 'Database', href: '#' },
+        { title: 'Databases', href: '#' },
     ];
-
-    const availableUpgradeVersions = useMemo(() => {
-        if (!installedDatabase) return [];
-        const currentVersion = installedDatabase.configuration?.version || '0';
-        return Object.entries(availableDatabases?.[selectedType]?.versions || {}).filter(([value]) => {
-            return parseFloat(value) > parseFloat(currentVersion);
-        });
-    }, [installedDatabase, availableDatabases, selectedType]);
 
     const handleTypeChange = (type: string) => {
         setSelectedType(type);
@@ -154,10 +123,6 @@ export default function Database({ server, availableDatabases }: { server: Serve
     };
 
     useEffect(() => {
-        if (installedDatabase) {
-            return;
-        }
-
         if (!availableTypeKeys.length) {
             return;
         }
@@ -177,13 +142,12 @@ export default function Database({ server, availableDatabases }: { server: Serve
         setData('type', firstType);
         setData('version', defaults.version);
         setData('port', defaults.port);
-    }, [availableDatabases, availableTypeKeys, data.type, installedDatabase, resolveDefaults, setData]);
+    }, [availableDatabases, availableTypeKeys, data.type, resolveDefaults, setData]);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleInstallSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         setSubmitError(null);
-        setErrorMessage(null);
-        post(`/servers/${server.id}/database`, {
+        post(`/servers/${server.id}/databases`, {
             preserveScroll: true,
             onError: (formErrors) => {
                 if (!formErrors || Object.keys(formErrors).length === 0) {
@@ -192,35 +156,59 @@ export default function Database({ server, availableDatabases }: { server: Serve
             },
             onSuccess: () => {
                 reset('name', 'root_password');
-                setIsDialogOpen(false);
+                setIsInstallDialogOpen(false);
             },
+        });
+    };
+
+    const handleUpdate = (database: DatabaseItem) => {
+        setSelectedDatabase(database);
+        setUpdateVersion(database.version);
+        setIsUpdateDialogOpen(true);
+    };
+
+    const handleUpdateSubmit = () => {
+        if (!selectedDatabase) return;
+
+        router.patch(
+            `/servers/${server.id}/databases/${selectedDatabase.id}`,
+            { version: updateVersion },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setIsUpdateDialogOpen(false);
+                    setSelectedDatabase(null);
+                },
+            },
+        );
+    };
+
+    const handleDelete = (database: DatabaseItem) => {
+        if (
+            confirm(
+                `Are you sure you want to uninstall ${availableDatabases?.[database.type]?.name || database.type} ${database.version}? This will remove all data and cannot be undone.`,
+            )
+        ) {
+            router.delete(`/servers/${server.id}/databases/${database.id}`, {
+                preserveScroll: true,
+            });
+        }
+    };
+
+    const getAvailableUpgradeVersions = (database: DatabaseItem) => {
+        const currentVersion = database.version;
+        return Object.entries(availableDatabases?.[database.type]?.versions || {}).filter(([value]) => {
+            return parseFloat(value) > parseFloat(currentVersion);
         });
     };
 
     return (
         <ServerLayout server={server} breadcrumbs={breadcrumbs}>
-            <Head title={`Database — ${server.vanity_name}`} />
+            <Head title={`Databases — ${server.vanity_name}`} />
             <PageHeader
-                title={installedDatabase ? 'Database Configuration' : 'Database Installation'}
-                description={
-                    installedDatabase
-                        ? 'Configure and manage database services for your server.'
-                        : 'Install and configure a database service for your server.'
-                }
+                title="Database Management"
+                description="Install and manage multiple database services for your server."
             >
-                {/* Error Alert */}
-                {errorMessage && (
-                    <Alert variant="destructive" className="mb-6">
-                        <AlertTitle>Operation Failed</AlertTitle>
-                        <AlertDescription>
-                            {errorMessage}
-                            <button onClick={() => setErrorMessage(null)} className="ml-2 underline">
-                                Dismiss
-                            </button>
-                        </AlertDescription>
-                    </Alert>
-                )}
-
                 {/* Databases List */}
                 <CardContainer
                     title="Databases"
@@ -244,9 +232,8 @@ export default function Database({ server, availableDatabases }: { server: Serve
                     action={
                         <CardContainerAddButton
                             label="Add Database"
-                            onClick={() => setIsDialogOpen(true)}
+                            onClick={() => setIsInstallDialogOpen(true)}
                             aria-label="Add Database"
-                            disabled={installedDatabase !== null}
                         />
                     }
                 >
@@ -310,6 +297,27 @@ export default function Database({ server, availableDatabases }: { server: Serve
                                                 Uninstalling
                                             </span>
                                         )}
+
+                                        {/* Actions Dropdown */}
+                                        {db.status === 'active' && (
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                                        <MoreVertical className="h-4 w-4" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuItem onClick={() => handleUpdate(db)}>
+                                                        <Pencil className="mr-2 h-4 w-4" />
+                                                        Update Version
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={() => handleDelete(db)} className="text-red-600">
+                                                        <Trash2 className="mr-2 h-4 w-4" />
+                                                        Uninstall
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        )}
                                     </div>
                                 </div>
                             ))}
@@ -319,154 +327,20 @@ export default function Database({ server, availableDatabases }: { server: Serve
                             <div className="mb-3 rounded-full bg-muted p-3">
                                 <DatabaseIcon className="h-6 w-6 text-muted-foreground" />
                             </div>
-                            <p className="text-sm text-muted-foreground">No database installed on this server yet.</p>
+                            <p className="text-sm text-muted-foreground">No databases installed on this server yet.</p>
                         </div>
                     )}
                 </CardContainer>
-
-                {installedDatabase && (
-                    <CardContainer
-                        title="Current Database"
-                        icon={
-                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <rect x="2" y="2" width="8" height="8" rx="1" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
-                                <path d="M2 5h8M5 2v8" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
-                            </svg>
-                        }
-                    >
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                            <div>
-                                <div className="text-sm text-muted-foreground">Type</div>
-                                <div className="font-medium capitalize">
-                                    {availableDatabases?.[installedDatabase.configuration.type]?.name || installedDatabase.configuration.type}
-                                </div>
-                            </div>
-                            <div>
-                                <div className="text-sm text-muted-foreground">Version</div>
-                                <div className="font-medium">{installedDatabase.configuration.version}</div>
-                            </div>
-                            <div>
-                                <div className="text-sm text-muted-foreground">Status</div>
-                                <div className="inline-flex items-center gap-2 font-medium capitalize">
-                                    {installedDatabase.status}
-                                    {isProcessing && <Loader2 className="h-3 w-3 animate-spin" />}
-                                </div>
-                            </div>
-                        </div>
-                    </CardContainer>
-                )}
-
-                {installedDatabase && !isProcessing && (
-                    <div className="space-y-6">
-                        <CardContainer
-                            title="Update Configuration"
-                            icon={
-                                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M6 1v10M3 4l3-3 3 3" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
-                                </svg>
-                            }
-                        >
-                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                                <div className="space-y-2">
-                                    <Label htmlFor="version">Version</Label>
-                                    {availableUpgradeVersions.length > 0 ? (
-                                        <Select value={data.version} onValueChange={(value) => setData('version', value)}>
-                                            <SelectTrigger disabled={processing}>
-                                                <SelectValue placeholder="Select version" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {availableUpgradeVersions.map(([value, label]) => (
-                                                    <SelectItem key={value} value={value}>
-                                                        {label}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    ) : (
-                                        <Input value={installedDatabase?.configuration?.version || ''} disabled className="bg-muted" />
-                                    )}
-                                    {errors.version && <div className="text-sm text-red-600">{errors.version}</div>}
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label htmlFor="root_password">Root Password</Label>
-                                    <Input
-                                        id="root_password"
-                                        type="password"
-                                        value={data.root_password}
-                                        onChange={(e) => setData('root_password', e.target.value)}
-                                        placeholder="Enter new password (optional)"
-                                        disabled={processing}
-                                        autoComplete="new-password"
-                                    />
-                                    {errors.root_password && <div className="text-sm text-red-600">{errors.root_password}</div>}
-                                </div>
-                            </div>
-                        </CardContainer>
-
-                        {/* Submit */}
-                        <div className="flex justify-between">
-                            <Button
-                                type="button"
-                                variant="destructive"
-                                disabled={processing}
-                                onClick={() => {
-                                    if (
-                                        confirm('Are you sure you want to uninstall this database? This will remove all data and cannot be undone.')
-                                    ) {
-                                        setErrorMessage(null);
-                                        router.delete(`/servers/${server.id}/database`, {
-                                            preserveScroll: true,
-                                            onSuccess: () => {
-                                                router.reload({ only: ['server'] });
-                                            },
-                                        });
-                                    }
-                                }}
-                            >
-                                Uninstall Database
-                            </Button>
-                            <Button
-                                type="button"
-                                disabled={processing}
-                                onClick={() => {
-                                    setErrorMessage(null);
-                                    router.patch(
-                                        `/servers/${server.id}/database`,
-                                        {
-                                            version: data.version,
-                                        },
-                                        {
-                                            preserveScroll: true,
-                                            onSuccess: () => {
-                                                router.reload({ only: ['server'] });
-                                            },
-                                        },
-                                    );
-                                }}
-                            >
-                                {processing ? (
-                                    <span className="inline-flex items-center gap-2">
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                        Updating...
-                                    </span>
-                                ) : (
-                                    'Update Database'
-                                )}
-                            </Button>
-                        </div>
-                    </div>
-                )}
             </PageHeader>
 
-            {/* Add Database Dialog */}
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            {/* Install Database Dialog */}
+            <Dialog open={isInstallDialogOpen} onOpenChange={setIsInstallDialogOpen}>
                 <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>Install Database Service</DialogTitle>
                         <DialogDescription>Choose a database type and configuration to install on your server.</DialogDescription>
                     </DialogHeader>
-                    <form onSubmit={handleSubmit} className="space-y-6">
+                    <form onSubmit={handleInstallSubmit} className="space-y-6">
                         {submitError && (
                             <Alert variant="destructive">
                                 <AlertTitle>Installation failed</AlertTitle>
@@ -549,9 +423,10 @@ export default function Database({ server, availableDatabases }: { server: Serve
                                         type="number"
                                         value={data.port}
                                         onChange={(e) => setData('port', parseInt(e.target.value))}
-                                        placeholder="3306"
+                                        placeholder="Auto-assigned if empty"
                                         disabled={processing}
                                     />
+                                    <p className="text-xs text-muted-foreground">Leave empty to auto-assign a unique port.</p>
                                     {errors.port && <div className="text-sm text-red-600">{errors.port}</div>}
                                 </div>
 
@@ -576,7 +451,7 @@ export default function Database({ server, availableDatabases }: { server: Serve
 
                         {/* Install Button */}
                         <div className="flex justify-end gap-3">
-                            <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} disabled={processing}>
+                            <Button type="button" variant="outline" onClick={() => setIsInstallDialogOpen(false)} disabled={processing}>
                                 Cancel
                             </Button>
                             <Button type="submit" disabled={processing}>
@@ -591,6 +466,58 @@ export default function Database({ server, availableDatabases }: { server: Serve
                             </Button>
                         </div>
                     </form>
+                </DialogContent>
+            </Dialog>
+
+            {/* Update Database Dialog */}
+            <Dialog open={isUpdateDialogOpen} onOpenChange={setIsUpdateDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Update Database Version</DialogTitle>
+                        <DialogDescription>
+                            Update {selectedDatabase && availableDatabases?.[selectedDatabase.type]?.name} to a newer version.
+                        </DialogDescription>
+                    </DialogHeader>
+                    {selectedDatabase && (
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="update_version">Select New Version</Label>
+                                <Select value={updateVersion} onValueChange={setUpdateVersion}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select version" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {getAvailableUpgradeVersions(selectedDatabase).length > 0 ? (
+                                            getAvailableUpgradeVersions(selectedDatabase).map(([value, label]) => (
+                                                <SelectItem key={value} value={value}>
+                                                    {label}
+                                                </SelectItem>
+                                            ))
+                                        ) : (
+                                            <SelectItem value={selectedDatabase.version} disabled>
+                                                No newer versions available
+                                            </SelectItem>
+                                        )}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="flex justify-end gap-3">
+                                <Button type="button" variant="outline" onClick={() => setIsUpdateDialogOpen(false)}>
+                                    Cancel
+                                </Button>
+                                <Button
+                                    onClick={handleUpdateSubmit}
+                                    disabled={
+                                        processing ||
+                                        updateVersion === selectedDatabase.version ||
+                                        getAvailableUpgradeVersions(selectedDatabase).length === 0
+                                    }
+                                >
+                                    Update Database
+                                </Button>
+                            </div>
+                        </div>
+                    )}
                 </DialogContent>
             </Dialog>
         </ServerLayout>

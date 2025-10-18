@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\DatabaseType;
+use App\Models\Server;
 
 class DatabaseConfigurationService
 {
@@ -55,5 +56,40 @@ class DatabaseConfigurationService
     public function getDefaultVersion(DatabaseType $type): string
     {
         return $this->getTypeConfiguration($type)['default_version'] ?? '8.0';
+    }
+
+    /**
+     * Find the next available port for a database type on the given server.
+     * Starts with the default port and increments until an unused port is found.
+     */
+    public function getNextAvailablePort(Server $server, DatabaseType $type, ?int $requestedPort = null): int
+    {
+        // If a specific port is requested, validate it's available
+        if ($requestedPort !== null) {
+            $isPortTaken = $server->databases()
+                ->where('port', $requestedPort)
+                ->exists();
+
+            if (! $isPortTaken) {
+                return $requestedPort;
+            }
+
+            // Port is taken, fall through to find next available
+        }
+
+        // Get all used ports on this server
+        $usedPorts = $server->databases()
+            ->pluck('port')
+            ->toArray();
+
+        // Start with default port for this database type
+        $port = $this->getDefaultPort($type);
+
+        // Keep incrementing until we find an available port
+        while (in_array($port, $usedPorts)) {
+            $port++;
+        }
+
+        return $port;
     }
 }

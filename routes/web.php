@@ -135,17 +135,15 @@ Route::middleware('auth')->group(function () {
         });
 
         // Database management
-        Route::prefix('database')->group(function () {
+        Route::prefix('databases')->group(function () {
             Route::get('/', [ServerDatabaseController::class, 'index'])
-                ->name('database');
-            Route::get('status', [ServerDatabaseController::class, 'status'])
-                ->name('database.status');
+                ->name('databases');
             Route::post('/', [ServerDatabaseController::class, 'store'])
-                ->name('database.install');
-            Route::patch('/', [ServerDatabaseController::class, 'update'])
-                ->name('database.update');
-            Route::delete('/', [ServerDatabaseController::class, 'destroy'])
-                ->name('database.uninstall');
+                ->name('databases.install');
+            Route::patch('{database}', [ServerDatabaseController::class, 'update'])
+                ->name('databases.update');
+            Route::delete('{database}', [ServerDatabaseController::class, 'destroy'])
+                ->name('databases.uninstall');
         });
 
         // PHP management

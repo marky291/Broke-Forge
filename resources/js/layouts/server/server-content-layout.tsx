@@ -90,7 +90,7 @@ export default function ServerContentLayout({ children, server, breadcrumbs, lat
         currentSection = 'server';
     } else if (path.includes('/php')) {
         currentSection = 'php';
-    } else if (path.includes('/database')) {
+    } else if (path.includes('/databases')) {
         currentSection = 'database';
     } else if (path.includes('/firewall')) {
         currentSection = 'firewall';
@@ -128,7 +128,7 @@ export default function ServerContentLayout({ children, server, breadcrumbs, lat
         },
         {
             title: 'Database',
-            href: `/servers/${server.id}/database`,
+            href: `/servers/${server.id}/databases`,
             icon: DatabaseIcon,
             isActive: currentSection === 'database',
         },

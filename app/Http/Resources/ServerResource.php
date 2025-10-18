@@ -49,7 +49,6 @@ class ServerResource extends JsonResource
             'scheduledTasks' => $this->transformScheduledTasks(),
             'recentTaskRuns' => $this->transformRecentTaskRuns($request),
             'supervisorTasks' => $this->transformSupervisorTasks(),
-            'installedDatabase' => $this->transformInstalledDatabase(),
             'databases' => $this->transformDatabases(),
             'sites' => $this->transformSites(),
             'phps' => $this->transformPhps(),
@@ -297,30 +296,6 @@ class ServerResource extends JsonResource
             'created_at' => $task->created_at->toISOString(),
             'updated_at' => $task->updated_at->toISOString(),
         ])->toArray();
-    }
-
-    /**
-     * Transform installed database for database page.
-     */
-    protected function transformInstalledDatabase(): ?array
-    {
-        $database = $this->databases()->latest()->first();
-
-        if (! $database) {
-            return null;
-        }
-
-        return [
-            'id' => $database->id,
-            'service_name' => $database->name,
-            'configuration' => [
-                'type' => $database->type?->value ?? $database->type,
-                'version' => $database->version,
-                'root_password' => $database->root_password,
-            ],
-            'status' => $database->status?->value ?? $database->status,
-            'installed_at' => $database->created_at?->toISOString(),
-        ];
     }
 
     /**
