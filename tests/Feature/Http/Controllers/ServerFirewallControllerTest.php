@@ -680,4 +680,75 @@ class ServerFirewallControllerTest extends TestCase
             'rule_type' => 'deny',
         ]);
     }
+
+    /**
+     * Test firewall data structure is nested correctly when firewall is installed.
+     *
+     * This test prevents regression where firewall data might be flattened
+     * at the top level instead of nested under 'firewall' property.
+     */
+    public function test_firewall_data_structure_is_nested_correctly_when_installed(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+        $firewall = ServerFirewall::factory()->create([
+            'server_id' => $server->id,
+            'is_enabled' => true,
+        ]);
+
+        ServerFirewallRule::factory()->create([
+            'server_firewall_id' => $firewall->id,
+            'name' => 'SSH',
+            'port' => '22',
+            'status' => 'active',
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/firewall");
+
+        // Assert - verify nested firewall structure
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('servers/firewall')
+            ->has('server.firewall')
+            ->where('server.firewall.isInstalled', true)
+            ->where('server.firewall.is_enabled', true)
+            ->where('server.firewall.status', 'enabled')
+            ->has('server.firewall.rules')
+            ->has('server.firewall.recentEvents')
+            ->has('server.firewall.rules', 1)
+        );
+    }
+
+    /**
+     * Test firewall data structure when firewall is not installed.
+     *
+     * This test ensures the frontend can correctly detect when
+     * firewall is not installed by checking server.firewall.isInstalled.
+     */
+    public function test_firewall_data_structure_when_not_installed(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+        // Deliberately not creating a firewall
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/firewall");
+
+        // Assert - verify nested firewall structure with isInstalled = false
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('servers/firewall')
+            ->has('server.firewall')
+            ->where('server.firewall.isInstalled', false)
+            ->where('server.firewall.status', 'not_installed')
+            ->where('server.firewall.is_enabled', false)
+            ->has('server.firewall.rules', 0)
+            ->has('server.firewall.recentEvents', 0)
+        );
+    }
 }

@@ -58,9 +58,6 @@ class MySqlRemover extends PackageRemover implements \App\Packages\Base\ServerPa
             // Close MySQL port in firewall
             'ufw delete allow 3306/tcp >/dev/null 2>&1 || true',
 
-            // Remove database record
-            fn () => $this->server->databases()->delete(),
-
             // Clean up package cache
             'apt-get clean',
         ];

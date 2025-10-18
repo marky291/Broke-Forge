@@ -51,8 +51,6 @@ class PostgreSqlRemover extends PackageRemover implements \App\Packages\Base\Ser
 
             'ufw delete allow 5432/tcp >/dev/null 2>&1 || true',
 
-            fn () => $this->server->databases()->delete(),
-
             'apt-get clean',
         ];
     }

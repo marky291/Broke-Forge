@@ -62,9 +62,6 @@ class MariaDbRemover extends PackageRemover implements \App\Packages\Base\Server
             // Close MariaDB port in firewall
             'ufw delete allow 3306/tcp >/dev/null 2>&1 || true',
 
-            // Delete database record
-            fn () => $this->server->databases()->delete(),
-
             // Clean up package cache
             'apt-get clean',
         ];

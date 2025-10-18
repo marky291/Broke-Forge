@@ -1053,4 +1053,128 @@ class ServerDatabaseControllerTest extends TestCase
             ->has('server.databases', 2)
         );
     }
+
+    /**
+     * Test deleting one database does not delete other databases.
+     *
+     * Regression test for bug where deleting one database deleted all databases on the server.
+     */
+    public function test_deleting_one_database_does_not_delete_other_databases(): void
+    {
+        // Arrange
+        \Illuminate\Support\Facades\Queue::fake();
+
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        $database1 = ServerDatabase::factory()->create([
+            'server_id' => $server->id,
+            'type' => DatabaseType::MariaDB,
+            'port' => 3310,
+            'status' => DatabaseStatus::Active,
+        ]);
+
+        $database2 = ServerDatabase::factory()->create([
+            'server_id' => $server->id,
+            'type' => DatabaseType::MariaDB,
+            'port' => 3315,
+            'status' => DatabaseStatus::Active,
+        ]);
+
+        // Act - delete only the first database
+        $response = $this->actingAs($user)
+            ->delete("/servers/{$server->id}/databases/{$database1->id}");
+
+        // Assert
+        $response->assertStatus(302);
+        $response->assertRedirect("/servers/{$server->id}/databases");
+        $response->assertSessionHas('success', 'Database uninstallation started.');
+
+        // Verify first database status changed to Uninstalling
+        $database1->refresh();
+        $this->assertEquals(DatabaseStatus::Uninstalling, $database1->status);
+
+        // Verify second database still exists and is unchanged
+        $database2->refresh();
+        $this->assertEquals(DatabaseStatus::Active, $database2->status);
+        $this->assertDatabaseCount('server_databases', 2);
+    }
+
+    /**
+     * Test deleting one MySQL database does not delete other MySQL databases.
+     */
+    public function test_deleting_one_mysql_database_does_not_delete_other_mysql_databases(): void
+    {
+        // Arrange
+        \Illuminate\Support\Facades\Queue::fake();
+
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        $database1 = ServerDatabase::factory()->create([
+            'server_id' => $server->id,
+            'type' => DatabaseType::MySQL,
+            'port' => 3306,
+            'version' => '8.0',
+            'status' => DatabaseStatus::Active,
+        ]);
+
+        $database2 = ServerDatabase::factory()->create([
+            'server_id' => $server->id,
+            'type' => DatabaseType::MySQL,
+            'port' => 3307,
+            'version' => '8.4',
+            'status' => DatabaseStatus::Active,
+        ]);
+
+        // Act - delete only the first database
+        $response = $this->actingAs($user)
+            ->delete("/servers/{$server->id}/databases/{$database1->id}");
+
+        // Assert
+        $response->assertStatus(302);
+
+        // Verify second database still exists
+        $database2->refresh();
+        $this->assertEquals(DatabaseStatus::Active, $database2->status);
+        $this->assertDatabaseCount('server_databases', 2);
+    }
+
+    /**
+     * Test deleting one PostgreSQL database does not delete other databases.
+     */
+    public function test_deleting_one_postgresql_database_does_not_delete_other_databases(): void
+    {
+        // Arrange
+        \Illuminate\Support\Facades\Queue::fake();
+
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        $database1 = ServerDatabase::factory()->create([
+            'server_id' => $server->id,
+            'type' => DatabaseType::PostgreSQL,
+            'port' => 5432,
+            'status' => DatabaseStatus::Active,
+        ]);
+
+        $database2 = ServerDatabase::factory()->create([
+            'server_id' => $server->id,
+            'type' => DatabaseType::PostgreSQL,
+            'port' => 5433,
+            'status' => DatabaseStatus::Active,
+        ]);
+
+        // Act - delete only the first database
+        $response = $this->actingAs($user)
+            ->delete("/servers/{$server->id}/databases/{$database1->id}");
+
+        // Assert
+        $response->assertStatus(302);
+
+        // Verify second database still exists
+        $database2->refresh();
+        $this->assertEquals(DatabaseStatus::Active, $database2->status);
+        $this->assertDatabaseCount('server_databases', 2);
+    }
 }
