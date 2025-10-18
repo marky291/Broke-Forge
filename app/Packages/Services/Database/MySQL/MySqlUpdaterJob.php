@@ -4,6 +4,7 @@ namespace App\Packages\Services\Database\MySQL;
 
 use App\Enums\DatabaseStatus;
 use App\Models\Server;
+use App\Models\ServerDatabase;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -15,32 +16,65 @@ class MySqlUpdaterJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    /**
+     * The number of seconds the job can run before timing out.
+     *
+     * @var int
+     */
+    public $timeout = 600;
+
     public function __construct(
         public Server $server,
-        public string $targetVersion
+        public int $databaseId  // ← Receives database record ID
     ) {}
 
     public function handle(): void
     {
-        Log::info("Starting MySQL update for server #{$this->server->id} to version {$this->targetVersion}");
+        // Set no time limit for long-running update process
+        set_time_limit(0);
+
+        // Load the database record from database
+        $database = ServerDatabase::findOrFail($this->databaseId);
+        $targetVersion = $database->version;  // Get version from database record
+
+        Log::info('Starting MySQL database update', [
+            'database_id' => $database->id,
+            'server_id' => $this->server->id,
+            'target_version' => $targetVersion,
+        ]);
 
         try {
+            // Create updater instance
             $updater = new MySqlUpdater($this->server);
-            $updater->execute($this->targetVersion);
 
-            Log::info("MySQL update completed for server #{$this->server->id}");
+            // Execute update
+            $updater->execute($targetVersion);
+
+            // ✅ UPDATE: updating → active
+            $database->update(['status' => DatabaseStatus::Active]);
+            // Model event broadcasts automatically via Reverb
+
+            Log::info('MySQL database update completed', [
+                'database_id' => $database->id,
+                'server_id' => $this->server->id,
+            ]);
+
         } catch (\Exception $e) {
-            Log::error("MySQL update failed for server #{$this->server->id}", [
+            // ✅ UPDATE: any → failed
+            $database->update([
+                'status' => DatabaseStatus::Failed,
+                'error_message' => $e->getMessage(),
+            ]);
+            // Model event broadcasts automatically via Reverb
+
+            Log::error('MySQL database update failed', [
+                'database_id' => $database->id,
+                'server_id' => $this->server->id,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
 
-            $this->server->databases()->latest()->first()?->update([
-                'status' => DatabaseStatus::Failed->value,
-                'error_message' => $e->getMessage(),
-            ]);
-
-            throw $e;
+            throw $e;  // Re-throw for Laravel's retry mechanism
         }
     }
 }

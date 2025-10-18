@@ -609,6 +609,69 @@ class ServerDatabaseControllerTest extends TestCase
     }
 
     /**
+     * Test update stores new version on database record.
+     */
+    public function test_update_stores_new_version_on_database_record(): void
+    {
+        // Arrange
+        \Illuminate\Support\Facades\Queue::fake();
+
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        $database = ServerDatabase::factory()->create([
+            'server_id' => $server->id,
+            'type' => DatabaseType::MySQL,
+            'version' => '8.0',
+            'status' => DatabaseStatus::Active,
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->patch("/servers/{$server->id}/database", [
+                'version' => '8.4',
+            ]);
+
+        // Assert - new version should be stored on record
+        $database->refresh();
+        $this->assertEquals('8.4', $database->version);
+        $this->assertEquals(DatabaseStatus::Updating, $database->status);
+    }
+
+    /**
+     * Test update dispatches job with database ID.
+     */
+    public function test_update_dispatches_job_with_database_id(): void
+    {
+        // Arrange
+        \Illuminate\Support\Facades\Queue::fake();
+
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        $database = ServerDatabase::factory()->create([
+            'server_id' => $server->id,
+            'type' => DatabaseType::MySQL,
+            'version' => '8.0',
+            'status' => DatabaseStatus::Active,
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->patch("/servers/{$server->id}/database", [
+                'version' => '8.4',
+            ]);
+
+        // Assert - job should be dispatched with database ID
+        \Illuminate\Support\Facades\Queue::assertPushed(
+            \App\Packages\Services\Database\MySQL\MySqlUpdaterJob::class,
+            function ($job) use ($database) {
+                return $job->databaseId === $database->id;
+            }
+        );
+    }
+
+    /**
      * Test cannot update when no database exists.
      */
     public function test_cannot_update_when_no_database_exists(): void

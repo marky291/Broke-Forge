@@ -124,17 +124,22 @@ class ServerDatabaseController extends Controller
             ? $database->type
             : DatabaseType::from($database->type);
 
-        $database->update(['status' => DatabaseStatus::Updating->value]);
+        // Store new version on database record and set status to updating
+        $database->update([
+            'version' => $validated['version'],
+            'status' => DatabaseStatus::Updating,
+        ]);
 
+        // Dispatch updater job with database ID
         switch ($databaseType) {
             case DatabaseType::MariaDB:
-                MariaDbUpdaterJob::dispatch($server, $validated['version']);
+                MariaDbUpdaterJob::dispatch($server, $database->id);
                 break;
             case DatabaseType::MySQL:
-                MySqlUpdaterJob::dispatch($server, $validated['version']);
+                MySqlUpdaterJob::dispatch($server, $database->id);
                 break;
             case DatabaseType::PostgreSQL:
-                PostgreSqlUpdaterJob::dispatch($server, $validated['version']);
+                PostgreSqlUpdaterJob::dispatch($server, $database->id);
                 break;
             default:
                 $database->update(['status' => DatabaseStatus::Failed->value]);

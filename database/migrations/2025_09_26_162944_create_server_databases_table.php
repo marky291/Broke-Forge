@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('type'); // mysql, mariadb, postgresql, mongodb, redis
             $table->string('version'); // e.g., "8.0.35", "10.11.5", "15.4"
             $table->unsignedInteger('port');
-            $table->string('status')->default(DatabaseStatus::Installing->value);
+            $table->string('status')->default(DatabaseStatus::Pending->value);
             $table->text('root_password')->nullable(); // Encrypted
             $table->timestamps();
 

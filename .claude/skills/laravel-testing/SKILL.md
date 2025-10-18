@@ -48,6 +48,12 @@ You are writing tests for BrokeForge, a Laravel 12 application using PHPUnit. Th
 - Check factory for custom states before manually setting attributes
 - Use `fake()` or `$this->faker` following existing conventions
 
+### TDD Philosophy
+- **Test what SHOULD work, not what was removed** - When doing TDD, always write tests that verify the intended behavior works correctly
+- **NEVER write tests that verify old behavior was removed** - Focus on positive assertions about current functionality
+- **Example**: Instead of `test_old_validation_was_removed()`, write `test_validates_new_field_correctly()`
+- Tests should always describe and verify the current expected behavior, not historical changes
+
 ## Workflow
 
 ### 1. Analyze Code Under Test
