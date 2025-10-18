@@ -482,4 +482,181 @@ class PhpTest extends TestCase
         $php->refresh();
         $this->assertEquals(PhpStatus::Installing, $php->status);
     }
+
+    /**
+     * Test Inertia modal can install PHP version via install endpoint.
+     */
+    public function test_inertia_modal_can_install_php_version_via_install_endpoint(): void
+    {
+        // Arrange
+        \Illuminate\Support\Facades\Queue::fake();
+
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        // Act - simulate modal form submission to /install endpoint
+        $response = $this->actingAs($user)
+            ->post("/servers/{$server->id}/php/install", [
+                'version' => '8.3',
+            ]);
+
+        // Assert - redirects with success message
+        $response->assertStatus(302);
+        $response->assertRedirect("/servers/{$server->id}/php");
+        $response->assertSessionHas('success', 'PHP 8.3 installation started');
+
+        // Verify database
+        $this->assertDatabaseHas('server_phps', [
+            'server_id' => $server->id,
+            'version' => '8.3',
+            'status' => PhpStatus::Pending->value,
+        ]);
+    }
+
+    /**
+     * Test Inertia modal validates all available PHP versions correctly.
+     */
+    public function test_inertia_modal_validates_all_available_php_versions(): void
+    {
+        // Arrange
+        \Illuminate\Support\Facades\Queue::fake();
+
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        $availableVersions = ['8.1', '8.2', '8.3', '8.4'];
+
+        // Act & Assert - test each available version
+        foreach ($availableVersions as $version) {
+            $response = $this->actingAs($user)
+                ->post("/servers/{$server->id}/php/install", [
+                    'version' => $version,
+                ]);
+
+            $response->assertStatus(302);
+            $response->assertSessionHasNoErrors();
+            $response->assertSessionHas('success');
+        }
+    }
+
+    /**
+     * Test Inertia modal rejects invalid PHP version.
+     */
+    public function test_inertia_modal_rejects_invalid_php_version(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        // Act - submit invalid version via modal
+        $response = $this->actingAs($user)
+            ->post("/servers/{$server->id}/php/install", [
+                'version' => '7.4', // Not in available versions
+            ]);
+
+        // Assert - validation error returned to modal
+        $response->assertStatus(302);
+        $response->assertSessionHasErrors(['version']);
+    }
+
+    /**
+     * Test Inertia modal requires version field.
+     */
+    public function test_inertia_modal_requires_version_field(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        // Act - submit without version
+        $response = $this->actingAs($user)
+            ->post("/servers/{$server->id}/php/install", []);
+
+        // Assert - validation error for missing version
+        $response->assertStatus(302);
+        $response->assertSessionHasErrors(['version']);
+    }
+
+    /**
+     * Test Inertia modal handles duplicate PHP version gracefully.
+     */
+    public function test_inertia_modal_handles_duplicate_php_version(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        ServerPhp::factory()->create([
+            'server_id' => $server->id,
+            'version' => '8.3',
+        ]);
+
+        // Act - try to install duplicate via modal
+        $response = $this->actingAs($user)
+            ->post("/servers/{$server->id}/php/install", [
+                'version' => '8.3',
+            ]);
+
+        // Assert - error message returned to modal
+        $response->assertStatus(302);
+        $response->assertSessionHas('error', 'PHP 8.3 is already installed on this server');
+    }
+
+    /**
+     * Test Inertia modal sets first PHP as CLI and Site default.
+     */
+    public function test_inertia_modal_sets_first_php_as_defaults(): void
+    {
+        // Arrange
+        \Illuminate\Support\Facades\Queue::fake();
+
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        // Act - install first PHP via modal
+        $response = $this->actingAs($user)
+            ->post("/servers/{$server->id}/php/install", [
+                'version' => '8.4',
+            ]);
+
+        // Assert - first PHP is both defaults
+        $response->assertStatus(302);
+
+        $php = $server->phps()->first();
+        $this->assertTrue($php->is_cli_default);
+        $this->assertTrue($php->is_site_default);
+    }
+
+    /**
+     * Test Inertia modal does not set second PHP as default.
+     */
+    public function test_inertia_modal_does_not_set_second_php_as_default(): void
+    {
+        // Arrange
+        \Illuminate\Support\Facades\Queue::fake();
+
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        // Create first PHP
+        ServerPhp::factory()->create([
+            'server_id' => $server->id,
+            'version' => '8.1',
+            'is_cli_default' => true,
+            'is_site_default' => true,
+        ]);
+
+        // Act - install second PHP via modal
+        $response = $this->actingAs($user)
+            ->post("/servers/{$server->id}/php/install", [
+                'version' => '8.4',
+            ]);
+
+        // Assert - second PHP is not default
+        $response->assertStatus(302);
+
+        $php = $server->phps()->where('version', '8.4')->first();
+        $this->assertFalse($php->is_cli_default);
+        $this->assertFalse($php->is_site_default);
+    }
 }

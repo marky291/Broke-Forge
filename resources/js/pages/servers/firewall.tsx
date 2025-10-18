@@ -29,10 +29,13 @@ type Server = {
     provision_status?: string;
     created_at: string;
     updated_at: string;
-    isFirewallInstalled: boolean;
-    firewallStatus: string;
-    rules: FirewallRule[];
-    recentEvents: FirewallEvent[];
+    firewall: {
+        isInstalled: boolean;
+        status: string;
+        is_enabled: boolean;
+        rules: FirewallRule[];
+        recentEvents: FirewallEvent[];
+    };
     latestMetrics?: any;
 };
 
@@ -211,7 +214,7 @@ export default function Firewall({ server }: FirewallProps) {
         },
     ];
 
-    if (!server.isFirewallInstalled) {
+    if (!server.firewall.isInstalled) {
         return (
             <ServerLayout server={server} breadcrumbs={breadcrumbs}>
                 <Head title={`${server.vanity_name} - Firewall`} />
@@ -256,7 +259,7 @@ export default function Firewall({ server }: FirewallProps) {
                 >
                     <CardTable
                         columns={columns}
-                        data={server.rules}
+                        data={server.firewall.rules}
                         getRowKey={(rule) => rule.id || Math.random()}
                         rowClassName={(rule) =>
                             cn(
@@ -282,7 +285,7 @@ export default function Firewall({ server }: FirewallProps) {
                 </CardContainer>
 
                 {/* Recent Events */}
-                {server.recentEvents.length > 0 && (
+                {server.firewall.recentEvents.length > 0 && (
                     <CardContainer
                         title="Recent Activity"
                         icon={
@@ -293,7 +296,7 @@ export default function Firewall({ server }: FirewallProps) {
                         }
                     >
                         <div className="space-y-2">
-                            {server.recentEvents.map((event) => (
+                            {server.firewall.recentEvents.map((event) => (
                                 <div key={event.id} className="flex items-center justify-between border-b py-2 last:border-0">
                                     <div className="flex items-center gap-3">
                                         {event.status === 'success' ? (

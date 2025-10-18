@@ -16,10 +16,6 @@ import { Head, router, useForm } from '@inertiajs/react';
 import { AlertCircle, CheckCircle, Loader2, MoreHorizontal } from 'lucide-react';
 import { useState } from 'react';
 
-type AvailablePhpVersions = {
-    [key: string]: string;
-};
-
 export default function Php({ server }: { server: Server }) {
     // Listen for real-time server updates via Reverb
     useEcho(`servers.${server.id}`, 'ServerUpdated', () => {
@@ -386,9 +382,9 @@ export default function Php({ server }: { server: Server }) {
                             <SelectValue placeholder="Select PHP version" />
                         </SelectTrigger>
                         <SelectContent>
-                            {Object.entries(server.availablePhpVersions).map(([value, label]) => (
-                                <SelectItem key={value} value={String(value)}>
-                                    {label}
+                            {server.availablePhpVersions.map((option) => (
+                                <SelectItem key={option.value} value={option.value}>
+                                    {option.label}
                                 </SelectItem>
                             ))}
                         </SelectContent>

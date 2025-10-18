@@ -43,6 +43,7 @@ class ServerResource extends JsonResource
                 'status' => $this->getFirewallStatus($firewall),
                 'is_enabled' => $firewall?->is_enabled ?? false,
                 'rules' => $this->transformFirewallRules($firewall),
+                'recentEvents' => [],
             ],
             'latestMetrics' => $this->getLatestMetrics(),
             'recentMetrics' => $this->transformRecentMetrics($request),
@@ -52,7 +53,7 @@ class ServerResource extends JsonResource
             'databases' => $this->transformDatabases(),
             'sites' => $this->transformSites(),
             'phps' => $this->transformPhps(),
-            'availablePhpVersions' => PhpConfigurationService::getAvailableVersions(),
+            'availablePhpVersions' => $this->transformAvailablePhpVersions(),
             'phpExtensions' => PhpConfigurationService::getAvailableExtensions(),
             'defaultSettings' => PhpConfigurationService::getDefaultSettings(),
         ];
@@ -191,6 +192,19 @@ class ServerResource extends JsonResource
             'created_at' => $php->created_at->toISOString(),
             'updated_at' => $php->updated_at->toISOString(),
         ])->toArray();
+    }
+
+    /**
+     * Transform available PHP versions into array of value/label objects.
+     */
+    protected function transformAvailablePhpVersions(): array
+    {
+        $versions = PhpConfigurationService::getAvailableVersions();
+
+        return collect($versions)->map(fn ($label, $value) => [
+            'value' => $value,
+            'label' => $label,
+        ])->values()->toArray();
     }
 
     /**

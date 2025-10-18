@@ -6,11 +6,11 @@ use App\Http\Controllers\Concerns\PreparesSiteData;
 use App\Http\Resources\ServerResource;
 use App\Models\Server;
 use App\Models\ServerPhp;
-use App\Packages\Enums\PhpVersion;
 use App\Packages\Services\PHP\PhpInstallerJob;
 use App\Packages\Services\PHP\Services\PhpConfigurationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -98,11 +98,8 @@ class ServerPhpController extends Controller
         $availableVersions = PhpConfigurationService::getAvailableVersions();
 
         $validated = $request->validate([
-            'version' => 'required|string|in:'.implode(',', array_keys($availableVersions)),
+            'version' => ['required', 'string', Rule::in(array_keys($availableVersions))],
         ]);
-
-        // Map version string to PhpVersion enum
-        $phpVersion = PhpVersion::from($validated['version']);
 
         // Check if this PHP version is already installed
         $existingPhp = $server->phps()
