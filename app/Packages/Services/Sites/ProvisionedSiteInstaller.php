@@ -3,10 +3,7 @@
 namespace App\Packages\Services\Sites;
 
 use App\Models\ServerSite;
-use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageInstaller;
-use App\Packages\Enums\PackageName;
-use App\Packages\Enums\PackageType;
 
 /**
  * Site Installation Class
@@ -64,23 +61,17 @@ class ProvisionedSiteInstaller extends PackageInstaller implements \App\Packages
         $appUser = $brokeforgeCredential?->getUsername() ?: 'brokeforge';
 
         return [
-            $this->track(ProvisionedSiteInstallerMilestones::PREPARE_DIRECTORIES),
             "mkdir -p {$documentRoot}",
             "mkdir -p /var/log/nginx/{$domain}",
 
-            $this->track(ProvisionedSiteInstallerMilestones::CREATE_CONFIG),
             "cat > /etc/nginx/sites-available/{$domain} << 'NGINX_CONFIG_EOF'\n{$nginxConfig}\nNGINX_CONFIG_EOF",
 
-            $this->track(ProvisionedSiteInstallerMilestones::ENABLE_SITE),
             "ln -sf /etc/nginx/sites-available/{$domain} /etc/nginx/sites-enabled/{$domain}",
 
-            $this->track(ProvisionedSiteInstallerMilestones::TEST_CONFIG),
             'nginx -t',
 
-            $this->track(ProvisionedSiteInstallerMilestones::RELOAD_NGINX),
             'nginx -s reload',
 
-            $this->track(ProvisionedSiteInstallerMilestones::SET_PERMISSIONS),
             "chown -R {$appUser}:{$appUser} {$documentRoot}",
             "chmod -R 775 {$documentRoot}",
             "echo '<?php phpinfo();' > {$documentRoot}/index.php",
@@ -89,7 +80,6 @@ class ProvisionedSiteInstaller extends PackageInstaller implements \App\Packages
             // Add git clone commands if repository is configured
             ...($this->getGitCloneCommands($config, $documentRoot, $appUser, $site)),
 
-            $this->track(ProvisionedSiteInstallerMilestones::COMPLETE),
             function () use ($site, $config) {
                 $site->refresh();
 
@@ -164,7 +154,6 @@ class ProvisionedSiteInstaller extends PackageInstaller implements \App\Packages
             // Generate SSH config for dedicated deploy keys (if applicable)
             ...$sshConfigCommands,
 
-            $this->track(ProvisionedSiteInstallerMilestones::CLONE_REPOSITORY),
             sprintf('rm -rf %1$s && mkdir -p %1$s', escapeshellarg($siteDirectory)),
             sprintf(
                 '%s git clone -b %s %s %s',
@@ -247,16 +236,6 @@ EOF;
 
         // Return unchanged if not a recognized GitHub SSH URL
         return $originalUrl;
-    }
-
-    public function packageName(): PackageName
-    {
-        return PackageName::Site;
-    }
-
-    public function packageType(): PackageType
-    {
-        return PackageType::Site;
     }
 
     public function milestones(): Milestones

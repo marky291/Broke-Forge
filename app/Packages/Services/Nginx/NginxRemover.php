@@ -2,10 +2,7 @@
 
 namespace App\Packages\Services\Nginx;
 
-use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageRemover;
-use App\Packages\Enums\PackageName;
-use App\Packages\Enums\PackageType;
 
 /**
  * Web Server Removal Class
@@ -14,21 +11,6 @@ use App\Packages\Enums\PackageType;
  */
 class NginxRemover extends PackageRemover
 {
-    public function packageName(): PackageName
-    {
-        return PackageName::Nginx;
-    }
-
-    public function packageType(): PackageType
-    {
-        return PackageType::ReverseProxy;
-    }
-
-    public function milestones(): Milestones
-    {
-        return new NginxRemoverMilestones;
-    }
-
     /**
      * Execute the web server removal
      */
@@ -57,26 +39,21 @@ class NginxRemover extends PackageRemover
     protected function commands(string $phpVersion, string $phpPackages): array
     {
         return [
-            $this->track(NginxRemoverMilestones::STOP_SERVICES),
             'systemctl stop nginx >/dev/null 2>&1 || true',
             "systemctl stop php{$phpVersion}-fpm >/dev/null 2>&1 || true",
             'systemctl disable nginx >/dev/null 2>&1 || true',
             "systemctl disable php{$phpVersion}-fpm >/dev/null 2>&1 || true",
 
-            $this->track(NginxRemoverMilestones::REMOVE_SITES),
             'rm -rf /etc/nginx/sites-enabled/*',
             'rm -rf /etc/nginx/sites-available/*',
 
-            $this->track(NginxRemoverMilestones::REMOVE_PACKAGES),
             "DEBIAN_FRONTEND=noninteractive apt-get remove -y --purge nginx {$phpPackages}",
             'DEBIAN_FRONTEND=noninteractive apt-get autoremove -y',
 
-            $this->track(NginxRemoverMilestones::CLEANUP_CONFIG),
             'rm -rf /etc/nginx',
             'rm -rf /var/log/nginx',
             'rm -rf /var/www/html',
 
-            $this->track(NginxRemoverMilestones::COMPLETE),
         ];
     }
 }

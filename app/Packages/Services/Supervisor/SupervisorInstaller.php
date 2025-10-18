@@ -3,11 +3,8 @@
 namespace App\Packages\Services\Supervisor;
 
 use App\Enums\SupervisorStatus;
-use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageInstaller;
 use App\Packages\Base\ServerPackage;
-use App\Packages\Enums\PackageName;
-use App\Packages\Enums\PackageType;
 
 /**
  * Supervisor Installation Class
@@ -17,21 +14,6 @@ use App\Packages\Enums\PackageType;
  */
 class SupervisorInstaller extends PackageInstaller implements ServerPackage
 {
-    public function packageName(): PackageName
-    {
-        return PackageName::Supervisor;
-    }
-
-    public function packageType(): PackageType
-    {
-        return PackageType::Supervisor;
-    }
-
-    public function milestones(): Milestones
-    {
-        return new SupervisorInstallerMilestones;
-    }
-
     /**
      * Execute the supervisor installation
      */
@@ -43,17 +25,12 @@ class SupervisorInstaller extends PackageInstaller implements ServerPackage
     protected function commands(): array
     {
         return [
-            $this->track(SupervisorInstallerMilestones::PREPARE_SYSTEM),
 
             // Ensure system is up to date
             'DEBIAN_FRONTEND=noninteractive apt-get update -y',
 
-            $this->track(SupervisorInstallerMilestones::INSTALL_SUPERVISOR),
-
             // Install supervisor
             'DEBIAN_FRONTEND=noninteractive apt-get install -y supervisor',
-
-            $this->track(SupervisorInstallerMilestones::CREATE_DIRECTORIES),
 
             // Create directory structure for supervisor configs
             'mkdir -p /etc/supervisor/conf.d',
@@ -63,13 +40,9 @@ class SupervisorInstaller extends PackageInstaller implements ServerPackage
             'chmod 755 /etc/supervisor/conf.d',
             'chmod 755 /var/log/supervisor',
 
-            $this->track(SupervisorInstallerMilestones::CONFIGURE_SERVICE),
-
             // Ensure supervisor service is enabled and started
             'systemctl enable supervisor',
             'systemctl start supervisor',
-
-            $this->track(SupervisorInstallerMilestones::VERIFY_INSTALL),
 
             // Verify supervisor is running
             'systemctl is-active --quiet supervisor || (echo "Supervisor service failed to start" && exit 1)',
@@ -83,7 +56,6 @@ class SupervisorInstaller extends PackageInstaller implements ServerPackage
                 'supervisor_installed_at' => now(),
             ]),
 
-            $this->track(SupervisorInstallerMilestones::COMPLETE),
         ];
     }
 }

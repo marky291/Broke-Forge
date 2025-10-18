@@ -4,11 +4,8 @@ namespace App\Packages\Services\PHP;
 
 use App\Enums\PhpStatus;
 use App\Models\ServerPhp;
-use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageRemover;
 use App\Packages\Base\ServerPackage;
-use App\Packages\Enums\PackageName;
-use App\Packages\Enums\PackageType;
 use App\Packages\Enums\PhpVersion;
 
 /**
@@ -28,26 +25,6 @@ class PhpRemover extends PackageRemover implements ServerPackage
      */
     private int $phpId;
 
-    public function packageName(): PackageName
-    {
-        return match ($this->removingVersion) {
-            PhpVersion::PHP81 => PackageName::Php81,
-            PhpVersion::PHP82 => PackageName::Php82,
-            PhpVersion::PHP83 => PackageName::Php83,
-            PhpVersion::PHP84 => PackageName::Php84,
-        };
-    }
-
-    public function packageType(): PackageType
-    {
-        return PackageType::PHP;
-    }
-
-    public function milestones(): Milestones
-    {
-        return new PhpRemoverMilestones;
-    }
-
     /**
      * Mark PHP removal as failed in database
      */
@@ -62,7 +39,7 @@ class PhpRemover extends PackageRemover implements ServerPackage
      */
     public function execute(PhpVersion $phpVersion, int $phpId): void
     {
-        // Store the version and ID for packageName() method and failure handling
+        // Store the version and ID for failure handling
         $this->removingVersion = $phpVersion;
         $this->phpId = $phpId;
 
@@ -90,19 +67,14 @@ class PhpRemover extends PackageRemover implements ServerPackage
     protected function commands(PhpVersion $phpVersion, string $phpPackages): array
     {
         return [
-            $this->track(PhpRemoverMilestones::STOP_SERVICES),
 
             // Stop and disable PHP-FPM service
             "systemctl stop php{$phpVersion->value}-fpm 2>/dev/null || true",
             "systemctl disable php{$phpVersion->value}-fpm 2>/dev/null || true",
 
-            $this->track(PhpRemoverMilestones::REMOVE_PACKAGES),
-
             // Remove PHP packages
             "DEBIAN_FRONTEND=noninteractive apt-get remove -y --purge {$phpPackages} 2>/dev/null || true",
             'DEBIAN_FRONTEND=noninteractive apt-get autoremove -y',
-
-            $this->track(PhpRemoverMilestones::CLEANUP_CONFIG),
 
             // Clean up configuration files
             "rm -rf /etc/php/{$phpVersion->value} 2>/dev/null || true",
@@ -111,7 +83,6 @@ class PhpRemover extends PackageRemover implements ServerPackage
             // Delete PHP record from database
             fn () => ServerPhp::where('id', $this->phpId)->delete(),
 
-            $this->track(PhpRemoverMilestones::COMPLETE),
         ];
     }
 }

@@ -2,11 +2,8 @@
 
 namespace App\Packages\Services\Monitoring;
 
-use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageInstaller;
 use App\Packages\Base\ServerPackage;
-use App\Packages\Enums\PackageName;
-use App\Packages\Enums\PackageType;
 
 /**
  * Server Monitoring Timer Updater
@@ -15,21 +12,6 @@ use App\Packages\Enums\PackageType;
  */
 class ServerMonitoringTimerUpdater extends PackageInstaller implements ServerPackage
 {
-    public function packageName(): PackageName
-    {
-        return PackageName::Monitoring;
-    }
-
-    public function packageType(): PackageType
-    {
-        return PackageType::Monitoring;
-    }
-
-    public function milestones(): Milestones
-    {
-        return new ServerMonitoringTimerUpdaterMilestones;
-    }
-
     /**
      * Execute the timer update
      *
@@ -50,17 +32,12 @@ class ServerMonitoringTimerUpdater extends PackageInstaller implements ServerPac
         ])->render();
 
         return [
-            $this->track(ServerMonitoringTimerUpdaterMilestones::UPDATE_TIMER),
 
             // Update the systemd timer configuration
             "cat > /etc/systemd/system/brokeforge-monitoring.timer << 'EOF'\n{$timerContent}\nEOF",
 
-            $this->track(ServerMonitoringTimerUpdaterMilestones::RELOAD_SYSTEMD),
-
             // Reload systemd to pick up the changes
             'systemctl daemon-reload',
-
-            $this->track(ServerMonitoringTimerUpdaterMilestones::RESTART_TIMER),
 
             // Restart the timer to apply the new interval
             'systemctl restart brokeforge-monitoring.timer',
@@ -73,7 +50,6 @@ class ServerMonitoringTimerUpdater extends PackageInstaller implements ServerPac
                 'monitoring_collection_interval' => $intervalSeconds,
             ]),
 
-            $this->track(ServerMonitoringTimerUpdaterMilestones::COMPLETE),
         ];
     }
 }

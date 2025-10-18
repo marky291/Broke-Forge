@@ -208,21 +208,8 @@ class ServerDatabaseController extends Controller
             ]);
         }
 
-        // Get progress from the latest database-related server event
-        $latestEvent = $server->events()
-            ->where('service_type', 'database')
-            ->orderBy('id', 'desc')
-            ->first();
-
-        $progressStep = $latestEvent?->current_step ?? 0;
-        $progressTotal = $latestEvent?->total_steps ?? 0;
-        $progressLabel = $latestEvent?->milestone ?? null;
-
         return response()->json([
             'status' => $database->status,
-            'progress_step' => $progressStep,
-            'progress_total' => $progressTotal,
-            'progress_label' => $progressLabel,
             'error_message' => $database->error_message,
             'database' => [
                 'id' => $database->id,
@@ -231,9 +218,6 @@ class ServerDatabaseController extends Controller
                 'version' => $database->version,
                 'port' => $database->port,
                 'status' => $database->status,
-                'progress_step' => $progressStep,
-                'progress_total' => $progressTotal,
-                'progress_label' => $progressLabel,
                 'error_message' => $database->error_message,
                 'created_at' => $database->created_at->toISOString(),
                 'updated_at' => $database->updated_at->toISOString(),

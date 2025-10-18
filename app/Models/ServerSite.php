@@ -114,14 +114,6 @@ class ServerSite extends Model
     }
 
     /**
-     * Get all events for this site.
-     */
-    public function events(): HasMany
-    {
-        return $this->hasMany(ServerEvent::class, 'server_site_id');
-    }
-
-    /**
      * Check if Git repository can be installed.
      */
     public function canInstallGitRepository(): bool

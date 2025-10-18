@@ -25,7 +25,7 @@ class ServerFirewallController extends Controller
         $this->authorize('view', $server);
 
         // Load necessary relationships for the resource
-        $server->load(['firewall.rules', 'events', 'metrics']);
+        $server->load(['firewall.rules', 'metrics']);
 
         return Inertia::render('servers/firewall', [
             'server' => new ServerResource($server),

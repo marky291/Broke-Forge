@@ -5,64 +5,13 @@ namespace Tests\Unit\Packages\Services\Sites;
 use App\Models\Server;
 use App\Models\ServerSite;
 use App\Models\User;
-use App\Packages\Enums\PackageName;
-use App\Packages\Enums\PackageType;
 use App\Packages\Services\Sites\SiteDeployKeyGenerator;
-use App\Packages\Services\Sites\SiteDeployKeyGeneratorMilestones;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class SiteDeployKeyGeneratorTest extends TestCase
 {
     use RefreshDatabase;
-
-    /**
-     * Test packageName returns Git.
-     */
-    public function test_package_name_returns_git(): void
-    {
-        // Arrange
-        $server = Server::factory()->create();
-        $generator = new SiteDeployKeyGenerator($server);
-
-        // Act
-        $packageName = $generator->packageName();
-
-        // Assert
-        $this->assertEquals(PackageName::Git, $packageName);
-    }
-
-    /**
-     * Test packageType returns Git.
-     */
-    public function test_package_type_returns_git(): void
-    {
-        // Arrange
-        $server = Server::factory()->create();
-        $generator = new SiteDeployKeyGenerator($server);
-
-        // Act
-        $packageType = $generator->packageType();
-
-        // Assert
-        $this->assertEquals(PackageType::Git, $packageType);
-    }
-
-    /**
-     * Test milestones returns SiteDeployKeyGeneratorMilestones instance.
-     */
-    public function test_milestones_returns_site_deploy_key_generator_milestones_instance(): void
-    {
-        // Arrange
-        $server = Server::factory()->create();
-        $generator = new SiteDeployKeyGenerator($server);
-
-        // Act
-        $milestones = $generator->milestones();
-
-        // Assert
-        $this->assertInstanceOf(SiteDeployKeyGeneratorMilestones::class, $milestones);
-    }
 
     /**
      * Test commands generates correct SSH key generation command.
@@ -92,7 +41,7 @@ class SiteDeployKeyGeneratorTest extends TestCase
 
         // Assert
         $this->assertIsArray($commands);
-        $this->assertGreaterThan(5, count($commands));
+        $this->assertCount(4, $commands);
 
         // Find the ssh-keygen command
         $foundKeygenCommand = false;

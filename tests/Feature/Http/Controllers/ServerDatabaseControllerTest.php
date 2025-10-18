@@ -6,7 +6,6 @@ use App\Enums\DatabaseStatus;
 use App\Enums\DatabaseType;
 use App\Models\Server;
 use App\Models\ServerDatabase;
-use App\Models\ServerEvent;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -935,42 +934,6 @@ class ServerDatabaseControllerTest extends TestCase
         $response->assertJson([
             'status' => 'uninstalled',
             'database' => null,
-        ]);
-    }
-
-    /**
-     * Test status endpoint includes progress information from server events.
-     */
-    public function test_status_endpoint_includes_progress_information_from_server_events(): void
-    {
-        // Arrange
-        $user = User::factory()->create();
-        $server = Server::factory()->create(['user_id' => $user->id]);
-
-        $database = ServerDatabase::factory()->create([
-            'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
-            'status' => DatabaseStatus::Installing,
-        ]);
-
-        ServerEvent::factory()->create([
-            'server_id' => $server->id,
-            'service_type' => 'database',
-            'current_step' => 3,
-            'total_steps' => 10,
-            'milestone' => 'Installing packages',
-        ]);
-
-        // Act
-        $response = $this->actingAs($user)
-            ->get("/servers/{$server->id}/database/status");
-
-        // Assert
-        $response->assertStatus(200);
-        $response->assertJson([
-            'progress_step' => 3,
-            'progress_total' => 10,
-            'progress_label' => 'Installing packages',
         ]);
     }
 

@@ -3,11 +3,8 @@
 namespace App\Packages\Services\Monitoring;
 
 use App\Enums\MonitoringStatus;
-use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageInstaller;
 use App\Packages\Base\ServerPackage;
-use App\Packages\Enums\PackageName;
-use App\Packages\Enums\PackageType;
 
 /**
  * Server Monitoring Installation Class
@@ -16,21 +13,6 @@ use App\Packages\Enums\PackageType;
  */
 class ServerMonitoringInstaller extends PackageInstaller implements ServerPackage
 {
-    public function packageName(): PackageName
-    {
-        return PackageName::Monitoring;
-    }
-
-    public function packageType(): PackageType
-    {
-        return PackageType::Monitoring;
-    }
-
-    public function milestones(): Milestones
-    {
-        return new ServerMonitoringInstallerMilestones;
-    }
-
     /**
      * Execute the monitoring installation
      */
@@ -55,26 +37,19 @@ class ServerMonitoringInstaller extends PackageInstaller implements ServerPackag
         ])->render();
 
         return [
-            $this->track(ServerMonitoringInstallerMilestones::PREPARE_SYSTEM),
 
             // Create monitoring directory
             'mkdir -p /opt/brokeforge/monitoring',
 
-            $this->track(ServerMonitoringInstallerMilestones::INSTALL_DEPENDENCIES),
-
             // Install required packages for monitoring (sysstat for iostat, bc for calculations)
             'DEBIAN_FRONTEND=noninteractive apt-get update -y',
             'DEBIAN_FRONTEND=noninteractive apt-get install -y sysstat bc curl',
-
-            $this->track(ServerMonitoringInstallerMilestones::CREATE_MONITORING_SCRIPT),
 
             // Create the metrics collection script with shebang
             "cat > /opt/brokeforge/monitoring/collect-metrics.sh << 'EOF'\n#!/bin/bash\n{$monitoringScript}\nEOF",
 
             // Make the script executable
             'chmod +x /opt/brokeforge/monitoring/collect-metrics.sh',
-
-            $this->track(ServerMonitoringInstallerMilestones::CONFIGURE_COLLECTION),
 
             // Create systemd service for monitoring
             function () {
@@ -96,12 +71,8 @@ class ServerMonitoringInstaller extends PackageInstaller implements ServerPackag
             // Reload systemd
             'systemctl daemon-reload',
 
-            $this->track(ServerMonitoringInstallerMilestones::START_MONITORING),
-
             // Enable and start the monitoring timer
             'systemctl enable --now brokeforge-monitoring.timer',
-
-            $this->track(ServerMonitoringInstallerMilestones::VERIFY_INSTALL),
 
             // Verify timer is active
             'systemctl status brokeforge-monitoring.timer',
@@ -116,7 +87,6 @@ class ServerMonitoringInstaller extends PackageInstaller implements ServerPackag
                 'monitoring_installed_at' => now(),
             ]),
 
-            $this->track(ServerMonitoringInstallerMilestones::COMPLETE),
         ];
     }
 }

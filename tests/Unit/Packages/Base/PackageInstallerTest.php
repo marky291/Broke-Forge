@@ -3,11 +3,8 @@
 namespace Tests\Unit\Packages\Base;
 
 use App\Models\Server;
-use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageInstaller;
 use App\Packages\Base\ServerPackage;
-use App\Packages\Enums\PackageName;
-use App\Packages\Enums\PackageType;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Mockery;
 use Spatie\Ssh\Ssh;
@@ -300,16 +297,6 @@ class PackageInstallerTest extends TestCase
  */
 class PackageInstallerTestStubInstaller extends PackageInstaller implements ServerPackage
 {
-    public function packageName(): PackageName
-    {
-        return PackageName::MySql80;
-    }
-
-    public function packageType(): PackageType
-    {
-        return PackageType::Database;
-    }
-
     public function milestones(): Milestones
     {
         return new PackageInstallerTestMilestones;
@@ -341,16 +328,6 @@ class PackageInstallerTestStubWithFailTracking extends PackageInstaller implemen
 
     private string $failureMessage = '';
 
-    public function packageName(): PackageName
-    {
-        return PackageName::MySql80;
-    }
-
-    public function packageType(): PackageType
-    {
-        return PackageType::Database;
-    }
-
     public function milestones(): Milestones
     {
         return new PackageInstallerTestMilestones;
@@ -375,16 +352,5 @@ class PackageInstallerTestStubWithFailTracking extends PackageInstaller implemen
     public function getFailureMessage(): string
     {
         return $this->failureMessage;
-    }
-}
-
-/**
- * Test implementation of Milestones
- */
-class PackageInstallerTestMilestones extends Milestones
-{
-    public function countLabels(): int
-    {
-        return 2;
     }
 }

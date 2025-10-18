@@ -222,14 +222,6 @@ class Server extends Model
         }
     }
 
-    /**
-     * Get all events for the server.
-     */
-    public function events(): HasMany
-    {
-        return $this->hasMany(ServerEvent::class);
-    }
-
     public function firewall(): HasOne
     {
         return $this->hasOne(ServerFirewall::class);

@@ -3,11 +3,8 @@
 namespace App\Packages\Services\Scheduler;
 
 use App\Enums\SchedulerStatus;
-use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageInstaller;
 use App\Packages\Base\ServerPackage;
-use App\Packages\Enums\PackageName;
-use App\Packages\Enums\PackageType;
 
 /**
  * Server Scheduler Framework Installation Class
@@ -17,21 +14,6 @@ use App\Packages\Enums\PackageType;
  */
 class ServerSchedulerInstaller extends PackageInstaller implements ServerPackage
 {
-    public function packageName(): PackageName
-    {
-        return PackageName::Scheduler;
-    }
-
-    public function packageType(): PackageType
-    {
-        return PackageType::Scheduler;
-    }
-
-    public function milestones(): Milestones
-    {
-        return new ServerSchedulerInstallerMilestones;
-    }
-
     /**
      * Execute the scheduler framework installation
      */
@@ -46,12 +28,9 @@ class ServerSchedulerInstaller extends PackageInstaller implements ServerPackage
         $schedulerToken = $this->server->generateSchedulerToken();
 
         return [
-            $this->track(ServerSchedulerInstallerMilestones::PREPARE_SYSTEM),
 
             // Ensure system is up to date
             'DEBIAN_FRONTEND=noninteractive apt-get update -y',
-
-            $this->track(ServerSchedulerInstallerMilestones::INSTALL_DEPENDENCIES),
 
             // Install required packages for scheduler (jq for JSON processing, bc for calculations)
             'DEBIAN_FRONTEND=noninteractive apt-get install -y jq bc curl cron',
@@ -59,8 +38,6 @@ class ServerSchedulerInstaller extends PackageInstaller implements ServerPackage
             // Ensure cron service is running
             'systemctl enable cron',
             'systemctl start cron',
-
-            $this->track(ServerSchedulerInstallerMilestones::CREATE_DIRECTORIES),
 
             // Create scheduler directory structure
             'mkdir -p /opt/brokeforge/scheduler',
@@ -72,16 +49,12 @@ class ServerSchedulerInstaller extends PackageInstaller implements ServerPackage
             'chmod 755 /opt/brokeforge/scheduler/tasks',
             'chmod 755 /var/log/brokeforge',
 
-            $this->track(ServerSchedulerInstallerMilestones::CONFIGURE_SCHEDULER),
-
             // Create log file
             'touch /var/log/brokeforge/scheduler.log',
             'chmod 644 /var/log/brokeforge/scheduler.log',
 
             // Create cron.d directory if it doesn't exist
             'mkdir -p /etc/cron.d',
-
-            $this->track(ServerSchedulerInstallerMilestones::VERIFY_INSTALL),
 
             // Verify cron is running
             'systemctl is-active --quiet cron || (echo "Cron service failed to start" && exit 1)',
@@ -95,7 +68,6 @@ class ServerSchedulerInstaller extends PackageInstaller implements ServerPackage
                 'scheduler_installed_at' => now(),
             ]),
 
-            $this->track(ServerSchedulerInstallerMilestones::COMPLETE),
         ];
     }
 }

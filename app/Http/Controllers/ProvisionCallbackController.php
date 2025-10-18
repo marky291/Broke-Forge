@@ -52,7 +52,6 @@ class ProvisionCallbackController extends Controller
             // Let's treat this as a brand-new installation for server
             // great when server testing, production should never be able to run
             // this after first installation anyway...
-            $server->events()->delete(); // delete all events if new provision.
             $server->databases()->delete(); // delete all databases for this server
             $server->phps()->delete(); // delete all phps for this server
             $server->reverseProxy()->delete(); // delete all proxy (nginx) for this server

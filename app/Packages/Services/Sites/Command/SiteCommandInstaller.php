@@ -5,10 +5,7 @@ namespace App\Packages\Services\Sites\Command;
 use App\Models\Server;
 use App\Models\ServerSite;
 use App\Models\ServerSiteCommandHistory;
-use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageInstaller;
-use App\Packages\Enums\PackageName;
-use App\Packages\Enums\PackageType;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
 use Symfony\Component\Process\Exception\ProcessTimedOutException;
@@ -121,7 +118,6 @@ class SiteCommandInstaller extends PackageInstaller implements \App\Packages\Bas
                 : "/home/{$appUser}/site-{$this->site->id}");
 
         return [
-            $this->track(SiteCommandInstallerMilestones::PREPARE_EXECUTION),
 
             // Capture command output for return
             function () use ($command, $workingDirectory, $timeout) {
@@ -148,23 +144,7 @@ class SiteCommandInstaller extends PackageInstaller implements \App\Packages\Bas
                 }
             },
 
-            $this->track(SiteCommandInstallerMilestones::COMMAND_COMPLETE),
         ];
-    }
-
-    public function packageName(): PackageName
-    {
-        return PackageName::Command;
-    }
-
-    public function packageType(): PackageType
-    {
-        return PackageType::Command;
-    }
-
-    public function milestones(): Milestones
-    {
-        return new SiteCommandInstallerMilestones;
     }
 
     /**

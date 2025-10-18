@@ -25,7 +25,7 @@ class ServerProvisioningController extends Controller
             return redirect()->route('servers.show', $server);
         }
 
-        $server->load(['databases', 'defaultPhp', 'events']);
+        $server->load(['databases', 'defaultPhp']);
 
         return Inertia::render('servers/provisioning', [
             'server' => new ServerProvisioningResource($server),
@@ -77,9 +77,6 @@ class ServerProvisioningController extends Controller
                 ->route('servers.provisioning', $server)
                 ->with('error', 'Provisioning is not in a failed state.');
         }
-
-        // Clear any recorded events so progress restarts cleanly
-        $server->events()->delete();
 
         // Generate new root password for the next attempt
         $server->ssh_root_password = Server::generatePassword();

@@ -4,7 +4,6 @@ namespace Tests\Feature\Http\Controllers;
 
 use App\Models\Server;
 use App\Models\ServerDatabase;
-use App\Models\ServerEvent;
 use App\Models\ServerFirewall;
 use App\Models\ServerPhp;
 use App\Models\ServerReverseProxy;
@@ -249,7 +248,6 @@ class ProvisionCallbackControllerTest extends TestCase
         $server = Server::factory()->create(['user_id' => $user->id]);
 
         // Create old data that should be cleared
-        ServerEvent::factory()->create(['server_id' => $server->id]);
         ServerDatabase::factory()->create(['server_id' => $server->id]);
         ServerPhp::factory()->create(['server_id' => $server->id]);
         ServerReverseProxy::factory()->create(['server_id' => $server->id]);
@@ -271,7 +269,6 @@ class ProvisionCallbackControllerTest extends TestCase
         $server->refresh();
 
         // Verify old data was cleared
-        $this->assertEquals(0, $server->events()->count());
         $this->assertEquals(0, $server->databases()->count());
         $this->assertEquals(0, $server->phps()->count());
         $this->assertNull($server->reverseProxy);

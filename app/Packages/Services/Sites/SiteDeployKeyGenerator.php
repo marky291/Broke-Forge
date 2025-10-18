@@ -4,11 +4,8 @@ namespace App\Packages\Services\Sites;
 
 use App\Models\Server;
 use App\Models\ServerSite;
-use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageInstaller;
 use App\Packages\Base\SitePackage;
-use App\Packages\Enums\PackageName;
-use App\Packages\Enums\PackageType;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
@@ -60,7 +57,6 @@ class SiteDeployKeyGenerator extends PackageInstaller implements SitePackage
     protected function commands(ServerSite $site, string $keyPath, string $keyTitle): array
     {
         return [
-            $this->track(SiteDeployKeyGeneratorMilestones::GENERATE_KEY),
 
             // Generate ed25519 key with no passphrase
             sprintf(
@@ -69,13 +65,9 @@ class SiteDeployKeyGenerator extends PackageInstaller implements SitePackage
                 escapeshellarg($keyTitle)
             ),
 
-            $this->track(SiteDeployKeyGeneratorMilestones::SET_PERMISSIONS),
-
             // Set proper permissions on keys
             sprintf('chmod 600 %s', escapeshellarg($keyPath)),
             sprintf('chmod 644 %s.pub', escapeshellarg($keyPath)),
-
-            $this->track(SiteDeployKeyGeneratorMilestones::READ_PUBLIC_KEY),
 
             // Read public key and store for return
             function () use ($keyPath) {
@@ -97,22 +89,6 @@ class SiteDeployKeyGenerator extends PackageInstaller implements SitePackage
                 }
             },
 
-            $this->track(SiteDeployKeyGeneratorMilestones::COMPLETE),
         ];
-    }
-
-    public function packageName(): PackageName
-    {
-        return PackageName::Git;
-    }
-
-    public function packageType(): PackageType
-    {
-        return PackageType::Git;
-    }
-
-    public function milestones(): Milestones
-    {
-        return new SiteDeployKeyGeneratorMilestones;
     }
 }

@@ -4,11 +4,8 @@ namespace App\Packages\Services\Supervisor\Task;
 
 use App\Models\Server;
 use App\Models\ServerSupervisorTask;
-use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageInstaller;
 use App\Packages\Base\ServerPackage;
-use App\Packages\Enums\PackageName;
-use App\Packages\Enums\PackageType;
 
 /**
  * Supervisor Task Installer
@@ -23,21 +20,6 @@ class SupervisorTaskInstaller extends PackageInstaller implements ServerPackage
     {
         parent::__construct($server);
         $this->task = $task;
-    }
-
-    public function packageName(): PackageName
-    {
-        return PackageName::SupervisorTask;
-    }
-
-    public function packageType(): PackageType
-    {
-        return PackageType::Supervisor;
-    }
-
-    public function milestones(): Milestones
-    {
-        return new SupervisorTaskInstallerMilestones;
     }
 
     /**
@@ -59,17 +41,12 @@ class SupervisorTaskInstaller extends PackageInstaller implements ServerPackage
         ])->render();
 
         return [
-            $this->track(SupervisorTaskInstallerMilestones::GENERATE_CONFIG),
-
-            $this->track(SupervisorTaskInstallerMilestones::DEPLOY_CONFIG),
 
             // Deploy configuration file
             "cat > /etc/supervisor/conf.d/{$sanitizedName}.conf << 'EOF'\n{$configContent}\nEOF",
 
             // Set proper permissions
             "chmod 644 /etc/supervisor/conf.d/{$sanitizedName}.conf",
-
-            $this->track(SupervisorTaskInstallerMilestones::RELOAD_SUPERVISOR),
 
             // Reload supervisor to pick up new config
             'supervisorctl reread',
@@ -78,7 +55,6 @@ class SupervisorTaskInstaller extends PackageInstaller implements ServerPackage
             // Start the task using sanitized name
             "supervisorctl start {$sanitizedName} || true",
 
-            $this->track(SupervisorTaskInstallerMilestones::COMPLETE),
         ];
     }
 }

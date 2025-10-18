@@ -4,11 +4,8 @@ namespace App\Packages\Services\PHP;
 
 use App\Enums\PhpStatus;
 use App\Models\ServerPhp;
-use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageInstaller;
 use App\Packages\Base\ServerPackage;
-use App\Packages\Enums\PackageName;
-use App\Packages\Enums\PackageType;
 use App\Packages\Enums\PhpVersion;
 
 /**
@@ -22,26 +19,6 @@ class PhpInstaller extends PackageInstaller implements ServerPackage
      * The PHP version being installed
      */
     private PhpVersion $installingVersion;
-
-    public function packageName(): PackageName
-    {
-        return match ($this->installingVersion) {
-            PhpVersion::PHP81 => PackageName::Php81,
-            PhpVersion::PHP82 => PackageName::Php82,
-            PhpVersion::PHP83 => PackageName::Php83,
-            PhpVersion::PHP84 => PackageName::Php84,
-        };
-    }
-
-    public function packageType(): PackageType
-    {
-        return PackageType::PHP;
-    }
-
-    public function milestones(): Milestones
-    {
-        return new PhpInstallerMilestones;
-    }
 
     /**
      * Mark PHP installation as failed in database
@@ -61,7 +38,7 @@ class PhpInstaller extends PackageInstaller implements ServerPackage
      */
     public function execute(PhpVersion $phpVersion): void
     {
-        // Store the version for packageName() method
+        // Store the version for this installation
         $this->installingVersion = $phpVersion;
 
         // Compose common PHP packages for the chosen version
@@ -88,23 +65,16 @@ class PhpInstaller extends PackageInstaller implements ServerPackage
     protected function commands(PhpVersion $phpVersion, string $phpPackages): array
     {
         return [
-            $this->track(PhpInstallerMilestones::PREPARE_SYSTEM),
 
             // Update package lists and install prerequisites
             'DEBIAN_FRONTEND=noninteractive apt-get update -y',
             'DEBIAN_FRONTEND=noninteractive apt-get install -y ca-certificates curl gnupg lsb-release software-properties-common',
 
-            $this->track(PhpInstallerMilestones::SETUP_REPOSITORY),
-
             // Add PHP repository (Ondrej PPA for Ubuntu, standard repos for Debian)
             'if command -v lsb_release >/dev/null 2>&1 && [ "$(lsb_release -is)" = "Ubuntu" ]; then add-apt-repository -y ppa:ondrej/php || true; DEBIAN_FRONTEND=noninteractive apt-get update -y; fi || true',
 
-            $this->track(PhpInstallerMilestones::INSTALL_PHP),
-
             // Install PHP packages (attempt versioned packages first, then fall back to default php if needed)
             "DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends {$phpPackages} || DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends php-fpm php-cli php-common php-curl php-mbstring php-xml php-zip php-intl php-mysql php-gd php-bcmath php-soap php-opcache php-readline",
-
-            $this->track(PhpInstallerMilestones::CONFIGURE_PHP),
 
             // Configure PHP-FPM settings
             "sed -i 's/^;*upload_max_filesize.*/upload_max_filesize = 100M/' /etc/php/{$phpVersion->value}/fpm/php.ini 2>/dev/null || true",
@@ -115,8 +85,6 @@ class PhpInstaller extends PackageInstaller implements ServerPackage
             // Configure CLI settings
             "sed -i 's/^;*memory_limit.*/memory_limit = -1/' /etc/php/{$phpVersion->value}/cli/php.ini 2>/dev/null || true",
 
-            $this->track(PhpInstallerMilestones::ENABLE_SERVICE),
-
             // Enable and start PHP-FPM service
             "systemctl enable php{$phpVersion->value}-fpm || systemctl enable php-fpm",
             "systemctl restart php{$phpVersion->value}-fpm || systemctl restart php-fpm",
@@ -124,13 +92,10 @@ class PhpInstaller extends PackageInstaller implements ServerPackage
             // Note: Status updates are managed by PhpInstallerJob (Reverb Package Lifecycle)
             // Job updates: pending → installing → active/failed
 
-            $this->track(PhpInstallerMilestones::VERIFY_INSTALLATION),
-
             // Verify PHP installation
             "php{$phpVersion->value} -v || php -v",
             "systemctl status php{$phpVersion->value}-fpm --no-pager || systemctl status php-fpm --no-pager",
 
-            $this->track(PhpInstallerMilestones::COMPLETE),
         ];
     }
 }

@@ -3,10 +3,7 @@
 namespace App\Packages\Services\Sites\Git;
 
 use App\Models\ServerSite;
-use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageInstaller;
-use App\Packages\Enums\PackageName;
-use App\Packages\Enums\PackageType;
 use Illuminate\Support\Arr;
 use InvalidArgumentException;
 use LogicException;
@@ -113,10 +110,8 @@ class GitRepositoryInstaller extends PackageInstaller implements \App\Packages\B
             // Generate SSH config for dedicated deploy keys (if applicable)
             ...$sshConfigCommands,
 
-            $this->track(GitRepositoryInstallerMilestones::ENSURE_REPOSITORY_DIRECTORY),
             sprintf('rm -rf %1$s && mkdir -p %1$s && chmod -R 775 %1$s', escapeshellarg($documentRoot)),
 
-            $this->track(GitRepositoryInstallerMilestones::CLONE_OR_FETCH_REPOSITORY),
             sprintf(
                 'git config --global --add safe.directory %1$s; REPO_DIR=%1$s; if [ -d "$REPO_DIR/.git" ]; then cd "$REPO_DIR" && %2$s git fetch --all --prune; else %3$s git clone %4$s "$REPO_DIR"; fi',
                 escapeshellarg($documentRoot),
@@ -125,21 +120,18 @@ class GitRepositoryInstaller extends PackageInstaller implements \App\Packages\B
                 escapeshellarg($transformedRepositoryUrl)
             ),
 
-            $this->track(GitRepositoryInstallerMilestones::CHECKOUT_TARGET_BRANCH),
             sprintf(
                 'REPO_DIR=%1$s; cd "$REPO_DIR" && BRANCH=%2$s; if git show-ref --verify --quiet refs/heads/"$BRANCH" || git show-ref --verify --quiet refs/remotes/origin/"$BRANCH"; then git checkout "$BRANCH"; else DETECTED_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed \'s@^refs/remotes/origin/@@\'); if [ -n "$DETECTED_BRANCH" ]; then git checkout "$DETECTED_BRANCH"; elif git show-ref --verify --quiet refs/remotes/origin/master; then git checkout master; elif git show-ref --verify --quiet refs/remotes/origin/main; then git checkout main; else echo "Error: Could not determine branch to checkout" && exit 1; fi; fi',
                 escapeshellarg($documentRoot),
                 escapeshellarg($branch)
             ),
 
-            $this->track(GitRepositoryInstallerMilestones::SYNC_WORKTREE),
             sprintf(
                 'REPO_DIR=%1$s; cd "$REPO_DIR" && CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD) && git reset --hard origin/"$CURRENT_BRANCH" && %2$s git pull origin "$CURRENT_BRANCH"',
                 escapeshellarg($documentRoot),
                 $gitSshCommand
             ),
 
-            $this->track(GitRepositoryInstallerMilestones::COMPLETE),
             function () use ($site, $repositoryConfiguration) {
                 // Persist repository configuration with server-specific deploy key
                 if (! $site instanceof ServerSite || ! $site->exists) {
@@ -165,21 +157,6 @@ class GitRepositoryInstaller extends PackageInstaller implements \App\Packages\B
                 $site->update(['configuration' => $configuration]);
             },
         ];
-    }
-
-    public function packageName(): PackageName
-    {
-        return PackageName::Git;
-    }
-
-    public function packageType(): PackageType
-    {
-        return PackageType::Git;
-    }
-
-    public function milestones(): Milestones
-    {
-        return new GitRepositoryInstallerMilestones;
     }
 
     /**

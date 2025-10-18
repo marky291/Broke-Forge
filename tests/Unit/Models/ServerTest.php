@@ -10,7 +10,6 @@ use App\Events\ServerUpdated;
 use App\Models\Server;
 use App\Models\ServerCredential;
 use App\Models\ServerDatabase;
-use App\Models\ServerEvent;
 use App\Models\ServerFirewall;
 use App\Models\ServerMetric;
 use App\Models\ServerPhp;
@@ -621,20 +620,6 @@ class ServerTest extends TestCase
     /**
      * Test events relationship returns HasMany.
      */
-    public function test_events_relationship_returns_has_many(): void
-    {
-        // Arrange
-        $server = Server::factory()->create();
-        ServerEvent::factory()->count(5)->create(['server_id' => $server->id]);
-
-        // Act
-        $events = $server->events;
-
-        // Assert
-        $this->assertCount(5, $events);
-        $this->assertInstanceOf(ServerEvent::class, $events->first());
-    }
-
     /**
      * Test firewall relationship returns HasOne.
      */

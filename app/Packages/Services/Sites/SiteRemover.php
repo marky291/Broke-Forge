@@ -3,11 +3,8 @@
 namespace App\Packages\Services\Sites;
 
 use App\Models\ServerSite;
-use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageRemover;
 use App\Packages\Base\SitePackage;
-use App\Packages\Enums\PackageName;
-use App\Packages\Enums\PackageType;
 
 /**
  * Site Removal Class
@@ -43,22 +40,17 @@ class SiteRemover extends PackageRemover implements SitePackage
     protected function commands(string $domain, ?ServerSite $site): array
     {
         return [
-            $this->track(SiteRemoverMilestones::DISABLE_SITE),
             "rm -f /etc/nginx/sites-enabled/{$domain}",
 
-            $this->track(SiteRemoverMilestones::TEST_CONFIGURATION),
             'nginx -t',
 
-            $this->track(SiteRemoverMilestones::RELOAD_NGINX),
             'nginx -s reload',
 
-            $this->track(SiteRemoverMilestones::ARCHIVE_CONFIGURATION),
             "[ -f /etc/nginx/sites-available/{$domain} ] && mv /etc/nginx/sites-available/{$domain} /etc/nginx/sites-available/{$domain}.disabled.$(date +%Y%m%d-%H%M%S)",
 
             // Optional backup command kept as reference for operators who may enable it.
             // "tar -czf /var/backups/sites/{$domain}-$(date +%Y%m%d-%H%M%S).tar.gz /var/www/{$domain} 2>/dev/null || true",
 
-            $this->track(SiteRemoverMilestones::COMPLETE),
             function () use ($site) {
                 if ($site) {
                     $site->update([
@@ -73,20 +65,5 @@ class SiteRemover extends PackageRemover implements SitePackage
     protected function serviceType(): string
     {
         return PackageName::SITE;
-    }
-
-    public function milestones(): Milestones
-    {
-        return new SiteRemoverMilestones;
-    }
-
-    public function packageName(): PackageName
-    {
-        return PackageName::Site;
-    }
-
-    public function packageType(): PackageType
-    {
-        return PackageType::Site;
     }
 }

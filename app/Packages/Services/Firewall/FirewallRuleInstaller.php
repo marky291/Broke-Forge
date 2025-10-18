@@ -2,11 +2,8 @@
 
 namespace App\Packages\Services\Firewall;
 
-use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageInstaller;
 use App\Packages\Base\ServerPackage;
-use App\Packages\Enums\PackageName;
-use App\Packages\Enums\PackageType;
 use App\Packages\Services\Firewall\Concerns\ManagesFirewallRules;
 
 /**
@@ -17,21 +14,6 @@ use App\Packages\Services\Firewall\Concerns\ManagesFirewallRules;
 class FirewallRuleInstaller extends PackageInstaller implements ServerPackage
 {
     use ManagesFirewallRules;
-
-    public function packageName(): PackageName
-    {
-        return PackageName::FirewallUfw;
-    }
-
-    public function packageType(): PackageType
-    {
-        return PackageType::Firewall;
-    }
-
-    public function milestones(): Milestones
-    {
-        return new FirewallRuleInstallerMilestones;
-    }
 
     /**
      * Execute firewall rule configuration
@@ -57,13 +39,11 @@ class FirewallRuleInstaller extends PackageInstaller implements ServerPackage
     protected function commands(array $rules): array
     {
         $commands = [
-            $this->track(FirewallRuleInstallerMilestones::VERIFY_FIREWALL),
 
             // Verify UFW is installed and enabled
             'which ufw >/dev/null 2>&1 || (echo "UFW is not installed" && exit 1)',
             'ufw status | grep -q "Status: active" || (echo "UFW is not enabled" && exit 1)',
 
-            $this->track(FirewallRuleInstallerMilestones::APPLY_RULES),
         ];
 
         // Add each rule with proper error handling
@@ -73,7 +53,6 @@ class FirewallRuleInstaller extends PackageInstaller implements ServerPackage
 
         // Continue with remaining commands
         $commands = array_merge($commands, [
-            $this->track(FirewallRuleInstallerMilestones::RELOAD_FIREWALL),
 
             // Reload UFW to ensure all rules are applied
             'ufw reload',
@@ -81,7 +60,6 @@ class FirewallRuleInstaller extends PackageInstaller implements ServerPackage
             // Show current status
             'ufw status numbered',
 
-            $this->track(FirewallRuleInstallerMilestones::COMPLETE),
         ]);
 
         return $commands;

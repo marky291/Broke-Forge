@@ -44,7 +44,6 @@ class ServerResource extends JsonResource
                 'is_enabled' => $firewall?->is_enabled ?? false,
                 'rules' => $this->transformFirewallRules($firewall),
             ],
-            'recentEvents' => $this->transformRecentEvents(),
             'latestMetrics' => $this->getLatestMetrics(),
             'recentMetrics' => $this->transformRecentMetrics($request),
             'scheduledTasks' => $this->transformScheduledTasks(),
@@ -90,28 +89,6 @@ class ServerResource extends JsonResource
             'status' => $rule->status,
             'created_at' => $rule->created_at->toISOString(),
         ])->toArray();
-    }
-
-    /**
-     * Transform recent firewall events.
-     */
-    protected function transformRecentEvents(): array
-    {
-        return $this->events()
-            ->where('service_type', 'firewall')
-            ->latest()
-            ->take(5)
-            ->get()
-            ->map(fn ($event) => [
-                'id' => $event->id,
-                'milestone' => $event->milestone,
-                'status' => $event->status,
-                'current_step' => $event->current_step,
-                'total_steps' => $event->total_steps,
-                'progress' => $event->progressPercentage ?? null,
-                'details' => $event->details,
-                'created_at' => $event->created_at->toISOString(),
-            ])->toArray();
     }
 
     /**
@@ -333,12 +310,6 @@ class ServerResource extends JsonResource
             return null;
         }
 
-        // Get progress from the latest database-related server event
-        $latestEvent = $this->events()
-            ->where('service_type', 'database')
-            ->orderBy('id', 'desc')
-            ->first();
-
         return [
             'id' => $database->id,
             'service_name' => $database->name,
@@ -348,9 +319,6 @@ class ServerResource extends JsonResource
                 'root_password' => $database->root_password,
             ],
             'status' => $database->status?->value ?? $database->status,
-            'progress_step' => $latestEvent?->current_step ?? 0,
-            'progress_total' => $latestEvent?->total_steps ?? 0,
-            'progress_label' => $latestEvent?->milestone ?? null,
             'installed_at' => $database->created_at?->toISOString(),
         ];
     }

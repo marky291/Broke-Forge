@@ -82,13 +82,6 @@ class ServerSiteGitRepositoryController extends Controller
     {
         $config = $site->getGitConfiguration();
 
-        // Get the latest Git installation event for error tracking (site-specific)
-        $latestGitEvent = $site->server->events()
-            ->where('service_type', 'git')
-            ->where('server_site_id', $site->id)
-            ->latest()
-            ->first();
-
         return [
             'provider' => $config['provider'],
             'repository' => $config['repository'],
@@ -96,11 +89,6 @@ class ServerSiteGitRepositoryController extends Controller
             'deployKey' => $config['deploy_key'] ?? $this->resolveDeployKey($site->server),
             'lastDeployedSha' => $site->last_deployment_sha,
             'lastDeployedAt' => $site->last_deployed_at?->toISOString(),
-            'latestEvent' => $latestGitEvent ? [
-                'status' => $latestGitEvent->status,
-                'error_log' => $latestGitEvent->error_log,
-                'milestone' => $latestGitEvent->milestone,
-            ] : null,
         ];
     }
 

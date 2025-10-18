@@ -7,11 +7,8 @@ use App\Enums\ReverseProxyType;
 use App\Enums\ScheduleFrequency;
 use App\Models\ServerPhp;
 use App\Models\ServerReverseProxy;
-use App\Packages\Base\Milestones;
 use App\Packages\Base\Package;
 use App\Packages\Base\PackageInstaller;
-use App\Packages\Enums\PackageName;
-use App\Packages\Enums\PackageType;
 use App\Packages\Enums\PhpVersion;
 use App\Packages\Enums\ProvisionStatus;
 use App\Packages\Services\Firewall\FirewallInstallerJob;
@@ -28,21 +25,6 @@ use App\Packages\Services\Supervisor\SupervisorInstallerJob;
  */
 class NginxInstaller extends PackageInstaller implements \App\Packages\Base\ServerPackage
 {
-    public function packageName(): PackageName
-    {
-        return PackageName::Nginx;
-    }
-
-    public function packageType(): PackageType
-    {
-        return PackageType::ReverseProxy;
-    }
-
-    public function milestones(): Milestones
-    {
-        return new NginxInstallerMilestones;
-    }
-
     /**
      * Execute the Nginx web server installation
      */
@@ -128,25 +110,18 @@ class NginxInstaller extends PackageInstaller implements \App\Packages\Base\Serv
 
         return [
 
-            $this->track(NginxInstallerMilestones::PREPARE_SYSTEM),
-
             // Update package lists and install prerequisites
             'DEBIAN_FRONTEND=noninteractive apt-get update -y',
             'DEBIAN_FRONTEND=noninteractive apt-get install -y ca-certificates curl gnupg lsb-release software-properties-common',
-
-            $this->track(NginxInstallerMilestones::SETUP_REPOSITORY),
 
             // On Ubuntu, add Ondrej PPA for NGINX (ignore errors on non-Ubuntu)
             // PHP repository is handled by PhpInstaller
             'if command -v lsb_release >/dev/null 2>&1 && [ "$(lsb_release -is)" = "Ubuntu" ]; then add-apt-repository -y ppa:ondrej/nginx || true; DEBIAN_FRONTEND=noninteractive apt-get update -y; fi',
 
-            $this->track(NginxInstallerMilestones::REMOVE_CONFLICTS),
             // Ensure Apache is not competing for port 80 (stop, disable, and mask if present)
             'systemctl stop apache2 >/dev/null 2>&1 || true',
             'systemctl disable apache2 >/dev/null 2>&1 || true',
             'systemctl mask apache2 >/dev/null 2>&1 || true',
-
-            $this->track(NginxInstallerMilestones::INSTALL_SOFTWARE),
 
             // Remove apache packages if installed
             'DEBIAN_FRONTEND=noninteractive apt-get remove -y --purge apache2 apache2-bin apache2-data apache2-utils libapache2-mod-php libapache2-mod-php* >/dev/null 2>&1 || true',
@@ -154,11 +129,9 @@ class NginxInstaller extends PackageInstaller implements \App\Packages\Base\Serv
             // Install NGINX only (PHP is already installed via PhpInstallerJob)
             'DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends nginx',
 
-            $this->track(NginxInstallerMilestones::ENABLE_SERVICES),
             // Enable and start Nginx service (PHP-FPM is already running from PhpInstaller)
             'systemctl enable --now nginx',
 
-            $this->track(NginxInstallerMilestones::SETUP_DEFAULT_SITE),
             // Create default site structure in app user's home directory
             "mkdir -p /home/{$appUser}/default/public",
 
@@ -169,7 +142,6 @@ class NginxInstaller extends PackageInstaller implements \App\Packages\Base\Serv
                 return "echo '{$content}' > /home/{$appUser}/default/public/index.php";
             },
 
-            $this->track(NginxInstallerMilestones::SET_PERMISSIONS),
             // Set proper ownership and permissions for app user's site directories
             "chown -R {$appUser}:{$appUser} /home/{$appUser}/",
             "chmod 755 /home/{$appUser}/",
@@ -179,7 +151,6 @@ class NginxInstaller extends PackageInstaller implements \App\Packages\Base\Serv
             // Add app user to www-data group for PHP-FPM compatibility
             "usermod -a -G www-data {$appUser}",
 
-            $this->track(NginxInstallerMilestones::CONFIGURE_NGINX),
             // Create default Nginx configuration for the default site (inline config generation)
             function () use ($appUser, $phpVersion) {
                 $nginxConfig = view('nginx.default', [
@@ -210,7 +181,6 @@ class NginxInstaller extends PackageInstaller implements \App\Packages\Base\Serv
             // Enable the default site
             'ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default',
 
-            $this->track(NginxInstallerMilestones::VERIFY_INSTALL),
             // Test Nginx configuration
             'nginx -t',
             // Reload Nginx to apply configuration
@@ -231,7 +201,6 @@ class NginxInstaller extends PackageInstaller implements \App\Packages\Base\Serv
             },
 
             // Mark installation as completed
-            $this->track(NginxInstallerMilestones::COMPLETE),
         ];
     }
 }

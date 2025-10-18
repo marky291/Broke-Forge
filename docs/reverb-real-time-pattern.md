@@ -1559,16 +1559,6 @@ class ServerScheduleTaskInstaller extends PackageInstaller implements ServerPack
         $this->task = $task;  // Only accepts existing task model
     }
 
-    public function packageName(): PackageName
-    {
-        return PackageName::ScheduledTask;
-    }
-
-    public function packageType(): PackageType
-    {
-        return PackageType::Scheduler;
-    }
-
     public function milestones(): Milestones
     {
         return new ServerScheduleTaskInstallerMilestones;

@@ -3,11 +3,8 @@
 namespace Tests\Unit\Packages\Base;
 
 use App\Models\Server;
-use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageRemover;
 use App\Packages\Base\ServerPackage;
-use App\Packages\Enums\PackageName;
-use App\Packages\Enums\PackageType;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Mockery;
 use Spatie\Ssh\Ssh;
@@ -293,22 +290,6 @@ class PackageRemoverTest extends TestCase
     }
 
     /**
-     * Test actionableName() returns 'Removing' for remover packages.
-     */
-    public function test_actionable_name_returns_removing(): void
-    {
-        // Arrange
-        $server = Server::factory()->create();
-        $remover = new PackageRemoverTestStubRemover($server);
-
-        // Act
-        $name = $remover->getActionableName();
-
-        // Assert
-        $this->assertEquals('Removing', $name);
-    }
-
-    /**
      * Test remove() handles empty command array.
      */
     public function test_remove_handles_empty_command_array(): void
@@ -332,16 +313,6 @@ class PackageRemoverTest extends TestCase
  */
 class PackageRemoverTestStubRemover extends PackageRemover implements ServerPackage
 {
-    public function packageName(): PackageName
-    {
-        return PackageName::MySql80;
-    }
-
-    public function packageType(): PackageType
-    {
-        return PackageType::Database;
-    }
-
     public function milestones(): Milestones
     {
         return new PackageRemoverTestMilestones;
@@ -362,11 +333,6 @@ class PackageRemoverTestStubRemover extends PackageRemover implements ServerPack
     {
         return $this->server;
     }
-
-    public function getActionableName(): string
-    {
-        return $this->actionableName();
-    }
 }
 
 /**
@@ -377,16 +343,6 @@ class PackageRemoverTestStubWithFailTracking extends PackageRemover implements S
     private bool $markResourceAsFailedCalled = false;
 
     private string $failureMessage = '';
-
-    public function packageName(): PackageName
-    {
-        return PackageName::MySql80;
-    }
-
-    public function packageType(): PackageType
-    {
-        return PackageType::Database;
-    }
 
     public function milestones(): Milestones
     {
@@ -412,16 +368,5 @@ class PackageRemoverTestStubWithFailTracking extends PackageRemover implements S
     public function getFailureMessage(): string
     {
         return $this->failureMessage;
-    }
-}
-
-/**
- * Test implementation of Milestones
- */
-class PackageRemoverTestMilestones extends Milestones
-{
-    public function countLabels(): int
-    {
-        return 2;
     }
 }

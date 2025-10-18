@@ -41,23 +41,6 @@ export interface User {
     [key: string]: unknown; // This allows for additional properties...
 }
 
-export interface ServerEvent {
-    id: number;
-    server_id: number;
-    service_type: string;
-    provision_type: 'install' | 'uninstall';
-    milestone: string;
-    current_step: number;
-    total_steps: number;
-    progress_percentage: number;
-    details: Record<string, unknown> | null;
-    label?: string | null;
-    status: 'pending' | 'success' | 'failed';
-    error_log?: string | null;
-    created_at: string;
-    updated_at: string;
-}
-
 export interface ProvisionStep {
     step: number;
     status: 'pending' | 'connecting' | 'installing' | 'completed' | 'failed';

@@ -4,10 +4,7 @@ namespace App\Packages\Services\Sites\Deployment;
 
 use App\Models\ServerDeployment;
 use App\Models\ServerSite;
-use App\Packages\Base\Milestones;
 use App\Packages\Base\PackageInstaller;
-use App\Packages\Enums\PackageName;
-use App\Packages\Enums\PackageType;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
@@ -99,9 +96,6 @@ class SiteGitDeploymentInstaller extends PackageInstaller implements \App\Packag
         $documentRoot = rtrim($documentRoot, '/');
 
         return [
-            $this->track(SiteGitDeploymentInstallerMilestones::PREPARE_DEPLOYMENT),
-
-            $this->track(SiteGitDeploymentInstallerMilestones::EXECUTE_DEPLOYMENT_SCRIPT),
 
             // Execute deployment script and capture output
             function () use ($documentRoot, $deploymentScript) {
@@ -132,8 +126,6 @@ class SiteGitDeploymentInstaller extends PackageInstaller implements \App\Packag
                 }
             },
 
-            $this->track(SiteGitDeploymentInstallerMilestones::CAPTURE_DEPLOYMENT_STATUS),
-
             // Capture current Git commit SHA
             function () use ($documentRoot) {
                 $remoteCommand = sprintf(
@@ -148,18 +140,7 @@ class SiteGitDeploymentInstaller extends PackageInstaller implements \App\Packag
                 $this->commitSha = trim($process->getOutput()) ?: null;
             },
 
-            $this->track(SiteGitDeploymentInstallerMilestones::COMPLETE),
         ];
-    }
-
-    public function packageName(): PackageName
-    {
-        return PackageName::Deployment;
-    }
-
-    public function packageType(): PackageType
-    {
-        return PackageType::Deployment;
     }
 
     public function milestones(): Milestones

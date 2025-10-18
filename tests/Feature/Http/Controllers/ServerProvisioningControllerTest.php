@@ -518,9 +518,6 @@ class ServerProvisioningControllerTest extends TestCase
             ]),
         ]);
 
-        // Create some events that should be cleared
-        \App\Models\ServerEvent::factory()->create(['server_id' => $server->id]);
-
         // Act
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/provision/retry");
@@ -535,7 +532,6 @@ class ServerProvisioningControllerTest extends TestCase
         // Verify server state was reset
         $this->assertEquals(ProvisionStatus::Pending, $server->provision_status);
         $this->assertEquals(ConnectionStatus::PENDING, $server->connection_status);
-        $this->assertEquals(0, $server->events()->count());
     }
 
     /**

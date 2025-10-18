@@ -4,8 +4,6 @@ namespace App\Packages\Services\Firewall;
 
 use App\Packages\Base\PackageRemover;
 use App\Packages\Base\ServerPackage;
-use App\Packages\Enums\PackageName;
-use App\Packages\Enums\PackageType;
 
 /**
  * Firewall Rule Uninstaller
@@ -14,40 +12,6 @@ use App\Packages\Enums\PackageType;
  */
 class FirewallRuleUninstaller extends PackageRemover implements ServerPackage
 {
-    /**
-     * Generic name of the current package
-     */
-    public function packageName(): PackageName
-    {
-        return PackageName::FirewallUfw;
-    }
-
-    /**
-     * Package categorization type
-     */
-    public function packageType(): PackageType
-    {
-        return PackageType::Firewall;
-    }
-
-    /**
-     * Service type identifier for milestone tracking
-     *
-     * @deprecated Use packageName() instead
-     */
-    protected function serviceType(): string
-    {
-        return $this->packageName()->value;
-    }
-
-    /**
-     * Milestone implementation for progress tracking
-     */
-    public function milestones(): Milestones
-    {
-        return new FirewallRuleUninstallerMilestones;
-    }
-
     /**
      * Execute the removal process
      *
@@ -84,7 +48,6 @@ class FirewallRuleUninstaller extends PackageRemover implements ServerPackage
         $deleteCommand = $ufwCommand.$ruleSpec;
 
         return [
-            $this->track(FirewallRuleUninstallerMilestones::PREPARE_REMOVAL),
 
             // Delete the firewall rule
             $deleteCommand,
@@ -92,7 +55,6 @@ class FirewallRuleUninstaller extends PackageRemover implements ServerPackage
             // Reload UFW to apply changes
             'ufw --force reload',
 
-            $this->track(FirewallRuleUninstallerMilestones::REMOVAL_COMPLETE),
         ];
     }
 }
