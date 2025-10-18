@@ -13,6 +13,7 @@ class DashboardController extends Controller
     public function __invoke(): Response
     {
         $servers = Server::query()
+            ->where('user_id', auth()->id())
             ->with(['defaultPhp', 'sites', 'supervisorTasks', 'scheduledTasks'])
             ->latest()
             ->limit(5)
@@ -20,6 +21,7 @@ class DashboardController extends Controller
 
         $sites = \App\Models\ServerSite::query()
             ->with(['server'])
+            ->whereHas('server', fn ($query) => $query->where('user_id', auth()->id()))
             ->latest()
             ->limit(5)
             ->get();
@@ -38,6 +40,7 @@ class DashboardController extends Controller
     protected function getRecentActivities(): \Illuminate\Support\Collection
     {
         return Activity::query()
+            ->where('causer_id', auth()->id())
             ->latest()
             ->take(10)
             ->get()

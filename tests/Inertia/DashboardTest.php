@@ -145,6 +145,7 @@ class DashboardTest extends TestCase
         // Create 12 activities to ensure only 10 are shown
         for ($i = 0; $i < 12; $i++) {
             activity()
+                ->causedBy($user)
                 ->event('auth.login')
                 ->withProperties(['email' => $user->email])
                 ->log('User logged in');
@@ -170,6 +171,7 @@ class DashboardTest extends TestCase
         $user = User::factory()->create(['email_verified_at' => now()]);
 
         activity()
+            ->causedBy($user)
             ->event('server.created')
             ->withProperties([
                 'name' => 'Test Server',
@@ -547,6 +549,256 @@ class DashboardTest extends TestCase
                 ->has('sites_count')
                 ->etc()
             )
+        );
+    }
+
+    /**
+     * Test Inertia props only include user's own servers.
+     */
+    public function test_inertia_props_only_include_users_own_servers(): void
+    {
+        // Arrange
+        $user = User::factory()->create(['email_verified_at' => now()]);
+        $otherUser = User::factory()->create(['email_verified_at' => now()]);
+
+        // Create servers for both users
+        $userServer = Server::factory()->create([
+            'user_id' => $user->id,
+            'vanity_name' => 'User Server',
+        ]);
+
+        $otherUserServer = Server::factory()->create([
+            'user_id' => $otherUser->id,
+            'vanity_name' => 'Other User Server',
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)->get('/dashboard');
+
+        // Assert - Inertia props should only contain user's server
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('dashboard')
+            ->has('dashboard.servers', 1)
+            ->where('dashboard.servers.0.name', 'User Server')
+            ->where('dashboard.servers.0.id', $userServer->id)
+        );
+    }
+
+    /**
+     * Test Inertia props only include sites from user's servers.
+     */
+    public function test_inertia_props_only_include_users_own_sites(): void
+    {
+        // Arrange
+        $user = User::factory()->create(['email_verified_at' => now()]);
+        $otherUser = User::factory()->create(['email_verified_at' => now()]);
+
+        $userServer = Server::factory()->create(['user_id' => $user->id]);
+        $otherUserServer = Server::factory()->create(['user_id' => $otherUser->id]);
+
+        // Create sites for both users
+        $userSite = ServerSite::factory()->create([
+            'server_id' => $userServer->id,
+            'domain' => 'mysite.com',
+        ]);
+
+        $otherUserSite = ServerSite::factory()->create([
+            'server_id' => $otherUserServer->id,
+            'domain' => 'othersite.com',
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)->get('/dashboard');
+
+        // Assert - Inertia props should only contain user's site
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('dashboard')
+            ->has('dashboard.sites', 1)
+            ->where('dashboard.sites.0.domain', 'mysite.com')
+            ->where('dashboard.sites.0.id', $userSite->id)
+        );
+    }
+
+    /**
+     * Test Inertia props only include user's activities.
+     */
+    public function test_inertia_props_only_include_users_activities(): void
+    {
+        // Arrange
+        $user = User::factory()->create(['email_verified_at' => now()]);
+        $otherUser = User::factory()->create(['email_verified_at' => now()]);
+
+        // Create activities for both users
+        activity()
+            ->causedBy($user)
+            ->event('server.created')
+            ->withProperties(['name' => 'User Server'])
+            ->log('User created server');
+
+        activity()
+            ->causedBy($otherUser)
+            ->event('server.created')
+            ->withProperties(['name' => 'Other User Server'])
+            ->log('Other user created server');
+
+        // Act
+        $response = $this->actingAs($user)->get('/dashboard');
+
+        // Assert - Inertia props should only contain user's activity
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('dashboard')
+            ->has('dashboard.activities', 1)
+            ->where('dashboard.activities.0.detail', 'User Server')
+        );
+    }
+
+    /**
+     * Test Inertia props show empty arrays when user has no data but others do.
+     */
+    public function test_inertia_props_empty_when_user_has_no_data_but_others_do(): void
+    {
+        // Arrange
+        $user = User::factory()->create(['email_verified_at' => now()]);
+        $otherUser = User::factory()->create(['email_verified_at' => now()]);
+
+        // Create data only for other user
+        $otherServer = Server::factory()->create(['user_id' => $otherUser->id]);
+        ServerSite::factory()->create(['server_id' => $otherServer->id]);
+        activity()
+            ->causedBy($otherUser)
+            ->event('server.created')
+            ->log('Other user activity');
+
+        // Act
+        $response = $this->actingAs($user)->get('/dashboard');
+
+        // Assert - Inertia props should have empty arrays for this user
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('dashboard')
+            ->has('dashboard.servers', 0)
+            ->has('dashboard.sites', 0)
+            ->has('dashboard.activities', 0)
+        );
+    }
+
+    /**
+     * Test Inertia props respect 5 server limit per user.
+     */
+    public function test_inertia_props_respect_five_server_limit_per_user(): void
+    {
+        // Arrange
+        $user = User::factory()->create(['email_verified_at' => now()]);
+        $otherUser = User::factory()->create(['email_verified_at' => now()]);
+
+        // Create 7 servers for user, 10 for other user
+        Server::factory()->count(7)->create(['user_id' => $user->id]);
+        Server::factory()->count(10)->create(['user_id' => $otherUser->id]);
+
+        // Act
+        $response = $this->actingAs($user)->get('/dashboard');
+
+        // Assert - should show only 5 of user's servers, not affected by other user's servers
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('dashboard')
+            ->has('dashboard.servers', 5)
+        );
+    }
+
+    /**
+     * Test Inertia props respect 5 site limit per user.
+     */
+    public function test_inertia_props_respect_five_site_limit_per_user(): void
+    {
+        // Arrange
+        $user = User::factory()->create(['email_verified_at' => now()]);
+        $otherUser = User::factory()->create(['email_verified_at' => now()]);
+
+        $userServer = Server::factory()->create(['user_id' => $user->id]);
+        $otherUserServer = Server::factory()->create(['user_id' => $otherUser->id]);
+
+        // Create 7 sites for user's server, 10 for other user's server
+        ServerSite::factory()->count(7)->create(['server_id' => $userServer->id]);
+        ServerSite::factory()->count(10)->create(['server_id' => $otherUserServer->id]);
+
+        // Act
+        $response = $this->actingAs($user)->get('/dashboard');
+
+        // Assert - should show only 5 of user's sites, not affected by other user's sites
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('dashboard')
+            ->has('dashboard.sites', 5)
+        );
+    }
+
+    /**
+     * Test Inertia props do not leak other users' server IDs.
+     */
+    public function test_inertia_props_do_not_leak_other_users_server_ids(): void
+    {
+        // Arrange
+        $user = User::factory()->create(['email_verified_at' => now()]);
+        $otherUser = User::factory()->create(['email_verified_at' => now()]);
+
+        $userServer = Server::factory()->create([
+            'user_id' => $user->id,
+            'vanity_name' => 'User Server',
+        ]);
+
+        $otherUserServer = Server::factory()->create([
+            'user_id' => $otherUser->id,
+            'vanity_name' => 'Other Server',
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)->get('/dashboard');
+
+        // Assert - response should only contain user's server, not other user's
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('dashboard')
+            ->has('dashboard.servers', 1)
+            ->where('dashboard.servers.0.id', $userServer->id)
+        );
+    }
+
+    /**
+     * Test Inertia props do not leak other users' site data.
+     */
+    public function test_inertia_props_do_not_leak_other_users_site_data(): void
+    {
+        // Arrange
+        $user = User::factory()->create(['email_verified_at' => now()]);
+        $otherUser = User::factory()->create(['email_verified_at' => now()]);
+
+        $userServer = Server::factory()->create(['user_id' => $user->id]);
+        $otherUserServer = Server::factory()->create(['user_id' => $otherUser->id]);
+
+        $userSite = ServerSite::factory()->create([
+            'server_id' => $userServer->id,
+            'domain' => 'mysite.com',
+        ]);
+
+        $otherUserSite = ServerSite::factory()->create([
+            'server_id' => $otherUserServer->id,
+            'domain' => 'secret-other-site.com',
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)->get('/dashboard');
+
+        // Assert - response should only contain user's site, not other user's
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('dashboard')
+            ->has('dashboard.sites', 1)
+            ->where('dashboard.sites.0.domain', 'mysite.com')
+            ->where('dashboard.sites.0.id', $userSite->id)
         );
     }
 }
