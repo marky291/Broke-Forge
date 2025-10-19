@@ -35,7 +35,7 @@ export function PageHeader({ title, description, action, children }: PageHeaderP
                     <h1 className="text-2xl font-bold">{title}</h1>
                     {action && <div>{action}</div>}
                 </div>
-                {description && <p className="text-sm text-neutral-500 dark:text-neutral-400">{description}</p>}
+                {/*{description && <p className="text-sm text-neutral-500 dark:text-neutral-400">{description}</p>}*/}
             </div>
             {children}
         </div>

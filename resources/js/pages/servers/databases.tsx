@@ -1,14 +1,7 @@
-import { CardContainerAddButton } from '@/components/card-container-add-button';
+import { CardList, type CardListAction } from '@/components/card-list';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { CardContainer } from '@/components/ui/card-container';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PageHeader } from '@/components/ui/page-header';
@@ -19,7 +12,7 @@ import { show as showServer } from '@/routes/servers';
 import { type BreadcrumbItem, type Server } from '@/types';
 import { Head, router, useForm } from '@inertiajs/react';
 import { useEcho } from '@laravel/echo-react';
-import { AlertCircle, CheckCircle, DatabaseIcon, Loader2, MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import { AlertCircle, CheckCircle, DatabaseIcon, Loader2, Pencil, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 type DatabaseVersion = {
@@ -210,7 +203,7 @@ export default function Databases({ server, availableDatabases }: { server: Serv
                 description="Install and manage multiple database services for your server."
             >
                 {/* Databases List */}
-                <CardContainer
+                <CardList<DatabaseItem>
                     title="Databases"
                     icon={
                         <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -229,108 +222,96 @@ export default function Databases({ server, availableDatabases }: { server: Serv
                             />
                         </svg>
                     }
-                    action={
-                        <CardContainerAddButton
-                            label="Add Database"
-                            onClick={() => setIsInstallDialogOpen(true)}
-                            aria-label="Add Database"
-                        />
-                    }
-                >
-                    {databases.length > 0 ? (
-                        <div className="divide-y divide-sidebar-border/70">
-                            {databases.map((db) => (
-                                <div key={db.id} className="flex items-center justify-between py-3 first:pt-0 last:pb-0">
-                                    <div className="flex items-center gap-3">
-                                        <div className="flex-shrink-0 rounded-md bg-muted p-2">
-                                            <DatabaseIcon className="h-5 w-5" />
-                                        </div>
-                                        <div>
-                                            <div className="font-medium">
-                                                {availableDatabases?.[db.type]?.name || db.type} {db.version}
-                                            </div>
-                                            <div className="text-sm text-muted-foreground">
-                                                Port {db.port} · {db.name}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        {/* Status badges */}
-                                        {db.status === 'pending' && (
-                                            <span className="inline-flex items-center gap-1 rounded bg-slate-500/10 px-1.5 py-0.5 text-xs text-slate-600 dark:text-slate-400">
-                                                <Loader2 className="size-3 animate-spin" />
-                                                Pending
-                                            </span>
-                                        )}
-                                        {db.status === 'installing' && (
-                                            <span className="inline-flex items-center gap-1 rounded bg-blue-500/10 px-1.5 py-0.5 text-xs text-blue-600 dark:text-blue-400">
-                                                <Loader2 className="size-3 animate-spin" />
-                                                Installing
-                                            </span>
-                                        )}
-                                        {db.status === 'updating' && (
-                                            <span className="inline-flex items-center gap-1 rounded bg-blue-500/10 px-1.5 py-0.5 text-xs text-blue-600 dark:text-blue-400">
-                                                <Loader2 className="size-3 animate-spin" />
-                                                Updating
-                                            </span>
-                                        )}
-                                        {db.status === 'active' && (
-                                            <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 px-1.5 py-0.5 text-xs text-emerald-600 dark:text-emerald-400">
-                                                <CheckCircle className="size-3" />
-                                                Active
-                                            </span>
-                                        )}
-                                        {db.status === 'failed' && (
-                                            <span className="inline-flex items-center gap-1 rounded bg-red-500/10 px-1.5 py-0.5 text-xs text-red-600 dark:text-red-400">
-                                                <AlertCircle className="size-3" />
-                                                Failed
-                                            </span>
-                                        )}
-                                        {db.status === 'stopped' && (
-                                            <span className="inline-flex items-center gap-1 rounded bg-gray-500/10 px-1.5 py-0.5 text-xs text-gray-600 dark:text-gray-400">
-                                                Stopped
-                                            </span>
-                                        )}
-                                        {db.status === 'uninstalling' && (
-                                            <span className="inline-flex items-center gap-1 rounded bg-orange-500/10 px-1.5 py-0.5 text-xs text-orange-600 dark:text-orange-400">
-                                                <Loader2 className="size-3 animate-spin" />
-                                                Uninstalling
-                                            </span>
-                                        )}
-
-                                        {/* Actions Dropdown */}
-                                        {db.status === 'active' && (
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                                        <MoreVertical className="h-4 w-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem onClick={() => handleUpdate(db)}>
-                                                        <Pencil className="mr-2 h-4 w-4" />
-                                                        Update Version
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => handleDelete(db)} className="text-red-600">
-                                                        <Trash2 className="mr-2 h-4 w-4" />
-                                                        Uninstall
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        )}
-                                    </div>
+                    onAddClick={() => setIsInstallDialogOpen(true)}
+                    addButtonLabel="Add Database"
+                    items={databases}
+                    keyExtractor={(db) => db.id}
+                    renderItem={(db) => (
+                        <div className="flex items-center justify-between gap-3">
+                            {/* Left: Database info */}
+                            <div className="min-w-0 flex-1">
+                                <div className="truncate text-sm font-medium">
+                                    {availableDatabases?.[db.type]?.name || db.type} {db.version}
                                 </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="flex flex-col items-center justify-center py-8 text-center">
-                            <div className="mb-3 rounded-full bg-muted p-3">
-                                <DatabaseIcon className="h-6 w-6 text-muted-foreground" />
+                                <div className="truncate text-xs text-muted-foreground">
+                                    Port {db.port} · {db.name}
+                                </div>
                             </div>
-                            <p className="text-sm text-muted-foreground">No databases installed on this server yet.</p>
+
+                            {/* Right: Status badge */}
+                            <div className="flex-shrink-0">
+                                {db.status === 'pending' && (
+                                    <span className="inline-flex items-center gap-1 rounded bg-slate-500/10 px-1.5 py-0.5 text-xs text-slate-600 dark:text-slate-400">
+                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                        Pending
+                                    </span>
+                                )}
+                                {db.status === 'installing' && (
+                                    <span className="inline-flex items-center gap-1 rounded bg-blue-500/10 px-1.5 py-0.5 text-xs text-blue-600 dark:text-blue-400">
+                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                        Installing
+                                    </span>
+                                )}
+                                {db.status === 'updating' && (
+                                    <span className="inline-flex items-center gap-1 rounded bg-blue-500/10 px-1.5 py-0.5 text-xs text-blue-600 dark:text-blue-400">
+                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                        Updating
+                                    </span>
+                                )}
+                                {db.status === 'active' && (
+                                    <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 px-1.5 py-0.5 text-xs text-emerald-600 dark:text-emerald-400">
+                                        <CheckCircle className="h-3 w-3" />
+                                        Active
+                                    </span>
+                                )}
+                                {db.status === 'failed' && (
+                                    <span className="inline-flex items-center gap-1 rounded bg-red-500/10 px-1.5 py-0.5 text-xs text-red-600 dark:text-red-400">
+                                        <AlertCircle className="h-3 w-3" />
+                                        Failed
+                                    </span>
+                                )}
+                                {db.status === 'stopped' && (
+                                    <span className="inline-flex items-center gap-1 rounded bg-gray-500/10 px-1.5 py-0.5 text-xs text-gray-600 dark:text-gray-400">
+                                        Stopped
+                                    </span>
+                                )}
+                                {db.status === 'uninstalling' && (
+                                    <span className="inline-flex items-center gap-1 rounded bg-orange-500/10 px-1.5 py-0.5 text-xs text-orange-600 dark:text-orange-400">
+                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                        Uninstalling
+                                    </span>
+                                )}
+                            </div>
                         </div>
                     )}
-                </CardContainer>
+                    actions={(db) => {
+                        const actions: CardListAction[] = [];
+                        const isInTransition = db.status === 'pending' || db.status === 'installing' || db.status === 'updating' || db.status === 'uninstalling';
+
+                        if (db.status === 'active') {
+                            actions.push({
+                                label: 'Update Version',
+                                onClick: () => handleUpdate(db),
+                                icon: <Pencil className="h-4 w-4" />,
+                                disabled: isInTransition,
+                            });
+                        }
+
+                        if (db.status === 'active') {
+                            actions.push({
+                                label: 'Uninstall',
+                                onClick: () => handleDelete(db),
+                                variant: 'destructive',
+                                icon: <Trash2 className="h-4 w-4" />,
+                                disabled: isInTransition,
+                            });
+                        }
+
+                        return actions;
+                    }}
+                    emptyStateMessage="No databases installed on this server yet."
+                    emptyStateIcon={<DatabaseIcon className="h-6 w-6 text-muted-foreground" />}
+                />
             </PageHeader>
 
             {/* Install Database Dialog */}

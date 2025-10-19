@@ -20,7 +20,7 @@ export default ({ children, breadcrumbs, ...props }: AppLayoutProps) => (
         <MainHeader />
 
         {/* Breadcrumbs Section */}
-        {breadcrumbs && breadcrumbs.length > 0 && (
+        {/* {breadcrumbs && breadcrumbs.length > 0 && (
             <div className="border-b bg-muted/30">
                 <div className="container mx-auto max-w-7xl px-4">
                     <div className="flex h-12 items-center">
@@ -43,7 +43,7 @@ export default ({ children, breadcrumbs, ...props }: AppLayoutProps) => (
                     </div>
                 </div>
             </div>
-        )}
+        )} */}
 
         {/* Main Content */}
         <main className="flex-1">

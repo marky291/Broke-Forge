@@ -1,9 +1,8 @@
-import { CardContainerAddButton } from '@/components/card-container-add-button';
+import { CardList, type CardListAction } from '@/components/card-list';
 import { Button } from '@/components/ui/button';
 import { CardContainer } from '@/components/ui/card-container';
 import { CardFormModal } from '@/components/ui/card-form-modal';
 import { CardInput } from '@/components/ui/card-input';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Label } from '@/components/ui/label';
 import { PageHeader } from '@/components/ui/page-header';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -13,7 +12,7 @@ import { dashboard } from '@/routes';
 import { show as showServer } from '@/routes/servers';
 import { type BreadcrumbItem, type Server, type ServerPhp } from '@/types';
 import { Head, router, useForm } from '@inertiajs/react';
-import { AlertCircle, CheckCircle, Loader2, MoreHorizontal } from 'lucide-react';
+import { AlertCircle, CheckCircle, Loader2, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
 export default function Php({ server }: { server: Server }) {
@@ -196,7 +195,7 @@ export default function Php({ server }: { server: Server }) {
                 )}
 
                 {server.phps.length > 0 && (
-                    <CardContainer
+                    <CardList<ServerPhp>
                         title="Versions"
                         icon={
                             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -210,97 +209,101 @@ export default function Php({ server }: { server: Server }) {
                                 <path d="M1.5 3.5L6 6L10.5 3.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
                             </svg>
                         }
-                        action={
-                            <CardContainerAddButton label="Add Version" onClick={openAddVersionDialog} aria-label="Add Version" />
-                        }
-                        parentBorder={false}
-                    >
-                        <div className="space-y-3">
-                            {server.phps.map((php) => (
-                                <div
-                                    key={php.id}
-                                    className="divide-y divide-neutral-200 rounded-lg border border-neutral-200 bg-white dark:divide-white/8 dark:border-white/8 dark:bg-white/3"
-                                >
-                                    <div className="flex items-center justify-between px-6 py-6">
-                                        <div className="flex items-center gap-2">
-                                            <span className="font-medium">PHP {php.version}</span>
-                                            {php.is_cli_default && (
-                                                <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                                                    CLI Default
-                                                </span>
-                                            )}
-                                            {php.is_site_default && (
-                                                <span className="rounded-full bg-blue-500/10 px-2 py-0.5 text-xs font-medium text-blue-600 dark:text-blue-400">
-                                                    Site Default
-                                                </span>
-                                            )}
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            {/* Status badges */}
-                                            {php.status === 'pending' && (
-                                                <span className="inline-flex items-center gap-1 rounded bg-slate-500/10 px-1.5 py-0.5 text-xs text-slate-600 dark:text-slate-400">
-                                                    <Loader2 className="size-3 animate-spin" />
-                                                    Pending
-                                                </span>
-                                            )}
-                                            {php.status === 'installing' && (
-                                                <span className="inline-flex items-center gap-1 rounded bg-blue-500/10 px-1.5 py-0.5 text-xs text-blue-600 dark:text-blue-400">
-                                                    <Loader2 className="size-3 animate-spin" />
-                                                    Installing
-                                                </span>
-                                            )}
-                                            {php.status === 'active' && (
-                                                <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 px-1.5 py-0.5 text-xs text-emerald-600 dark:text-emerald-400">
-                                                    <CheckCircle className="size-3" />
-                                                    Active
-                                                </span>
-                                            )}
-                                            {php.status === 'inactive' && (
-                                                <span className="inline-flex items-center gap-1 rounded bg-gray-500/10 px-1.5 py-0.5 text-xs text-gray-600 dark:text-gray-400">
-                                                    Inactive
-                                                </span>
-                                            )}
-                                            {php.status === 'failed' && (
-                                                <span className="inline-flex items-center gap-1 rounded bg-red-500/10 px-1.5 py-0.5 text-xs text-red-600 dark:text-red-400">
-                                                    <AlertCircle className="size-3" />
-                                                    Failed
-                                                </span>
-                                            )}
-                                            {php.status === 'removing' && (
-                                                <span className="inline-flex items-center gap-1 rounded bg-orange-500/10 px-1.5 py-0.5 text-xs text-orange-600 dark:text-orange-400">
-                                                    <Loader2 className="size-3 animate-spin" />
-                                                    Removing
-                                                </span>
-                                            )}
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="sm" className="size-8 p-0">
-                                                        <MoreHorizontal className="size-4" />
-                                                        <span className="sr-only">Open menu</span>
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem onClick={() => handleSetCliDefault(php)} disabled={php.is_cli_default}>
-                                                        Set as CLI Default
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => handleSetSiteDefault(php)} disabled={php.is_site_default}>
-                                                        Set as Site Default
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem
-                                                        variant="destructive"
-                                                        onClick={() => handleRemovePhp(php)}
-                                                        disabled={php.is_cli_default || php.is_site_default}
-                                                    >
-                                                        Remove PHP {php.version}
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </div>
-                                    </div>
+                        onAddClick={openAddVersionDialog}
+                        addButtonLabel="Add Version"
+                        items={server.phps}
+                        keyExtractor={(php) => php.id}
+                        renderItem={(php) => (
+                            <div className="flex items-center justify-between gap-3">
+                                {/* Left: PHP Version + Badges */}
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm font-medium">PHP {php.version}</span>
+                                    {php.is_cli_default && (
+                                        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                                            CLI Default
+                                        </span>
+                                    )}
+                                    {php.is_site_default && (
+                                        <span className="rounded-full bg-blue-500/10 px-2 py-0.5 text-xs font-medium text-blue-600 dark:text-blue-400">
+                                            Site Default
+                                        </span>
+                                    )}
                                 </div>
-                            ))}
-                        </div>
-                    </CardContainer>
+
+                                {/* Right: Status Badge */}
+                                <div>
+                                    {php.status === 'pending' && (
+                                        <span className="inline-flex items-center gap-1 rounded bg-slate-500/10 px-1.5 py-0.5 text-xs text-slate-600 dark:text-slate-400">
+                                            <Loader2 className="size-3 animate-spin" />
+                                            Pending
+                                        </span>
+                                    )}
+                                    {php.status === 'installing' && (
+                                        <span className="inline-flex items-center gap-1 rounded bg-blue-500/10 px-1.5 py-0.5 text-xs text-blue-600 dark:text-blue-400">
+                                            <Loader2 className="size-3 animate-spin" />
+                                            Installing
+                                        </span>
+                                    )}
+                                    {php.status === 'active' && (
+                                        <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 px-1.5 py-0.5 text-xs text-emerald-600 dark:text-emerald-400">
+                                            <CheckCircle className="size-3" />
+                                            Active
+                                        </span>
+                                    )}
+                                    {php.status === 'inactive' && (
+                                        <span className="inline-flex items-center gap-1 rounded bg-gray-500/10 px-1.5 py-0.5 text-xs text-gray-600 dark:text-gray-400">
+                                            Inactive
+                                        </span>
+                                    )}
+                                    {php.status === 'failed' && (
+                                        <span className="inline-flex items-center gap-1 rounded bg-red-500/10 px-1.5 py-0.5 text-xs text-red-600 dark:text-red-400">
+                                            <AlertCircle className="size-3" />
+                                            Failed
+                                        </span>
+                                    )}
+                                    {php.status === 'removing' && (
+                                        <span className="inline-flex items-center gap-1 rounded bg-orange-500/10 px-1.5 py-0.5 text-xs text-orange-600 dark:text-orange-400">
+                                            <Loader2 className="size-3 animate-spin" />
+                                            Removing
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                        actions={(php) => {
+                            const actions: CardListAction[] = [];
+                            const isInTransition = php.status === 'pending' || php.status === 'installing' || php.status === 'removing';
+
+                            // Always show actions, but disable them during transitional states
+                            if (!php.is_cli_default) {
+                                actions.push({
+                                    label: 'Set as CLI Default',
+                                    onClick: () => handleSetCliDefault(php),
+                                    disabled: isInTransition,
+                                });
+                            }
+
+                            if (!php.is_site_default) {
+                                actions.push({
+                                    label: 'Set as Site Default',
+                                    onClick: () => handleSetSiteDefault(php),
+                                    disabled: isInTransition,
+                                });
+                            }
+
+                            if (!php.is_cli_default && !php.is_site_default) {
+                                actions.push({
+                                    label: `Remove PHP ${php.version}`,
+                                    onClick: () => handleRemovePhp(php),
+                                    variant: 'destructive',
+                                    icon: <Trash2 className="h-4 w-4" />,
+                                    disabled: isInTransition,
+                                });
+                            }
+
+                            return actions;
+                        }}
+                    />
                 )}
 
                 {defaultPhp && (

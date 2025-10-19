@@ -1,4 +1,4 @@
-import { CardContainerAddButton } from '@/components/card-container-add-button';
+import { CardList, type CardListAction } from '@/components/card-list';
 import { InstallSkeleton } from '@/components/install-skeleton';
 import { Button } from '@/components/ui/button';
 import { CardContainer } from '@/components/ui/card-container';
@@ -12,15 +12,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import ServerLayout from '@/layouts/server/layout';
 import { dashboard } from '@/routes';
 import { show as showServer } from '@/routes/servers';
-import { type BreadcrumbItem, type Server, type ServerScheduledTask, type ServerScheduledTaskRun } from '@/types';
-import { Head, Link, router, useForm } from '@inertiajs/react';
+import { type BreadcrumbItem, type Server, type ServerScheduledTask } from '@/types';
+import { Head, router, useForm } from '@inertiajs/react';
 import { useEcho } from '@laravel/echo-react';
-import { AlertCircle, CheckCircle, ChevronLeft, ChevronRight, Clock, Eye, Loader2, Pause, Play, RotateCw, Trash2 } from 'lucide-react';
+import { AlertCircle, CheckCircle, Clock, Loader2, Pause, Play, RotateCw, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
 export default function Scheduler({ server }: { server: Server }) {
     const tasks = server.scheduledTasks || [];
-    const recentRuns = server.recentTaskRuns || { data: [], links: {}, meta: {} };
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard.url() },
         { title: server.vanity_name, href: showServer({ server: server.id }).url },
@@ -50,15 +49,6 @@ export default function Scheduler({ server }: { server: Server }) {
         send_notifications: false,
         timeout: 300,
     });
-
-    // Output dialog state
-    const [outputDialogOpen, setOutputDialogOpen] = useState(false);
-    const [selectedRun, setSelectedRun] = useState<ServerScheduledTaskRun | null>(null);
-
-    const handleViewOutput = (run: ServerScheduledTaskRun) => {
-        setSelectedRun(run);
-        setOutputDialogOpen(true);
-    };
 
     // Real-time updates via Reverb WebSocket - listens for scheduler changes
     useEcho(`servers.${server.id}`, 'ServerUpdated', () => {
@@ -128,15 +118,6 @@ export default function Scheduler({ server }: { server: Server }) {
         });
     };
 
-    const formatDuration = (ms: number | null) => {
-        if (ms === null) return 'N/A';
-        if (ms < 1000) return `${ms}ms`;
-        const seconds = Math.floor(ms / 1000);
-        if (seconds < 60) return `${seconds}s`;
-        const minutes = Math.floor(seconds / 60);
-        return `${minutes}m ${seconds % 60}s`;
-    };
-
     const formatFrequency = (frequency: string) => {
         return frequency.charAt(0).toUpperCase() + frequency.slice(1);
     };
@@ -180,7 +161,7 @@ export default function Scheduler({ server }: { server: Server }) {
                     </CardContainer>
                 ) : (
                     <>
-                        <CardContainer
+                        <CardList<ServerScheduledTask>
                             title="Scheduled Tasks"
                             icon={
                                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -188,233 +169,132 @@ export default function Scheduler({ server }: { server: Server }) {
                                     <path d="M6 3v3l2 1" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
                                 </svg>
                             }
-                            action={<CardContainerAddButton label="Create Task" onClick={() => setCreateDialogOpen(true)} />}
-                        >
-                            {tasks.length === 0 ? (
-                                <div className="p-12 text-center">
-                                    <Clock className="mx-auto mb-4 h-12 w-12 text-muted-foreground/30" />
-                                    <p className="text-muted-foreground">No scheduled tasks yet</p>
-                                    <p className="mt-1 text-sm text-muted-foreground/70">Create your first task to get started</p>
-                                </div>
-                            ) : (
-                                <div className="divide-y">
-                                    {tasks.map((task) => {
-                                        const latestRun = recentRuns?.data?.find((run) => run.server_scheduled_task_id === task.id);
-                                        return (
-                                            <div key={task.id} className="p-4">
-                                                <div className="flex items-start justify-between gap-3">
-                                                    <div className="min-w-0 flex-1">
-                                                        <div className="flex items-center gap-2">
-                                                            <h4 className="truncate text-sm font-medium text-foreground">{task.name}</h4>
-                                                            {task.status === 'pending' && (
-                                                                <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 px-1.5 py-0.5 text-xs text-amber-600 dark:text-amber-400">
-                                                                    <Loader2 className="h-3 w-3" />
-                                                                    Pending
-                                                                </span>
-                                                            )}
-                                                            {task.status === 'installing' && (
-                                                                <span className="inline-flex items-center gap-1 rounded bg-blue-500/10 px-1.5 py-0.5 text-xs text-blue-600 dark:text-blue-400">
-                                                                    <Loader2 className="h-3 w-3 animate-spin" />
-                                                                    Installing
-                                                                </span>
-                                                            )}
-                                                            {task.status === 'active' && (
-                                                                <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 px-1.5 py-0.5 text-xs text-emerald-600 dark:text-emerald-400">
-                                                                    <CheckCircle className="h-3 w-3" />
-                                                                    Active
-                                                                </span>
-                                                            )}
-                                                            {task.status === 'paused' && (
-                                                                <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 px-1.5 py-0.5 text-xs text-amber-600 dark:text-amber-400">
-                                                                    <Pause className="h-3 w-3" />
-                                                                    Paused
-                                                                </span>
-                                                            )}
-                                                            {task.status === 'failed' && (
-                                                                <span className="inline-flex items-center gap-1 rounded bg-red-500/10 px-1.5 py-0.5 text-xs text-red-600 dark:text-red-400">
-                                                                    <AlertCircle className="h-3 w-3" />
-                                                                    Failed
-                                                                </span>
-                                                            )}
-                                                            {task.status === 'removing' && (
-                                                                <span className="inline-flex items-center gap-1 rounded bg-orange-500/10 px-1.5 py-0.5 text-xs text-orange-600 dark:text-orange-400">
-                                                                    <Loader2 className="h-3 w-3 animate-spin" />
-                                                                    Removing
-                                                                </span>
-                                                            )}
-                                                            <span className="text-xs text-muted-foreground">{formatFrequency(task.frequency)}</span>
-                                                        </div>
-                                                        <p className="mt-1 truncate font-mono text-xs text-muted-foreground">{task.command}</p>
-                                                        {latestRun && (
-                                                            <div className="mt-1.5 flex items-center gap-3 text-xs text-muted-foreground">
-                                                                <span>{new Date(latestRun.started_at).toLocaleString()}</span>
-                                                                {latestRun.was_successful ? (
-                                                                    <span className="text-emerald-600 dark:text-emerald-400">
-                                                                        ✓ {formatDuration(latestRun.duration_ms)}
-                                                                    </span>
-                                                                ) : (
-                                                                    <span className="text-red-600 dark:text-red-400">
-                                                                        ✗ Exit {latestRun.exit_code}
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                    <div className="flex flex-shrink-0 items-center gap-1.5">
-                                                        {task.status === 'failed' && (
-                                                            <Button
-                                                                size="sm"
-                                                                variant="ghost"
-                                                                onClick={() => handleRetryTask(task)}
-                                                                disabled={processing}
-                                                                className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
-                                                                title="Retry task installation"
-                                                            >
-                                                                <RotateCw className="h-4 w-4" />
-                                                            </Button>
-                                                        )}
-                                                        {task.status !== 'failed' && (
-                                                            <Button
-                                                                size="sm"
-                                                                variant="ghost"
-                                                                onClick={() => handleToggleTask(task)}
-                                                                disabled={processing}
-                                                                className="h-8 w-8 p-0"
-                                                                title={task.status === 'active' ? 'Pause task' : 'Resume task'}
-                                                            >
-                                                                {task.status === 'active' ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                                                            </Button>
-                                                        )}
-                                                        <Button
-                                                            size="sm"
-                                                            variant="ghost"
-                                                            onClick={() => handleDeleteTask(task)}
-                                                            disabled={processing}
-                                                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                                                            title="Delete task"
-                                                        >
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </Button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
-                        </CardContainer>
-
-                        {/* Task Activity */}
-                        <CardContainer
-                            title="Task Activity"
-                            icon={
-                                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M2 2h8v8H2z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
-                                    <path d="M2 4.5h8M4.5 2v8" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
-                                </svg>
-                            }
-                        >
-                            {!recentRuns?.data || recentRuns.data.length === 0 ? (
-                                <div className="p-12 text-center">
-                                    <Clock className="mx-auto mb-4 h-12 w-12 text-muted-foreground/30" />
-                                    <p className="text-muted-foreground">No tasks have run yet</p>
-                                    <p className="mt-1 text-sm text-muted-foreground/70">Task executions will appear here once they run</p>
-                                </div>
-                            ) : (
-                                <>
-                                    <div className="divide-y">
-                                        {recentRuns.data.map((run) => {
-                                            const task = tasks.find((t) => t.id === run.server_scheduled_task_id);
-                                            return (
-                                                <div key={run.id} className="p-4">
-                                                    <div className="mb-2 flex items-start justify-between gap-3">
-                                                        <div className="flex min-w-0 flex-1 items-center gap-2">
-                                                            {run.was_successful ? (
-                                                                <CheckCircle className="h-4 w-4 flex-shrink-0 text-emerald-500" />
-                                                            ) : (
-                                                                <AlertCircle className="h-4 w-4 flex-shrink-0 text-red-500" />
-                                                            )}
-                                                            <div className="min-w-0 flex-1">
-                                                                <h4 className="truncate text-sm font-medium text-foreground">
-                                                                    {task?.name || 'Unknown Task'}
-                                                                </h4>
-                                                                <p className="text-xs text-muted-foreground">
-                                                                    {new Date(run.started_at).toLocaleString()} · {formatDuration(run.duration_ms)}
-                                                                </p>
-                                                            </div>
-                                                        </div>
-                                                        {!run.was_successful && (
-                                                            <span className="flex-shrink-0 text-xs text-red-600 dark:text-red-400">
-                                                                Exit {run.exit_code}
-                                                            </span>
-                                                        )}
-                                                    </div>
-
-                                                    <div className="flex items-center justify-between gap-2">
-                                                        <p className="flex-1 truncate font-mono text-xs text-muted-foreground">
-                                                            {task?.command || 'N/A'}
-                                                        </p>
-                                                        <Button
-                                                            size="sm"
-                                                            variant="ghost"
-                                                            onClick={() => handleViewOutput(run)}
-                                                            className="h-6 w-6 flex-shrink-0 p-0"
-                                                            title="View output"
-                                                        >
-                                                            <Eye className="h-3.5 w-3.5" />
-                                                        </Button>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-
-                                    {/* Pagination Controls */}
-                                    {recentRuns?.meta?.last_page > 1 && (
-                                        <div className="flex items-center justify-between border-t px-6 py-4">
-                                            <div className="text-sm text-muted-foreground">
-                                                Showing {recentRuns.meta.from ?? 0} to {recentRuns.meta.to ?? 0} of {recentRuns.meta.total} runs
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                {recentRuns.links?.prev ? (
-                                                    <Link
-                                                        href={recentRuns.links.prev}
-                                                        preserveScroll
-                                                        className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-sm transition-colors hover:bg-muted"
-                                                    >
-                                                        <ChevronLeft className="h-4 w-4" />
-                                                        Previous
-                                                    </Link>
-                                                ) : (
-                                                    <span className="inline-flex cursor-not-allowed items-center gap-1 rounded-md border px-3 py-1.5 text-sm opacity-50">
-                                                        <ChevronLeft className="h-4 w-4" />
-                                                        Previous
-                                                    </span>
-                                                )}
-                                                <div className="text-sm text-muted-foreground">
-                                                    Page {recentRuns.meta.current_page} of {recentRuns.meta.last_page}
-                                                </div>
-                                                {recentRuns.links?.next ? (
-                                                    <Link
-                                                        href={recentRuns.links.next}
-                                                        preserveScroll
-                                                        className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-sm transition-colors hover:bg-muted"
-                                                    >
-                                                        Next
-                                                        <ChevronRight className="h-4 w-4" />
-                                                    </Link>
-                                                ) : (
-                                                    <span className="inline-flex cursor-not-allowed items-center gap-1 rounded-md border px-3 py-1.5 text-sm opacity-50">
-                                                        Next
-                                                        <ChevronRight className="h-4 w-4" />
-                                                    </span>
-                                                )}
-                                            </div>
+                            onAddClick={() => setCreateDialogOpen(true)}
+                            addButtonLabel="Create Task"
+                            items={tasks}
+                            keyExtractor={(task) => task.id}
+                            renderItem={(task) => {
+                                return (
+                                    <div className="flex items-center justify-between gap-3">
+                                        {/* Left: Task name and command */}
+                                        <div className="min-w-0 flex-1">
+                                            <h4 className="truncate text-sm font-medium text-foreground">{task.name}</h4>
+                                            <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                                                {task.user && <span>{task.user} · </span>}
+                                                {task.command}
+                                            </p>
                                         </div>
-                                    )}
-                                </>
-                            )}
-                        </CardContainer>
+
+                                        {/* Right: Frequency + Status Badge */}
+                                        <div className="flex flex-shrink-0 items-center gap-3">
+                                            <span className="text-xs text-muted-foreground">{formatFrequency(task.frequency)}</span>
+
+                                            {/* Notification icon placeholder */}
+                                            <svg
+                                                width="16"
+                                                height="16"
+                                                viewBox="0 0 16 16"
+                                                fill="none"
+                                                className="text-muted-foreground/40"
+                                                xmlns="http://www.w3.org/2000/svg"
+                                            >
+                                                <path
+                                                    d="M12 5.33333C12 4.27247 11.5786 3.25505 10.8284 2.50491C10.0783 1.75476 9.06087 1.33333 8 1.33333C6.93913 1.33333 5.92172 1.75476 5.17157 2.50491C4.42143 3.25505 4 4.27247 4 5.33333C4 10 2 11.3333 2 11.3333H14C14 11.3333 12 10 12 5.33333Z"
+                                                    stroke="currentColor"
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                />
+                                                <path
+                                                    d="M9.15332 14C9.03614 14.2021 8.86791 14.3698 8.6655 14.4864C8.46309 14.603 8.23324 14.6643 7.99918 14.6643C7.76512 14.6643 7.53527 14.603 7.33286 14.4864C7.13045 14.3698 6.96222 14.2021 6.84504 14"
+                                                    stroke="currentColor"
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                />
+                                                <line x1="2" y1="2" x2="14" y2="14" stroke="currentColor" strokeLinecap="round" />
+                                            </svg>
+
+                                            {/* Status Badge */}
+                                            {task.status === 'pending' && (
+                                                <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 px-2 py-1 text-xs font-medium text-amber-600 dark:text-amber-400">
+                                                    <Loader2 className="h-3 w-3" />
+                                                    Pending
+                                                </span>
+                                            )}
+                                            {task.status === 'installing' && (
+                                                <span className="inline-flex items-center gap-1 rounded bg-blue-500/10 px-2 py-1 text-xs font-medium text-blue-600 dark:text-blue-400">
+                                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                                    Installing
+                                                </span>
+                                            )}
+                                            {task.status === 'active' && (
+                                                <span className="inline-flex items-center gap-1 rounded border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                                                    <CheckCircle className="h-3 w-3" />
+                                                    Installed
+                                                </span>
+                                            )}
+                                            {task.status === 'paused' && (
+                                                <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 px-2 py-1 text-xs font-medium text-amber-600 dark:text-amber-400">
+                                                    <Pause className="h-3 w-3" />
+                                                    Paused
+                                                </span>
+                                            )}
+                                            {task.status === 'failed' && (
+                                                <span className="inline-flex items-center gap-1 rounded bg-red-500/10 px-2 py-1 text-xs font-medium text-red-600 dark:text-red-400">
+                                                    <AlertCircle className="h-3 w-3" />
+                                                    Failed
+                                                </span>
+                                            )}
+                                            {task.status === 'removing' && (
+                                                <span className="inline-flex items-center gap-1 rounded bg-orange-500/10 px-2 py-1 text-xs font-medium text-orange-600 dark:text-orange-400">
+                                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                                    Removing
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            }}
+                            actions={(task) => {
+                                const actions: CardListAction[] = [];
+                                const isInTransition = task.status === 'pending' || task.status === 'installing' || task.status === 'removing';
+
+                                // View Activity - always available
+                                actions.push({
+                                    label: 'View Activity',
+                                    onClick: () => router.visit(`/servers/${server.id}/scheduler/tasks/${task.id}/activity`),
+                                    icon: <Clock className="h-4 w-4" />,
+                                    disabled: false,
+                                });
+
+                                if (task.status === 'failed') {
+                                    actions.push({
+                                        label: 'Retry Installation',
+                                        onClick: () => handleRetryTask(task),
+                                        icon: <RotateCw className="h-4 w-4" />,
+                                        disabled: processing,
+                                    });
+                                } else {
+                                    actions.push({
+                                        label: task.status === 'active' ? 'Pause Task' : 'Resume Task',
+                                        onClick: () => handleToggleTask(task),
+                                        icon: task.status === 'active' ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />,
+                                        disabled: processing || isInTransition,
+                                    });
+                                }
+
+                                actions.push({
+                                    label: 'Delete Task',
+                                    onClick: () => handleDeleteTask(task),
+                                    variant: 'destructive',
+                                    icon: <Trash2 className="h-4 w-4" />,
+                                    disabled: processing || isInTransition,
+                                });
+
+                                return actions;
+                            }}
+                            emptyStateMessage="No scheduled tasks yet"
+                            emptyStateIcon={<Clock className="h-6 w-6 text-muted-foreground" />}
+                        />
                     </>
                 )}
 
@@ -520,83 +400,6 @@ export default function Scheduler({ server }: { server: Server }) {
                         </div>
                     </div>
                 </CardFormModal>
-
-                {/* Task Run Output Dialog */}
-                <Dialog open={outputDialogOpen} onOpenChange={setOutputDialogOpen}>
-                    <DialogContent className="flex max-h-[80vh] max-w-4xl flex-col overflow-hidden">
-                        <DialogHeader>
-                            <DialogTitle>Task Run Output</DialogTitle>
-                            <DialogDescription>
-                                {selectedRun && (
-                                    <div className="mt-2 flex items-center gap-4">
-                                        <span>{tasks.find((t) => t.id === selectedRun.server_scheduled_task_id)?.name || 'Unknown Task'}</span>
-                                        <span className="text-xs text-muted-foreground">{new Date(selectedRun.started_at).toLocaleString()}</span>
-                                        <span
-                                            className={
-                                                selectedRun.was_successful
-                                                    ? 'text-emerald-600 dark:text-emerald-400'
-                                                    : 'text-red-600 dark:text-red-400'
-                                            }
-                                        >
-                                            {selectedRun.was_successful ? '✓ Success' : `✗ Failed (exit ${selectedRun.exit_code})`}
-                                        </span>
-                                    </div>
-                                )}
-                            </DialogDescription>
-                        </DialogHeader>
-
-                        <div className="flex-1 space-y-4 overflow-y-auto">
-                            {selectedRun && (
-                                <>
-                                    {/* Standard Output */}
-                                    <div>
-                                        <h4 className="mb-2 text-sm font-medium text-foreground">Standard Output</h4>
-                                        <pre className="overflow-x-auto rounded-md bg-muted p-4 text-xs">{selectedRun.output || '(no output)'}</pre>
-                                    </div>
-
-                                    {/* Error Output */}
-                                    {selectedRun.error_output && (
-                                        <div>
-                                            <h4 className="mb-2 text-sm font-medium text-red-600 dark:text-red-400">Error Output</h4>
-                                            <pre className="overflow-x-auto rounded-md bg-red-50 p-4 text-xs text-red-600 dark:bg-red-950/20 dark:text-red-400">
-                                                {selectedRun.error_output}
-                                            </pre>
-                                        </div>
-                                    )}
-
-                                    {/* Run Details */}
-                                    <div>
-                                        <h4 className="mb-2 text-sm font-medium text-foreground">Run Details</h4>
-                                        <div className="space-y-1 rounded-md bg-muted p-4 text-sm">
-                                            <div className="flex justify-between">
-                                                <span className="text-muted-foreground">Started:</span>
-                                                <span>{new Date(selectedRun.started_at).toLocaleString()}</span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <span className="text-muted-foreground">Completed:</span>
-                                                <span>{selectedRun.completed_at ? new Date(selectedRun.completed_at).toLocaleString() : 'N/A'}</span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <span className="text-muted-foreground">Duration:</span>
-                                                <span>{formatDuration(selectedRun.duration_ms)}</span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <span className="text-muted-foreground">Exit Code:</span>
-                                                <span>{selectedRun.exit_code ?? 'N/A'}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </>
-                            )}
-                        </div>
-
-                        <DialogFooter>
-                            <Button variant="outline" onClick={() => setOutputDialogOpen(false)}>
-                                Close
-                            </Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
             </div>
         </ServerLayout>
     );

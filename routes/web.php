@@ -292,6 +292,9 @@ Route::middleware('auth')->group(function () {
                 Route::get('{scheduledTask}/runs', [ServerSchedulerController::class, 'getTaskRuns'])
                     ->name('scheduler.tasks.runs')
                     ->withoutMiddleware('throttle:60,1');
+
+                Route::get('{scheduledTask}/activity', [ServerSchedulerController::class, 'showTaskActivity'])
+                    ->name('scheduler.tasks.activity');
             });
         });
 

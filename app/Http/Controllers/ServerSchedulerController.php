@@ -357,4 +357,23 @@ class ServerSchedulerController extends Controller
             'data' => ServerScheduledTaskRunResource::collection($runs),
         ]);
     }
+
+    /**
+     * Show task activity page with run history
+     */
+    public function showTaskActivity(Server $server, ServerScheduledTask $scheduledTask): Response
+    {
+        $this->authorize('view', $server);
+
+        // Get recent task runs with pagination
+        $runs = $scheduledTask->runs()
+            ->orderBy('started_at', 'desc')
+            ->paginate(20);
+
+        return Inertia::render('servers/scheduler-task-activity', [
+            'server' => new ServerResource($server),
+            'task' => $scheduledTask,
+            'runs' => ServerScheduledTaskRunResource::collection($runs),
+        ]);
+    }
 }

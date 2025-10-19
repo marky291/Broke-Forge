@@ -24,7 +24,7 @@ class ServerScheduledTaskRunResource extends JsonResource
             'output' => $this->output,
             'error_output' => $this->error_output,
             'duration_ms' => $this->duration_ms,
-            'was_successful' => $this->wasSuccessful(),
+            'was_successful' => $this->was_successful,
             'created_at' => $this->created_at->toISOString(),
             'updated_at' => $this->updated_at->toISOString(),
         ];

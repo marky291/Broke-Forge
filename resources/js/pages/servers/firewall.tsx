@@ -1,15 +1,12 @@
-import { CardContainerAddButton } from '@/components/card-container-add-button';
+import { CardList, type CardListAction } from '@/components/card-list';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { CardContainer } from '@/components/ui/card-container';
 import { CardFormModal } from '@/components/ui/card-form-modal';
-import { CardTable, type CardTableColumn } from '@/components/ui/card-table';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PageHeader } from '@/components/ui/page-header';
 import ServerLayout from '@/layouts/server/layout';
-import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router, useForm } from '@inertiajs/react';
@@ -65,7 +62,6 @@ interface FirewallProps {
 
 export default function Firewall({ server }: FirewallProps) {
     const [showAddRuleDialog, setShowAddRuleDialog] = useState(false);
-    const [isDeletingRule, setIsDeletingRule] = useState<number | null>(null);
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard.url() },
@@ -114,12 +110,9 @@ export default function Firewall({ server }: FirewallProps) {
         });
     };
 
-    const handleDeleteRule = (ruleId: number, index: number) => {
+    const handleDeleteRule = (ruleId: number) => {
         if (window.confirm('Are you sure you want to delete this firewall rule?')) {
-            setIsDeletingRule(index);
-            router.delete(`/servers/${server.id}/firewall/${ruleId}`, {
-                onFinish: () => setIsDeletingRule(null),
-            });
+            router.delete(`/servers/${server.id}/firewall/${ruleId}`);
         }
     };
 
@@ -129,90 +122,6 @@ export default function Firewall({ server }: FirewallProps) {
         }
         return <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">Deny</Badge>;
     };
-
-    const getStatusBadge = (status?: string) => {
-        if (status === 'pending') {
-            return (
-                <Badge className="bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200">
-                    <Clock className="mr-1 size-3" />
-                    Pending
-                </Badge>
-            );
-        }
-        if (status === 'installing') {
-            return (
-                <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
-                    <Loader2 className="mr-1 size-3 animate-spin" />
-                    Installing
-                </Badge>
-            );
-        }
-        if (status === 'active') {
-            return (
-                <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                    <CheckCircle2 className="mr-1 size-3" />
-                    Active
-                </Badge>
-            );
-        }
-        if (status === 'failed') {
-            return (
-                <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
-                    <AlertCircle className="mr-1 size-3" />
-                    Failed
-                </Badge>
-            );
-        }
-        if (status === 'removing') {
-            return (
-                <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
-                    <Loader2 className="mr-1 size-3 animate-spin" />
-                    Removing
-                </Badge>
-            );
-        }
-        return null;
-    };
-
-    const columns: CardTableColumn<FirewallRule>[] = [
-        {
-            header: 'Name',
-            accessor: (rule) => <span className="text-sm">{rule.name}</span>,
-        },
-        {
-            header: 'Port',
-            accessor: (rule) => <span className="font-mono text-sm">{rule.port || 'All'}</span>,
-        },
-        {
-            header: 'Protocol',
-            accessor: () => <span className="text-sm">TCP/UDP</span>,
-        },
-        {
-            header: 'Source',
-            accessor: (rule) => <span className="font-mono text-sm">{rule.from_ip_address || 'Any'}</span>,
-        },
-        {
-            header: 'Action',
-            accessor: (rule) => getActionBadge(rule.rule_type),
-        },
-        {
-            header: 'Status',
-            accessor: (rule) => getStatusBadge(rule.status),
-        },
-        {
-            header: 'Actions',
-            align: 'right',
-            cell: (rule, index) => (
-                <>
-                    {(!rule.status || rule.status === 'active' || rule.status === 'failed') && rule.id && (
-                        <Button variant="ghost" size="sm" onClick={() => handleDeleteRule(rule.id!, index)} disabled={isDeletingRule === index}>
-                            {isDeletingRule === index ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4 text-red-500" />}
-                        </Button>
-                    )}
-                </>
-            ),
-        },
-    ];
 
     if (!server.firewall.isInstalled) {
         return (
@@ -242,8 +151,9 @@ export default function Firewall({ server }: FirewallProps) {
 
             <PageHeader title="Firewall" description="Configure and manage firewall rules to control network traffic to your server.">
                 {/* Firewall Rules */}
-                <CardContainer
-                    title="Firewall Rules"
+                <CardList<FirewallRule>
+                    title="Rules"
+                    description="Manage firewall rules that control the incoming and outgoing traffic to and from your server."
                     icon={
                         <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path
@@ -255,34 +165,85 @@ export default function Firewall({ server }: FirewallProps) {
                             <path d="M6 4.5V7.5M6 8.5V9" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
                     }
-                    action={<CardContainerAddButton label="Add Rule" onClick={() => setShowAddRuleDialog(true)} aria-label="Add Firewall Rule" />}
-                >
-                    <CardTable
-                        columns={columns}
-                        data={server.firewall.rules}
-                        getRowKey={(rule) => rule.id || Math.random()}
-                        rowClassName={(rule) =>
-                            cn(
-                                rule.status === 'pending'
-                                    ? 'bg-gray-50/50 dark:bg-gray-950/20'
-                                    : rule.status === 'installing'
-                                      ? 'animate-pulse bg-amber-50/50 dark:bg-amber-950/20'
-                                      : rule.status === 'removing'
-                                        ? 'animate-pulse bg-orange-50/50 dark:bg-orange-950/20'
-                                        : rule.status === 'failed'
-                                          ? 'bg-red-50/50 dark:bg-red-950/20'
-                                          : 'hover:bg-muted/50',
-                            )
-                        }
-                        emptyState={
-                            <div className="py-8 text-center text-muted-foreground">
-                                <Shield className="mx-auto mb-3 size-12 opacity-20" />
-                                <p>No firewall rules configured</p>
-                                <p className="mt-1 text-sm">Add your first rule above</p>
+                    onAddClick={() => setShowAddRuleDialog(true)}
+                    addButtonLabel="Add Rule"
+                    items={server.firewall.rules}
+                    keyExtractor={(rule) => rule.id || Math.random()}
+                    renderItem={(rule) => (
+                        <div className="flex items-center justify-between gap-3">
+                            {/* Left: Rule info */}
+                            <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2">
+                                    <h4 className="truncate text-sm font-medium text-foreground">{rule.name}</h4>
+                                    {getActionBadge(rule.rule_type)}
+                                </div>
+                                <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
+                                    <span>
+                                        Port: <span className="font-mono">{rule.port || 'All'}</span>
+                                    </span>
+                                    <span>•</span>
+                                    <span>Protocol: TCP/UDP</span>
+                                    <span>•</span>
+                                    <span>
+                                        Source: <span className="font-mono">{rule.from_ip_address || 'Any'}</span>
+                                    </span>
+                                </div>
                             </div>
+
+                            {/* Right: Status badge */}
+                            <div className="flex-shrink-0">
+                                {rule.status === 'pending' && (
+                                    <span className="inline-flex items-center gap-1 rounded bg-gray-100 px-2 py-1 text-xs font-medium text-gray-800 dark:bg-gray-900 dark:text-gray-200">
+                                        <Clock className="h-3 w-3" />
+                                        Pending
+                                    </span>
+                                )}
+                                {rule.status === 'installing' && (
+                                    <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-2 py-1 text-xs font-medium text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                        Installing
+                                    </span>
+                                )}
+                                {rule.status === 'active' && (
+                                    <span className="inline-flex items-center gap-1 rounded bg-green-100 px-2 py-1 text-xs font-medium text-green-800 dark:bg-green-900 dark:text-green-200">
+                                        <CheckCircle2 className="h-3 w-3" />
+                                        Active
+                                    </span>
+                                )}
+                                {rule.status === 'failed' && (
+                                    <span className="inline-flex items-center gap-1 rounded bg-red-100 px-2 py-1 text-xs font-medium text-red-800 dark:bg-red-900 dark:text-red-200">
+                                        <AlertCircle className="h-3 w-3" />
+                                        Failed
+                                    </span>
+                                )}
+                                {rule.status === 'removing' && (
+                                    <span className="inline-flex items-center gap-1 rounded bg-orange-100 px-2 py-1 text-xs font-medium text-orange-800 dark:bg-orange-900 dark:text-orange-200">
+                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                        Removing
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                    actions={(rule) => {
+                        const actions: CardListAction[] = [];
+                        const isInTransition = rule.status === 'pending' || rule.status === 'installing' || rule.status === 'removing';
+
+                        if (rule.id && (!rule.status || rule.status === 'active' || rule.status === 'failed')) {
+                            actions.push({
+                                label: 'Delete Rule',
+                                onClick: () => handleDeleteRule(rule.id!),
+                                variant: 'destructive',
+                                icon: <Trash2 className="h-4 w-4" />,
+                                disabled: isInTransition,
+                            });
                         }
-                    />
-                </CardContainer>
+
+                        return actions;
+                    }}
+                    emptyStateMessage="No firewall rules configured"
+                    emptyStateIcon={<Shield className="h-6 w-6 text-muted-foreground" />}
+                />
 
                 {/* Recent Events */}
                 {server.firewall.recentEvents.length > 0 && (
@@ -321,13 +282,13 @@ export default function Firewall({ server }: FirewallProps) {
                 )}
 
                 {/* Info Alert */}
-                <Alert>
-                    <Shield className="size-4" />
-                    <AlertDescription>
-                        Changes to firewall rules are applied immediately. SSH (port 22) is always allowed to prevent lockout. Be careful when
-                        modifying rules as incorrect configuration may block access to your services.
-                    </AlertDescription>
-                </Alert>
+                {/*<Alert>*/}
+                {/*    <Shield className="size-4" />*/}
+                {/*    <AlertDescription>*/}
+                {/*        Changes to firewall rules are applied immediately. SSH (port 22) is always allowed to prevent lockout. Be careful when*/}
+                {/*        modifying rules as incorrect configuration may block access to your services.*/}
+                {/*    </AlertDescription>*/}
+                {/*</Alert>*/}
             </PageHeader>
 
             {/* Add Rule Modal */}

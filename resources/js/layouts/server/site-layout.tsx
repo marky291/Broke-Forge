@@ -101,7 +101,7 @@ export default function SiteLayout({ children, server, site, breadcrumbs }: Site
             <MainHeader />
 
             {/* Breadcrumbs Section */}
-            {breadcrumbs && breadcrumbs.length > 0 && (
+            {/* {breadcrumbs && breadcrumbs.length > 0 && (
                 <div className="border-b bg-muted/30">
                     <div className="container mx-auto max-w-7xl px-4">
                         <div className="flex h-12 items-center">
@@ -124,7 +124,7 @@ export default function SiteLayout({ children, server, site, breadcrumbs }: Site
                         </div>
                     </div>
                 </div>
-            )}
+            )} */}
 
             {/* Mobile Navigation Overlay */}
             {mobileMenuOpen && (

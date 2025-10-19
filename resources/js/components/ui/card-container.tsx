@@ -51,16 +51,16 @@ interface CardContainerProps {
  */
 export function CardContainer({ title, description, icon, action, children, className, parentBorder = true }: CardContainerProps) {
     return (
-        <div className={cn('grid gap-2', className)}>
+        <div className={cn('grid gap-2 rounded-xl', className)}>
             <div className="grid gap-2">
-                <div className="flex items-center justify-between p-2 pb-1.5">
+                <div className="flex items-center justify-between pt-2 pb-1 px-2">
                     <div>
                         <div className="flex items-center gap-2">
-                            {icon && (
-                                <span className="flex size-6 items-center justify-center rounded-md border border-neutral-300 bg-white dark:border-white/10 dark:bg-neutral-700/75 [&_svg]:size-3 [&_svg]:text-neutral-400">
-                                    {icon}
-                                </span>
-                            )}
+                            {/*{icon && (*/}
+                            {/*    <span className="flex size-6 items-center justify-center rounded-md border border-neutral-300 bg-white dark:border-white/10 dark:bg-neutral-700/75 [&_svg]:size-3 [&_svg]:text-neutral-400">*/}
+                            {/*        {icon}*/}
+                            {/*    </span>*/}
+                            {/*)}*/}
                             <h2 className="text-base font-medium text-foreground">{title}</h2>
                         </div>
                         {description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}
@@ -68,7 +68,7 @@ export function CardContainer({ title, description, icon, action, children, clas
                     {action && <div>{action}</div>}
                 </div>
                 {parentBorder ? (
-                    <div className="divide-y divide-neutral-200 rounded-lg border border-neutral-200 bg-white dark:divide-white/8 dark:border-white/8 dark:bg-white/3">
+                    <div className="divide-y divide-neutral-200 rounded-xl border border-neutral-200 bg-white dark:divide-white/8 dark:border-white/8 dark:bg-[#141514]">
                         <div className="px-6 py-6">{children}</div>
                     </div>
                 ) : (

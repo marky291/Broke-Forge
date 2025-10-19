@@ -1,8 +1,7 @@
-import { CardContainerAddButton } from '@/components/card-container-add-button';
+import { CardList, type CardListAction } from '@/components/card-list';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CardContainer } from '@/components/ui/card-container';
 import { CardFormModal } from '@/components/ui/card-form-modal';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -15,9 +14,9 @@ import { dashboard } from '@/routes';
 import { show as showServer } from '@/routes/servers';
 import { show as showSite } from '@/routes/servers/sites';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
+import { Head, router, useForm, usePage } from '@inertiajs/react';
 import { useEcho } from '@laravel/echo-react';
-import { AlertCircle, CheckCircle, CheckCircle2, ChevronRight, Clock, Eye, GitBranch, Globe, Loader2, Lock, Plus, RefreshCw, Trash2, XCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle, CheckCircle2, Clock, Eye, GitBranch, Globe, Loader2, Lock, RefreshCw, Trash2, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 type ServerSite = {
@@ -216,21 +215,12 @@ export default function Sites({ server }: SitesProps) {
         });
     };
 
-    const isSiteClickable = (status: string) => {
-        return status === 'active';
-    };
-
     const getStatusBadge = (site: ServerSite) => {
         const status = site.status;
 
         switch (status) {
             case 'active':
-                return (
-                    <Badge variant="outline" className="inline-flex items-center gap-1.5 border-green-200 bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700">
-                        <CheckCircle className="h-3 w-3" />
-                        Active
-                    </Badge>
-                );
+                return null;
             case 'pending':
                 return (
                     <Badge variant="outline" className="inline-flex items-center gap-1.5 border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700">
@@ -319,7 +309,7 @@ export default function Sites({ server }: SitesProps) {
                 )}
 
                 {/* Sites List */}
-                <CardContainer
+                <CardList<ServerSite>
                     title="Sites"
                     icon={
                         <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -332,116 +322,85 @@ export default function Sites({ server }: SitesProps) {
                             />
                         </svg>
                     }
-                    action={<CardContainerAddButton label="Add Site" onClick={() => setShowAddSiteDialog(true)} aria-label="Add Site" />}
-                    parentBorder={false}
-                >
-                    {server.sites.length > 0 ? (
-                        <div className="space-y-2 md:space-y-3">
-                            {server.sites.map((site) => {
-                                const isClickable = isSiteClickable(site.status);
-                                const WrapperComponent = isClickable ? Link : 'div';
-                                const wrapperProps = isClickable
-                                    ? { href: showSite({ server: server.id, site: site.id }).url, className: 'group block' }
-                                    : { className: 'block cursor-default' };
+                    onAddClick={() => setShowAddSiteDialog(true)}
+                    addButtonLabel="Add Site"
+                    items={server.sites}
+                    keyExtractor={(site) => site.id}
+                    onItemClick={(site) => {
+                        if (site.status === 'active') {
+                            router.visit(showSite({ server: server.id, site: site.id }).url);
+                        }
+                    }}
+                    renderItem={(site) => (
+                        <div className="flex items-center justify-between gap-3">
+                            {/* Left: Icon + Site Info */}
+                            <div className="flex min-w-0 flex-1 items-center gap-3">
+                                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                                    <Globe className="h-5 w-5 text-primary" />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <div className="text-sm font-medium text-foreground">{site.domain}</div>
+                                    {site.configuration?.git_repository?.repository ? (
+                                        <div className="flex items-center gap-1.5">
+                                            <GitBranch className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground/60" />
+                                            <p className="truncate text-xs text-muted-foreground">
+                                                {site.configuration.git_repository.repository}
+                                                {site.configuration.git_repository.branch && (
+                                                    <span className="text-muted-foreground/60"> • {site.configuration.git_repository.branch}</span>
+                                                )}
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <p className="text-xs text-muted-foreground/60">No repository configured</p>
+                                    )}
+                                </div>
+                            </div>
 
-                                return (
-                                    <div
-                                        key={site.id}
-                                        className="divide-y divide-neutral-200 rounded-lg border border-neutral-200 bg-white dark:divide-white/8 dark:border-white/8 dark:bg-white/3"
-                                    >
-                                        <WrapperComponent {...wrapperProps}>
-                                            <div className={`px-3 py-3 transition-colors md:px-6 md:py-6 ${isClickable ? 'hover:bg-muted/30' : 'opacity-75'}`}>
-                                                <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-6">
-                                                    {/* Top row: Icon + Site Info + Arrow (on mobile) */}
-                                                    <div className="flex items-center gap-3 md:min-w-0 md:flex-1 md:gap-6">
-                                                        {/* Icon */}
-                                                        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-primary/10 md:h-11 md:w-11">
-                                                            <Globe className="h-4 w-4 text-primary md:h-5 md:w-5" />
-                                                        </div>
-
-                                                        {/* Site Info */}
-                                                        <div className="min-w-0 flex-1">
-                                                            <div className="mb-0.5 flex items-center gap-2 md:mb-1">
-                                                                <h3
-                                                                    className={`truncate text-sm font-semibold text-foreground md:text-base ${isClickable ? 'transition-colors group-hover:text-primary' : ''}`}
-                                                                >
-                                                                    {site.domain}
-                                                                </h3>
-                                                                {getStatusBadge(site)}
-                                                            </div>
-                                                            {site.configuration?.git_repository?.repository ? (
-                                                                <div className="flex items-center gap-1.5">
-                                                                    <GitBranch className="h-3 w-3 flex-shrink-0 text-muted-foreground/60 md:h-3.5 md:w-3.5" />
-                                                                    <p className="truncate text-xs text-muted-foreground md:text-sm">
-                                                                        {site.configuration.git_repository.repository}
-                                                                        {site.configuration.git_repository.branch && (
-                                                                            <span className="text-muted-foreground/60">
-                                                                                {' '}
-                                                                                • {site.configuration.git_repository.branch}
-                                                                            </span>
-                                                                        )}
-                                                                    </p>
-                                                                </div>
-                                                            ) : (
-                                                                <p className="text-xs text-muted-foreground/60 md:text-sm">No repository configured</p>
-                                                            )}
-                                                        </div>
-
-                                                        {/* Arrow - visible only on mobile */}
-                                                        {isClickable && (
-                                                            <ChevronRight className="h-4 w-4 flex-shrink-0 text-muted-foreground/40 transition-all group-hover:translate-x-0.5 group-hover:text-primary md:hidden md:h-5 md:w-5" />
-                                                        )}
-                                                    </div>
-
-                                                    {/* Bottom row: Metadata (stacked on mobile, inline on desktop) */}
-                                                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 pl-12 text-xs md:flex-shrink-0 md:gap-6 md:pl-0 md:text-sm">
-                                                        {/* SSL */}
-                                                        <div className="flex items-center gap-1.5">
-                                                            <Lock
-                                                                className={`h-3.5 w-3.5 flex-shrink-0 md:h-4 md:w-4 ${site.ssl_enabled ? 'text-green-600' : 'text-muted-foreground/30'}`}
-                                                            />
-                                                            <span className="text-muted-foreground">{site.ssl_enabled ? 'SSL' : 'No SSL'}</span>
-                                                        </div>
-
-                                                        {/* PHP Version */}
-                                                        <div>
-                                                            <span className="text-muted-foreground">PHP </span>
-                                                            <span className="font-medium text-foreground">{site.php_version}</span>
-                                                        </div>
-
-                                                        {/* Deployed Time */}
-                                                        <div className="text-muted-foreground">
-                                                            {site.last_deployed_at_human ? `Deployed ${site.last_deployed_at_human}` : 'Not deployed'}
-                                                        </div>
-
-                                                        {/* Arrow - visible only on desktop */}
-                                                        {isClickable && (
-                                                            <ChevronRight className="hidden h-5 w-5 flex-shrink-0 text-muted-foreground/40 transition-all group-hover:translate-x-0.5 group-hover:text-primary md:block" />
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </WrapperComponent>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    ) : (
-                        <div className="divide-y divide-neutral-200 rounded-lg border border-neutral-200 bg-white dark:divide-white/8 dark:border-white/8 dark:bg-white/3">
-                            <div className="px-6 py-6">
-                                <div className="p-8 text-center">
-                                    <Globe className="mx-auto h-12 w-12 text-muted-foreground/50" />
-                                    <h3 className="mt-4 text-lg font-semibold">No sites configured</h3>
-                                    <p className="mt-2 text-sm text-muted-foreground">Get started by adding your first site to this server.</p>
-                                    <Button onClick={() => setShowAddSiteDialog(true)} className="mt-4" variant="outline">
-                                        <Plus className="mr-2 h-4 w-4" />
-                                        Add Your First Site
-                                    </Button>
+                            {/* Right: Status Badge + Metadata */}
+                            <div className="flex flex-shrink-0 items-center gap-3">
+                                {getStatusBadge(site)}
+                                <div className="hidden items-center gap-2 text-xs text-muted-foreground md:flex">
+                                    <Lock className={`h-4 w-4 ${site.ssl_enabled ? 'text-green-600' : 'text-muted-foreground/30'}`} />
+                                    <span>PHP {site.php_version}</span>
                                 </div>
                             </div>
                         </div>
                     )}
-                </CardContainer>
+                    actions={(site) => {
+                        const actions: CardListAction[] = [];
+
+                        // Active sites get "Delete Site" only (clicking item navigates to details)
+                        if (site.status === 'active') {
+                            actions.push({
+                                label: 'Delete Site',
+                                onClick: () => handleDeleteClick(site),
+                                variant: 'destructive',
+                                icon: <Trash2 className="h-4 w-4" />,
+                            });
+                        }
+
+                        // Failed sites get "View Error" and "Delete Site"
+                        if (site.status === 'failed') {
+                            if (site.error_log) {
+                                actions.push({
+                                    label: 'View Error',
+                                    onClick: () => handleViewError(site),
+                                    icon: <Eye className="h-4 w-4" />,
+                                });
+                            }
+                            actions.push({
+                                label: 'Delete Site',
+                                onClick: () => handleDeleteClick(site),
+                                variant: 'destructive',
+                                icon: <Trash2 className="h-4 w-4" />,
+                            });
+                        }
+
+                        return actions;
+                    }}
+                    emptyStateMessage="No sites configured on this server yet."
+                    emptyStateIcon={<Globe className="h-6 w-6 text-muted-foreground" />}
+                />
             </PageHeader>
 
             {/* Add Site Modal */}

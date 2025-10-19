@@ -42,7 +42,7 @@ export function MainHeader() {
         <header
             className="sticky top-0 z-50 w-full border-b"
             style={{
-                background: '#151715',
+                background: '#0a0b0a',
             }}
         >
             <div className="container mx-auto max-w-7xl px-4">

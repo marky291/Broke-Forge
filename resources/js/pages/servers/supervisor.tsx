@@ -1,4 +1,4 @@
-import { CardContainerAddButton } from '@/components/card-container-add-button';
+import { CardList, type CardListAction } from '@/components/card-list';
 import { InstallSkeleton } from '@/components/install-skeleton';
 import { Button } from '@/components/ui/button';
 import { CardContainer } from '@/components/ui/card-container';
@@ -10,7 +10,7 @@ import { PageHeader } from '@/components/ui/page-header';
 import ServerLayout from '@/layouts/server/layout';
 import { dashboard } from '@/routes';
 import { show as showServer } from '@/routes/servers';
-import { type BreadcrumbItem, type Server } from '@/types';
+import { type BreadcrumbItem, type Server, type ServerSupervisorTask } from '@/types';
 import { Head, router, useForm } from '@inertiajs/react';
 import { useEcho } from '@laravel/echo-react';
 import { AlertCircle, CheckCircle, Eye, Loader2, Pause, Pencil, Play, RefreshCw, RotateCw, Trash2 } from 'lucide-react';
@@ -204,7 +204,7 @@ export default function Supervisor({ server }: { server: Server }) {
                     </CardContainer>
                 ) : (
                     <>
-                        <CardContainer
+                        <CardList<ServerSupervisorTask>
                             title="Supervisor Tasks"
                             icon={
                                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -212,132 +212,113 @@ export default function Supervisor({ server }: { server: Server }) {
                                     <path d="M6 3v3l2 1" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
                                 </svg>
                             }
-                            action={<CardContainerAddButton label="Create Task" onClick={() => setCreateDialogOpen(true)} />}
-                        >
-                            {tasks.length === 0 ? (
-                                <div className="p-12 text-center">
-                                    <Eye className="mx-auto mb-4 h-12 w-12 text-muted-foreground/30" />
-                                    <p className="text-muted-foreground">No supervisor tasks yet</p>
-                                    <p className="mt-1 text-sm text-muted-foreground/70">Create your first task to get started</p>
-                                </div>
-                            ) : (
-                                <div className="divide-y">
-                                    {tasks.map((task) => {
-                                        return (
-                                            <div key={task.id} className="p-4">
-                                                <div className="flex items-start justify-between gap-3">
-                                                    <div className="min-w-0 flex-1">
-                                                        <div className="flex items-center gap-2">
-                                                            <h4 className="truncate text-sm font-medium text-foreground">{task.name}</h4>
-                                                            {task.status === 'pending' && (
-                                                                <span className="inline-flex items-center gap-1 rounded bg-slate-500/10 px-1.5 py-0.5 text-xs text-slate-600 dark:text-slate-400">
-                                                                    <Loader2 className="h-3 w-3 animate-spin" />
-                                                                    Pending
-                                                                </span>
-                                                            )}
-                                                            {task.status === 'installing' && (
-                                                                <span className="inline-flex items-center gap-1 rounded bg-blue-500/10 px-1.5 py-0.5 text-xs text-blue-600 dark:text-blue-400">
-                                                                    <Loader2 className="h-3 w-3 animate-spin" />
-                                                                    Installing
-                                                                </span>
-                                                            )}
-                                                            {task.status === 'active' && (
-                                                                <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 px-1.5 py-0.5 text-xs text-emerald-600 dark:text-emerald-400">
-                                                                    <CheckCircle className="h-3 w-3" />
-                                                                    Active
-                                                                </span>
-                                                            )}
-                                                            {task.status === 'inactive' && (
-                                                                <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 px-1.5 py-0.5 text-xs text-amber-600 dark:text-amber-400">
-                                                                    <Pause className="h-3 w-3" />
-                                                                    Inactive
-                                                                </span>
-                                                            )}
-                                                            {task.status === 'failed' && (
-                                                                <span className="inline-flex items-center gap-1 rounded bg-red-500/10 px-1.5 py-0.5 text-xs text-red-600 dark:text-red-400">
-                                                                    <AlertCircle className="h-3 w-3" />
-                                                                    Failed
-                                                                </span>
-                                                            )}
-                                                            {task.status === 'removing' && (
-                                                                <span className="inline-flex items-center gap-1 rounded bg-orange-500/10 px-1.5 py-0.5 text-xs text-orange-600 dark:text-orange-400">
-                                                                    <Loader2 className="h-3 w-3 animate-spin" />
-                                                                    Removing
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                        <p className="mt-1 truncate font-mono text-xs text-muted-foreground">{task.command}</p>
-                                                        <div className="mt-1.5 flex items-center gap-3 text-xs text-muted-foreground">
-                                                            <span>{task.working_directory}</span>
-                                                            <span>•</span>
-                                                            <span>
-                                                                {task.processes} {task.processes === 1 ? 'process' : 'processes'}
-                                                            </span>
-                                                            <span>•</span>
-                                                            <span>User: {task.user}</span>
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex flex-shrink-0 items-center gap-1.5">
-                                                        {task.status === 'failed' && (
-                                                            <Button
-                                                                size="sm"
-                                                                variant="ghost"
-                                                                onClick={() => handleRetryTask(task)}
-                                                                disabled={processing}
-                                                                className="h-8 w-8 p-0 text-blue-600 hover:text-blue-600"
-                                                                title="Retry installation"
-                                                            >
-                                                                <RotateCw className="h-4 w-4" />
-                                                            </Button>
-                                                        )}
-                                                        <Button
-                                                            size="sm"
-                                                            variant="ghost"
-                                                            onClick={() => handleOpenEditDialog(task)}
-                                                            disabled={processing || task.status === 'pending' || task.status === 'installing' || task.status === 'removing'}
-                                                            className="h-8 w-8 p-0"
-                                                            title="Edit task"
-                                                        >
-                                                            <Pencil className="h-4 w-4" />
-                                                        </Button>
-                                                        <Button
-                                                            size="sm"
-                                                            variant="ghost"
-                                                            onClick={() => handleRestartTask(task)}
-                                                            disabled={processing || task.status !== 'active'}
-                                                            className="h-8 w-8 p-0"
-                                                            title="Restart task"
-                                                        >
-                                                            <RefreshCw className="h-4 w-4" />
-                                                        </Button>
-                                                        <Button
-                                                            size="sm"
-                                                            variant="ghost"
-                                                            onClick={() => handleToggleTask(task)}
-                                                            disabled={processing || task.status === 'pending' || task.status === 'installing' || task.status === 'failed' || task.status === 'removing'}
-                                                            className="h-8 w-8 p-0"
-                                                            title={task.status === 'active' ? 'Stop task' : 'Start task'}
-                                                        >
-                                                            {task.status === 'active' ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                                                        </Button>
-                                                        <Button
-                                                            size="sm"
-                                                            variant="ghost"
-                                                            onClick={() => handleDeleteTask(task)}
-                                                            disabled={processing || task.status === 'pending' || task.status === 'installing' || task.status === 'removing'}
-                                                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                                                            title="Delete task"
-                                                        >
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </Button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
+                            onAddClick={() => setCreateDialogOpen(true)}
+                            addButtonLabel="Create Task"
+                            items={tasks}
+                            keyExtractor={(task) => task.id}
+                            renderItem={(task) => (
+                                <div className="flex items-center justify-between gap-3">
+                                    {/* Left: Task name + status */}
+                                    <div className="min-w-0 flex-1">
+                                        <div className="flex items-center gap-2">
+                                            <h4 className="truncate text-sm font-medium text-foreground">{task.name}</h4>
+                                            {task.status === 'pending' && (
+                                                <span className="inline-flex items-center gap-1 rounded bg-slate-500/10 px-1.5 py-0.5 text-xs text-slate-600 dark:text-slate-400">
+                                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                                    Pending
+                                                </span>
+                                            )}
+                                            {task.status === 'installing' && (
+                                                <span className="inline-flex items-center gap-1 rounded bg-blue-500/10 px-1.5 py-0.5 text-xs text-blue-600 dark:text-blue-400">
+                                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                                    Installing
+                                                </span>
+                                            )}
+                                            {task.status === 'active' && (
+                                                <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 px-1.5 py-0.5 text-xs text-emerald-600 dark:text-emerald-400">
+                                                    <CheckCircle className="h-3 w-3" />
+                                                    Active
+                                                </span>
+                                            )}
+                                            {task.status === 'inactive' && (
+                                                <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 px-1.5 py-0.5 text-xs text-amber-600 dark:text-amber-400">
+                                                    <Pause className="h-3 w-3" />
+                                                    Inactive
+                                                </span>
+                                            )}
+                                            {task.status === 'failed' && (
+                                                <span className="inline-flex items-center gap-1 rounded bg-red-500/10 px-1.5 py-0.5 text-xs text-red-600 dark:text-red-400">
+                                                    <AlertCircle className="h-3 w-3" />
+                                                    Failed
+                                                </span>
+                                            )}
+                                            {task.status === 'removing' && (
+                                                <span className="inline-flex items-center gap-1 rounded bg-orange-500/10 px-1.5 py-0.5 text-xs text-orange-600 dark:text-orange-400">
+                                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                                    Removing
+                                                </span>
+                                            )}
+                                        </div>
+                                        <p className="mt-1 truncate font-mono text-xs text-muted-foreground">{task.command}</p>
+                                        <div className="mt-1.5 flex items-center gap-3 text-xs text-muted-foreground">
+                                            <span>{task.working_directory}</span>
+                                            <span>•</span>
+                                            <span>
+                                                {task.processes} {task.processes === 1 ? 'process' : 'processes'}
+                                            </span>
+                                            <span>•</span>
+                                            <span>User: {task.user}</span>
+                                        </div>
+                                    </div>
                                 </div>
                             )}
-                        </CardContainer>
+                            actions={(task) => {
+                                const actions: CardListAction[] = [];
+                                const isInTransition = task.status === 'pending' || task.status === 'installing' || task.status === 'removing';
+
+                                if (task.status === 'failed') {
+                                    actions.push({
+                                        label: 'Retry Installation',
+                                        onClick: () => handleRetryTask(task),
+                                        icon: <RotateCw className="h-4 w-4" />,
+                                        disabled: processing,
+                                    });
+                                }
+
+                                actions.push({
+                                    label: 'Edit Task',
+                                    onClick: () => handleOpenEditDialog(task),
+                                    icon: <Pencil className="h-4 w-4" />,
+                                    disabled: processing || isInTransition,
+                                });
+
+                                actions.push({
+                                    label: 'Restart Task',
+                                    onClick: () => handleRestartTask(task),
+                                    icon: <RefreshCw className="h-4 w-4" />,
+                                    disabled: processing || task.status !== 'active',
+                                });
+
+                                actions.push({
+                                    label: task.status === 'active' ? 'Stop Task' : 'Start Task',
+                                    onClick: () => handleToggleTask(task),
+                                    icon: task.status === 'active' ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />,
+                                    disabled: processing || task.status === 'pending' || task.status === 'installing' || task.status === 'failed' || task.status === 'removing',
+                                });
+
+                                actions.push({
+                                    label: 'Delete Task',
+                                    onClick: () => handleDeleteTask(task),
+                                    variant: 'destructive',
+                                    icon: <Trash2 className="h-4 w-4" />,
+                                    disabled: processing || isInTransition,
+                                });
+
+                                return actions;
+                            }}
+                            emptyStateMessage="No supervisor tasks yet"
+                            emptyStateIcon={<Eye className="h-6 w-6 text-muted-foreground" />}
+                        />
                     </>
                 )}
 
