@@ -1,6 +1,7 @@
 import { CardList, type CardListAction } from '@/components/card-list';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { CardBadge } from '@/components/ui/card-badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,7 +13,7 @@ import { show as showServer } from '@/routes/servers';
 import { type BreadcrumbItem, type Server } from '@/types';
 import { Head, router, useForm } from '@inertiajs/react';
 import { useEcho } from '@laravel/echo-react';
-import { AlertCircle, CheckCircle, DatabaseIcon, Loader2, Pencil, Trash2 } from 'lucide-react';
+import { DatabaseIcon, Pencil, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 type DatabaseVersion = {
@@ -240,47 +241,7 @@ export default function Databases({ server, availableDatabases }: { server: Serv
 
                             {/* Right: Status badge */}
                             <div className="flex-shrink-0">
-                                {db.status === 'pending' && (
-                                    <span className="inline-flex items-center gap-1 rounded bg-slate-500/10 px-1.5 py-0.5 text-xs text-slate-600 dark:text-slate-400">
-                                        <Loader2 className="h-3 w-3 animate-spin" />
-                                        Pending
-                                    </span>
-                                )}
-                                {db.status === 'installing' && (
-                                    <span className="inline-flex items-center gap-1 rounded bg-blue-500/10 px-1.5 py-0.5 text-xs text-blue-600 dark:text-blue-400">
-                                        <Loader2 className="h-3 w-3 animate-spin" />
-                                        Installing
-                                    </span>
-                                )}
-                                {db.status === 'updating' && (
-                                    <span className="inline-flex items-center gap-1 rounded bg-blue-500/10 px-1.5 py-0.5 text-xs text-blue-600 dark:text-blue-400">
-                                        <Loader2 className="h-3 w-3 animate-spin" />
-                                        Updating
-                                    </span>
-                                )}
-                                {db.status === 'active' && (
-                                    <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 px-1.5 py-0.5 text-xs text-emerald-600 dark:text-emerald-400">
-                                        <CheckCircle className="h-3 w-3" />
-                                        Active
-                                    </span>
-                                )}
-                                {db.status === 'failed' && (
-                                    <span className="inline-flex items-center gap-1 rounded bg-red-500/10 px-1.5 py-0.5 text-xs text-red-600 dark:text-red-400">
-                                        <AlertCircle className="h-3 w-3" />
-                                        Failed
-                                    </span>
-                                )}
-                                {db.status === 'stopped' && (
-                                    <span className="inline-flex items-center gap-1 rounded bg-gray-500/10 px-1.5 py-0.5 text-xs text-gray-600 dark:text-gray-400">
-                                        Stopped
-                                    </span>
-                                )}
-                                {db.status === 'uninstalling' && (
-                                    <span className="inline-flex items-center gap-1 rounded bg-orange-500/10 px-1.5 py-0.5 text-xs text-orange-600 dark:text-orange-400">
-                                        <Loader2 className="h-3 w-3 animate-spin" />
-                                        Uninstalling
-                                    </span>
-                                )}
+                                <CardBadge variant={db.status as any} />
                             </div>
                         </div>
                     )}

@@ -1,6 +1,6 @@
 import { CardList, type CardListAction } from '@/components/card-list';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
+import { CardBadge } from '@/components/ui/card-badge';
 import { CardContainer } from '@/components/ui/card-container';
 import { CardFormModal } from '@/components/ui/card-form-modal';
 import { Input } from '@/components/ui/input';
@@ -11,7 +11,7 @@ import { dashboard } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router, useForm } from '@inertiajs/react';
 import { useEcho } from '@laravel/echo-react';
-import { AlertCircle, CheckCircle2, Clock, Loader2, Shield, Trash2 } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Clock, Shield, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
 type Server = {
@@ -116,12 +116,6 @@ export default function Firewall({ server }: FirewallProps) {
         }
     };
 
-    const getActionBadge = (action: string) => {
-        if (action === 'allow') {
-            return <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Allow</Badge>;
-        }
-        return <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">Deny</Badge>;
-    };
 
     if (!server.firewall.isInstalled) {
         return (
@@ -173,11 +167,12 @@ export default function Firewall({ server }: FirewallProps) {
                         <div className="flex items-center justify-between gap-3">
                             {/* Left: Rule info */}
                             <div className="min-w-0 flex-1">
-                                <div className="flex items-center gap-2">
-                                    <h4 className="truncate text-sm font-medium text-foreground">{rule.name}</h4>
-                                    {getActionBadge(rule.rule_type)}
-                                </div>
+                                <div className="truncate text-sm font-medium text-foreground">{rule.name}</div>
                                 <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
+                                    <span className={rule.rule_type === 'allow' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
+                                        {rule.rule_type === 'allow' ? 'Allow' : 'Deny'}
+                                    </span>
+                                    <span>•</span>
                                     <span>
                                         Port: <span className="font-mono">{rule.port || 'All'}</span>
                                     </span>
@@ -192,36 +187,7 @@ export default function Firewall({ server }: FirewallProps) {
 
                             {/* Right: Status badge */}
                             <div className="flex-shrink-0">
-                                {rule.status === 'pending' && (
-                                    <span className="inline-flex items-center gap-1 rounded bg-gray-100 px-2 py-1 text-xs font-medium text-gray-800 dark:bg-gray-900 dark:text-gray-200">
-                                        <Clock className="h-3 w-3" />
-                                        Pending
-                                    </span>
-                                )}
-                                {rule.status === 'installing' && (
-                                    <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-2 py-1 text-xs font-medium text-amber-800 dark:bg-amber-900 dark:text-amber-200">
-                                        <Loader2 className="h-3 w-3 animate-spin" />
-                                        Installing
-                                    </span>
-                                )}
-                                {rule.status === 'active' && (
-                                    <span className="inline-flex items-center gap-1 rounded bg-green-100 px-2 py-1 text-xs font-medium text-green-800 dark:bg-green-900 dark:text-green-200">
-                                        <CheckCircle2 className="h-3 w-3" />
-                                        Active
-                                    </span>
-                                )}
-                                {rule.status === 'failed' && (
-                                    <span className="inline-flex items-center gap-1 rounded bg-red-100 px-2 py-1 text-xs font-medium text-red-800 dark:bg-red-900 dark:text-red-200">
-                                        <AlertCircle className="h-3 w-3" />
-                                        Failed
-                                    </span>
-                                )}
-                                {rule.status === 'removing' && (
-                                    <span className="inline-flex items-center gap-1 rounded bg-orange-100 px-2 py-1 text-xs font-medium text-orange-800 dark:bg-orange-900 dark:text-orange-200">
-                                        <Loader2 className="h-3 w-3 animate-spin" />
-                                        Removing
-                                    </span>
-                                )}
+                                <CardBadge variant={rule.status as any} />
                             </div>
                         </div>
                     )}

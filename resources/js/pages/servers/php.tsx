@@ -1,5 +1,6 @@
 import { CardList, type CardListAction } from '@/components/card-list';
 import { Button } from '@/components/ui/button';
+import { CardBadge } from '@/components/ui/card-badge';
 import { CardContainer } from '@/components/ui/card-container';
 import { CardFormModal } from '@/components/ui/card-form-modal';
 import { CardInput } from '@/components/ui/card-input';
@@ -12,7 +13,7 @@ import { dashboard } from '@/routes';
 import { show as showServer } from '@/routes/servers';
 import { type BreadcrumbItem, type Server, type ServerPhp } from '@/types';
 import { Head, router, useForm } from '@inertiajs/react';
-import { AlertCircle, CheckCircle, Loader2, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
 export default function Php({ server }: { server: Server }) {
@@ -231,42 +232,8 @@ export default function Php({ server }: { server: Server }) {
                                 </div>
 
                                 {/* Right: Status Badge */}
-                                <div>
-                                    {php.status === 'pending' && (
-                                        <span className="inline-flex items-center gap-1 rounded bg-slate-500/10 px-1.5 py-0.5 text-xs text-slate-600 dark:text-slate-400">
-                                            <Loader2 className="size-3 animate-spin" />
-                                            Pending
-                                        </span>
-                                    )}
-                                    {php.status === 'installing' && (
-                                        <span className="inline-flex items-center gap-1 rounded bg-blue-500/10 px-1.5 py-0.5 text-xs text-blue-600 dark:text-blue-400">
-                                            <Loader2 className="size-3 animate-spin" />
-                                            Installing
-                                        </span>
-                                    )}
-                                    {php.status === 'active' && (
-                                        <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 px-1.5 py-0.5 text-xs text-emerald-600 dark:text-emerald-400">
-                                            <CheckCircle className="size-3" />
-                                            Active
-                                        </span>
-                                    )}
-                                    {php.status === 'inactive' && (
-                                        <span className="inline-flex items-center gap-1 rounded bg-gray-500/10 px-1.5 py-0.5 text-xs text-gray-600 dark:text-gray-400">
-                                            Inactive
-                                        </span>
-                                    )}
-                                    {php.status === 'failed' && (
-                                        <span className="inline-flex items-center gap-1 rounded bg-red-500/10 px-1.5 py-0.5 text-xs text-red-600 dark:text-red-400">
-                                            <AlertCircle className="size-3" />
-                                            Failed
-                                        </span>
-                                    )}
-                                    {php.status === 'removing' && (
-                                        <span className="inline-flex items-center gap-1 rounded bg-orange-500/10 px-1.5 py-0.5 text-xs text-orange-600 dark:text-orange-400">
-                                            <Loader2 className="size-3 animate-spin" />
-                                            Removing
-                                        </span>
-                                    )}
+                                <div className="flex-shrink-0">
+                                    <CardBadge variant={php.status as any} />
                                 </div>
                             </div>
                         )}

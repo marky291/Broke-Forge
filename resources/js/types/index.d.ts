@@ -74,6 +74,7 @@ export interface Server {
     recentEvents?: ServerEvent[];
     latestMetrics?: ServerMetric | null;
     recentMetrics?: ServerMetric[];
+    monitors?: ServerMonitor[];
     scheduledTasks?: ServerScheduledTask[];
     recentTaskRuns?: {
         data: ServerScheduledTaskRun[];
@@ -201,6 +202,25 @@ export interface ServerMetric {
     storage_usage_percentage: number;
     collected_at: string;
     created_at: string;
+}
+
+export interface ServerMonitor {
+    id: number;
+    user_id: number;
+    server_id: number;
+    name: string;
+    metric_type: 'cpu' | 'memory' | 'storage';
+    operator: '>' | '<' | '>=' | '<=' | '==';
+    threshold: number;
+    duration_minutes: number;
+    notification_emails: string[];
+    enabled: boolean;
+    cooldown_minutes: number;
+    last_triggered_at: string | null;
+    last_recovered_at: string | null;
+    status: 'normal' | 'triggered';
+    created_at: string;
+    updated_at: string;
 }
 
 export interface ServerScheduledTask {

@@ -47,6 +47,7 @@ class ServerResource extends JsonResource
             ],
             'latestMetrics' => $this->getLatestMetrics(),
             'recentMetrics' => $this->transformRecentMetrics($request),
+            'monitors' => $this->transformMonitors(),
             'scheduledTasks' => $this->transformScheduledTasks(),
             'recentTaskRuns' => $this->transformRecentTaskRuns($request),
             'supervisorTasks' => $this->transformSupervisorTasks(),
@@ -152,11 +153,34 @@ class ServerResource extends JsonResource
     }
 
     /**
+     * Transform monitors collection.
+     */
+    protected function transformMonitors(): array
+    {
+        return $this->monitors()->orderBy('created_at', 'desc')->get()->map(fn ($monitor) => [
+            'id' => $monitor->id,
+            'name' => $monitor->name,
+            'metric_type' => $monitor->metric_type,
+            'operator' => $monitor->operator,
+            'threshold' => $monitor->threshold,
+            'duration_minutes' => $monitor->duration_minutes,
+            'notification_emails' => $monitor->notification_emails,
+            'enabled' => $monitor->enabled,
+            'cooldown_minutes' => $monitor->cooldown_minutes,
+            'last_triggered_at' => $monitor->last_triggered_at?->toISOString(),
+            'last_recovered_at' => $monitor->last_recovered_at?->toISOString(),
+            'status' => $monitor->status,
+            'created_at' => $monitor->created_at->toISOString(),
+            'updated_at' => $monitor->updated_at->toISOString(),
+        ])->toArray();
+    }
+
+    /**
      * Transform sites collection.
      */
     protected function transformSites(): array
     {
-        return $this->sites()->latest()->get()->map(fn ($site) => [
+        return $this->sites()->latest('id')->get()->map(fn ($site) => [
             'id' => $site->id,
             'domain' => $site->domain,
             'document_root' => $site->document_root,

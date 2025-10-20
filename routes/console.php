@@ -24,3 +24,8 @@ Schedule::command('scheduler:cleanup')
 Schedule::command('git:cleanup-stuck')
     ->everyFiveMinutes()
     ->onOneServer();
+
+// Evaluate server monitors every minute
+Schedule::command('monitors:evaluate')
+    ->everyMinute()
+    ->onOneServer();

@@ -8,6 +8,7 @@ use App\Http\Controllers\ServerController;
 use App\Http\Controllers\ServerDatabaseController;
 use App\Http\Controllers\ServerFileExplorerController;
 use App\Http\Controllers\ServerFirewallController;
+use App\Http\Controllers\ServerMonitorController;
 use App\Http\Controllers\ServerMonitoringController;
 use App\Http\Controllers\ServerPhpController;
 use App\Http\Controllers\ServerProvisioningController;
@@ -250,6 +251,20 @@ Route::middleware('auth')->group(function () {
                 ->name('monitoring.update-interval');
             Route::get('metrics', [ServerMonitoringController::class, 'getMetrics'])
                 ->name('monitoring.metrics');
+
+            // Monitor management (alert triggers)
+            Route::prefix('monitors')->group(function () {
+                Route::get('/', [ServerMonitorController::class, 'index'])
+                    ->name('monitors.index');
+                Route::post('/', [ServerMonitorController::class, 'store'])
+                    ->name('monitors.store');
+                Route::put('{monitor}', [ServerMonitorController::class, 'update'])
+                    ->name('monitors.update');
+                Route::delete('{monitor}', [ServerMonitorController::class, 'destroy'])
+                    ->name('monitors.destroy');
+                Route::post('{monitor}/toggle', [ServerMonitorController::class, 'toggle'])
+                    ->name('monitors.toggle');
+            });
         });
 
         // Scheduler management

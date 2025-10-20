@@ -42,6 +42,70 @@
 
 **Reference Implementation:** `app/Packages/Services/Firewall/FirewallRuleInstallerJob.php` + `app/Models/ServerFirewallRule.php`
 
+## Package Organization Structure
+
+**⚠️ MANDATORY** - All service-related classes must be organized within `app/Packages/Services/{ServiceName}/` following Laravel best practices for folder structure:
+
+### Directory Structure
+```
+app/Packages/Services/{ServiceName}/
+├── Commands/          # Artisan commands (auto-discovered via bootstrap/app.php)
+├── Events/            # Domain events
+├── Listeners/         # Event listeners
+├── Notifications/     # Email/notification classes
+├── Jobs/              # Background jobs (suffix: Job.php)
+└── Services/          # Service classes (no suffix)
+```
+
+### Naming Conventions
+- **Jobs**: Suffix with `Job` (e.g., `FirewallRuleInstallerJob.php`)
+- **Commands**: Suffix with `Command` (e.g., `EvaluateServerMonitorsCommand.php`)
+- **Events**: Suffix with `Event` (e.g., `MonitorTriggeredEvent.php`)
+- **Listeners**: Descriptive name (e.g., `SendMonitorAlertNotification.php`)
+- **Notifications**: Suffix with `Notification` (e.g., `MonitorTriggeredNotification.php`)
+- **Services**: Descriptive name based on purpose (e.g., `FirewallRuleInstaller.php`)
+
+### Namespace Structure
+```php
+// Events
+namespace App\Packages\Services\{ServiceName}\Events;
+
+// Listeners
+namespace App\Packages\Services\{ServiceName}\Listeners;
+
+// Notifications
+namespace App\Packages\Services\{ServiceName}\Notifications;
+
+// Commands
+namespace App\Packages\Services\{ServiceName}\Commands;
+
+// Jobs
+namespace App\Packages\Services\{ServiceName};
+```
+
+### Auto-Discovery Configuration
+Commands in `app/Packages/` are auto-discovered via `bootstrap/app.php`:
+
+```php
+->withCommands([
+    __DIR__.'/../app/Packages',
+])
+```
+
+### Listeners Registration
+Event listeners must be registered in `app/Providers/EventServiceProvider.php`:
+
+```php
+protected $subscribe = [
+    \App\Packages\Services\{ServiceName}\Listeners\ListenerClass::class,
+];
+```
+
+### Example Implementations
+- **Monitoring**: `app/Packages/Services/Monitoring/` - Events, Listeners, Notifications, Commands for server monitoring alerts
+- **Firewall**: `app/Packages/Services/Firewall/` - Jobs and services for firewall rule management
+- **Scheduler**: `app/Packages/Services/Scheduler/` - Jobs and services for scheduled task management
+
 <laravel-boost-guidelines>
 === foundation rules ===
 

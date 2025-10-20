@@ -232,6 +232,11 @@ class Server extends Model
         return $this->hasMany(ServerMetric::class);
     }
 
+    public function monitors(): HasMany
+    {
+        return $this->hasMany(ServerMonitor::class);
+    }
+
     public function scheduledTasks(): HasMany
     {
         return $this->hasMany(ServerScheduledTask::class);

@@ -2,6 +2,7 @@ import { CardList } from '@/components/card-list';
 import { CardContainerAddButton } from '@/components/card-container-add-button';
 import DeployServerModal from '@/components/deploy-server-modal';
 import { ServerProviderIcon, type ServerProvider } from '@/components/server-provider-icon';
+import { SiteAvatar } from '@/components/site-avatar';
 import { Button } from '@/components/ui/button';
 import { CardContainer } from '@/components/ui/card-container';
 import AppLayout from '@/layouts/app-layout';
@@ -91,23 +92,6 @@ export default function Dashboard({ dashboard }: { dashboard: DashboardData }) {
         return `${years} ${years === 1 ? 'year' : 'years'} ago`;
     };
 
-    const getSiteInitial = (domain: string) => {
-        return domain.charAt(0).toUpperCase();
-    };
-
-    const getSiteColor = (domain: string) => {
-        const colors = [
-            'bg-blue-500',
-            'bg-purple-500',
-            'bg-pink-500',
-            'bg-green-500',
-            'bg-yellow-500',
-            'bg-red-500',
-            'bg-indigo-500',
-        ];
-        const index = domain.charCodeAt(0) % colors.length;
-        return colors[index];
-    };
 
     const getUserInitials = (name: string) => {
         return name
@@ -252,9 +236,7 @@ export default function Dashboard({ dashboard }: { dashboard: DashboardData }) {
                         <div className="flex items-center justify-between gap-3">
                             {/* Left: Site icon + info */}
                             <div className="flex min-w-0 flex-1 items-center gap-3">
-                                <div className={`flex size-10 shrink-0 items-center justify-center rounded-lg ${getSiteColor(site.domain)} text-white`}>
-                                    <span className="text-lg font-semibold">{getSiteInitial(site.domain)}</span>
-                                </div>
+                                <SiteAvatar domain={site.domain} />
                                 <div className="min-w-0 flex-1">
                                     <div className="text-sm font-medium text-foreground">{site.domain}</div>
                                     <p className="truncate text-xs text-muted-foreground">

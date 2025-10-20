@@ -1,6 +1,7 @@
 import { CardList, type CardListAction } from '@/components/card-list';
 import { InstallSkeleton } from '@/components/install-skeleton';
 import { Button } from '@/components/ui/button';
+import { CardBadge } from '@/components/ui/card-badge';
 import { CardContainer } from '@/components/ui/card-container';
 import { CardFormModal } from '@/components/ui/card-form-modal';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -13,7 +14,7 @@ import { show as showServer } from '@/routes/servers';
 import { type BreadcrumbItem, type Server, type ServerSupervisorTask } from '@/types';
 import { Head, router, useForm } from '@inertiajs/react';
 import { useEcho } from '@laravel/echo-react';
-import { AlertCircle, CheckCircle, Eye, Loader2, Pause, Pencil, Play, RefreshCw, RotateCw, Trash2 } from 'lucide-react';
+import { Eye, Pause, Pencil, Play, RefreshCw, RotateCw, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
 export default function Supervisor({ server }: { server: Server }) {
@@ -218,47 +219,9 @@ export default function Supervisor({ server }: { server: Server }) {
                             keyExtractor={(task) => task.id}
                             renderItem={(task) => (
                                 <div className="flex items-center justify-between gap-3">
-                                    {/* Left: Task name + status */}
+                                    {/* Left: Task info */}
                                     <div className="min-w-0 flex-1">
-                                        <div className="flex items-center gap-2">
-                                            <h4 className="truncate text-sm font-medium text-foreground">{task.name}</h4>
-                                            {task.status === 'pending' && (
-                                                <span className="inline-flex items-center gap-1 rounded bg-slate-500/10 px-1.5 py-0.5 text-xs text-slate-600 dark:text-slate-400">
-                                                    <Loader2 className="h-3 w-3 animate-spin" />
-                                                    Pending
-                                                </span>
-                                            )}
-                                            {task.status === 'installing' && (
-                                                <span className="inline-flex items-center gap-1 rounded bg-blue-500/10 px-1.5 py-0.5 text-xs text-blue-600 dark:text-blue-400">
-                                                    <Loader2 className="h-3 w-3 animate-spin" />
-                                                    Installing
-                                                </span>
-                                            )}
-                                            {task.status === 'active' && (
-                                                <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 px-1.5 py-0.5 text-xs text-emerald-600 dark:text-emerald-400">
-                                                    <CheckCircle className="h-3 w-3" />
-                                                    Active
-                                                </span>
-                                            )}
-                                            {task.status === 'inactive' && (
-                                                <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 px-1.5 py-0.5 text-xs text-amber-600 dark:text-amber-400">
-                                                    <Pause className="h-3 w-3" />
-                                                    Inactive
-                                                </span>
-                                            )}
-                                            {task.status === 'failed' && (
-                                                <span className="inline-flex items-center gap-1 rounded bg-red-500/10 px-1.5 py-0.5 text-xs text-red-600 dark:text-red-400">
-                                                    <AlertCircle className="h-3 w-3" />
-                                                    Failed
-                                                </span>
-                                            )}
-                                            {task.status === 'removing' && (
-                                                <span className="inline-flex items-center gap-1 rounded bg-orange-500/10 px-1.5 py-0.5 text-xs text-orange-600 dark:text-orange-400">
-                                                    <Loader2 className="h-3 w-3 animate-spin" />
-                                                    Removing
-                                                </span>
-                                            )}
-                                        </div>
+                                        <h4 className="truncate text-sm font-medium text-foreground">{task.name}</h4>
                                         <p className="mt-1 truncate font-mono text-xs text-muted-foreground">{task.command}</p>
                                         <div className="mt-1.5 flex items-center gap-3 text-xs text-muted-foreground">
                                             <span>{task.working_directory}</span>
@@ -269,6 +232,11 @@ export default function Supervisor({ server }: { server: Server }) {
                                             <span>•</span>
                                             <span>User: {task.user}</span>
                                         </div>
+                                    </div>
+
+                                    {/* Right: Status badge */}
+                                    <div className="flex-shrink-0">
+                                        <CardBadge variant={task.status as any} />
                                     </div>
                                 </div>
                             )}

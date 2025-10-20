@@ -121,7 +121,9 @@ interface CardListAction {
 
 **Layout Pattern for renderItem:**
 ```tsx
-// Standard layout: Left content (flex-1), Right status (flex-shrink-0)
+// Standard layout: Left content (flex-1), Right status badge (flex-shrink-0)
+// IMPORTANT: Only ONE status badge should be shown at a time based on item.status
+// The status badge MUST always be positioned on the right-hand side BEFORE the ellipsis menu
 <div className="flex items-center justify-between gap-3">
   {/* Left: Primary info (expands to fill) */}
   <div className="min-w-0 flex-1">
@@ -133,10 +135,12 @@ interface CardListAction {
     </div>
   </div>
 
-  {/* Right: Status indicator (fixed width) */}
+  {/* Right: Status badge (fixed width) - positioned before the ellipsis menu */}
+  {/* Only ONE status badge at a time - use conditional logic based on item.status */}
   <div className="flex-shrink-0">
     <StatusBadge status={item.status} />
   </div>
+  {/* The ellipsis (three-dot) menu is automatically rendered by CardList after the status badge */}
 </div>
 ```
 
@@ -205,8 +209,44 @@ interface CardTableColumn<T> {
 
 ## Status Badges
 
-### Standard Status Badge Pattern
-Use inline badge spans for status indicators with consistent color scheme:
+### CardBadge Component (Recommended)
+Use the `CardBadge` component for consistent status indicators across the application:
+
+```tsx
+import { CardBadge } from '@/components/ui/card-badge';
+
+// Simple usage with predefined variants
+<CardBadge variant="active" />
+<CardBadge variant="installing" />
+<CardBadge variant="failed" />
+
+// Custom label (overrides default)
+<CardBadge variant="active" label="Running" />
+
+// Custom icon (overrides default)
+<CardBadge variant="active" icon={<CustomIcon />} />
+```
+
+**Available Variants:**
+- `pending` - Gray with loading spinner
+- `installing` - Blue with loading spinner
+- `updating` - Blue with loading spinner
+- `active` - Green with checkmark (displays "Installed" by default)
+- `inactive` - Amber with pause icon
+- `failed` - Red with X icon
+- `removing` - Blue with loading spinner
+- `uninstalling` - Blue with loading spinner
+- `stopped` - Gray (no icon)
+
+**Component Features:**
+- Consistent styling across all status badges
+- Built-in dark mode support
+- Predefined icons and labels for each variant
+- Customizable labels and icons when needed
+- Bordered design with proper color schemes
+
+### Standard Status Badge Pattern (Manual)
+For custom status badges not covered by CardBadge variants, use inline badge spans with consistent color scheme:
 
 ```tsx
 {/* Pending */}
@@ -310,6 +350,36 @@ import { Badge } from '@/components/ui/badge';
   Allow
 </Badge>
 ```
+
+## Site Avatar
+
+### SiteAvatar Component
+Use the `SiteAvatar` component for consistent site icons/avatars across the application:
+
+```tsx
+import { SiteAvatar } from '@/components/site-avatar';
+
+// Default size (medium)
+<SiteAvatar domain="example.com" />
+
+// Small size
+<SiteAvatar domain="example.com" size="sm" />
+
+// Large size
+<SiteAvatar domain="example.com" size="lg" />
+```
+
+**Available Sizes:**
+- `sm` - 32px (size-8, text-sm)
+- `md` - 40px (size-10, text-lg) - Default
+- `lg` - 48px (size-12, text-xl)
+
+**Component Features:**
+- Automatically generates color based on domain (consistent across app)
+- Displays first letter of domain as initial
+- 7 predefined colors (blue, purple, pink, green, yellow, red, indigo)
+- Rounded square avatar with white text
+- Same domain always gets same color
 
 ## Metadata Display Patterns
 
@@ -522,6 +592,82 @@ import { InstallSkeleton } from '@/components/install-skeleton';
   />
 </CardContainer>
 ```
+
+## Tabs & Toggle Groups
+
+### Toggle Tab Pattern
+For switching between views or options, use this inline tab pattern:
+
+```tsx
+import { useState } from 'react';
+import { cn } from '@/lib/utils';
+
+const [activeTab, setActiveTab] = useState<'metrics' | 'monitors'>('metrics');
+
+const tabs = [
+  { value: 'metrics' as const, label: 'Metrics' },
+  { value: 'monitors' as const, label: 'Monitors' },
+];
+
+<div className="inline-flex gap-1 rounded-lg bg-neutral-100 p-1 dark:bg-neutral-800">
+  {tabs.map(({ value, label }) => (
+    <button
+      key={value}
+      onClick={() => setActiveTab(value)}
+      className={cn(
+        'flex items-center rounded-md px-3.5 py-1.5 transition-colors',
+        activeTab === value
+          ? 'bg-white shadow-xs dark:bg-neutral-700 dark:text-neutral-100'
+          : 'text-neutral-500 hover:bg-neutral-200/60 hover:text-black dark:text-neutral-400 dark:hover:bg-neutral-700/60'
+      )}
+    >
+      <span className="text-sm">{label}</span>
+    </button>
+  ))}
+</div>
+
+{/* Conditional rendering based on active tab */}
+{activeTab === 'metrics' && <MetricsView />}
+{activeTab === 'monitors' && <MonitorsView />}
+```
+
+### Toggle Tab with Icons
+```tsx
+import { Activity, Bell } from 'lucide-react';
+
+const tabs = [
+  { value: 'metrics', icon: Activity, label: 'Metrics' },
+  { value: 'monitors', icon: Bell, label: 'Monitors' },
+];
+
+<div className="inline-flex gap-1 rounded-lg bg-neutral-100 p-1 dark:bg-neutral-800">
+  {tabs.map(({ value, icon: Icon, label }) => (
+    <button
+      key={value}
+      onClick={() => setActiveTab(value)}
+      className={cn(
+        'flex items-center rounded-md px-3.5 py-1.5 transition-colors',
+        activeTab === value
+          ? 'bg-white shadow-xs dark:bg-neutral-700 dark:text-neutral-100'
+          : 'text-neutral-500 hover:bg-neutral-200/60 hover:text-black dark:text-neutral-400 dark:hover:bg-neutral-700/60'
+      )}
+    >
+      <Icon className="-ml-1 h-4 w-4" />
+      <span className="ml-1.5 text-sm">{label}</span>
+    </button>
+  ))}
+</div>
+```
+
+### Tab Styling
+- **Container**: `inline-flex gap-1 rounded-lg bg-neutral-100 p-1 dark:bg-neutral-800`
+- **Tab button**: `flex items-center rounded-md px-3.5 py-1.5 transition-colors`
+- **Active tab**: `bg-white shadow-xs dark:bg-neutral-700 dark:text-neutral-100`
+- **Inactive tab**: `text-neutral-500 hover:bg-neutral-200/60 hover:text-black dark:text-neutral-400 dark:hover:bg-neutral-700/60`
+- **Tab text**: `text-sm`
+- **Tab icon**: `h-4 w-4` with `-ml-1` offset and `ml-1.5` spacing before label
+
+**Reference**: `resources/js/components/appearance-tabs.tsx`
 
 ## Modals & Dialogs
 

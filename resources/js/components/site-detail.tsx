@@ -1,6 +1,7 @@
 import { formatRelativeTime } from '@/lib/utils';
 import { cn } from '@/lib/utils';
-import { GitBranch, Globe, Menu } from 'lucide-react';
+import { SiteAvatar } from '@/components/site-avatar';
+import { GitBranch, Menu } from 'lucide-react';
 
 interface SiteDetailProps {
     server: {
@@ -50,9 +51,7 @@ export function SiteDetail({ server, site, onMobileMenuClick }: SiteDetailProps)
                                 </button>
                             )}
 
-                            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10">
-                                <Globe className="h-4 w-4 text-primary" />
-                            </div>
+                            <SiteAvatar domain={site.domain} size="sm" />
                             <h1 className="text-xl font-semibold text-foreground">{site.domain}</h1>
                         </div>
 

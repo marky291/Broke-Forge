@@ -1,4 +1,5 @@
 import { CardList, type CardListAction } from '@/components/card-list';
+import { SiteAvatar } from '@/components/site-avatar';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -333,36 +334,32 @@ export default function Sites({ server }: SitesProps) {
                     }}
                     renderItem={(site) => (
                         <div className="flex items-center justify-between gap-3">
-                            {/* Left: Icon + Site Info */}
+                            {/* Left: Site Avatar + Info */}
                             <div className="flex min-w-0 flex-1 items-center gap-3">
-                                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                                    <Globe className="h-5 w-5 text-primary" />
-                                </div>
+                                <SiteAvatar domain={site.domain} />
                                 <div className="min-w-0 flex-1">
                                     <div className="text-sm font-medium text-foreground">{site.domain}</div>
-                                    {site.configuration?.git_repository?.repository ? (
-                                        <div className="flex items-center gap-1.5">
-                                            <GitBranch className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground/60" />
-                                            <p className="truncate text-xs text-muted-foreground">
+                                    <p className="truncate text-xs text-muted-foreground">
+                                        {site.configuration?.git_repository?.repository ? (
+                                            <>
                                                 {site.configuration.git_repository.repository}
-                                                {site.configuration.git_repository.branch && (
-                                                    <span className="text-muted-foreground/60"> • {site.configuration.git_repository.branch}</span>
-                                                )}
-                                            </p>
-                                        </div>
-                                    ) : (
-                                        <p className="text-xs text-muted-foreground/60">No repository configured</p>
-                                    )}
+                                                {site.configuration.git_repository.branch && <> · {site.configuration.git_repository.branch}</>}
+                                            </>
+                                        ) : (
+                                            'No repository configured'
+                                        )}
+                                        {site.ssl_enabled && <> · SSL</>}
+                                        {site.php_version && <> · PHP {site.php_version}</>}
+                                    </p>
                                 </div>
                             </div>
 
-                            {/* Right: Status Badge + Metadata */}
+                            {/* Right: Deployment info + Status Badge */}
                             <div className="flex flex-shrink-0 items-center gap-3">
-                                {getStatusBadge(site)}
-                                <div className="hidden items-center gap-2 text-xs text-muted-foreground md:flex">
-                                    <Lock className={`h-4 w-4 ${site.ssl_enabled ? 'text-green-600' : 'text-muted-foreground/30'}`} />
-                                    <span>PHP {site.php_version}</span>
+                                <div className="text-xs text-muted-foreground">
+                                    {site.last_deployed_at_human ? `Deployed ${site.last_deployed_at_human}` : 'Not deployed'}
                                 </div>
+                                {getStatusBadge(site)}
                             </div>
                         </div>
                     )}
