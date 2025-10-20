@@ -14,9 +14,11 @@
         "laravel/cashier": "^16.0",
         "laravel/framework": "^12.0",
         "laravel/horizon": "^5.35",
+        "laravel/reverb": "^1.6",
         "laravel/socialite": "^5.23",
         "laravel/tinker": "^2.10.1",
         "laravel/wayfinder": "^0.1.9",
+        "pusher/pusher-php-server": "^7.2",
         "spatie/laravel-activitylog": "^4.10",
         "spatie/ssh": "^1.13"
     },

@@ -338,4 +338,151 @@ class DatabaseConfigurationServiceTest extends TestCase
         $this->assertArrayHasKey('11.4', $config['versions']);
         $this->assertArrayHasKey('10.11', $config['versions']);
     }
+
+    /**
+     * Test getAvailableDatabases only returns actual databases (not cache/queue).
+     */
+    public function test_get_available_databases_only_returns_actual_databases(): void
+    {
+        // Arrange
+        $service = new DatabaseConfigurationService;
+
+        // Act
+        $databases = $service->getAvailableDatabases();
+
+        // Assert
+        $this->assertArrayHasKey('mysql', $databases);
+        $this->assertArrayHasKey('mariadb', $databases);
+        $this->assertArrayHasKey('postgresql', $databases);
+        $this->assertArrayNotHasKey('redis', $databases);
+    }
+
+    /**
+     * Test getAvailableCacheQueue only returns cache/queue services.
+     */
+    public function test_get_available_cache_queue_only_returns_cache_queue_services(): void
+    {
+        // Arrange
+        $service = new DatabaseConfigurationService;
+
+        // Act
+        $cacheQueue = $service->getAvailableCacheQueue();
+
+        // Assert
+        $this->assertArrayHasKey('redis', $cacheQueue);
+        $this->assertArrayNotHasKey('mysql', $cacheQueue);
+        $this->assertArrayNotHasKey('mariadb', $cacheQueue);
+        $this->assertArrayNotHasKey('postgresql', $cacheQueue);
+    }
+
+    /**
+     * Test getAvailableCacheQueue returns correct Redis configuration.
+     */
+    public function test_get_available_cache_queue_returns_correct_redis_configuration(): void
+    {
+        // Arrange
+        $service = new DatabaseConfigurationService;
+
+        // Act
+        $cacheQueue = $service->getAvailableCacheQueue();
+        $redis = $cacheQueue['redis'];
+
+        // Assert
+        $this->assertEquals('Redis', $redis['name']);
+        $this->assertArrayHasKey('description', $redis);
+        $this->assertArrayHasKey('versions', $redis);
+        $this->assertEquals('7.2', $redis['default_version']);
+        $this->assertEquals(6379, $redis['default_port']);
+    }
+
+    /**
+     * Test getAvailableTypes combines databases and cache/queue.
+     */
+    public function test_get_available_types_combines_databases_and_cache_queue(): void
+    {
+        // Arrange
+        $service = new DatabaseConfigurationService;
+
+        // Act
+        $databases = $service->getAvailableDatabases();
+        $cacheQueue = $service->getAvailableCacheQueue();
+        $allTypes = $service->getAvailableTypes();
+
+        // Assert
+        $this->assertCount(count($databases) + count($cacheQueue), $allTypes);
+        $this->assertArrayHasKey('mysql', $allTypes);
+        $this->assertArrayHasKey('mariadb', $allTypes);
+        $this->assertArrayHasKey('postgresql', $allTypes);
+        $this->assertArrayHasKey('redis', $allTypes);
+    }
+
+    /**
+     * Test databases and cache/queue services are mutually exclusive.
+     */
+    public function test_databases_and_cache_queue_are_mutually_exclusive(): void
+    {
+        // Arrange
+        $service = new DatabaseConfigurationService;
+
+        // Act
+        $databases = $service->getAvailableDatabases();
+        $cacheQueue = $service->getAvailableCacheQueue();
+
+        // Assert - No overlap between the two sets
+        foreach (array_keys($databases) as $dbType) {
+            $this->assertArrayNotHasKey($dbType, $cacheQueue, "Type '{$dbType}' should not appear in both databases and cache/queue");
+        }
+
+        foreach (array_keys($cacheQueue) as $cqType) {
+            $this->assertArrayNotHasKey($cqType, $databases, "Type '{$cqType}' should not appear in both databases and cache/queue");
+        }
+    }
+
+    /**
+     * Test Redis type configuration is accessible via getTypeConfiguration.
+     */
+    public function test_get_type_configuration_returns_redis_configuration(): void
+    {
+        // Arrange
+        $service = new DatabaseConfigurationService;
+
+        // Act
+        $config = $service->getTypeConfiguration(DatabaseType::Redis);
+
+        // Assert
+        $this->assertIsArray($config);
+        $this->assertEquals('Redis', $config['name']);
+        $this->assertEquals(6379, $config['default_port']);
+        $this->assertEquals('7.2', $config['default_version']);
+    }
+
+    /**
+     * Test getDefaultPort returns correct port for Redis.
+     */
+    public function test_get_default_port_returns_correct_port_for_redis(): void
+    {
+        // Arrange
+        $service = new DatabaseConfigurationService;
+
+        // Act
+        $port = $service->getDefaultPort(DatabaseType::Redis);
+
+        // Assert
+        $this->assertEquals(6379, $port);
+    }
+
+    /**
+     * Test getDefaultVersion returns correct version for Redis.
+     */
+    public function test_get_default_version_returns_correct_version_for_redis(): void
+    {
+        // Arrange
+        $service = new DatabaseConfigurationService;
+
+        // Act
+        $version = $service->getDefaultVersion(DatabaseType::Redis);
+
+        // Assert
+        $this->assertEquals('7.2', $version);
+    }
 }

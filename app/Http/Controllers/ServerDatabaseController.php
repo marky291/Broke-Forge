@@ -18,6 +18,9 @@ use App\Packages\Services\Database\MySQL\MySqlUpdaterJob;
 use App\Packages\Services\Database\PostgreSQL\PostgreSqlInstallerJob;
 use App\Packages\Services\Database\PostgreSQL\PostgreSqlRemoverJob;
 use App\Packages\Services\Database\PostgreSQL\PostgreSqlUpdaterJob;
+use App\Packages\Services\Database\Redis\RedisInstallerJob;
+use App\Packages\Services\Database\Redis\RedisRemoverJob;
+use App\Packages\Services\Database\Redis\RedisUpdaterJob;
 use App\Services\DatabaseConfigurationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -32,16 +35,15 @@ class ServerDatabaseController extends Controller
         private readonly DatabaseConfigurationService $databaseConfig
     ) {}
 
-    public function index(Server $server): Response
+    public function services(Server $server): Response
     {
         // Authorize user can view this server
         $this->authorize('view', $server);
 
-        return Inertia::render('servers/databases', [
+        return Inertia::render('servers/services', [
             'server' => new ServerResource($server),
-            'availableDatabases' => Inertia::defer(
-                fn () => $this->databaseConfig->getAvailableTypes($server->os_codename)
-            ),
+            'availableDatabases' => $this->databaseConfig->getAvailableDatabases($server->os_codename),
+            'availableCacheQueue' => $this->databaseConfig->getAvailableCacheQueue($server->os_codename),
         ]);
     }
 
@@ -81,16 +83,19 @@ class ServerDatabaseController extends Controller
             case DatabaseType::PostgreSQL:
                 PostgreSqlInstallerJob::dispatch($server, $database->id);
                 break;
+            case DatabaseType::Redis:
+                RedisInstallerJob::dispatch($server, $database->id);
+                break;
             default:
                 $database->update(['status' => DatabaseStatus::Failed->value]);
 
                 return redirect()
-                    ->route('servers.databases', $server)
+                    ->route('servers.services', $server)
                     ->with('error', 'Selected database type is not supported yet.');
         }
 
         return redirect()
-            ->route('servers.databases', $server)
+            ->route('servers.services', $server)
             ->with('success', 'Database installation started.');
     }
 
@@ -112,7 +117,7 @@ class ServerDatabaseController extends Controller
             $database->status === DatabaseStatus::Uninstalling ||
             $database->status === DatabaseStatus::Updating) {
             return redirect()
-                ->route('servers.databases', $server)
+                ->route('servers.services', $server)
                 ->with('error', 'Database is currently being modified. Please wait.');
         }
 
@@ -137,16 +142,19 @@ class ServerDatabaseController extends Controller
             case DatabaseType::PostgreSQL:
                 PostgreSqlUpdaterJob::dispatch($server, $database->id);
                 break;
+            case DatabaseType::Redis:
+                RedisUpdaterJob::dispatch($server, $database->id);
+                break;
             default:
                 $database->update(['status' => DatabaseStatus::Failed->value]);
 
                 return redirect()
-                    ->route('servers.databases', $server)
+                    ->route('servers.services', $server)
                     ->with('error', 'Selected database type cannot be updated automatically yet.');
         }
 
         return redirect()
-            ->route('servers.databases', $server)
+            ->route('servers.services', $server)
             ->with('success', 'Database update started.');
     }
 
@@ -178,16 +186,19 @@ class ServerDatabaseController extends Controller
             case DatabaseType::PostgreSQL:
                 PostgreSqlRemoverJob::dispatch($server, $database->id);
                 break;
+            case DatabaseType::Redis:
+                RedisRemoverJob::dispatch($server, $database->id);
+                break;
             default:
                 $database->update(['status' => DatabaseStatus::Failed->value]);
 
                 return redirect()
-                    ->route('servers.databases', $server)
+                    ->route('servers.services', $server)
                     ->with('error', 'Selected database type cannot be uninstalled automatically yet.');
         }
 
         return redirect()
-            ->route('servers.databases', $server)
+            ->route('servers.services', $server)
             ->with('success', 'Database uninstallation started.');
     }
 }

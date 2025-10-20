@@ -54,9 +54,9 @@ class NavigationTest extends TestCase
     }
 
     /**
-     * Test database navigation returns 200 and renders correct component.
+     * Test services navigation returns 200 and renders correct component.
      */
-    public function test_database_navigation_returns_200(): void
+    public function test_services_navigation_returns_200(): void
     {
         // Arrange
         $user = User::factory()->create();
@@ -64,12 +64,12 @@ class NavigationTest extends TestCase
 
         // Act
         $response = $this->actingAs($user)
-            ->get("/servers/{$server->id}/databases");
+            ->get("/servers/{$server->id}/services");
 
         // Assert
         $response->assertStatus(200);
         $response->assertInertia(fn ($page) => $page
-            ->component('servers/databases')
+            ->component('servers/services')
             ->has('server')
         );
     }
@@ -191,7 +191,7 @@ class NavigationTest extends TestCase
         $pages = [
             "/servers/{$server->id}/sites",
             "/servers/{$server->id}/php",
-            "/servers/{$server->id}/databases",
+            "/servers/{$server->id}/services",
             "/servers/{$server->id}/firewall",
             "/servers/{$server->id}/monitoring",
             "/servers/{$server->id}/scheduler",
@@ -220,7 +220,7 @@ class NavigationTest extends TestCase
         $pages = [
             "/servers/{$server->id}/sites",
             "/servers/{$server->id}/php",
-            "/servers/{$server->id}/databases",
+            "/servers/{$server->id}/services",
             "/servers/{$server->id}/firewall",
             "/servers/{$server->id}/monitoring",
             "/servers/{$server->id}/scheduler",
@@ -250,7 +250,7 @@ class NavigationTest extends TestCase
         $pages = [
             "/servers/{$server->id}/sites",
             "/servers/{$server->id}/php",
-            "/servers/{$server->id}/databases",
+            "/servers/{$server->id}/services",
             "/servers/{$server->id}/firewall",
             "/servers/{$server->id}/monitoring",
             "/servers/{$server->id}/scheduler",

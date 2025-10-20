@@ -51,6 +51,7 @@ This application is a Laravel application and its main Laravel ecosystems packag
 - inertiajs/inertia-laravel (INERTIA) - v2
 - laravel/cashier (CASHIER) - v16
 - laravel/framework (LARAVEL) - v12
+- laravel/horizon (HORIZON) - v5
 - laravel/prompts (PROMPTS) - v0
 - laravel/socialite (SOCIALITE) - v5
 - laravel/wayfinder (WAYFINDER) - v0
@@ -63,6 +64,7 @@ This application is a Laravel application and its main Laravel ecosystems packag
 - tailwindcss (TAILWINDCSS) - v4
 - @laravel/vite-plugin-wayfinder (WAYFINDER) - v0
 - eslint (ESLINT) - v9
+- laravel-echo (ECHO) - v2
 - prettier (PRETTIER) - v3
 
 
@@ -154,7 +156,7 @@ protected function isAccessible(User $user, ?string $path = null): bool
 - Add useful array shape type definitions for arrays when appropriate.
 
 ## Enums
-- Typically, keys in an Enum should be TitleCase. For example: `FavoritePerson`, `BestLake`, `Monthly`.
+- That being said, keys in an Enum should follow existing application Enum conventions.
 
 
 === inertia-laravel/core rules ===

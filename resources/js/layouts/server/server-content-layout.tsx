@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { type BreadcrumbItem, type NavItem, type ServerMetric } from '@/types';
 import { usePage } from '@inertiajs/react';
-import { Activity, ArrowLeft, Check, Clock, CodeIcon, Cpu, DatabaseIcon, Eye, Globe, HardDrive, MemoryStick, Settings, Shield, XCircle } from 'lucide-react';
+import { Activity, ArrowLeft, Check, Clock, CodeIcon, Cpu, DatabaseIcon, Eye, Globe, HardDrive, Layers, MemoryStick, Settings, Shield, XCircle } from 'lucide-react';
 import { PropsWithChildren, useEffect, useState } from 'react';
 
 interface ServerContentLayoutProps extends PropsWithChildren {
@@ -90,8 +90,8 @@ export default function ServerContentLayout({ children, server, breadcrumbs, lat
         currentSection = 'server';
     } else if (path.includes('/php')) {
         currentSection = 'php';
-    } else if (path.includes('/databases')) {
-        currentSection = 'database';
+    } else if (path.includes('/services')) {
+        currentSection = 'services';
     } else if (path.includes('/firewall')) {
         currentSection = 'firewall';
     } else if (path.includes('/monitoring')) {
@@ -127,10 +127,10 @@ export default function ServerContentLayout({ children, server, breadcrumbs, lat
             isActive: currentSection === 'php',
         },
         {
-            title: 'Database',
-            href: `/servers/${server.id}/databases`,
-            icon: DatabaseIcon,
-            isActive: currentSection === 'database',
+            title: 'Services',
+            href: `/servers/${server.id}/services`,
+            icon: HardDrive,
+            isActive: currentSection === 'services',
         },
         {
             title: 'Firewall',

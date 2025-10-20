@@ -7,7 +7,10 @@ use App\Models\Server;
 
 class DatabaseConfigurationService
 {
-    public function getAvailableTypes(?string $osCodename = null): array
+    /**
+     * Get all available database types (excluding cache/queue services)
+     */
+    public function getAvailableDatabases(?string $osCodename = null): array
     {
         return [
             DatabaseType::MySQL->value => [
@@ -39,6 +42,38 @@ class DatabaseConfigurationService
                 'default_port' => 5432,
             ],
         ];
+    }
+
+    /**
+     * Get all available cache/queue services
+     */
+    public function getAvailableCacheQueue(?string $osCodename = null): array
+    {
+        return [
+            DatabaseType::Redis->value => [
+                'name' => 'Redis',
+                'description' => 'In-memory data structure store for caching and queuing.',
+                'versions' => [
+                    '7.2' => 'Redis 7.2',
+                    '7.0' => 'Redis 7.0',
+                    '6.2' => 'Redis 6.2',
+                ],
+                'default_version' => '7.2',
+                'default_port' => 6379,
+            ],
+        ];
+    }
+
+    /**
+     * Get all available types (databases + cache/queue services)
+     * @deprecated Use getAvailableDatabases() or getAvailableCacheQueue() instead
+     */
+    public function getAvailableTypes(?string $osCodename = null): array
+    {
+        return array_merge(
+            $this->getAvailableDatabases($osCodename),
+            $this->getAvailableCacheQueue($osCodename)
+        );
     }
 
     public function getTypeConfiguration(DatabaseType $type): array

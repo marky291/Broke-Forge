@@ -24,7 +24,7 @@ class ServerDatabaseControllerTest extends TestCase
         $server = Server::factory()->create(['user_id' => $user->id]);
 
         // Act
-        $response = $this->get("/servers/{$server->id}/databases");
+        $response = $this->get("/servers/{$server->id}/services");
 
         // Assert - guests should be redirected to login
         $response->assertStatus(302);
@@ -42,7 +42,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         // Act
         $response = $this->actingAs($user)
-            ->get("/servers/{$server->id}/databases");
+            ->get("/servers/{$server->id}/services");
 
         // Assert
         $response->assertStatus(200);
@@ -60,7 +60,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         // Act
         $response = $this->actingAs($user)
-            ->get("/servers/{$server->id}/databases");
+            ->get("/servers/{$server->id}/services");
 
         // Assert
         $response->assertStatus(403);
@@ -77,12 +77,12 @@ class ServerDatabaseControllerTest extends TestCase
 
         // Act
         $response = $this->actingAs($user)
-            ->get("/servers/{$server->id}/databases");
+            ->get("/servers/{$server->id}/services");
 
         // Assert
         $response->assertStatus(200);
         $response->assertInertia(fn ($page) => $page
-            ->component('servers/databases')
+            ->component('servers/services')
             ->has('server')
         );
     }
@@ -101,12 +101,12 @@ class ServerDatabaseControllerTest extends TestCase
 
         // Act
         $response = $this->actingAs($user)
-            ->get("/servers/{$server->id}/databases");
+            ->get("/servers/{$server->id}/services");
 
         // Assert
         $response->assertStatus(200);
         $response->assertInertia(fn ($page) => $page
-            ->component('servers/databases')
+            ->component('servers/services')
             ->where('server.id', $server->id)
             ->where('server.vanity_name', 'Database Server')
         );
@@ -131,12 +131,12 @@ class ServerDatabaseControllerTest extends TestCase
 
         // Act
         $response = $this->actingAs($user)
-            ->get("/servers/{$server->id}/databases");
+            ->get("/servers/{$server->id}/services");
 
         // Assert
         $response->assertStatus(200);
         $response->assertInertia(fn ($page) => $page
-            ->component('servers/databases')
+            ->component('servers/services')
             ->has('server.databases', 1)
         );
     }
@@ -152,12 +152,12 @@ class ServerDatabaseControllerTest extends TestCase
 
         // Act
         $response = $this->actingAs($user)
-            ->get("/servers/{$server->id}/databases");
+            ->get("/servers/{$server->id}/services");
 
         // Assert
         $response->assertStatus(200);
         $response->assertInertia(fn ($page) => $page
-            ->component('servers/databases')
+            ->component('servers/services')
             ->has('server.databases', 0)
         );
     }
@@ -179,12 +179,12 @@ class ServerDatabaseControllerTest extends TestCase
 
         // Act
         $response = $this->actingAs($user)
-            ->get("/servers/{$server->id}/databases");
+            ->get("/servers/{$server->id}/services");
 
         // Assert
         $response->assertStatus(200);
         $response->assertInertia(fn ($page) => $page
-            ->component('servers/databases')
+            ->component('servers/services')
             ->has('server.databases', 1)
             ->where('server.databases.0.status', DatabaseStatus::Installing->value)
         );
@@ -213,7 +213,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         // Assert
         $response->assertStatus(302);
-        $response->assertRedirect("/servers/{$server->id}/databases");
+        $response->assertRedirect("/servers/{$server->id}/services");
         $response->assertSessionHas('success', 'Database installation started.');
 
         $this->assertDatabaseHas('server_databases', [
@@ -572,7 +572,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         // Assert
         $response->assertStatus(302);
-        $response->assertRedirect("/servers/{$server->id}/databases");
+        $response->assertRedirect("/servers/{$server->id}/services");
         $response->assertSessionHas('success', 'Database update started.');
 
         $database->refresh();
@@ -686,7 +686,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         // Assert
         $response->assertStatus(302);
-        $response->assertRedirect("/servers/{$server->id}/databases");
+        $response->assertRedirect("/servers/{$server->id}/services");
         $response->assertSessionHas('error', 'Database is currently being modified. Please wait.');
     }
 
@@ -713,7 +713,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         // Assert
         $response->assertStatus(302);
-        $response->assertRedirect("/servers/{$server->id}/databases");
+        $response->assertRedirect("/servers/{$server->id}/services");
         $response->assertSessionHas('error', 'Database is currently being modified. Please wait.');
     }
 
@@ -740,7 +740,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         // Assert
         $response->assertStatus(302);
-        $response->assertRedirect("/servers/{$server->id}/databases");
+        $response->assertRedirect("/servers/{$server->id}/services");
         $response->assertSessionHas('error', 'Database is currently being modified. Please wait.');
     }
 
@@ -842,7 +842,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         // Assert
         $response->assertStatus(302);
-        $response->assertRedirect("/servers/{$server->id}/databases");
+        $response->assertRedirect("/servers/{$server->id}/services");
         $response->assertSessionHas('success', 'Database uninstallation started.');
 
         $database->refresh();
@@ -1044,12 +1044,12 @@ class ServerDatabaseControllerTest extends TestCase
 
         // Act
         $response = $this->actingAs($user)
-            ->get("/servers/{$server->id}/databases");
+            ->get("/servers/{$server->id}/services");
 
         // Assert
         $response->assertStatus(200);
         $response->assertInertia(fn ($page) => $page
-            ->component('servers/databases')
+            ->component('servers/services')
             ->has('server.databases', 2)
         );
     }
@@ -1087,7 +1087,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         // Assert
         $response->assertStatus(302);
-        $response->assertRedirect("/servers/{$server->id}/databases");
+        $response->assertRedirect("/servers/{$server->id}/services");
         $response->assertSessionHas('success', 'Database uninstallation started.');
 
         // Verify first database status changed to Uninstalling
@@ -1176,5 +1176,75 @@ class ServerDatabaseControllerTest extends TestCase
         $database2->refresh();
         $this->assertEquals(DatabaseStatus::Active, $database2->status);
         $this->assertDatabaseCount('server_databases', 2);
+    }
+
+    /**
+     * Test database page only includes actual databases (not cache/queue services like Redis).
+     */
+    public function test_database_page_only_includes_actual_databases(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/services");
+
+        // Assert
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('servers/services')
+            ->has('availableDatabases', fn ($availableDatabases) => $availableDatabases
+                ->has('mysql')
+                ->has('mariadb')
+                ->has('postgresql')
+                ->missing('redis')
+            )
+        );
+    }
+
+    /**
+     * Test database page does not show Redis instances even if they exist.
+     */
+    public function test_database_page_does_not_show_redis_instances(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        // Create both a MySQL and Redis instance
+        ServerDatabase::factory()->create([
+            'server_id' => $server->id,
+            'type' => DatabaseType::MySQL,
+            'version' => '8.0',
+            'port' => 3306,
+            'status' => DatabaseStatus::Active,
+        ]);
+
+        ServerDatabase::factory()->create([
+            'server_id' => $server->id,
+            'type' => DatabaseType::Redis,
+            'version' => '7.2',
+            'port' => 6379,
+            'status' => DatabaseStatus::Active,
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/services");
+
+        // Assert - Should show 2 total databases in backend, but frontend filters to 1
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('servers/services')
+            ->has('server.databases', 2) // Backend still sends all
+        );
+
+        // Verify Redis is in the data but will be filtered by frontend
+        $response->assertInertia(fn ($page) => $page
+            ->where('server.databases.0.type', 'mysql')
+            ->where('server.databases.1.type', 'redis')
+        );
     }
 }

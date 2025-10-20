@@ -135,17 +135,17 @@ Route::middleware('auth')->group(function () {
                 ->name('events');
         });
 
-        // Database management
-        Route::prefix('databases')->group(function () {
-            Route::get('/', [ServerDatabaseController::class, 'index'])
-                ->name('databases');
-            Route::post('/', [ServerDatabaseController::class, 'store'])
-                ->name('databases.install');
-            Route::patch('{database}', [ServerDatabaseController::class, 'update'])
-                ->name('databases.update');
-            Route::delete('{database}', [ServerDatabaseController::class, 'destroy'])
-                ->name('databases.uninstall');
-        });
+        // Services management (databases + cache/queue)
+        Route::get('services', [ServerDatabaseController::class, 'services'])
+            ->name('services');
+
+        // Database CRUD endpoints
+        Route::post('databases', [ServerDatabaseController::class, 'store'])
+            ->name('databases.install');
+        Route::patch('databases/{database}', [ServerDatabaseController::class, 'update'])
+            ->name('databases.update');
+        Route::delete('databases/{database}', [ServerDatabaseController::class, 'destroy'])
+            ->name('databases.uninstall');
 
         // PHP management
         Route::get('php', [ServerPhpController::class, 'index'])
