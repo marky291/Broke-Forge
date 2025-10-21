@@ -11,9 +11,10 @@ import {
     BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { type BreadcrumbItem, type NavItem, type ServerMetric } from '@/types';
-import { usePage } from '@inertiajs/react';
+import { useEcho } from '@laravel/echo-react';
+import { router, usePage } from '@inertiajs/react';
 import { Activity, ArrowLeft, Check, Clock, CodeIcon, Cpu, DatabaseIcon, Eye, Globe, HardDrive, Layers, MemoryStick, Settings, Shield, XCircle } from 'lucide-react';
-import { PropsWithChildren, useEffect, useState } from 'react';
+import { PropsWithChildren } from 'react';
 
 interface ServerContentLayoutProps extends PropsWithChildren {
     server: {
@@ -24,64 +25,27 @@ interface ServerContentLayoutProps extends PropsWithChildren {
         public_ip?: string;
         private_ip?: string;
         monitoring_status?: 'installing' | 'active' | 'failed' | 'uninstalling' | 'uninstalled' | null;
+        latestMetrics?: ServerMetric | null;
     };
     breadcrumbs?: BreadcrumbItem[];
-    latestMetrics?: ServerMetric | null;
 }
 
 /**
  * Layout for server pages with integrated sidebar navigation in content area
  */
-export default function ServerContentLayout({ children, server, breadcrumbs, latestMetrics }: ServerContentLayoutProps) {
+export default function ServerContentLayout({ children, server, breadcrumbs }: ServerContentLayoutProps) {
     const { url } = usePage();
     const [path = ''] = url.split('?');
-    const [metrics, setMetrics] = useState<ServerMetric | null>(latestMetrics ?? null);
 
-    // Update metrics when we receive latestMetrics from server
-    useEffect(() => {
-        if (latestMetrics) {
-            setMetrics(latestMetrics);
-        }
-    }, [latestMetrics]);
-
-    // Fetch metrics on mount if monitoring is active but no metrics provided
-    useEffect(() => {
-        if (server.monitoring_status === 'active' && !latestMetrics) {
-            fetch(`/servers/${server.id}/monitoring/metrics?hours=1`, {
-                headers: { Accept: 'application/json' },
-            })
-                .then((res) => res.json())
-                .then((json) => {
-                    if (json.success && json.data && json.data.length > 0) {
-                        setMetrics(json.data[json.data.length - 1]);
-                    }
-                })
-                .catch(() => {});
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []); // Run only on mount
-
-    // Poll for metrics when monitoring is active
-    useEffect(() => {
-        if (server.monitoring_status !== 'active') return;
-
-        const interval = setInterval(async () => {
-            try {
-                const res = await fetch(`/servers/${server.id}/monitoring/metrics?hours=1`, {
-                    headers: { Accept: 'application/json' },
-                });
-                if (!res.ok) return;
-                const json = await res.json();
-                if (json.success && json.data && json.data.length > 0) {
-                    setMetrics(json.data[json.data.length - 1]);
-                }
-            } catch (error) {
-                console.error('Failed to fetch metrics:', error);
-            }
-        }, 30000); // Poll every 30 seconds
-
-        return () => clearInterval(interval);
-    }, [server.monitoring_status, server.id]);
+    // Real-time updates via Reverb WebSocket - listens for ServerUpdated events
+    // When metrics are collected, the Server model is updated and broadcasts ServerUpdated
+    useEcho(`servers.${server.id}`, 'ServerUpdated', () => {
+        router.reload({
+            only: ['server'],
+            preserveScroll: true,
+            preserveState: true,
+        });
+    });
 
     // Determine current active section
     let currentSection: string = 'server';
@@ -272,7 +236,7 @@ export default function ServerContentLayout({ children, server, breadcrumbs, lat
             )} */}
 
             {/* Server Header - Full Width */}
-            <ServerDetail server={server} metrics={metrics} />
+            <ServerDetail server={server} metrics={server.latestMetrics} />
 
             <div className="container mx-auto max-w-7xl px-4">
                 <div className="mt-6 flex h-full flex-col lg:flex-row">

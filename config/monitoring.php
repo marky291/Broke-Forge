@@ -19,10 +19,10 @@ return [
     |--------------------------------------------------------------------------
     |
     | How often metrics should be collected from remote servers (in seconds).
-    | Default: 300 seconds (5 minutes)
+    | Default: 60 seconds (1 minute)
     |
     */
-    'collection_interval' => env('MONITORING_COLLECTION_INTERVAL', 300),
+    'collection_interval' => env('MONITORING_COLLECTION_INTERVAL', 60),
 
     /*
     |--------------------------------------------------------------------------

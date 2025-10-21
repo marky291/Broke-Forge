@@ -15,7 +15,7 @@ interface ServerDetailProps {
 
 export function ServerDetail({ server, metrics }: ServerDetailProps) {
     return (
-        <div className="w-full border-b bg-card py-4">
+        <div id="server-detail-bar'server-detail-bar" className="w-full border-b bg-card py-4">
             <div className="container mx-auto max-w-7xl px-4">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:gap-8">
