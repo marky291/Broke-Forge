@@ -29,6 +29,18 @@ class ServerSchedulerController extends Controller
     use PreparesSiteData;
 
     /**
+     * Display unified tasks page with scheduler and supervisor
+     */
+    public function tasks(Server $server): Response
+    {
+        $this->authorize('view', $server);
+
+        return Inertia::render('servers/tasks', [
+            'server' => new ServerResource($server),
+        ]);
+    }
+
+    /**
      * Display scheduler page with installation status and tasks
      */
     public function index(Server $server): Response

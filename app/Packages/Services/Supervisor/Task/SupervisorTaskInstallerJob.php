@@ -62,7 +62,10 @@ class SupervisorTaskInstallerJob implements ShouldQueue
 
         } catch (Exception $e) {
             // ✅ UPDATE: any → failed
-            $task->update(['status' => SupervisorTaskStatus::Failed]);
+            $task->update([
+                'status' => SupervisorTaskStatus::Failed,
+                'error_log' => $e->getMessage(),
+            ]);
             // Model event broadcasts automatically via Reverb
 
             Log::error('Supervisor task installation failed', [
@@ -74,5 +77,24 @@ class SupervisorTaskInstallerJob implements ShouldQueue
 
             throw $e;  // Re-throw for Laravel's retry mechanism
         }
+    }
+
+    public function failed(\Throwable $exception): void
+    {
+        $task = ServerSupervisorTask::find($this->taskId);
+
+        if ($task) {
+            $task->update([
+                'status' => SupervisorTaskStatus::Failed,
+                'error_log' => $exception->getMessage(),
+            ]);
+        }
+
+        Log::error('SupervisorTaskInstallerJob job failed', [
+            'task_id' => $this->taskId,
+            'server_id' => $this->server->id,
+            'error' => $exception->getMessage(),
+            'trace' => $exception->getTraceAsString(),
+        ]);
     }
 }

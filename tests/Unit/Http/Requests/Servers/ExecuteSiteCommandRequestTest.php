@@ -195,7 +195,7 @@ class ExecuteSiteCommandRequestTest extends TestCase
     /**
      * Test custom error message for required field.
      */
-    public function test_custom_error_message_for_required_field(): void
+    public function test_custom_error_log_for_required_field(): void
     {
         // Arrange
         $data = [];

@@ -2,6 +2,7 @@
 
 namespace App\Packages\Services\PHP;
 
+use App\Enums\PhpStatus;
 use App\Models\Server;
 use App\Models\ServerPhp;
 use App\Packages\Enums\PhpVersion;
@@ -38,7 +39,6 @@ class PhpRemoverJob implements ShouldQueue
 
         // Load the PHP record from database
         $php = ServerPhp::findOrFail($this->phpId);
-        $originalStatus = $php->status; // Store for rollback on failure
 
         // Map version string to PhpVersion enum
         $phpVersion = PhpVersion::from($php->version);
@@ -70,9 +70,12 @@ class PhpRemoverJob implements ShouldQueue
             ]);
 
         } catch (Exception $e) {
-            // ✅ ROLLBACK: Restore original status on failure (allows retry)
+            // ✅ UPDATE: any → failed
             // Model event broadcasts automatically via Reverb
-            $php->update(['status' => $originalStatus]);
+            $php->update([
+                'status' => PhpStatus::Failed,
+                'error_log' => $e->getMessage(),
+            ]);
 
             Log::error("PHP {$phpVersion->value} removal failed", [
                 'php_id' => $php->id,
@@ -83,5 +86,24 @@ class PhpRemoverJob implements ShouldQueue
 
             throw $e;  // Re-throw for Laravel's retry mechanism
         }
+    }
+
+    public function failed(\Throwable $exception): void
+    {
+        $php = ServerPhp::find($this->phpId);
+
+        if ($php) {
+            $php->update([
+                'status' => PhpStatus::Failed,
+                'error_log' => $exception->getMessage(),
+            ]);
+        }
+
+        Log::error('PhpRemoverJob job failed', [
+            'php_id' => $this->phpId,
+            'server_id' => $this->server->id,
+            'error' => $exception->getMessage(),
+            'trace' => $exception->getTraceAsString(),
+        ]);
     }
 }

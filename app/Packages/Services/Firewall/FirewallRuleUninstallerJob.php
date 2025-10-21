@@ -45,9 +45,6 @@ class FirewallRuleUninstallerJob implements ShouldQueue
             'rule_id' => $this->ruleId,
         ]);
 
-        // Store original status for rollback
-        $originalStatus = $rule->status;
-
         try {
             // ✅ UPDATE: active → removing
             // Model event broadcasts automatically via Reverb
@@ -81,12 +78,34 @@ class FirewallRuleUninstallerJob implements ShouldQueue
                 'trace' => $e->getTraceAsString(),
             ]);
 
-            // ✅ ROLLBACK: Restore original status on failure
+            // ✅ UPDATE: any → failed
             // Model event broadcasts automatically via Reverb
-            $rule->update(['status' => $originalStatus]);
+            $rule->update([
+                'status' => FirewallRuleStatus::Failed,
+                'error_log' => $e->getMessage(),
+            ]);
 
             // Mark job as failed without retrying
             $this->fail($e);
         }
+    }
+
+    public function failed(\Throwable $exception): void
+    {
+        $rule = ServerFirewallRule::find($this->ruleId);
+
+        if ($rule) {
+            $rule->update([
+                'status' => FirewallRuleStatus::Failed,
+                'error_log' => $exception->getMessage(),
+            ]);
+        }
+
+        Log::error('FirewallRuleUninstallerJob job failed', [
+            'rule_id' => $this->ruleId,
+            'server_id' => $this->server->id,
+            'error' => $exception->getMessage(),
+            'trace' => $exception->getTraceAsString(),
+        ]);
     }
 }

@@ -17,6 +17,7 @@ class ServerFirewallRule extends Model
         'from_ip_address',
         'rule_type', // 'allow' or 'deny'
         'status', // 'pending', 'installing', 'active', 'failed', 'removing'
+        'error_log',
     ];
 
     public function firewall(): BelongsTo

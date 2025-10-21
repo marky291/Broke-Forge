@@ -53,6 +53,7 @@ class SupervisorRemoverJob implements ShouldQueue
             // Mark as failed
             $this->server->update([
                 'supervisor_status' => SupervisorStatus::Failed,
+                'error_log' => $e->getMessage(),
             ]);
 
             Log::error("Supervisor removal failed for server #{$this->server->id}", [
@@ -62,5 +63,19 @@ class SupervisorRemoverJob implements ShouldQueue
 
             throw $e;
         }
+    }
+
+    public function failed(\Throwable $exception): void
+    {
+        $this->server->update([
+            'supervisor_status' => SupervisorStatus::Failed,
+            'error_log' => $exception->getMessage(),
+        ]);
+
+        Log::error('SupervisorRemoverJob job failed', [
+            'server_id' => $this->server->id,
+            'error' => $exception->getMessage(),
+            'trace' => $exception->getTraceAsString(),
+        ]);
     }
 }

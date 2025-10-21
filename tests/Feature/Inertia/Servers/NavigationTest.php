@@ -117,9 +117,9 @@ class NavigationTest extends TestCase
     }
 
     /**
-     * Test scheduler navigation returns 200 and renders correct component.
+     * Test tasks navigation returns 200 and renders correct component.
      */
-    public function test_scheduler_navigation_returns_200(): void
+    public function test_tasks_navigation_returns_200(): void
     {
         // Arrange
         $user = User::factory()->create();
@@ -127,33 +127,12 @@ class NavigationTest extends TestCase
 
         // Act
         $response = $this->actingAs($user)
-            ->get("/servers/{$server->id}/scheduler");
+            ->get("/servers/{$server->id}/tasks");
 
         // Assert
         $response->assertStatus(200);
         $response->assertInertia(fn ($page) => $page
-            ->component('servers/scheduler')
-            ->has('server')
-        );
-    }
-
-    /**
-     * Test supervisor navigation returns 200 and renders correct component.
-     */
-    public function test_supervisor_navigation_returns_200(): void
-    {
-        // Arrange
-        $user = User::factory()->create();
-        $server = Server::factory()->create(['user_id' => $user->id]);
-
-        // Act
-        $response = $this->actingAs($user)
-            ->get("/servers/{$server->id}/supervisor");
-
-        // Assert
-        $response->assertStatus(200);
-        $response->assertInertia(fn ($page) => $page
-            ->component('servers/supervisor')
+            ->component('servers/tasks')
             ->has('server')
         );
     }
@@ -194,8 +173,7 @@ class NavigationTest extends TestCase
             "/servers/{$server->id}/services",
             "/servers/{$server->id}/firewall",
             "/servers/{$server->id}/monitoring",
-            "/servers/{$server->id}/scheduler",
-            "/servers/{$server->id}/supervisor",
+            "/servers/{$server->id}/tasks",
             "/servers/{$server->id}/settings",
         ];
 
@@ -223,8 +201,7 @@ class NavigationTest extends TestCase
             "/servers/{$server->id}/services",
             "/servers/{$server->id}/firewall",
             "/servers/{$server->id}/monitoring",
-            "/servers/{$server->id}/scheduler",
-            "/servers/{$server->id}/supervisor",
+            "/servers/{$server->id}/tasks",
             "/servers/{$server->id}/settings",
         ];
 
@@ -253,8 +230,7 @@ class NavigationTest extends TestCase
             "/servers/{$server->id}/services",
             "/servers/{$server->id}/firewall",
             "/servers/{$server->id}/monitoring",
-            "/servers/{$server->id}/scheduler",
-            "/servers/{$server->id}/supervisor",
+            "/servers/{$server->id}/tasks",
             "/servers/{$server->id}/settings",
         ];
 

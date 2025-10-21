@@ -2392,6 +2392,76 @@ Use this pattern for the same resources that use installation lifecycle:
 
 This ensures consistent real-time feedback for both installation and removal operations.
 
+## Job Failure Handling
+
+All package jobs use Laravel's `failed()` method to ensure resources never get stuck in transitional states when a job fails.
+
+### The Pattern
+
+Jobs update the resource status to `'failed'` with an error log when they fail:
+
+```php
+class FirewallRuleInstallerJob implements ShouldQueue
+{
+    use Queueable;
+
+    public function __construct(
+        public Server $server,
+        public int $ruleId
+    ) {}
+
+    public function handle(): void
+    {
+        $rule = ServerFirewallRule::findOrFail($this->ruleId);
+
+        $rule->update(['status' => 'installing']);
+
+        $installer = new FirewallRuleInstaller($this->server, $rule);
+        $installer->execute();
+
+        $rule->update(['status' => 'active']);
+    }
+
+    public function failed(\Throwable $exception): void
+    {
+        $rule = ServerFirewallRule::find($this->ruleId);
+
+        if ($rule) {
+            $rule->update([
+                'status' => 'failed',
+                'error_log' => $exception->getMessage(),
+            ]);
+        }
+
+        Log::error('Firewall rule installation failed', [
+            'rule_id' => $this->ruleId,
+            'error' => $exception->getMessage(),
+        ]);
+    }
+}
+```
+
+### Key Points
+
+- Use `find()` in `failed()` method (record may have been deleted)
+- Store `error_log` for user visibility
+- Status changes broadcast automatically via model events
+- Users can retry failed operations
+
+### Database Requirements
+
+Package tables need an `error_log` column:
+
+```php
+$table->text('error_log')->nullable()->after('status');
+```
+
+Models must include it in `$fillable`:
+
+```php
+protected $fillable = ['status', 'error_log', /* ... */];
+```
+
 ## Summary
 
 The **Broadcast Notification → Fetch Full Resource** pattern provides:
@@ -2401,4 +2471,10 @@ The **Broadcast Notification → Fetch Full Resource** pattern provides:
 - Consistent data structure
 - Instant real-time updates
 
-Use this pattern as the default for real-time features in BrokeForge.
+The **Job Failure Handling** pattern ensures:
+- Resources never stuck in transitional states
+- User visibility into errors via error logs
+- Retry capability for all failed operations
+- Real-time failure notifications via Reverb
+
+Use these patterns as the default for real-time features and background jobs in BrokeForge.

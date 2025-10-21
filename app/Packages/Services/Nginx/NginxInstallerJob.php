@@ -67,4 +67,23 @@ class NginxInstallerJob implements ShouldQueue
             throw $e;
         }
     }
+
+    public function failed(\Throwable $exception): void
+    {
+        $this->server->refresh();
+
+        if ($this->server && $this->isProvisioningServer) {
+            $this->server->update([
+                'provision_status' => ProvisionStatus::Failed,
+            ]);
+        }
+
+        Log::error('NginxInstallerJob job failed', [
+            'server_id' => $this->server->id,
+            'php_version' => $this->phpVersion->value,
+            'is_provisioning_server' => $this->isProvisioningServer,
+            'error' => $exception->getMessage(),
+            'trace' => $exception->getTraceAsString(),
+        ]);
+    }
 }

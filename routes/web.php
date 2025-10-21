@@ -267,6 +267,10 @@ Route::middleware('auth')->group(function () {
             });
         });
 
+        // Tasks management (unified scheduler + supervisor view)
+        Route::get('tasks', [ServerSchedulerController::class, 'tasks'])
+            ->name('tasks');
+
         // Scheduler management
         Route::prefix('scheduler')->middleware('throttle:60,1')->group(function () {
             Route::get('/', [ServerSchedulerController::class, 'index'])

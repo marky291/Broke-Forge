@@ -67,7 +67,7 @@ class RedisInstallerJob implements ShouldQueue
 
         } catch (Exception $e) {
             // ✅ UPDATE: any → failed
-            $database->update(['status' => DatabaseStatus::Failed, 'error_message' => $e->getMessage()]);
+            $database->update(['status' => DatabaseStatus::Failed, 'error_log' => $e->getMessage()]);
             // Model event broadcasts automatically via Reverb
 
             Log::error('Redis installation failed', [
@@ -79,5 +79,24 @@ class RedisInstallerJob implements ShouldQueue
 
             throw $e;  // Re-throw for Laravel's retry mechanism
         }
+    }
+
+    public function failed(\Throwable $exception): void
+    {
+        $database = ServerDatabase::find($this->databaseId);
+
+        if ($database) {
+            $database->update([
+                'status' => DatabaseStatus::Failed,
+                'error_log' => $exception->getMessage(),
+            ]);
+        }
+
+        Log::error('Redis installation job failed', [
+            'database_id' => $this->databaseId,
+            'server_id' => $this->server->id,
+            'error' => $exception->getMessage(),
+            'trace' => $exception->getTraceAsString(),
+        ]);
     }
 }

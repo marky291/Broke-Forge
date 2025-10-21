@@ -160,7 +160,7 @@ class CheckSubscriptionTest extends TestCase
     /**
      * Test middleware redirect includes error message.
      */
-    public function test_middleware_redirect_includes_error_message(): void
+    public function test_middleware_redirect_includes_error_log(): void
     {
         // Arrange
         $user = User::factory()->create();

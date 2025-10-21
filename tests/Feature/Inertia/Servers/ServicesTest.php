@@ -431,4 +431,321 @@ class ServicesTest extends TestCase
             )
         );
     }
+
+    /**
+     * Test services page displays failed status badge correctly.
+     */
+    public function test_services_page_displays_failed_status_badge(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        ServerDatabase::factory()->create([
+            'server_id' => $server->id,
+            'type' => DatabaseType::MySQL,
+            'version' => '8.0',
+            'port' => 3306,
+            'status' => DatabaseStatus::Failed,
+            'error_log' => 'Installation failed: Unable to start MySQL service',
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/services");
+
+        // Assert
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('servers/services')
+            ->has('server.databases', 1)
+            ->where('server.databases.0.status', DatabaseStatus::Failed->value)
+            ->where('server.databases.0.type', 'mysql')
+        );
+    }
+
+    /**
+     * Test services page includes error message for failed databases.
+     */
+    public function test_services_page_includes_error_log_for_failed_databases(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        $errorMessage = 'Installation failed: Port 3306 is already in use';
+
+        ServerDatabase::factory()->create([
+            'server_id' => $server->id,
+            'type' => DatabaseType::PostgreSQL,
+            'version' => '16',
+            'port' => 5432,
+            'status' => DatabaseStatus::Failed,
+            'error_log' => $errorMessage,
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/services");
+
+        // Assert
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('servers/services')
+            ->has('server.databases', 1)
+            ->where('server.databases.0.status', DatabaseStatus::Failed->value)
+            ->where('server.databases.0.error_log', $errorMessage)
+        );
+    }
+
+    /**
+     * Test services page displays databases with different statuses correctly.
+     */
+    public function test_services_page_displays_databases_with_different_statuses(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        // Create databases with different statuses
+        ServerDatabase::factory()->create([
+            'server_id' => $server->id,
+            'type' => DatabaseType::MySQL,
+            'port' => 3306,
+            'status' => DatabaseStatus::Pending,
+        ]);
+
+        ServerDatabase::factory()->create([
+            'server_id' => $server->id,
+            'type' => DatabaseType::PostgreSQL,
+            'port' => 5432,
+            'status' => DatabaseStatus::Installing,
+        ]);
+
+        ServerDatabase::factory()->create([
+            'server_id' => $server->id,
+            'type' => DatabaseType::MariaDB,
+            'port' => 3307,
+            'status' => DatabaseStatus::Active,
+        ]);
+
+        ServerDatabase::factory()->create([
+            'server_id' => $server->id,
+            'type' => DatabaseType::Redis,
+            'port' => 6379,
+            'status' => DatabaseStatus::Failed,
+            'error_log' => 'Failed to configure Redis',
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/services");
+
+        // Assert - Verify all 4 databases with their statuses exist (order not guaranteed due to latest())
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('servers/services')
+            ->has('server.databases', 4)
+        );
+    }
+
+    /**
+     * Test services page shows correct props structure for databases.
+     */
+    public function test_services_page_shows_correct_props_structure_for_databases(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        ServerDatabase::factory()->create([
+            'server_id' => $server->id,
+            'name' => 'production-db',
+            'type' => DatabaseType::MySQL,
+            'version' => '8.0',
+            'port' => 3306,
+            'status' => DatabaseStatus::Active,
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/services");
+
+        // Assert
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('servers/services')
+            ->has('server.databases', 1)
+            ->has('server.databases.0.id')
+            ->has('server.databases.0.name')
+            ->has('server.databases.0.type')
+            ->has('server.databases.0.version')
+            ->has('server.databases.0.port')
+            ->has('server.databases.0.status')
+            ->has('server.databases.0.created_at')
+            ->has('server.databases.0.updated_at')
+            ->where('server.databases.0.name', 'production-db')
+            ->where('server.databases.0.type', 'mysql')
+            ->where('server.databases.0.version', '8.0')
+            ->where('server.databases.0.port', 3306)
+            ->where('server.databases.0.status', DatabaseStatus::Active->value)
+        );
+    }
+
+    /**
+     * Test services page displays failed cache queue services correctly.
+     */
+    public function test_services_page_displays_failed_cache_queue_services(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        ServerDatabase::factory()->create([
+            'server_id' => $server->id,
+            'type' => DatabaseType::Redis,
+            'version' => '7.2',
+            'port' => 6379,
+            'status' => DatabaseStatus::Failed,
+            'error_log' => 'Redis installation failed: Configuration error',
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/services");
+
+        // Assert
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('servers/services')
+            ->has('server.databases', 1)
+            ->where('server.databases.0.type', 'redis')
+            ->where('server.databases.0.status', DatabaseStatus::Failed->value)
+            ->where('server.databases.0.error_log', 'Redis installation failed: Configuration error')
+        );
+    }
+
+    /**
+     * Test services page displays pending status correctly.
+     */
+    public function test_services_page_displays_pending_status_correctly(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        ServerDatabase::factory()->create([
+            'server_id' => $server->id,
+            'type' => DatabaseType::PostgreSQL,
+            'version' => '16',
+            'port' => 5432,
+            'status' => DatabaseStatus::Pending,
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/services");
+
+        // Assert
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('servers/services')
+            ->has('server.databases', 1)
+            ->where('server.databases.0.status', DatabaseStatus::Pending->value)
+            ->where('server.databases.0.type', 'postgresql')
+        );
+    }
+
+    /**
+     * Test services page displays updating status correctly.
+     */
+    public function test_services_page_displays_updating_status_correctly(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        ServerDatabase::factory()->create([
+            'server_id' => $server->id,
+            'type' => DatabaseType::MariaDB,
+            'version' => '11.4',
+            'port' => 3307,
+            'status' => DatabaseStatus::Updating,
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/services");
+
+        // Assert
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('servers/services')
+            ->has('server.databases', 1)
+            ->where('server.databases.0.status', DatabaseStatus::Updating->value)
+            ->where('server.databases.0.type', 'mariadb')
+        );
+    }
+
+    /**
+     * Test services page displays uninstalling status correctly.
+     */
+    public function test_services_page_displays_uninstalling_status_correctly(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        ServerDatabase::factory()->create([
+            'server_id' => $server->id,
+            'type' => DatabaseType::MySQL,
+            'version' => '8.0',
+            'port' => 3306,
+            'status' => DatabaseStatus::Uninstalling,
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/services");
+
+        // Assert
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('servers/services')
+            ->has('server.databases', 1)
+            ->where('server.databases.0.status', DatabaseStatus::Uninstalling->value)
+            ->where('server.databases.0.type', 'mysql')
+        );
+    }
+
+    /**
+     * Test services page handles null error message for failed databases.
+     */
+    public function test_services_page_handles_null_error_log_for_failed_databases(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        ServerDatabase::factory()->create([
+            'server_id' => $server->id,
+            'type' => DatabaseType::MySQL,
+            'version' => '8.0',
+            'port' => 3306,
+            'status' => DatabaseStatus::Failed,
+            'error_log' => null,
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/services");
+
+        // Assert
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('servers/services')
+            ->has('server.databases', 1)
+            ->where('server.databases.0.status', DatabaseStatus::Failed->value)
+        );
+    }
 }

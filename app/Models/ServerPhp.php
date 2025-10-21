@@ -18,6 +18,7 @@ class ServerPhp extends Model
         'is_cli_default', // Whether this is the default PHP version for CLI
         'is_site_default', // Whether this is the default PHP version for sites
         'status',
+        'error_log',
     ];
 
     protected function casts(): array

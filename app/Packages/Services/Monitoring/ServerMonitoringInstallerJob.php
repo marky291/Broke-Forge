@@ -63,4 +63,21 @@ class ServerMonitoringInstallerJob implements ShouldQueue
             throw $e;
         }
     }
+
+    public function failed(\Throwable $exception): void
+    {
+        $this->server->refresh();
+
+        if ($this->server) {
+            $this->server->update([
+                'monitoring_status' => MonitoringStatus::Failed,
+            ]);
+        }
+
+        Log::error('ServerMonitoringInstallerJob job failed', [
+            'server_id' => $this->server->id,
+            'error' => $exception->getMessage(),
+            'trace' => $exception->getTraceAsString(),
+        ]);
+    }
 }

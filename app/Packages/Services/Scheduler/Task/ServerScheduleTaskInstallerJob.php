@@ -74,7 +74,10 @@ class ServerScheduleTaskInstallerJob implements ShouldQueue
 
         } catch (Exception $e) {
             // ✅ UPDATE: any → failed
-            $task->update(['status' => TaskStatus::Failed]);
+            $task->update([
+                'status' => TaskStatus::Failed,
+                'error_log' => $e->getMessage(),
+            ]);
             // Model event broadcasts automatically via Reverb
 
             Log::error('Scheduled task installation failed', [
@@ -87,5 +90,24 @@ class ServerScheduleTaskInstallerJob implements ShouldQueue
 
             throw $e;  // Re-throw for Laravel's retry mechanism
         }
+    }
+
+    public function failed(\Throwable $exception): void
+    {
+        $task = ServerScheduledTask::find($this->taskId);
+
+        if ($task) {
+            $task->update([
+                'status' => TaskStatus::Failed,
+                'error_log' => $exception->getMessage(),
+            ]);
+        }
+
+        Log::error('ServerScheduleTaskInstallerJob job failed', [
+            'task_id' => $this->taskId,
+            'server_id' => $this->server->id,
+            'error' => $exception->getMessage(),
+            'trace' => $exception->getTraceAsString(),
+        ]);
     }
 }

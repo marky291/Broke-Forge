@@ -76,6 +76,7 @@ class GitRepositoryInstallerJob implements ShouldQueue
             // Model event broadcasts automatically via Reverb
             $this->site->update([
                 'git_status' => GitStatus::Failed,
+                'error_log' => $e->getMessage(),
             ]);
 
             Log::error("Git repository installation failed for site #{$this->site->id} on server #{$this->server->id}", [
@@ -86,5 +87,24 @@ class GitRepositoryInstallerJob implements ShouldQueue
 
             throw $e;
         }
+    }
+
+    public function failed(\Throwable $exception): void
+    {
+        $site = ServerSite::find($this->site->id);
+
+        if ($site) {
+            $site->update([
+                'git_status' => GitStatus::Failed,
+                'error_log' => $exception->getMessage(),
+            ]);
+        }
+
+        Log::error('GitRepositoryInstallerJob failed', [
+            'site_id' => $this->site->id,
+            'server_id' => $this->server->id,
+            'error' => $exception->getMessage(),
+            'trace' => $exception->getTraceAsString(),
+        ]);
     }
 }

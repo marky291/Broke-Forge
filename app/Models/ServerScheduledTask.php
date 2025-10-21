@@ -20,6 +20,7 @@ class ServerScheduledTask extends Model
         'frequency',
         'cron_expression',
         'status',
+        'error_log',
         'last_run_at',
         'next_run_at',
         'send_notifications',

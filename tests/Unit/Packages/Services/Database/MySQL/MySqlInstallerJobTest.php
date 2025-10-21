@@ -1,0 +1,166 @@
+<?php
+
+namespace Tests\Unit\Packages\Services\Database\MySQL;
+
+use App\Enums\DatabaseStatus;
+use App\Models\Server;
+use App\Models\ServerDatabase;
+use App\Packages\Services\Database\MySQL\MySqlInstallerJob;
+use Exception;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+class MySqlInstallerJobTest extends TestCase
+{
+    use RefreshDatabase;
+
+    /**
+     * Test failed() method updates status to DatabaseStatus::Failed.
+     */
+    public function test_failed_method_updates_status_to_failed(): void
+    {
+        // Arrange
+        $server = Server::factory()->create();
+        $database = ServerDatabase::factory()->create([
+            'server_id' => $server->id,
+            'status' => DatabaseStatus::Installing,
+        ]);
+
+        $job = new MySqlInstallerJob($server, $database->id);
+        $exception = new Exception('Installation failed');
+
+        // Act
+        $job->failed($exception);
+
+        // Assert
+        $database->refresh();
+        $this->assertEquals(DatabaseStatus::Failed, $database->status);
+    }
+
+    /**
+     * Test failed() method stores error message in database.
+     */
+    public function test_failed_method_stores_error_log(): void
+    {
+        // Arrange
+        $server = Server::factory()->create();
+        $database = ServerDatabase::factory()->create([
+            'server_id' => $server->id,
+            'status' => DatabaseStatus::Installing,
+            'error_log' => null,
+        ]);
+
+        $job = new MySqlInstallerJob($server, $database->id);
+        $errorMessage = 'MySQL installation timeout error';
+        $exception = new Exception($errorMessage);
+
+        // Act
+        $job->failed($exception);
+
+        // Assert
+        $database->refresh();
+        $this->assertEquals($errorMessage, $database->error_log);
+    }
+
+    /**
+     * Test failed() method handles missing records gracefully.
+     */
+    public function test_failed_method_handles_missing_records_gracefully(): void
+    {
+        // Arrange
+        $server = Server::factory()->create();
+        $nonExistentId = 99999;
+
+        $job = new MySqlInstallerJob($server, $nonExistentId);
+        $exception = new Exception('Test error');
+
+        // Act - should not throw exception
+        $job->failed($exception);
+
+        // Assert - verify no database record was created
+        $this->assertDatabaseMissing('server_databases', [
+            'id' => $nonExistentId,
+        ]);
+    }
+
+    /**
+     * Test catch block sets failed status immediately when exception occurs.
+     */
+    public function test_catch_block_sets_failed_status_immediately(): void
+    {
+        // Arrange
+        $server = Server::factory()->create();
+        $database = ServerDatabase::factory()->create([
+            'server_id' => $server->id,
+            'status' => DatabaseStatus::Pending,
+        ]);
+
+        $job = new MySqlInstallerJob($server, $database->id);
+
+        // Act & Assert - handle() will throw exception because installer cannot run
+        // We expect the catch block to set status to failed
+        try {
+            $job->handle();
+        } catch (Exception $e) {
+            // Expected to throw
+        }
+
+        // Assert
+        $database->refresh();
+        $this->assertEquals(DatabaseStatus::Failed, $database->status);
+        $this->assertNotNull($database->error_log);
+    }
+
+    /**
+     * Test failed() method updates from any status to failed.
+     */
+    public function test_failed_method_updates_from_any_status_to_failed(): void
+    {
+        // Arrange - test from pending status
+        $server = Server::factory()->create();
+        $database = ServerDatabase::factory()->create([
+            'server_id' => $server->id,
+            'status' => DatabaseStatus::Pending,
+        ]);
+
+        $job = new MySqlInstallerJob($server, $database->id);
+        $exception = new Exception('Fatal error');
+
+        // Act
+        $job->failed($exception);
+
+        // Assert
+        $database->refresh();
+        $this->assertEquals(DatabaseStatus::Failed, $database->status);
+        $this->assertEquals('Fatal error', $database->error_log);
+    }
+
+    /**
+     * Test failed() method preserves database record data except status and error.
+     */
+    public function test_failed_method_preserves_database_record_data(): void
+    {
+        // Arrange
+        $server = Server::factory()->create();
+        $database = ServerDatabase::factory()->create([
+            'server_id' => $server->id,
+            'status' => DatabaseStatus::Installing,
+            'name' => 'mysql',
+            'version' => '8.0',
+            'port' => 3306,
+        ]);
+
+        $job = new MySqlInstallerJob($server, $database->id);
+        $exception = new Exception('Installation error');
+
+        // Act
+        $job->failed($exception);
+
+        // Assert - verify other fields remain unchanged
+        $database->refresh();
+        $this->assertEquals('mysql', $database->name);
+        $this->assertEquals('8.0', $database->version);
+        $this->assertEquals(3306, $database->port);
+        $this->assertEquals($server->id, $database->server_id);
+    }
+}

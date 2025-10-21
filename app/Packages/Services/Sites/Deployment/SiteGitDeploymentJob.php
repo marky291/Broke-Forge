@@ -94,4 +94,24 @@ class SiteGitDeploymentJob implements ShouldQueue
             throw $e;  // Re-throw for Laravel's retry mechanism
         }
     }
+
+    public function failed(\Throwable $exception): void
+    {
+        $deployment = ServerDeployment::find($this->deploymentId);
+
+        if ($deployment) {
+            $deployment->update([
+                'status' => DeploymentStatus::Failed,
+                'completed_at' => now(),
+                'error_output' => $exception->getMessage(),
+            ]);
+        }
+
+        Log::error('SiteGitDeploymentJob failed', [
+            'deployment_id' => $this->deploymentId,
+            'server_id' => $this->server->id,
+            'error' => $exception->getMessage(),
+            'trace' => $exception->getTraceAsString(),
+        ]);
+    }
 }

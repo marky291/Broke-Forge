@@ -46,6 +46,7 @@ class ServerSchedulerInstallerJob implements ShouldQueue
             // Mark as failed
             $this->server->update([
                 'scheduler_status' => SchedulerStatus::Failed,
+                'error_log' => $e->getMessage(),
             ]);
 
             Log::error("Scheduler framework installation failed for server #{$this->server->id}", [
@@ -55,5 +56,19 @@ class ServerSchedulerInstallerJob implements ShouldQueue
 
             throw $e;
         }
+    }
+
+    public function failed(\Throwable $exception): void
+    {
+        $this->server->update([
+            'scheduler_status' => SchedulerStatus::Failed,
+            'error_log' => $exception->getMessage(),
+        ]);
+
+        Log::error('ServerSchedulerInstallerJob job failed', [
+            'server_id' => $this->server->id,
+            'error' => $exception->getMessage(),
+            'trace' => $exception->getTraceAsString(),
+        ]);
     }
 }

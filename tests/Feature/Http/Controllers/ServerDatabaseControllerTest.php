@@ -547,6 +547,110 @@ class ServerDatabaseControllerTest extends TestCase
     }
 
     /**
+     * Test creating database returns record with pending status.
+     */
+    public function test_creating_database_returns_record_with_pending_status(): void
+    {
+        // Arrange
+        \Illuminate\Support\Facades\Queue::fake();
+
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->post("/servers/{$server->id}/databases", [
+                'type' => 'postgresql',
+                'version' => '16',
+                'root_password' => 'SecurePassword123',
+                'port' => 5432,
+            ]);
+
+        // Assert
+        $response->assertStatus(302);
+
+        $database = $server->databases()->first();
+        $this->assertNotNull($database);
+        $this->assertEquals(DatabaseStatus::Pending, $database->status);
+
+        $this->assertDatabaseHas('server_databases', [
+            'server_id' => $server->id,
+            'type' => DatabaseType::PostgreSQL->value,
+            'status' => DatabaseStatus::Pending->value,
+        ]);
+    }
+
+    /**
+     * Test error message is accessible in database record after failure.
+     */
+    public function test_error_log_is_accessible_in_database_record_after_failure(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        // Create a database with failed status and error message
+        $database = ServerDatabase::factory()->create([
+            'server_id' => $server->id,
+            'type' => DatabaseType::MySQL,
+            'version' => '8.0',
+            'port' => 3306,
+            'status' => DatabaseStatus::Failed,
+            'error_log' => 'Installation failed: Connection timeout',
+        ]);
+
+        // Act - Refresh the model to ensure we can read the error_log
+        $database->refresh();
+
+        // Assert - error_log should be accessible
+        $this->assertEquals('Installation failed: Connection timeout', $database->error_log);
+        $this->assertEquals(DatabaseStatus::Failed, $database->status);
+
+        $this->assertDatabaseHas('server_databases', [
+            'id' => $database->id,
+            'status' => DatabaseStatus::Failed->value,
+            'error_log' => 'Installation failed: Connection timeout',
+        ]);
+    }
+
+    /**
+     * Test database can transition from pending to failed with error message.
+     */
+    public function test_database_can_transition_from_pending_to_failed_with_error_log(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        // Create database in pending status
+        $database = ServerDatabase::factory()->create([
+            'server_id' => $server->id,
+            'type' => DatabaseType::MariaDB,
+            'version' => '11.4',
+            'port' => 3310,
+            'status' => DatabaseStatus::Pending,
+            'error_log' => null,
+        ]);
+
+        // Act - Simulate job failure by updating to failed status with error message
+        $database->update([
+            'status' => DatabaseStatus::Failed,
+            'error_log' => 'Package installation failed: mariadb-server not found',
+        ]);
+
+        // Assert
+        $database->refresh();
+        $this->assertEquals(DatabaseStatus::Failed, $database->status);
+        $this->assertEquals('Package installation failed: mariadb-server not found', $database->error_log);
+
+        $this->assertDatabaseHas('server_databases', [
+            'id' => $database->id,
+            'status' => DatabaseStatus::Failed->value,
+            'error_log' => 'Package installation failed: mariadb-server not found',
+        ]);
+    }
+
+    /**
      * Test user can update database version.
      */
     public function test_user_can_update_database_version(): void

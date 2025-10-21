@@ -344,7 +344,7 @@ class DatabaseVersionCompatibilityTest extends TestCase
     /**
      * Test validateInstallation provides helpful error messages.
      */
-    public function test_validate_installation_provides_helpful_error_messages(): void
+    public function test_validate_installation_provides_helpful_error_logs(): void
     {
         // Arrange
         $service = new DatabaseVersionCompatibility;

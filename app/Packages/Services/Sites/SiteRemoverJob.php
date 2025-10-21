@@ -60,6 +60,7 @@ class SiteRemoverJob implements ShouldQueue
             // Mark as failed
             $this->site->update([
                 'status' => 'failed',
+                'error_log' => $e->getMessage(),
             ]);
 
             Log::error("Site uninstallation failed for site #{$this->site->id}", [
@@ -69,5 +70,24 @@ class SiteRemoverJob implements ShouldQueue
 
             throw $e;
         }
+    }
+
+    public function failed(\Throwable $exception): void
+    {
+        $site = ServerSite::find($this->site->id);
+
+        if ($site) {
+            $site->update([
+                'status' => 'failed',
+                'error_log' => $exception->getMessage(),
+            ]);
+        }
+
+        Log::error('SiteRemoverJob failed', [
+            'site_id' => $this->site->id,
+            'server_id' => $this->server->id,
+            'error' => $exception->getMessage(),
+            'trace' => $exception->getTraceAsString(),
+        ]);
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Packages\Services\Scheduler\Task;
 
+use App\Enums\TaskStatus;
 use App\Models\Server;
 use App\Models\ServerScheduledTask;
 use Exception;
@@ -37,9 +38,6 @@ class ServerScheduleTaskRemoverJob implements ShouldQueue
         // Load the task from database
         $task = ServerScheduledTask::findOrFail($this->taskId);
 
-        // Store original status for rollback on failure
-        $originalStatus = $task->status;
-
         Log::info('Starting scheduled task removal', [
             'task_id' => $task->id,
             'server_id' => $this->server->id,
@@ -65,9 +63,11 @@ class ServerScheduleTaskRemoverJob implements ShouldQueue
             $task->delete();
 
         } catch (Exception $e) {
-            // ✅ ROLLBACK: Restore original status on failure (allows retry)
-            // Model event broadcasts automatically via Reverb
-            $task->update(['status' => $originalStatus]);
+            // ✅ Mark as failed
+            $task->update([
+                'status' => TaskStatus::Failed,
+                'error_log' => $e->getMessage(),
+            ]);
 
             Log::error('Scheduled task removal failed', [
                 'task_id' => $task->id,
@@ -78,5 +78,24 @@ class ServerScheduleTaskRemoverJob implements ShouldQueue
 
             throw $e;
         }
+    }
+
+    public function failed(\Throwable $exception): void
+    {
+        $task = ServerScheduledTask::find($this->taskId);
+
+        if ($task) {
+            $task->update([
+                'status' => TaskStatus::Failed,
+                'error_log' => $exception->getMessage(),
+            ]);
+        }
+
+        Log::error('ServerScheduleTaskRemoverJob job failed', [
+            'task_id' => $this->taskId,
+            'server_id' => $this->server->id,
+            'error' => $exception->getMessage(),
+            'trace' => $exception->getTraceAsString(),
+        ]);
     }
 }

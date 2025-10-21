@@ -53,6 +53,7 @@ class ServerSchedulerRemoverJob implements ShouldQueue
             // Mark as failed
             $this->server->update([
                 'scheduler_status' => SchedulerStatus::Failed,
+                'error_log' => $e->getMessage(),
             ]);
 
             Log::error("Scheduler framework removal failed for server #{$this->server->id}", [
@@ -62,5 +63,19 @@ class ServerSchedulerRemoverJob implements ShouldQueue
 
             throw $e;
         }
+    }
+
+    public function failed(\Throwable $exception): void
+    {
+        $this->server->update([
+            'scheduler_status' => SchedulerStatus::Failed,
+            'error_log' => $exception->getMessage(),
+        ]);
+
+        Log::error('ServerSchedulerRemoverJob job failed', [
+            'server_id' => $this->server->id,
+            'error' => $exception->getMessage(),
+            'trace' => $exception->getTraceAsString(),
+        ]);
     }
 }

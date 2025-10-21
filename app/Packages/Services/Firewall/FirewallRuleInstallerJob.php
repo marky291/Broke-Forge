@@ -84,7 +84,10 @@ class FirewallRuleInstallerJob implements ShouldQueue
 
         } catch (Exception $e) {
             // ✅ UPDATE: any → failed
-            $rule->update(['status' => FirewallRuleStatus::Failed]);
+            $rule->update([
+                'status' => FirewallRuleStatus::Failed,
+                'error_log' => $e->getMessage(),
+            ]);
             // Model event broadcasts automatically via Reverb
 
             Log::error('Firewall rule configuration failed', [
@@ -98,5 +101,24 @@ class FirewallRuleInstallerJob implements ShouldQueue
 
             throw $e;  // Re-throw for Laravel's retry mechanism
         }
+    }
+
+    public function failed(\Throwable $exception): void
+    {
+        $rule = ServerFirewallRule::find($this->ruleId);
+
+        if ($rule) {
+            $rule->update([
+                'status' => FirewallRuleStatus::Failed,
+                'error_log' => $exception->getMessage(),
+            ]);
+        }
+
+        Log::error('FirewallRuleInstallerJob job failed', [
+            'rule_id' => $this->ruleId,
+            'server_id' => $this->server->id,
+            'error' => $exception->getMessage(),
+            'trace' => $exception->getTraceAsString(),
+        ]);
     }
 }

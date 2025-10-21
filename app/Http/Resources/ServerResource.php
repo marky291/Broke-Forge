@@ -348,7 +348,9 @@ class ServerResource extends JsonResource
             'version' => $db->version,
             'port' => $db->port,
             'status' => $db->status?->value ?? $db->status,
+            'error_log' => $db->error_log,
             'created_at' => $db->created_at?->toISOString(),
+            'updated_at' => $db->updated_at?->toISOString(),
         ])->toArray();
     }
 }

@@ -124,7 +124,7 @@ class CheckServerLimitTest extends TestCase
     /**
      * Test middleware error message includes limit number.
      */
-    public function test_middleware_error_message_includes_limit_number(): void
+    public function test_middleware_error_log_includes_limit_number(): void
     {
         // Arrange
         $user = User::factory()->create();

@@ -45,4 +45,16 @@ class ServerMonitoringTimerUpdaterJob implements ShouldQueue
             throw $e;
         }
     }
+
+    public function failed(\Throwable $exception): void
+    {
+        $this->server->refresh();
+
+        Log::error('ServerMonitoringTimerUpdaterJob job failed', [
+            'server_id' => $this->server->id,
+            'interval_seconds' => $this->intervalSeconds,
+            'error' => $exception->getMessage(),
+            'trace' => $exception->getTraceAsString(),
+        ]);
+    }
 }

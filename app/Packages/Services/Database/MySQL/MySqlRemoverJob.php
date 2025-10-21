@@ -2,6 +2,7 @@
 
 namespace App\Packages\Services\Database\MySQL;
 
+use App\Enums\DatabaseStatus;
 use App\Models\Server;
 use App\Models\ServerDatabase;
 use Exception;
@@ -37,7 +38,6 @@ class MySqlRemoverJob implements ShouldQueue
 
         // Load the database record from database
         $database = ServerDatabase::findOrFail($this->databaseId);
-        $originalStatus = $database->status; // Store for rollback on failure
 
         Log::info('Starting MySQL database removal', [
             'database_id' => $database->id,
@@ -46,7 +46,7 @@ class MySqlRemoverJob implements ShouldQueue
         ]);
 
         try {
-            // ✅ UPDATE: active → removing
+            // ✅ UPDATE: active → uninstalling
             // Model event broadcasts automatically via Reverb
             $database->update(['status' => 'uninstalling']);
 
@@ -66,9 +66,12 @@ class MySqlRemoverJob implements ShouldQueue
             ]);
 
         } catch (Exception $e) {
-            // ✅ ROLLBACK: Restore original status on failure (allows retry)
+            // ✅ UPDATE: any → failed
             // Model event broadcasts automatically via Reverb
-            $database->update(['status' => $originalStatus]);
+            $database->update([
+                'status' => DatabaseStatus::Failed,
+                'error_log' => $e->getMessage(),
+            ]);
 
             Log::error('MySQL database removal failed', [
                 'database_id' => $database->id,
@@ -79,5 +82,29 @@ class MySqlRemoverJob implements ShouldQueue
 
             throw $e;  // Re-throw for Laravel's retry mechanism
         }
+    }
+
+    /**
+     * Handle a job failure (timeout, fatal error, worker crash).
+     *
+     * This is Laravel's safety net for failures that occur outside normal execution flow.
+     */
+    public function failed(\Throwable $exception): void
+    {
+        $database = ServerDatabase::find($this->databaseId);
+
+        if ($database) {
+            $database->update([
+                'status' => DatabaseStatus::Failed,
+                'error_log' => $exception->getMessage(),
+            ]);
+        }
+
+        Log::error('MySQL removal job failed', [
+            'database_id' => $this->databaseId,
+            'server_id' => $this->server->id,
+            'error' => $exception->getMessage(),
+            'trace' => $exception->getTraceAsString(),
+        ]);
     }
 }

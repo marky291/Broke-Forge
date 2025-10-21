@@ -2,6 +2,7 @@
 
 namespace App\Packages\Services\Supervisor\Task;
 
+use App\Enums\SupervisorTaskStatus;
 use App\Models\Server;
 use App\Models\ServerSupervisorTask;
 use Exception;
@@ -37,9 +38,6 @@ class SupervisorTaskRemoverJob implements ShouldQueue
         // Load the task from database
         $task = ServerSupervisorTask::findOrFail($this->taskId);
 
-        // Store original status for rollback on failure
-        $originalStatus = $task->status;
-
         Log::info('Starting supervisor task removal', [
             'task_id' => $task->id,
             'server_id' => $this->server->id,
@@ -66,9 +64,11 @@ class SupervisorTaskRemoverJob implements ShouldQueue
             $task->delete();
 
         } catch (Exception $e) {
-            // ✅ ROLLBACK: Restore original status on failure (allows retry)
-            // Model event broadcasts automatically via Reverb
-            $task->update(['status' => $originalStatus]);
+            // ✅ UPDATE: Mark as failed on exception
+            $task->update([
+                'status' => SupervisorTaskStatus::Failed,
+                'error_log' => $e->getMessage(),
+            ]);
 
             Log::error('Supervisor task removal failed', [
                 'task_id' => $task->id,
@@ -79,5 +79,24 @@ class SupervisorTaskRemoverJob implements ShouldQueue
 
             throw $e;
         }
+    }
+
+    public function failed(\Throwable $exception): void
+    {
+        $task = ServerSupervisorTask::find($this->taskId);
+
+        if ($task) {
+            $task->update([
+                'status' => SupervisorTaskStatus::Failed,
+                'error_log' => $exception->getMessage(),
+            ]);
+        }
+
+        Log::error('SupervisorTaskRemoverJob job failed', [
+            'task_id' => $this->taskId,
+            'server_id' => $this->server->id,
+            'error' => $exception->getMessage(),
+            'trace' => $exception->getTraceAsString(),
+        ]);
     }
 }

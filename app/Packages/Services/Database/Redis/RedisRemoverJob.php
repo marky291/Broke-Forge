@@ -2,6 +2,7 @@
 
 namespace App\Packages\Services\Database\Redis;
 
+use App\Enums\DatabaseStatus;
 use App\Models\Server;
 use App\Models\ServerDatabase;
 use Exception;
@@ -37,7 +38,6 @@ class RedisRemoverJob implements ShouldQueue
 
         // Load the database record from database
         $database = ServerDatabase::findOrFail($this->databaseId);
-        $originalStatus = $database->status; // Store for rollback on failure
 
         Log::info('Starting Redis removal', [
             'database_id' => $database->id,
@@ -66,9 +66,12 @@ class RedisRemoverJob implements ShouldQueue
             ]);
 
         } catch (Exception $e) {
-            // ✅ ROLLBACK: Restore original status on failure (allows retry)
+            // ✅ UPDATE: any → failed
+            $database->update([
+                'status' => DatabaseStatus::Failed,
+                'error_log' => $e->getMessage(),
+            ]);
             // Model event broadcasts automatically via Reverb
-            $database->update(['status' => $originalStatus]);
 
             Log::error('Redis removal failed', [
                 'database_id' => $database->id,
@@ -79,5 +82,24 @@ class RedisRemoverJob implements ShouldQueue
 
             throw $e;  // Re-throw for Laravel's retry mechanism
         }
+    }
+
+    public function failed(\Throwable $exception): void
+    {
+        $database = ServerDatabase::find($this->databaseId);
+
+        if ($database) {
+            $database->update([
+                'status' => DatabaseStatus::Failed,
+                'error_log' => $exception->getMessage(),
+            ]);
+        }
+
+        Log::error('Redis removal job failed', [
+            'database_id' => $this->databaseId,
+            'server_id' => $this->server->id,
+            'error' => $exception->getMessage(),
+            'trace' => $exception->getTraceAsString(),
+        ]);
     }
 }

@@ -67,7 +67,10 @@ class MariaDbInstallerJob implements ShouldQueue
 
         } catch (Exception $e) {
             // ✅ UPDATE: any → failed
-            $database->update(['status' => DatabaseStatus::Failed]);
+            $database->update([
+                'status' => DatabaseStatus::Failed,
+                'error_log' => $e->getMessage(),
+            ]);
             // Model event broadcasts automatically via Reverb
 
             Log::error('MariaDB installation failed', [
@@ -79,5 +82,29 @@ class MariaDbInstallerJob implements ShouldQueue
 
             throw $e;  // Re-throw for Laravel's retry mechanism
         }
+    }
+
+    /**
+     * Handle a job failure (timeout, fatal error, worker crash).
+     *
+     * This is Laravel's safety net for failures that occur outside normal execution flow.
+     */
+    public function failed(\Throwable $exception): void
+    {
+        $database = ServerDatabase::find($this->databaseId);
+
+        if ($database) {
+            $database->update([
+                'status' => DatabaseStatus::Failed,
+                'error_log' => $exception->getMessage(),
+            ]);
+        }
+
+        Log::error('MariaDB installation job failed', [
+            'database_id' => $this->databaseId,
+            'server_id' => $this->server->id,
+            'error' => $exception->getMessage(),
+            'trace' => $exception->getTraceAsString(),
+        ]);
     }
 }

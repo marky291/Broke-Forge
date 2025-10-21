@@ -71,7 +71,10 @@ class PhpInstallerJob implements ShouldQueue
 
         } catch (Exception $e) {
             // ✅ UPDATE: any → failed
-            $php->update(['status' => PhpStatus::Failed]);
+            $php->update([
+                'status' => PhpStatus::Failed,
+                'error_log' => $e->getMessage(),
+            ]);
             // Model event broadcasts automatically via Reverb
 
             Log::error("PHP {$phpVersion->value} installation failed", [
@@ -83,5 +86,24 @@ class PhpInstallerJob implements ShouldQueue
 
             throw $e;  // Re-throw for Laravel's retry mechanism
         }
+    }
+
+    public function failed(\Throwable $exception): void
+    {
+        $php = ServerPhp::find($this->phpId);
+
+        if ($php) {
+            $php->update([
+                'status' => PhpStatus::Failed,
+                'error_log' => $exception->getMessage(),
+            ]);
+        }
+
+        Log::error('PhpInstallerJob job failed', [
+            'php_id' => $this->phpId,
+            'server_id' => $this->server->id,
+            'error' => $exception->getMessage(),
+            'trace' => $exception->getTraceAsString(),
+        ]);
     }
 }

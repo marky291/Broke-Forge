@@ -96,10 +96,8 @@ export default function ServerContentLayout({ children, server, breadcrumbs, lat
         currentSection = 'firewall';
     } else if (path.includes('/monitoring')) {
         currentSection = 'monitoring';
-    } else if (path.includes('/scheduler')) {
-        currentSection = 'scheduler';
-    } else if (path.includes('/supervisor')) {
-        currentSection = 'supervisor';
+    } else if (path.includes('/tasks')) {
+        currentSection = 'tasks';
     } else if (path.includes('/settings')) {
         currentSection = 'settings';
     }
@@ -145,16 +143,10 @@ export default function ServerContentLayout({ children, server, breadcrumbs, lat
             isActive: currentSection === 'monitoring',
         },
         {
-            title: 'Scheduler',
-            href: `/servers/${server.id}/scheduler`,
+            title: 'Tasks',
+            href: `/servers/${server.id}/tasks`,
             icon: Clock,
-            isActive: currentSection === 'scheduler',
-        },
-        {
-            title: 'Supervisor',
-            href: `/servers/${server.id}/supervisor`,
-            icon: Eye,
-            isActive: currentSection === 'supervisor',
+            isActive: currentSection === 'tasks',
         },
         {
             title: 'Settings',

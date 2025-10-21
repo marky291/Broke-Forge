@@ -526,7 +526,7 @@ class FirewallRuleRequestTest extends TestCase
     /**
      * Test custom error messages are defined.
      */
-    public function test_custom_error_messages_are_defined(): void
+    public function test_custom_error_logs_are_defined(): void
     {
         // Arrange
         $request = new FirewallRuleRequest;

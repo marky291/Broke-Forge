@@ -178,7 +178,7 @@ class ServerDatabaseTest extends TestCase
             'port' => 5432,
             'status' => DatabaseStatus::Pending,
             'root_password' => 'password123',
-            'error_message' => 'Test error',
+            'error_log' => 'Test error',
         ]);
 
         // Assert
@@ -188,7 +188,7 @@ class ServerDatabaseTest extends TestCase
         $this->assertEquals(5432, $database->port);
         $this->assertEquals(DatabaseStatus::Pending, $database->status);
         $this->assertEquals('password123', $database->root_password);
-        $this->assertEquals('Test error', $database->error_message);
+        $this->assertEquals('Test error', $database->error_log);
     }
 
     /**
@@ -357,7 +357,7 @@ class ServerDatabaseTest extends TestCase
     /**
      * Test database can store error message.
      */
-    public function test_database_can_store_error_message(): void
+    public function test_database_can_store_error_log(): void
     {
         // Arrange
         $errorMessage = 'Failed to install: Connection timeout';
@@ -365,23 +365,23 @@ class ServerDatabaseTest extends TestCase
         // Act
         $database = ServerDatabase::factory()->create([
             'status' => DatabaseStatus::Failed,
-            'error_message' => $errorMessage,
+            'error_log' => $errorMessage,
         ]);
 
         // Assert
-        $this->assertEquals($errorMessage, $database->error_message);
+        $this->assertEquals($errorMessage, $database->error_log);
     }
 
     /**
      * Test database can have null error message.
      */
-    public function test_database_can_have_null_error_message(): void
+    public function test_database_can_have_null_error_log(): void
     {
         // Arrange & Act
-        $database = ServerDatabase::factory()->create(['error_message' => null]);
+        $database = ServerDatabase::factory()->create(['error_log' => null]);
 
         // Assert
-        $this->assertNull($database->error_message);
+        $this->assertNull($database->error_log);
     }
 
     /**

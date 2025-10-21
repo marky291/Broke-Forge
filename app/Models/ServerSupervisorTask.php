@@ -21,6 +21,7 @@ class ServerSupervisorTask extends Model
         'auto_restart',
         'autorestart_unexpected',
         'status',
+        'error_log',
         'stdout_logfile',
         'stderr_logfile',
         'installed_at',
