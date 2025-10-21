@@ -251,7 +251,10 @@ class ServerCacheQueueControllerTest extends TestCase
 
         // Assert
         $response->assertSessionHasErrors(['root_password']);
-        $this->assertDatabaseCount('server_databases', 0);
+        $this->assertDatabaseMissing('server_databases', [
+            'server_id' => $server->id,
+            'type' => 'redis',
+        ]);
     }
 
     /**
@@ -397,7 +400,10 @@ class ServerCacheQueueControllerTest extends TestCase
 
         // Assert
         $response->assertStatus(403);
-        $this->assertDatabaseCount('server_databases', 0);
+        $this->assertDatabaseMissing('server_databases', [
+            'server_id' => $server->id,
+            'type' => 'redis',
+        ]);
     }
 
     /**

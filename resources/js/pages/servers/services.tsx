@@ -66,6 +66,16 @@ export default function Services({
         return allDatabases.filter((db) => db.type === 'redis');
     }, [server.databases]);
 
+    // Check if there's an active database (non-failed, non-uninstalling)
+    const hasActiveDatabase = useMemo(() => {
+        return databases.some((db) => db.status !== 'failed' && db.status !== 'uninstalling');
+    }, [databases]);
+
+    // Check if there's an active cache/queue service (non-failed, non-uninstalling)
+    const hasActiveCacheQueue = useMemo(() => {
+        return cacheQueueServices.some((service) => service.status !== 'failed' && service.status !== 'uninstalling');
+    }, [cacheQueueServices]);
+
     const [installDialogType, setInstallDialogType] = useState<InstallDialogType>(null);
     const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
     const [selectedService, setSelectedService] = useState<ServiceItem | null>(null);
@@ -252,7 +262,7 @@ export default function Services({
                             />
                         </svg>
                     }
-                    onAddClick={() => setInstallDialogType('database')}
+                    onAddClick={hasActiveDatabase ? undefined : () => setInstallDialogType('database')}
                     addButtonLabel="Add Database"
                     items={databases}
                     keyExtractor={(db) => db.id}
@@ -323,7 +333,7 @@ export default function Services({
                                 <path d="M4.5 3V7.5M7.5 3V7.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
                             </svg>
                         }
-                        onAddClick={() => setInstallDialogType('cache-queue')}
+                        onAddClick={hasActiveCacheQueue ? undefined : () => setInstallDialogType('cache-queue')}
                         addButtonLabel="Add Cache & Queue"
                         items={cacheQueueServices}
                         keyExtractor={(service) => service.id}

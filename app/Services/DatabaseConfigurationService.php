@@ -66,6 +66,7 @@ class DatabaseConfigurationService
 
     /**
      * Get all available types (databases + cache/queue services)
+     *
      * @deprecated Use getAvailableDatabases() or getAvailableCacheQueue() instead
      */
     public function getAvailableTypes(?string $osCodename = null): array
@@ -126,5 +127,41 @@ class DatabaseConfigurationService
         }
 
         return $port;
+    }
+
+    /**
+     * Determine if the database type belongs to the "database" category
+     * (as opposed to cache/queue services)
+     */
+    public function isDatabaseCategory(DatabaseType $type): bool
+    {
+        return in_array($type, [
+            DatabaseType::MySQL,
+            DatabaseType::MariaDB,
+            DatabaseType::PostgreSQL,
+            DatabaseType::MongoDB,
+        ]);
+    }
+
+    /**
+     * Check if the server already has a database installed in the same category
+     * as the requested type (database vs cache/queue)
+     */
+    public function hasExistingDatabaseInCategory(Server $server, DatabaseType $type): bool
+    {
+        $isDatabase = $this->isDatabaseCategory($type);
+
+        return $server->databases()
+            ->where(function ($query) use ($isDatabase) {
+                if ($isDatabase) {
+                    // Check for any database type (MySQL, MariaDB, PostgreSQL, MongoDB)
+                    $query->whereIn('type', ['mysql', 'mariadb', 'postgresql', 'mongodb']);
+                } else {
+                    // Check for cache/queue type (Redis)
+                    $query->where('type', 'redis');
+                }
+            })
+            ->whereNotIn('status', ['failed', 'uninstalling'])
+            ->exists();
     }
 }

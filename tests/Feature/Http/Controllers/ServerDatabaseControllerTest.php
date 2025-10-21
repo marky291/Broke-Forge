@@ -1020,9 +1020,9 @@ class ServerDatabaseControllerTest extends TestCase
     }
 
     /**
-     * Test user can install multiple databases with different types.
+     * Test user cannot install multiple databases (same category).
      */
-    public function test_user_can_install_multiple_databases_with_different_types(): void
+    public function test_user_cannot_install_multiple_databases_same_category(): void
     {
         // Arrange
         \Illuminate\Support\Facades\Queue::fake();
@@ -1039,7 +1039,7 @@ class ServerDatabaseControllerTest extends TestCase
                 'port' => 3306,
             ]);
 
-        // Act - Install PostgreSQL
+        // Act - Attempt to install PostgreSQL (same database category)
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
                 'type' => 'postgresql',
@@ -1048,14 +1048,15 @@ class ServerDatabaseControllerTest extends TestCase
                 'port' => 5432,
             ]);
 
-        // Assert - both should be created
+        // Assert - second database installation should fail
         $response->assertStatus(302);
-        $this->assertDatabaseCount('server_databases', 2);
+        $response->assertSessionHasErrors(['type']);
+        $this->assertEquals(1, $server->databases()->count());
         $this->assertDatabaseHas('server_databases', [
             'server_id' => $server->id,
             'type' => DatabaseType::MySQL->value,
         ]);
-        $this->assertDatabaseHas('server_databases', [
+        $this->assertDatabaseMissing('server_databases', [
             'server_id' => $server->id,
             'type' => DatabaseType::PostgreSQL->value,
         ]);
@@ -1091,9 +1092,9 @@ class ServerDatabaseControllerTest extends TestCase
     }
 
     /**
-     * Test auto-assigns unique port when not provided.
+     * Test can install database and cache service (different categories).
      */
-    public function test_auto_assigns_unique_port_when_not_provided(): void
+    public function test_can_install_database_and_cache_service_different_categories(): void
     {
         // Arrange
         \Illuminate\Support\Facades\Queue::fake();
@@ -1101,7 +1102,7 @@ class ServerDatabaseControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create(['user_id' => $user->id]);
 
-        // Install first MySQL database on default port
+        // Install MySQL database
         $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
                 'type' => 'mysql',
@@ -1110,19 +1111,28 @@ class ServerDatabaseControllerTest extends TestCase
                 'port' => 3306,
             ]);
 
-        // Act - install second MySQL without specifying port
+        // Act - install Redis (different category - cache/queue)
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
-                'type' => 'mysql',
-                'version' => '8.4',
+                'type' => 'redis',
+                'version' => '7.2',
                 'root_password' => 'Password2',
+                'port' => 6379,
             ]);
 
-        // Assert - should auto-assign a different port
+        // Assert - both should be installed (different categories)
         $response->assertStatus(302);
+        $response->assertSessionHasNoErrors();
         $databases = $server->databases()->get();
         $this->assertEquals(2, $databases->count());
-        $this->assertNotEquals($databases[0]->port, $databases[1]->port);
+        $this->assertDatabaseHas('server_databases', [
+            'server_id' => $server->id,
+            'type' => 'mysql',
+        ]);
+        $this->assertDatabaseHas('server_databases', [
+            'server_id' => $server->id,
+            'type' => 'redis',
+        ]);
     }
 
     /**
@@ -1159,11 +1169,11 @@ class ServerDatabaseControllerTest extends TestCase
     }
 
     /**
-     * Test deleting one database does not delete other databases.
+     * Test deleting database does not delete cache service (different category).
      *
-     * Regression test for bug where deleting one database deleted all databases on the server.
+     * Regression test for bug where deleting one service deleted all services on the server.
      */
-    public function test_deleting_one_database_does_not_delete_other_databases(): void
+    public function test_deleting_database_does_not_delete_cache_service(): void
     {
         // Arrange
         \Illuminate\Support\Facades\Queue::fake();
@@ -1171,116 +1181,39 @@ class ServerDatabaseControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create(['user_id' => $user->id]);
 
-        $database1 = ServerDatabase::factory()->create([
+        $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MariaDB,
-            'port' => 3310,
+            'type' => DatabaseType::MySQL,
+            'port' => 3306,
             'status' => DatabaseStatus::Active,
         ]);
 
-        $database2 = ServerDatabase::factory()->create([
+        $cacheService = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MariaDB,
-            'port' => 3315,
+            'type' => DatabaseType::Redis,
+            'port' => 6379,
             'status' => DatabaseStatus::Active,
         ]);
 
-        // Act - delete only the first database
+        // Act - delete the database
         $response = $this->actingAs($user)
-            ->delete("/servers/{$server->id}/databases/{$database1->id}");
+            ->delete("/servers/{$server->id}/databases/{$database->id}");
 
         // Assert
         $response->assertStatus(302);
         $response->assertRedirect("/servers/{$server->id}/services");
         $response->assertSessionHas('success', 'Database uninstallation started.');
 
-        // Verify first database status changed to Uninstalling
-        $database1->refresh();
-        $this->assertEquals(DatabaseStatus::Uninstalling, $database1->status);
+        // Verify database status changed to Uninstalling
+        $database->refresh();
+        $this->assertEquals(DatabaseStatus::Uninstalling, $database->status);
 
-        // Verify second database still exists and is unchanged
-        $database2->refresh();
-        $this->assertEquals(DatabaseStatus::Active, $database2->status);
-        $this->assertDatabaseCount('server_databases', 2);
+        // Verify cache service still exists and is unchanged
+        $cacheService->refresh();
+        $this->assertEquals(DatabaseStatus::Active, $cacheService->status);
+        $this->assertEquals(2, $server->databases()->count());
     }
 
-    /**
-     * Test deleting one MySQL database does not delete other MySQL databases.
-     */
-    public function test_deleting_one_mysql_database_does_not_delete_other_mysql_databases(): void
-    {
-        // Arrange
-        \Illuminate\Support\Facades\Queue::fake();
-
-        $user = User::factory()->create();
-        $server = Server::factory()->create(['user_id' => $user->id]);
-
-        $database1 = ServerDatabase::factory()->create([
-            'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
-            'port' => 3306,
-            'version' => '8.0',
-            'status' => DatabaseStatus::Active,
-        ]);
-
-        $database2 = ServerDatabase::factory()->create([
-            'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
-            'port' => 3307,
-            'version' => '8.4',
-            'status' => DatabaseStatus::Active,
-        ]);
-
-        // Act - delete only the first database
-        $response = $this->actingAs($user)
-            ->delete("/servers/{$server->id}/databases/{$database1->id}");
-
-        // Assert
-        $response->assertStatus(302);
-
-        // Verify second database still exists
-        $database2->refresh();
-        $this->assertEquals(DatabaseStatus::Active, $database2->status);
-        $this->assertDatabaseCount('server_databases', 2);
-    }
-
-    /**
-     * Test deleting one PostgreSQL database does not delete other databases.
-     */
-    public function test_deleting_one_postgresql_database_does_not_delete_other_databases(): void
-    {
-        // Arrange
-        \Illuminate\Support\Facades\Queue::fake();
-
-        $user = User::factory()->create();
-        $server = Server::factory()->create(['user_id' => $user->id]);
-
-        $database1 = ServerDatabase::factory()->create([
-            'server_id' => $server->id,
-            'type' => DatabaseType::PostgreSQL,
-            'port' => 5432,
-            'status' => DatabaseStatus::Active,
-        ]);
-
-        $database2 = ServerDatabase::factory()->create([
-            'server_id' => $server->id,
-            'type' => DatabaseType::PostgreSQL,
-            'port' => 5433,
-            'status' => DatabaseStatus::Active,
-        ]);
-
-        // Act - delete only the first database
-        $response = $this->actingAs($user)
-            ->delete("/servers/{$server->id}/databases/{$database1->id}");
-
-        // Assert
-        $response->assertStatus(302);
-
-        // Verify second database still exists
-        $database2->refresh();
-        $this->assertEquals(DatabaseStatus::Active, $database2->status);
-        $this->assertDatabaseCount('server_databases', 2);
-    }
 
     /**
      * Test database page only includes actual databases (not cache/queue services like Redis).

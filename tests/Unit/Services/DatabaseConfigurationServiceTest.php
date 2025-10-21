@@ -485,4 +485,239 @@ class DatabaseConfigurationServiceTest extends TestCase
         // Assert
         $this->assertEquals('7.2', $version);
     }
+
+    /**
+     * Test isDatabaseCategory returns true for MySQL.
+     */
+    public function test_is_database_category_returns_true_for_mysql(): void
+    {
+        // Arrange
+        $service = new DatabaseConfigurationService;
+
+        // Act
+        $result = $service->isDatabaseCategory(DatabaseType::MySQL);
+
+        // Assert
+        $this->assertTrue($result);
+    }
+
+    /**
+     * Test isDatabaseCategory returns true for MariaDB.
+     */
+    public function test_is_database_category_returns_true_for_mariadb(): void
+    {
+        // Arrange
+        $service = new DatabaseConfigurationService;
+
+        // Act
+        $result = $service->isDatabaseCategory(DatabaseType::MariaDB);
+
+        // Assert
+        $this->assertTrue($result);
+    }
+
+    /**
+     * Test isDatabaseCategory returns true for PostgreSQL.
+     */
+    public function test_is_database_category_returns_true_for_postgresql(): void
+    {
+        // Arrange
+        $service = new DatabaseConfigurationService;
+
+        // Act
+        $result = $service->isDatabaseCategory(DatabaseType::PostgreSQL);
+
+        // Assert
+        $this->assertTrue($result);
+    }
+
+    /**
+     * Test isDatabaseCategory returns true for MongoDB.
+     */
+    public function test_is_database_category_returns_true_for_mongodb(): void
+    {
+        // Arrange
+        $service = new DatabaseConfigurationService;
+
+        // Act
+        $result = $service->isDatabaseCategory(DatabaseType::MongoDB);
+
+        // Assert
+        $this->assertTrue($result);
+    }
+
+    /**
+     * Test isDatabaseCategory returns false for Redis.
+     */
+    public function test_is_database_category_returns_false_for_redis(): void
+    {
+        // Arrange
+        $service = new DatabaseConfigurationService;
+
+        // Act
+        $result = $service->isDatabaseCategory(DatabaseType::Redis);
+
+        // Assert
+        $this->assertFalse($result);
+    }
+
+    /**
+     * Test hasExistingDatabaseInCategory detects MySQL.
+     */
+    public function test_has_existing_database_in_category_detects_mysql(): void
+    {
+        // Arrange
+        $service = new DatabaseConfigurationService;
+        $server = \App\Models\Server::factory()->create();
+        $server->databases()->create([
+            'name' => 'test-mysql',
+            'type' => 'mysql',
+            'version' => '8.0',
+            'port' => 3306,
+            'status' => 'active',
+            'root_password' => 'password123',
+        ]);
+
+        // Act
+        $result = $service->hasExistingDatabaseInCategory($server, DatabaseType::MariaDB);
+
+        // Assert - Should detect MySQL when checking for MariaDB (same category)
+        $this->assertTrue($result);
+    }
+
+    /**
+     * Test hasExistingDatabaseInCategory ignores different category.
+     */
+    public function test_has_existing_database_in_category_ignores_different_category(): void
+    {
+        // Arrange
+        $service = new DatabaseConfigurationService;
+        $server = \App\Models\Server::factory()->create();
+        $server->databases()->create([
+            'name' => 'test-redis',
+            'type' => 'redis',
+            'version' => '7.2',
+            'port' => 6379,
+            'status' => 'active',
+            'root_password' => 'password123',
+        ]);
+
+        // Act
+        $result = $service->hasExistingDatabaseInCategory($server, DatabaseType::MySQL);
+
+        // Assert - Should not detect Redis when checking for MySQL (different category)
+        $this->assertFalse($result);
+    }
+
+    /**
+     * Test hasExistingDatabaseInCategory ignores failed installations.
+     */
+    public function test_has_existing_database_in_category_ignores_failed_installations(): void
+    {
+        // Arrange
+        $service = new DatabaseConfigurationService;
+        $server = \App\Models\Server::factory()->create();
+        $server->databases()->create([
+            'name' => 'test-mysql-failed',
+            'type' => 'mysql',
+            'version' => '8.0',
+            'port' => 3306,
+            'status' => 'failed',
+            'root_password' => 'password123',
+        ]);
+
+        // Act
+        $result = $service->hasExistingDatabaseInCategory($server, DatabaseType::MySQL);
+
+        // Assert - Should ignore failed installations
+        $this->assertFalse($result);
+    }
+
+    /**
+     * Test hasExistingDatabaseInCategory ignores uninstalling databases.
+     */
+    public function test_has_existing_database_in_category_ignores_uninstalling_databases(): void
+    {
+        // Arrange
+        $service = new DatabaseConfigurationService;
+        $server = \App\Models\Server::factory()->create();
+        $server->databases()->create([
+            'name' => 'test-mysql-uninstalling',
+            'type' => 'mysql',
+            'version' => '8.0',
+            'port' => 3306,
+            'status' => 'uninstalling',
+            'root_password' => 'password123',
+        ]);
+
+        // Act
+        $result = $service->hasExistingDatabaseInCategory($server, DatabaseType::MySQL);
+
+        // Assert - Should ignore uninstalling databases
+        $this->assertFalse($result);
+    }
+
+    /**
+     * Test hasExistingDatabaseInCategory detects pending installations.
+     */
+    public function test_has_existing_database_in_category_detects_pending_installations(): void
+    {
+        // Arrange
+        $service = new DatabaseConfigurationService;
+        $server = \App\Models\Server::factory()->create();
+        $server->databases()->create([
+            'name' => 'test-mysql-pending',
+            'type' => 'mysql',
+            'version' => '8.0',
+            'port' => 3306,
+            'status' => 'pending',
+            'root_password' => 'password123',
+        ]);
+
+        // Act
+        $result = $service->hasExistingDatabaseInCategory($server, DatabaseType::MySQL);
+
+        // Assert - Should detect pending installations
+        $this->assertTrue($result);
+    }
+
+    /**
+     * Test hasExistingDatabaseInCategory detects installing databases.
+     */
+    public function test_has_existing_database_in_category_detects_installing_databases(): void
+    {
+        // Arrange
+        $service = new DatabaseConfigurationService;
+        $server = \App\Models\Server::factory()->create();
+        $server->databases()->create([
+            'name' => 'test-mysql-installing',
+            'type' => 'mysql',
+            'version' => '8.0',
+            'port' => 3306,
+            'status' => 'installing',
+            'root_password' => 'password123',
+        ]);
+
+        // Act
+        $result = $service->hasExistingDatabaseInCategory($server, DatabaseType::MySQL);
+
+        // Assert - Should detect installing databases
+        $this->assertTrue($result);
+    }
+
+    /**
+     * Test hasExistingDatabaseInCategory returns false for empty server.
+     */
+    public function test_has_existing_database_in_category_returns_false_for_empty_server(): void
+    {
+        // Arrange
+        $service = new DatabaseConfigurationService;
+        $server = \App\Models\Server::factory()->create();
+
+        // Act
+        $result = $service->hasExistingDatabaseInCategory($server, DatabaseType::MySQL);
+
+        // Assert
+        $this->assertFalse($result);
+    }
 }

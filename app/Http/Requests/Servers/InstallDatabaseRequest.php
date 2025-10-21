@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests\Servers;
 
+use App\Enums\DatabaseType;
+use App\Services\DatabaseConfigurationService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -30,6 +32,35 @@ class InstallDatabaseRequest extends FormRequest
                     ->where('server_id', $server?->id),
             ],
         ];
+    }
+
+    /**
+     * Configure the validator instance.
+     */
+    public function withValidator($validator): void
+    {
+        $validator->after(function ($validator) {
+            $server = $this->route('server');
+            $requestedType = DatabaseType::tryFrom($this->input('type'));
+
+            if (! $server || ! $requestedType) {
+                return;
+            }
+
+            $databaseConfig = app(DatabaseConfigurationService::class);
+
+            // Check if server already has a database in this category
+            if ($databaseConfig->hasExistingDatabaseInCategory($server, $requestedType)) {
+                $category = $databaseConfig->isDatabaseCategory($requestedType)
+                    ? 'database'
+                    : 'cache/queue service';
+
+                $validator->errors()->add(
+                    'type',
+                    "This server already has a {$category} installed. Please uninstall the existing {$category} before installing a new one."
+                );
+            }
+        });
     }
 
     public function messages(): array
