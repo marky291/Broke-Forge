@@ -201,4 +201,66 @@ class ServerDatabaseController extends Controller
             ->route('servers.services', $server)
             ->with('success', 'Database uninstallation started.');
     }
+
+    /**
+     * Retry a failed database installation
+     */
+    public function retry(Server $server, ServerDatabase $database): RedirectResponse
+    {
+        $this->authorize('update', $server);
+
+        // Ensure database belongs to this server
+        if ($database->server_id !== $server->id) {
+            abort(404);
+        }
+
+        // Only allow retry for failed databases
+        if ($database->status !== DatabaseStatus::Failed) {
+            return back()->with('error', 'Only failed databases can be retried');
+        }
+
+        // Audit log
+        \Illuminate\Support\Facades\Log::info('Database installation retry initiated', [
+            'user_id' => auth()->id(),
+            'server_id' => $server->id,
+            'database_id' => $database->id,
+            'database_type' => $database->type,
+            'database_version' => $database->version,
+            'ip_address' => request()->ip(),
+        ]);
+
+        // Reset status to 'pending' and clear error log
+        // Model events will broadcast automatically via Reverb
+        $database->update([
+            'status' => DatabaseStatus::Pending,
+            'error_log' => null,
+        ]);
+
+        $databaseType = $database->type instanceof DatabaseType
+            ? $database->type
+            : DatabaseType::from($database->type);
+
+        // Re-dispatch installer job based on database type
+        switch ($databaseType) {
+            case DatabaseType::MariaDB:
+                MariaDbInstallerJob::dispatch($server, $database->id);
+                break;
+            case DatabaseType::MySQL:
+                MySqlInstallerJob::dispatch($server, $database->id);
+                break;
+            case DatabaseType::PostgreSQL:
+                PostgreSqlInstallerJob::dispatch($server, $database->id);
+                break;
+            case DatabaseType::Redis:
+                RedisInstallerJob::dispatch($server, $database->id);
+                break;
+            default:
+                $database->update(['status' => DatabaseStatus::Failed->value]);
+
+                return back()->with('error', 'Selected database type is not supported yet.');
+        }
+
+        // No redirect needed - frontend will update via Reverb
+        return back();
+    }
 }

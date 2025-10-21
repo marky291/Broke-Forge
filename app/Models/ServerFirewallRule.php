@@ -20,6 +20,13 @@ class ServerFirewallRule extends Model
         'error_log',
     ];
 
+    protected function casts(): array
+    {
+        return [
+            'status' => \App\Enums\FirewallRuleStatus::class,
+        ];
+    }
+
     public function firewall(): BelongsTo
     {
         return $this->belongsTo(ServerFirewall::class, 'server_firewall_id');

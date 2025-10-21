@@ -13,7 +13,7 @@ import { show as showServer } from '@/routes/servers';
 import { type BreadcrumbItem, type Server } from '@/types';
 import { Head, router, useForm } from '@inertiajs/react';
 import { useEcho } from '@laravel/echo-react';
-import { DatabaseIcon, Layers, Loader2, Pencil, Trash2 } from 'lucide-react';
+import { DatabaseIcon, Layers, Loader2, Pencil, RotateCw, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 type DatabaseVersion = {
@@ -210,6 +210,16 @@ export default function Services({
         }
     };
 
+    const handleRetry = (service: ServiceItem) => {
+        const serviceName = currentServices?.[service.type]?.name || service.type;
+        if (!confirm(`Retry installing ${serviceName} ${service.version}?`)) {
+            return;
+        }
+        router.post(`/servers/${server.id}/databases/${service.id}/retry`, {}, {
+            preserveScroll: true,
+        });
+    };
+
     const getAvailableUpgradeVersions = (service: ServiceItem) => {
         const currentVersion = service.version;
         const services = service.type === 'redis' ? availableCacheQueue : availableDatabases;
@@ -264,6 +274,15 @@ export default function Services({
                     actions={(db) => {
                         const actions: CardListAction[] = [];
                         const isInTransition = db.status === 'pending' || db.status === 'installing' || db.status === 'updating' || db.status === 'uninstalling';
+
+                        if (db.status === 'failed') {
+                            actions.push({
+                                label: 'Retry Installation',
+                                onClick: () => handleRetry(db),
+                                icon: <RotateCw className="h-4 w-4" />,
+                                disabled: processing,
+                            });
+                        }
 
                         if (db.status === 'active') {
                             const upgradeVersions = getAvailableUpgradeVersions(db);
@@ -330,6 +349,15 @@ export default function Services({
                                 service.status === 'installing' ||
                                 service.status === 'updating' ||
                                 service.status === 'uninstalling';
+
+                            if (service.status === 'failed') {
+                                actions.push({
+                                    label: 'Retry Installation',
+                                    onClick: () => handleRetry(service),
+                                    icon: <RotateCw className="h-4 w-4" />,
+                                    disabled: processing,
+                                });
+                            }
 
                             if (service.status === 'active') {
                                 const upgradeVersions = getAvailableUpgradeVersions(service);

@@ -96,4 +96,45 @@ class ServerFirewallController extends Controller
             return back()->with('error', 'Failed to remove firewall rule.');
         }
     }
+
+    /**
+     * Retry a failed firewall rule installation
+     */
+    public function retry(Server $server, ServerFirewallRule $firewallRule): RedirectResponse
+    {
+        $this->authorize('update', $server);
+
+        // Verify the firewall rule belongs to this server
+        if ($firewallRule->firewall->server_id !== $server->id) {
+            return back()->with('error', 'Invalid firewall rule.');
+        }
+
+        // Only allow retry for failed firewall rules
+        if ($firewallRule->status !== \App\Enums\FirewallRuleStatus::Failed) {
+            return back()->with('error', 'Only failed firewall rules can be retried');
+        }
+
+        // Audit log
+        Log::info('Firewall rule installation retry initiated', [
+            'user_id' => auth()->id(),
+            'server_id' => $server->id,
+            'rule_id' => $firewallRule->id,
+            'rule_name' => $firewallRule->name,
+            'port' => $firewallRule->port,
+            'ip_address' => request()->ip(),
+        ]);
+
+        // Reset status to 'pending' and clear error log
+        // Model events will broadcast automatically via Reverb
+        $firewallRule->update([
+            'status' => \App\Enums\FirewallRuleStatus::Pending,
+            'error_log' => null,
+        ]);
+
+        // Re-dispatch installer job
+        FirewallRuleInstallerJob::dispatch($server, $firewallRule->id);
+
+        // No redirect needed - frontend will update via Reverb
+        return back();
+    }
 }

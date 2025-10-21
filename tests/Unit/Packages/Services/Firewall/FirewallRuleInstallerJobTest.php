@@ -37,7 +37,7 @@ class FirewallRuleInstallerJobTest extends TestCase
 
         // Assert
         $rule->refresh();
-        $this->assertEquals(FirewallRuleStatus::Failed->value, $rule->status);
+        $this->assertEquals(FirewallRuleStatus::Failed, $rule->status);
     }
 
     /**
@@ -117,7 +117,7 @@ class FirewallRuleInstallerJobTest extends TestCase
 
         // Assert
         $rule->refresh();
-        $this->assertEquals(FirewallRuleStatus::Failed->value, $rule->status);
+        $this->assertEquals(FirewallRuleStatus::Failed, $rule->status);
         $this->assertNotNull($rule->error_log);
     }
 
@@ -144,7 +144,7 @@ class FirewallRuleInstallerJobTest extends TestCase
 
         // Assert
         $rule->refresh();
-        $this->assertEquals(FirewallRuleStatus::Failed->value, $rule->status);
+        $this->assertEquals(FirewallRuleStatus::Failed, $rule->status);
         $this->assertEquals('Network timeout error', $rule->error_log);
     }
 
@@ -205,7 +205,7 @@ class FirewallRuleInstallerJobTest extends TestCase
 
         // Assert
         $rule->refresh();
-        $this->assertEquals(FirewallRuleStatus::Failed->value, $rule->status);
+        $this->assertEquals(FirewallRuleStatus::Failed, $rule->status);
         $this->assertEquals('Runtime error occurred', $rule->error_log);
     }
 }

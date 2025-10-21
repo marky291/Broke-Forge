@@ -163,4 +163,34 @@ class ServerMonitoringController extends Controller
             ->route('servers.monitoring', ['server' => $server, 'hours' => $currentTimeframe])
             ->with('success', 'Monitoring collection interval update started');
     }
+
+    /**
+     * Retry a failed monitoring installation
+     */
+    public function retry(Server $server): RedirectResponse
+    {
+        $this->authorize('update', $server);
+
+        // Only allow retry for failed monitoring
+        if ($server->monitoring_status !== \App\Enums\MonitoringStatus::Failed) {
+            return back()->with('error', 'Only failed monitoring installations can be retried');
+        }
+
+        // Audit log
+        \Illuminate\Support\Facades\Log::info('Monitoring installation retry initiated', [
+            'user_id' => auth()->id(),
+            'server_id' => $server->id,
+            'ip_address' => request()->ip(),
+        ]);
+
+        // Reset status to 'installing'
+        // Model events will broadcast automatically via Reverb
+        $server->update(['monitoring_status' => \App\Enums\MonitoringStatus::Installing]);
+
+        // Re-dispatch installer job
+        ServerMonitoringInstallerJob::dispatch($server);
+
+        // No redirect needed - frontend will update via Reverb
+        return back();
+    }
 }

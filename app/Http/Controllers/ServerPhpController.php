@@ -208,4 +208,44 @@ class ServerPhpController extends Controller
             ->route('servers.php', $server)
             ->with('success', 'PHP '.$php->version.' removal started');
     }
+
+    /**
+     * Retry a failed PHP installation
+     */
+    public function retry(Server $server, ServerPhp $php): RedirectResponse
+    {
+        $this->authorize('update', $server);
+
+        // Verify the PHP version belongs to this server
+        if ($php->server_id !== $server->id) {
+            abort(404);
+        }
+
+        // Only allow retry for failed PHP installations
+        if ($php->status !== \App\Enums\PhpStatus::Failed) {
+            return back()->with('error', 'Only failed PHP installations can be retried');
+        }
+
+        // Audit log
+        \Illuminate\Support\Facades\Log::info('PHP installation retry initiated', [
+            'user_id' => auth()->id(),
+            'server_id' => $server->id,
+            'php_id' => $php->id,
+            'php_version' => $php->version,
+            'ip_address' => request()->ip(),
+        ]);
+
+        // Reset status to 'pending' and clear error log
+        // Model events will broadcast automatically via Reverb
+        $php->update([
+            'status' => \App\Enums\PhpStatus::Pending,
+            'error_log' => null,
+        ]);
+
+        // Re-dispatch installer job
+        PhpInstallerJob::dispatch($server, $php->id);
+
+        // No redirect needed - frontend will update via Reverb
+        return back();
+    }
 }

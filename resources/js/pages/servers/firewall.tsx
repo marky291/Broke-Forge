@@ -11,7 +11,7 @@ import { dashboard } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router, useForm } from '@inertiajs/react';
 import { useEcho } from '@laravel/echo-react';
-import { AlertCircle, CheckCircle2, Clock, Shield, Trash2 } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Clock, RotateCw, Shield, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
 type Server = {
@@ -116,6 +116,15 @@ export default function Firewall({ server }: FirewallProps) {
         }
     };
 
+    const handleRetryFirewallRule = (rule: FirewallRule) => {
+        if (!confirm(`Retry installing firewall rule "${rule.name}"?`)) {
+            return;
+        }
+        router.post(`/servers/${server.id}/firewall/${rule.id}/retry`, {}, {
+            preserveScroll: true,
+        });
+    };
+
 
     if (!server.firewall.isInstalled) {
         return (
@@ -194,6 +203,16 @@ export default function Firewall({ server }: FirewallProps) {
                     actions={(rule) => {
                         const actions: CardListAction[] = [];
                         const isInTransition = rule.status === 'pending' || rule.status === 'installing' || rule.status === 'removing';
+
+                        // Add retry action for failed firewall rules
+                        if (rule.status === 'failed') {
+                            actions.push({
+                                label: 'Retry Installation',
+                                onClick: () => handleRetryFirewallRule(rule),
+                                icon: <RotateCw className="h-4 w-4" />,
+                                disabled: processing,
+                            });
+                        }
 
                         if (rule.id && (!rule.status || rule.status === 'active' || rule.status === 'failed')) {
                             actions.push({

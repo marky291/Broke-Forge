@@ -13,7 +13,7 @@ import { dashboard } from '@/routes';
 import { show as showServer } from '@/routes/servers';
 import { type BreadcrumbItem, type Server, type ServerPhp } from '@/types';
 import { Head, router, useForm } from '@inertiajs/react';
-import { Trash2 } from 'lucide-react';
+import { RotateCw, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
 export default function Php({ server }: { server: Server }) {
@@ -80,6 +80,15 @@ export default function Php({ server }: { server: Server }) {
         if (confirm(`Are you sure you want to remove PHP ${php.version}? This action cannot be undone.`)) {
             router.delete(`/servers/${server.id}/php/${php.id}`);
         }
+    };
+
+    const handleRetryPhp = (php: ServerPhp) => {
+        if (!confirm(`Retry installing PHP ${php.version}?`)) {
+            return;
+        }
+        router.post(`/servers/${server.id}/php/${php.id}/retry`, {}, {
+            preserveScroll: true,
+        });
     };
 
     const handleSetCliDefault = (php: ServerPhp) => {
@@ -241,20 +250,30 @@ export default function Php({ server }: { server: Server }) {
                             const actions: CardListAction[] = [];
                             const isInTransition = php.status === 'pending' || php.status === 'installing' || php.status === 'removing';
 
-                            // Always show actions, but disable them during transitional states
-                            if (!php.is_cli_default) {
+                            // Add retry action for failed PHP installations
+                            if (php.status === 'failed') {
                                 actions.push({
-                                    label: 'Set as CLI Default',
-                                    onClick: () => handleSetCliDefault(php),
-                                    disabled: isInTransition,
+                                    label: 'Retry Installation',
+                                    onClick: () => handleRetryPhp(php),
+                                    icon: <RotateCw className="h-4 w-4" />,
+                                    disabled: processing,
                                 });
                             }
 
-                            if (!php.is_site_default) {
+                            // Always show actions, but disable them during transitional states
+                            if (!php.is_cli_default && php.status !== 'failed') {
+                                actions.push({
+                                    label: 'Set as CLI Default',
+                                    onClick: () => handleSetCliDefault(php),
+                                    disabled: isInTransition || php.status === 'failed',
+                                });
+                            }
+
+                            if (!php.is_site_default && php.status !== 'failed') {
                                 actions.push({
                                     label: 'Set as Site Default',
                                     onClick: () => handleSetSiteDefault(php),
-                                    disabled: isInTransition,
+                                    disabled: isInTransition || php.status === 'failed',
                                 });
                             }
 

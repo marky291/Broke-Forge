@@ -16,7 +16,7 @@ import { show as showServer } from '@/routes/servers';
 import { type BreadcrumbItem, type Server, type ServerMonitor } from '@/types';
 import { useEcho } from '@laravel/echo-react';
 import { Head, router, useForm } from '@inertiajs/react';
-import { Activity, AlertCircle, AlertTriangle, Bell, CheckCircle, Cpu, Edit, HardDrive, Loader2, MemoryStick, Power, PowerOff, Trash2 } from 'lucide-react';
+import { Activity, AlertCircle, AlertTriangle, Bell, CheckCircle, Cpu, Edit, HardDrive, Loader2, MemoryStick, Power, PowerOff, RotateCw, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Area, AreaChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { ArrowDown, ArrowRight, ArrowUp, TrendingDown, TrendingUp } from 'lucide-react';
@@ -233,6 +233,15 @@ export default function Monitoring({ server, selectedTimeframe = 24 }: { server:
         }
         post(`/servers/${server.id}/monitoring/uninstall`, {
             onSuccess: () => router.reload(),
+        });
+    };
+
+    const handleRetry = () => {
+        if (!confirm('Retry installing monitoring?')) {
+            return;
+        }
+        router.post(`/servers/${server.id}/monitoring/retry`, {}, {
+            preserveScroll: true,
         });
     };
 
@@ -475,14 +484,17 @@ export default function Monitoring({ server, selectedTimeframe = 24 }: { server:
                             <p className="mt-2 text-sm text-muted-foreground">
                                 The monitoring installation failed. Please check the server logs for details.
                             </p>
-                            <Button onClick={handleInstall} disabled={processing} className="mt-4">
+                            <Button onClick={handleRetry} disabled={processing} className="mt-4">
                                 {processing ? (
                                     <>
                                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                         Retrying...
                                     </>
                                 ) : (
-                                    'Retry Installation'
+                                    <>
+                                        <RotateCw className="mr-2 h-4 w-4" />
+                                        Retry Installation
+                                    </>
                                 )}
                             </Button>
                         </div>

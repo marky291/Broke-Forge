@@ -144,6 +144,9 @@ Route::middleware('auth')->group(function () {
             ->name('databases.install');
         Route::patch('databases/{database}', [ServerDatabaseController::class, 'update'])
             ->name('databases.update');
+        Route::post('databases/{database}/retry', [ServerDatabaseController::class, 'retry'])
+            ->name('databases.retry')
+            ->scopeBindings();
         Route::delete('databases/{database}', [ServerDatabaseController::class, 'destroy'])
             ->name('databases.uninstall');
 
@@ -158,6 +161,8 @@ Route::middleware('auth')->group(function () {
             ->name('php.set-cli-default');
         Route::patch('php/{php}/set-site-default', [ServerPhpController::class, 'setSiteDefault'])
             ->name('php.set-site-default');
+        Route::post('php/{php}/retry', [ServerPhpController::class, 'retry'])
+            ->name('php.retry');
         Route::delete('php/{php}', [ServerPhpController::class, 'destroy'])
             ->name('php.destroy');
 
@@ -235,6 +240,9 @@ Route::middleware('auth')->group(function () {
                 ->name('firewall.status');
             Route::post('/', [ServerFirewallController::class, 'store'])
                 ->name('firewall.store');
+            Route::post('/{firewallRule}/retry', [ServerFirewallController::class, 'retry'])
+                ->name('firewall.retry')
+                ->withoutScopedBindings();
             Route::delete('/{rule}', [ServerFirewallController::class, 'destroy'])
                 ->name('firewall.destroy');
         });
@@ -247,6 +255,8 @@ Route::middleware('auth')->group(function () {
                 ->name('monitoring.install');
             Route::post('uninstall', [ServerMonitoringController::class, 'uninstall'])
                 ->name('monitoring.uninstall');
+            Route::post('retry', [ServerMonitoringController::class, 'retry'])
+                ->name('monitoring.retry');
             Route::post('update-interval', [ServerMonitoringController::class, 'updateInterval'])
                 ->name('monitoring.update-interval');
             Route::get('metrics', [ServerMonitoringController::class, 'getMetrics'])
