@@ -32,7 +32,14 @@ class MySqlInstallerJob implements ShouldQueue
      *
      * @var int
      */
-    public $tries = 3;
+    public $tries = 0;
+
+    /**
+     * The number of exceptions to allow before failing.
+     *
+     * @var int
+     */
+    public $maxExceptions = 3;
 
     public function __construct(
         public Server $server,

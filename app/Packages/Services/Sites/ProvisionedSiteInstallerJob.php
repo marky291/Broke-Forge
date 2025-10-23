@@ -6,8 +6,8 @@ use App\Models\Server;
 use App\Models\ServerSite;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Queue\Middleware\WithoutOverlapping;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Site Installation Job
@@ -28,7 +28,14 @@ class ProvisionedSiteInstallerJob implements ShouldQueue
      *
      * @var int
      */
-    public $tries = 3;
+    public $tries = 0;
+
+    /**
+     * The number of exceptions to allow before failing.
+     *
+     * @var int
+     */
+    public $maxExceptions = 3;
 
     /**
      * Create a new job instance.

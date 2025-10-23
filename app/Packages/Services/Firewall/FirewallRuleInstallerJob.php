@@ -8,8 +8,8 @@ use App\Models\ServerFirewallRule;
 use Exception;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Queue\Middleware\WithoutOverlapping;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Firewall Rule Installation Job
@@ -34,7 +34,14 @@ class FirewallRuleInstallerJob implements ShouldQueue
      *
      * @var int
      */
-    public $tries = 3;
+    public $tries = 0;
+
+    /**
+     * The number of exceptions to allow before failing.
+     *
+     * @var int
+     */
+    public $maxExceptions = 3;
 
     /**
      * @param  Server  $server  The server to configure

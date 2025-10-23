@@ -7,8 +7,8 @@ use App\Models\ServerSite;
 use App\Packages\Enums\GitStatus;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Queue\Middleware\WithoutOverlapping;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Git Repository Installation Job
@@ -29,7 +29,14 @@ class GitRepositoryInstallerJob implements ShouldQueue
      *
      * @var int
      */
-    public $tries = 3;
+    public $tries = 0;
+
+    /**
+     * The number of exceptions to allow before failing.
+     *
+     * @var int
+     */
+    public $maxExceptions = 3;
 
     /**
      * Create a new job instance.

@@ -39,7 +39,9 @@ Use Laravel's `WithoutOverlapping` job middleware to serialize jobs per server:
 ```php
 use Illuminate\Queue\Middleware\WithoutOverlapping;
 
-public $tries = 3;  // Limit actual execution failures to 3 attempts
+public $timeout = 600;
+public $tries = 0;           // Unlimited attempts (lock waits don't fail job)
+public $maxExceptions = 3;   // Limit actual execution failures
 
 public function middleware(): array
 {
@@ -52,17 +54,26 @@ public function middleware(): array
 ```
 
 **Configuration:**
-- `$tries = 3` - Limits ACTUAL execution failures to 3 attempts (not lock waits)
-- `releaseAfter(15)` - Wait 15 seconds before retrying when lock is held (does NOT count as attempt)
+- `$timeout = 600` - Maximum execution time in seconds (10 minutes)
+- `$tries = 0` - Unlimited attempts allows infinite retries when encountering locks
+- `$maxExceptions = 3` - Only actual execution failures count toward failure limit
+- `releaseAfter(15)` - Wait 15 seconds before retrying when lock is held
 - `expireAfter(900)` - Lock auto-expires after 15 minutes if job crashes
 - **Lock key: `"package:action:{$this->server->id}"`** - Explicit shared lock key for ALL package jobs on the same server
 - **`->shared()`** - Ensures the lock is shared across different job classes
 
-**⚠️ CRITICAL: Attempt Counting Behavior**
-- **Lock waits (can't acquire lock)**: Released back to queue WITHOUT incrementing attempts → infinite retries
-- **Actual execution failures (exceptions thrown)**: Normal retry logic → counts towards `$tries` limit
+**⚠️ CRITICAL: Why `$tries = 0` with `$maxExceptions = 3`?**
 
-This means a job will wait indefinitely for the lock to be released, but will only retry actual failures 3 times.
+Middlewares like `WithoutOverlapping` consume attempts from the `$tries` count. When a job encounters the lock:
+- Middleware releases the job back to the queue
+- This counts as one "attempt" toward `$tries`
+- With `$tries = 3`, jobs can fail after 3 lock encounters WITHOUT ever executing
+
+**The Solution:**
+- `$tries = 0` - Unlimited attempts (lock waits won't cause permanent failure)
+- `$maxExceptions = 3` - Only ACTUAL execution exceptions count toward the 3-failure limit
+
+This ensures jobs will infinitely retry when encountering locks (waiting for other jobs to complete) but still protect from infinite failure loops via `$maxExceptions`.
 
 **⚠️ IMPORTANT: Why Custom Lock Key?**
 By default, `WithoutOverlapping($this->server->id)` includes the job class name in the lock key:
@@ -73,17 +84,19 @@ These are DIFFERENT locks and won't prevent concurrent execution! Using a custom
 
 **Behavior:**
 - Job stays in "pending" status while waiting for lock to be acquired
-- Lock waits: Released back to queue WITHOUT counting as attempts (infinite retries)
-- Actual failures: Counted towards retry limit (3 attempts max)
+- Lock waits: Released back to queue (infinite retries with `$tries = 0`)
+- Actual failures: Counted towards `$maxExceptions` limit (3 max)
 - Different servers can run operations in parallel (isolated by server ID)
 - No code changes needed in `handle()` method - middleware handles everything
 
 **Example Timeline:**
 1. T=0s: Job 1 (PHP installer) starts on Server #5 → acquires lock
-2. T=5s: Job 2 (MySQL installer) tries Server #5 → can't get lock → released (attempt 1/10)
-3. T=35s: Job 2 retries → still locked → released (attempt 2/10)
+2. T=5s: Job 2 (MySQL installer) tries Server #5 → can't get lock → released (will retry infinitely)
+3. T=35s: Job 2 retries → still locked → released (will retry infinitely)
 4. T=240s: Job 1 completes → releases lock
 5. T=245s: Job 2 retries → gets lock → runs successfully ✅
+6. If Job 2 throws exception → catches, increments exception count (1/3) → retries
+7. If Job 2 throws 3 exceptions → `$maxExceptions` limit reached → permanently fails
 
 **Reference:** Laravel Queue Middleware documentation - `WithoutOverlapping` middleware
 
@@ -99,7 +112,9 @@ These are DIFFERENT locks and won't prevent concurrent execution! Using a custom
 - [ ] Controller creates record with `status: 'pending'` BEFORE dispatching job
 - [ ] Controller dispatches job with record ID (NOT full model/array)
 - [ ] Job accepts record ID and loads from database
-- [ ] Job has `public $tries = 3;` property for retry attempts
+- [ ] Job has `public $timeout = 600;` property for execution time limit
+- [ ] Job has `public $tries = 0;` for unlimited lock wait retries
+- [ ] Job has `public $maxExceptions = 3;` to limit actual execution failures
 - [ ] Job has `middleware()` method returning `WithoutOverlapping` middleware
 - [ ] Job manages status lifecycle: `pending → installing → active/failed`
 - [ ] Job implements `failed()` method for error handling
@@ -236,7 +251,9 @@ class FirewallRuleInstallerJob implements ShouldQueue
 {
     use Queueable;
 
-    public $timeout = 300;
+    public $timeout = 600;
+    public $tries = 0;
+    public $maxExceptions = 3;
 
     public function __construct(
         public Server $server,
@@ -429,7 +446,9 @@ class FirewallRuleRemoverJob implements ShouldQueue
 {
     use Queueable;
 
-    public $timeout = 300;
+    public $timeout = 600;
+    public $tries = 0;
+    public $maxExceptions = 3;
 
     public function __construct(
         public Server $server,
@@ -553,7 +572,7 @@ Study these for complete examples:
 
 1. **Create record FIRST** with `status: 'pending'` before dispatching job
 2. **Job accepts ID** (not full model or array)
-3. **Prevent concurrent operations** - use `WithoutOverlapping` middleware with `$tries = 10`
+3. **Prevent concurrent operations** - use `WithoutOverlapping` middleware with `$tries = 0` and `$maxExceptions = 3`
 4. **Model events broadcast** automatically - never manually dispatch
 5. **Frontend uses useEcho + router.reload()** - no polling
 6. **Status badges** for all lifecycle states
@@ -569,7 +588,8 @@ Study these for complete examples:
 - ✅ Migration with `status` column defaulting to `'pending'`
 - ✅ Model with automatic broadcasting events
 - ✅ Controller creates record first, dispatches job with ID
-- ✅ Job has `$tries = 10` and `middleware()` with `WithoutOverlapping`
+- ✅ Job has `$timeout = 600`, `$tries = 0`, `$maxExceptions = 3`
+- ✅ Job has `middleware()` method with `WithoutOverlapping`
 - ✅ Job manages lifecycle: pending → installing → active/failed
 - ✅ Job implements `failed()` method
 - ✅ Frontend has status badges and retry button

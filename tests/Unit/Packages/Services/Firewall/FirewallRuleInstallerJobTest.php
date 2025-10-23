@@ -15,6 +15,69 @@ class FirewallRuleInstallerJobTest extends TestCase
     use RefreshDatabase;
 
     /**
+     * Test job has correct timeout property.
+     */
+    public function test_job_has_correct_timeout_property(): void
+    {
+        $server = Server::factory()->create();
+        $firewall = \App\Models\ServerFirewall::factory()->create(['server_id' => $server->id]);
+        $rule = ServerFirewallRule::factory()->create(['server_firewall_id' => $firewall->id]);
+        $job = new FirewallRuleInstallerJob($server, $rule->id);
+        $this->assertEquals(600, $job->timeout);
+    }
+
+    /**
+     * Test job has correct tries property.
+     */
+    public function test_job_has_correct_tries_property(): void
+    {
+        $server = Server::factory()->create();
+        $firewall = \App\Models\ServerFirewall::factory()->create(['server_id' => $server->id]);
+        $rule = ServerFirewallRule::factory()->create(['server_firewall_id' => $firewall->id]);
+        $job = new FirewallRuleInstallerJob($server, $rule->id);
+        $this->assertEquals(0, $job->tries);
+    }
+
+    /**
+     * Test job has correct maxExceptions property.
+     */
+    public function test_job_has_correct_max_exceptions_property(): void
+    {
+        $server = Server::factory()->create();
+        $firewall = \App\Models\ServerFirewall::factory()->create(['server_id' => $server->id]);
+        $rule = ServerFirewallRule::factory()->create(['server_firewall_id' => $firewall->id]);
+        $job = new FirewallRuleInstallerJob($server, $rule->id);
+        $this->assertEquals(3, $job->maxExceptions);
+    }
+
+    /**
+     * Test middleware is configured with WithoutOverlapping.
+     */
+    public function test_middleware_configured_with_without_overlapping(): void
+    {
+        $server = Server::factory()->create();
+        $firewall = \App\Models\ServerFirewall::factory()->create(['server_id' => $server->id]);
+        $rule = ServerFirewallRule::factory()->create(['server_firewall_id' => $firewall->id]);
+        $job = new FirewallRuleInstallerJob($server, $rule->id);
+        $middleware = $job->middleware();
+        $this->assertCount(1, $middleware);
+        $this->assertInstanceOf(\Illuminate\Queue\Middleware\WithoutOverlapping::class, $middleware[0]);
+    }
+
+    /**
+     * Test job constructor accepts server and rule ID.
+     */
+    public function test_constructor_accepts_server_and_id(): void
+    {
+        $server = Server::factory()->create();
+        $ruleId = 123;
+        $job = new FirewallRuleInstallerJob($server, $ruleId);
+        $this->assertInstanceOf(FirewallRuleInstallerJob::class, $job);
+        $this->assertEquals($server->id, $job->server->id);
+        $this->assertEquals($ruleId, $job->ruleId);
+    }
+
+    /**
      * Test failed() method updates status to FirewallRuleStatus::Failed.
      */
     public function test_failed_method_updates_status_to_failed(): void

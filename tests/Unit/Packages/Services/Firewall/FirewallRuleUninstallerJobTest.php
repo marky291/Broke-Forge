@@ -30,7 +30,19 @@ class FirewallRuleUninstallerJobTest extends TestCase
         $firewall = ServerFirewall::factory()->create(['server_id' => $server->id]);
         $rule = ServerFirewallRule::factory()->create(['server_firewall_id' => $firewall->id]);
         $job = new FirewallRuleUninstallerJob($server, $rule->id);
-        $this->assertEquals(3, $job->tries);
+        $this->assertEquals(0, $job->tries);
+    }
+
+    /**
+     * Test job has correct maxExceptions property.
+     */
+    public function test_job_has_correct_max_exceptions_property(): void
+    {
+        $server = Server::factory()->create();
+        $firewall = ServerFirewall::factory()->create(['server_id' => $server->id]);
+        $rule = ServerFirewallRule::factory()->create(['server_firewall_id' => $firewall->id]);
+        $job = new FirewallRuleUninstallerJob($server, $rule->id);
+        $this->assertEquals(3, $job->maxExceptions);
     }
 
     public function test_middleware_configured_with_without_overlapping(): void

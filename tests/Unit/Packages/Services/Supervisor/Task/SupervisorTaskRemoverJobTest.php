@@ -27,7 +27,18 @@ class SupervisorTaskRemoverJobTest extends TestCase
         $server = Server::factory()->create();
         $record = ServerSupervisorTask::factory()->create(['server_id' => $server->id]);
         $job = new SupervisorTaskRemoverJob($server, $record->id);
-        $this->assertEquals(3, $job->tries);
+        $this->assertEquals(0, $job->tries);
+    }
+
+    /**
+     * Test job has correct maxExceptions property.
+     */
+    public function test_job_has_correct_max_exceptions_property(): void
+    {
+        $server = Server::factory()->create();
+        $record = ServerSupervisorTask::factory()->create(['server_id' => $server->id]);
+        $job = new SupervisorTaskRemoverJob($server, $record->id);
+        $this->assertEquals(3, $job->maxExceptions);
     }
 
     public function test_middleware_configured_with_without_overlapping(): void

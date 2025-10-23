@@ -43,7 +43,23 @@ class MySqlUpdaterJobTest extends TestCase
         $job = new MySqlUpdaterJob($server, $database->id);
 
         // Assert
-        $this->assertEquals(3, $job->tries);
+        $this->assertEquals(0, $job->tries);
+    }
+
+    /**
+     * Test job has correct maxExceptions property.
+     */
+    public function test_job_has_correct_max_exceptions_property(): void
+    {
+        // Arrange
+        $server = Server::factory()->create();
+        $database = ServerDatabase::factory()->create(['server_id' => $server->id]);
+
+        // Act
+        $job = new MySqlUpdaterJob($server, $database->id);
+
+        // Assert
+        $this->assertEquals(3, $job->maxExceptions);
     }
 
     /**

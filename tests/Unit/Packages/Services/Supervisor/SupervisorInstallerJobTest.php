@@ -38,7 +38,19 @@ class SupervisorInstallerJobTest extends TestCase
         $job = new SupervisorInstallerJob($server);
 
         // Assert
-        $this->assertEquals(3, $job->tries);
+        $this->assertEquals(0, $job->tries);
+    }
+
+    /**
+     * Test job has correct maxExceptions property.
+     */
+    public function test_job_has_correct_max_exceptions_property(): void
+    {
+        $server = Server::factory()->create();
+
+        // Act
+        $job = new SupervisorInstallerJob($server);
+        $this->assertEquals(3, $job->maxExceptions);
     }
 
     /**
