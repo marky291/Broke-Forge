@@ -2,7 +2,6 @@
 
 namespace App\Packages\Services\Database\MySQL;
 
-use App\Enums\DatabaseStatus;
 use App\Packages\Base\PackageInstaller;
 
 /**
@@ -14,25 +13,10 @@ use App\Packages\Base\PackageInstaller;
 class MySqlInstaller extends PackageInstaller implements \App\Packages\Base\ServerPackage
 {
     /**
-     * Mark MySQL installation as failed in database
-     */
-    protected function markResourceAsFailed(string $errorMessage): void
-    {
-        $this->server->databases()->latest()->first()?->update([
-            'status' => DatabaseStatus::Failed,
-            'error_message' => $errorMessage,
-        ]);
-    }
-
-    /**
      * Execute the MySQL server installation
      */
-    public function execute(): void
+    public function execute(string $version, string $rootPassword): void
     {
-        $database = $this->server->databases()->latest()->first();
-        $version = $database?->version ?? '8.0';
-        $rootPassword = $database?->root_password ?? bin2hex(random_bytes(16));
-
         $this->install($this->commands($version, $rootPassword));
     }
 
@@ -74,14 +58,6 @@ class MySqlInstaller extends PackageInstaller implements \App\Packages\Base\Serv
             // Verify MySQL is running
             'systemctl status mysql --no-pager',
             "mysql -u root -p{$rootPassword} -e 'SELECT VERSION();'",
-
-            // Update database record with installation details
-            fn () => $this->server->databases()->latest()->first()?->update([
-                'status' => DatabaseStatus::Active->value,
-                'version' => $version,
-                'port' => 3306,
-                'root_password' => $rootPassword,
-            ]),
 
         ];
     }

@@ -53,8 +53,8 @@ class PostgreSqlInstallerJob implements ShouldQueue
             // Create installer instance
             $installer = new PostgreSqlInstaller($this->server);
 
-            // Execute installation
-            $installer->execute();
+            // Execute installation with database-specific parameters
+            $installer->execute($database->version, $database->root_password);
 
             // ✅ UPDATE: installing → active
             $database->update(['status' => DatabaseStatus::Active]);

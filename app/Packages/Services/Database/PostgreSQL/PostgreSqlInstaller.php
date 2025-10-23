@@ -2,28 +2,12 @@
 
 namespace App\Packages\Services\Database\PostgreSQL;
 
-use App\Enums\DatabaseStatus;
 use App\Packages\Base\PackageInstaller;
 
 class PostgreSqlInstaller extends PackageInstaller implements \App\Packages\Base\ServerPackage
 {
-    /**
-     * Mark PostgreSQL installation as failed in database
-     */
-    protected function markResourceAsFailed(string $errorMessage): void
+    public function execute(string $version, string $rootPassword): void
     {
-        $this->server->databases()->latest()->first()?->update([
-            'status' => DatabaseStatus::Failed,
-            'error_message' => $errorMessage,
-        ]);
-    }
-
-    public function execute(): void
-    {
-        $database = $this->server->databases()->latest()->first();
-        $version = $database?->version ?? '16';
-        $rootPassword = $database?->root_password ?? bin2hex(random_bytes(16));
-
         $this->install($this->commands($version, $rootPassword));
     }
 
@@ -59,13 +43,6 @@ class PostgreSqlInstaller extends PackageInstaller implements \App\Packages\Base
 
             'systemctl status postgresql --no-pager',
             "sudo -u postgres psql -c 'SELECT version();'",
-
-            fn () => $this->server->databases()->latest()->first()?->update([
-                'status' => DatabaseStatus::Active->value,
-                'version' => $version,
-                'port' => 5432,
-                'root_password' => $rootPassword,
-            ]),
 
         ];
     }

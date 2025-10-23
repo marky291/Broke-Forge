@@ -2,7 +2,6 @@
 
 namespace App\Packages\Services\Database\MariaDB;
 
-use App\Enums\DatabaseStatus;
 use App\Packages\Base\PackageInstaller;
 
 /**
@@ -13,25 +12,10 @@ use App\Packages\Base\PackageInstaller;
 class MariaDbInstaller extends PackageInstaller implements \App\Packages\Base\ServerPackage
 {
     /**
-     * Mark MariaDB installation as failed in database
-     */
-    protected function markResourceAsFailed(string $errorMessage): void
-    {
-        $this->server->databases()->latest()->first()?->update([
-            'status' => DatabaseStatus::Failed,
-            'error_message' => $errorMessage,
-        ]);
-    }
-
-    /**
      * Execute the MariaDB server installation
      */
-    public function execute(): void
+    public function execute(string $version, string $rootPassword): void
     {
-        $database = $this->server->databases()->latest()->first();
-        $version = $database?->version ?? '11.4';
-        $rootPassword = $database?->root_password ?? bin2hex(random_bytes(16));
-
         $this->install($this->commands($version, $rootPassword));
     }
 
@@ -95,13 +79,6 @@ class MariaDbInstaller extends PackageInstaller implements \App\Packages\Base\Se
             // Verify MariaDB is running
             'systemctl status mariadb --no-pager',
             "mariadb -u root -p{$rootPassword} -e 'SELECT VERSION();'",
-
-            // Update database record
-            fn () => $this->server->databases()->latest()->first()?->update([
-                'status' => DatabaseStatus::Active->value,
-                'version' => $version,
-                'root_password' => $rootPassword,
-            ]),
 
         ];
     }
