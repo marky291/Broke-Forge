@@ -9,6 +9,7 @@ use Exception;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Queue\Middleware\WithoutOverlapping;
 
 /**
  * Server Scheduled Task Installation Job
@@ -27,6 +28,13 @@ class ServerScheduleTaskInstallerJob implements ShouldQueue
      * @var int
      */
     public $timeout = 600;
+
+    /**
+     * The number of times the job may be attempted.
+     *
+     * @var int
+     */
+    public $tries = 3;
 
     /**
      * @param  Server  $server  The server to configure
@@ -90,6 +98,20 @@ class ServerScheduleTaskInstallerJob implements ShouldQueue
 
             throw $e;  // Re-throw for Laravel's retry mechanism
         }
+    }
+
+    /**
+     * Get the middleware the job should pass through.
+     *
+     * @return array<int, object>
+     */
+    public function middleware(): array
+    {
+        return [
+            (new WithoutOverlapping("package:action:{$this->server->id}"))->shared()
+                ->releaseAfter(15)
+                ->expireAfter(900),
+        ];
     }
 
     public function failed(\Throwable $exception): void

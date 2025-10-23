@@ -30,6 +30,7 @@ use Illuminate\Support\Facades\Log;
  * @property string $vanity_name
  * @property ProvisionStatus $provision_status
  * @property \Illuminate\Support\Collection|null $provision
+ * @property int $id
  */
 class Server extends Model
 {

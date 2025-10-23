@@ -8,6 +8,7 @@ use App\Models\ServerDatabase;
 use Exception;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -26,10 +27,31 @@ class MySqlInstallerJob implements ShouldQueue
      */
     public $timeout = 600;
 
+    /**
+     * The number of times the job may be attempted.
+     *
+     * @var int
+     */
+    public $tries = 3;
+
     public function __construct(
         public Server $server,
         public int $databaseId  // ← Receives database record ID
     ) {}
+
+    /**
+     * Get the middleware the job should pass through.
+     *
+     * @return array<int, object>
+     */
+    public function middleware(): array
+    {
+        return [
+            (new WithoutOverlapping("package:action:{$this->server->id}"))->shared()
+                ->releaseAfter(15)
+                ->expireAfter(900),
+        ];
+    }
 
     public function handle(): void
     {

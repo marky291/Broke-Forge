@@ -15,6 +15,74 @@ class MySqlInstallerJobTest extends TestCase
     use RefreshDatabase;
 
     /**
+     * Test job has correct timeout property.
+     */
+    public function test_job_has_correct_timeout_property(): void
+    {
+        // Arrange
+        $server = Server::factory()->create();
+        $database = ServerDatabase::factory()->create(['server_id' => $server->id]);
+
+        // Act
+        $job = new MySqlInstallerJob($server, $database->id);
+
+        // Assert
+        $this->assertEquals(600, $job->timeout);
+    }
+
+    /**
+     * Test job has correct tries property.
+     */
+    public function test_job_has_correct_tries_property(): void
+    {
+        // Arrange
+        $server = Server::factory()->create();
+        $database = ServerDatabase::factory()->create(['server_id' => $server->id]);
+
+        // Act
+        $job = new MySqlInstallerJob($server, $database->id);
+
+        // Assert
+        $this->assertEquals(3, $job->tries);
+    }
+
+    /**
+     * Test middleware is configured with WithoutOverlapping.
+     */
+    public function test_middleware_configured_with_without_overlapping(): void
+    {
+        // Arrange
+        $server = Server::factory()->create();
+        $database = ServerDatabase::factory()->create(['server_id' => $server->id]);
+
+        // Act
+        $job = new MySqlInstallerJob($server, $database->id);
+        $middleware = $job->middleware();
+
+        // Assert
+        $this->assertCount(1, $middleware);
+        $this->assertInstanceOf(\Illuminate\Queue\Middleware\WithoutOverlapping::class, $middleware[0]);
+    }
+
+    /**
+     * Test job constructor accepts server and database ID.
+     */
+    public function test_constructor_accepts_server_and_database_id(): void
+    {
+        // Arrange
+        $server = Server::factory()->create();
+        $databaseId = 123;
+
+        // Act
+        $job = new MySqlInstallerJob($server, $databaseId);
+
+        // Assert
+        $this->assertInstanceOf(MySqlInstallerJob::class, $job);
+        $this->assertEquals($server->id, $job->server->id);
+        $this->assertEquals($databaseId, $job->databaseId);
+    }
+
+    /**
      * Test failed() method updates status to DatabaseStatus::Failed.
      */
     public function test_failed_method_updates_status_to_failed(): void

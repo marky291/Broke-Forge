@@ -8,6 +8,7 @@ use App\Packages\Enums\GitStatus;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Queue\Middleware\WithoutOverlapping;
 
 /**
  * Git Repository Installation Job
@@ -24,6 +25,13 @@ class GitRepositoryInstallerJob implements ShouldQueue
     public $timeout = 600;
 
     /**
+     * The number of times the job may be attempted.
+     *
+     * @var int
+     */
+    public $tries = 3;
+
+    /**
      * Create a new job instance.
      */
     public function __construct(
@@ -32,6 +40,20 @@ class GitRepositoryInstallerJob implements ShouldQueue
         protected array $configuration
     ) {
         //
+    }
+
+    /**
+     * Get the middleware the job should pass through.
+     *
+     * @return array<int, object>
+     */
+    public function middleware(): array
+    {
+        return [
+            (new WithoutOverlapping("package:action:{$this->server->id}"))->shared()
+                ->releaseAfter(15)
+                ->expireAfter(900),
+        ];
     }
 
     /**

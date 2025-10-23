@@ -7,6 +7,7 @@ use App\Models\ServerSite;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Queue\Middleware\WithoutOverlapping;
 
 /**
  * Site Installation Job
@@ -21,6 +22,13 @@ class ProvisionedSiteInstallerJob implements ShouldQueue
      * The number of seconds the job can run before timing out.
      */
     public $timeout = 600;
+
+    /**
+     * The number of times the job may be attempted.
+     *
+     * @var int
+     */
+    public $tries = 3;
 
     /**
      * Create a new job instance.
@@ -64,6 +72,20 @@ class ProvisionedSiteInstallerJob implements ShouldQueue
 
             throw $e;
         }
+    }
+
+    /**
+     * Get the middleware the job should pass through.
+     *
+     * @return array<int, object>
+     */
+    public function middleware(): array
+    {
+        return [
+            (new WithoutOverlapping("package:action:{$this->server->id}"))->shared()
+                ->releaseAfter(15)
+                ->expireAfter(900),
+        ];
     }
 
     public function failed(\Throwable $exception): void
