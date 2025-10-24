@@ -2,7 +2,7 @@
 
 namespace App\Packages\Services\Monitoring;
 
-use App\Enums\MonitoringStatus;
+use App\Enums\TaskStatus;
 use App\Packages\Base\PackageInstaller;
 use App\Packages\Base\ServerPackage;
 
@@ -82,7 +82,7 @@ class ServerMonitoringInstaller extends PackageInstaller implements ServerPackag
 
             // Mark monitoring as active in database
             fn () => $this->server->update([
-                'monitoring_status' => MonitoringStatus::Active,
+                'monitoring_status' => TaskStatus::Active,
                 'monitoring_collection_interval' => config('monitoring.collection_interval'),
                 'monitoring_installed_at' => now(),
             ]),

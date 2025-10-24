@@ -60,7 +60,7 @@ class ServerDeploymentFactory extends Factory
     public function running(): static
     {
         return $this->state(fn (array $attributes) => [
-            'status' => 'running',
+            'status' => 'updating',
             'output' => "Starting deployment...\nPulling from remote...",
             'error_output' => null,
             'exit_code' => null,

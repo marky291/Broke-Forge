@@ -2,7 +2,7 @@
 
 namespace Tests\Feature\Http\Controllers;
 
-use App\Enums\PhpStatus;
+use App\Enums\TaskStatus;
 use App\Models\Server;
 use App\Models\ServerPhp;
 use App\Models\ServerPhpModule;
@@ -124,13 +124,13 @@ class ServerPhpControllerTest extends TestCase
         $php81 = ServerPhp::factory()->create([
             'server_id' => $server->id,
             'version' => '8.1',
-            'status' => PhpStatus::Active,
+            'status' => TaskStatus::Active,
         ]);
 
         $php83 = ServerPhp::factory()->create([
             'server_id' => $server->id,
             'version' => '8.3',
-            'status' => PhpStatus::Active,
+            'status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -208,7 +208,7 @@ class ServerPhpControllerTest extends TestCase
         $this->assertDatabaseHas('server_phps', [
             'server_id' => $server->id,
             'version' => '8.3',
-            'status' => PhpStatus::Pending->value,
+            'status' => TaskStatus::Pending->value,
         ]);
 
         \Illuminate\Support\Facades\Queue::assertPushed(\App\Packages\Services\PHP\PhpInstallerJob::class);
@@ -472,7 +472,7 @@ class ServerPhpControllerTest extends TestCase
             'version' => '8.3',
             'is_cli_default' => false,
             'is_site_default' => false,
-            'status' => PhpStatus::Active,
+            'status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -485,7 +485,7 @@ class ServerPhpControllerTest extends TestCase
         $response->assertSessionHas('success', 'PHP 8.3 removal started');
 
         $php->refresh();
-        $this->assertEquals(PhpStatus::Pending, $php->status);
+        $this->assertEquals(TaskStatus::Pending, $php->status);
 
         \Illuminate\Support\Facades\Queue::assertPushed(\App\Packages\Services\PHP\PhpRemoverJob::class);
     }
@@ -516,7 +516,7 @@ class ServerPhpControllerTest extends TestCase
         $response->assertSessionHas('error', 'Cannot remove PHP 8.3 as it is the CLI default version');
 
         $php->refresh();
-        $this->assertNotEquals(PhpStatus::Removing, $php->status);
+        $this->assertNotEquals(TaskStatus::Removing, $php->status);
     }
 
     /**
@@ -545,7 +545,7 @@ class ServerPhpControllerTest extends TestCase
         $response->assertSessionHas('error', 'Cannot remove PHP 8.3 as it is the Site default version');
 
         $php->refresh();
-        $this->assertNotEquals(PhpStatus::Removing, $php->status);
+        $this->assertNotEquals(TaskStatus::Removing, $php->status);
     }
 
     /**
@@ -695,7 +695,7 @@ class ServerPhpControllerTest extends TestCase
         ServerPhp::factory()->create([
             'server_id' => $server->id,
             'version' => '8.3',
-            'status' => PhpStatus::Active,
+            'status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -707,7 +707,7 @@ class ServerPhpControllerTest extends TestCase
         $response->assertInertia(fn ($page) => $page
             ->component('servers/php')
             ->has('server.phps', 1)
-            ->where('server.phps.0.status', PhpStatus::Active->value)
+            ->where('server.phps.0.status', TaskStatus::Active->value)
         );
     }
 
@@ -794,7 +794,7 @@ class ServerPhpControllerTest extends TestCase
         $this->assertDatabaseHas('server_phps', [
             'server_id' => $server->id,
             'version' => '8.3',
-            'status' => \App\Enums\PhpStatus::Pending->value,
+            'status' => \App\Enums\TaskStatus::Pending->value,
         ]);
 
         $php = $server->phps()->first();
@@ -818,7 +818,7 @@ class ServerPhpControllerTest extends TestCase
         $php = ServerPhp::factory()->create([
             'server_id' => $server->id,
             'version' => '8.3',
-            'status' => PhpStatus::Active,
+            'status' => TaskStatus::Active,
         ]);
 
         // Create initial modules
@@ -844,7 +844,7 @@ class ServerPhpControllerTest extends TestCase
         $response->assertRedirect("/servers/{$server->id}/php");
 
         $php->refresh();
-        $this->assertEquals(PhpStatus::Installing, $php->status);
+        $this->assertEquals(TaskStatus::Installing, $php->status);
 
         // Verify modules updated
         $this->assertCount(3, $php->modules);

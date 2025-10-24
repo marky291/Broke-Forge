@@ -2,7 +2,7 @@
 
 namespace Database\Factories;
 
-use App\Enums\PhpStatus;
+use App\Enums\TaskStatus;
 use App\Models\Server;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -23,7 +23,7 @@ class ServerPhpFactory extends Factory
             'version' => fake()->randomElement(['8.1', '8.2', '8.3', '8.4']),
             'is_cli_default' => false,
             'is_site_default' => false,
-            'status' => PhpStatus::Active,
+            'status' => TaskStatus::Active,
         ];
     }
 }

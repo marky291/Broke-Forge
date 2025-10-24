@@ -1,6 +1,6 @@
 <?php
 
-use App\Enums\DatabaseStatus;
+use App\Enums\TaskStatus;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('type'); // mysql, mariadb, postgresql, mongodb, redis
             $table->string('version'); // e.g., "8.0.35", "10.11.5", "15.4"
             $table->unsignedInteger('port');
-            $table->string('status')->default(DatabaseStatus::Pending->value);
+            $table->string('status')->default(TaskStatus::Pending->value);
             $table->text('root_password')->nullable(); // Encrypted
             $table->timestamps();
 

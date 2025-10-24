@@ -2,8 +2,8 @@
 
 namespace App\Console\Commands;
 
+use App\Enums\TaskStatus;
 use App\Models\ServerSite;
-use App\Packages\Enums\GitStatus;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 
@@ -32,7 +32,7 @@ class CleanupStuckGitInstallations extends Command
         $cutoffTime = now()->subMinutes($timeoutMinutes);
 
         // Find sites with git_status = 'installing' that were updated more than 15 minutes ago
-        $stuckSites = ServerSite::where('git_status', GitStatus::Installing)
+        $stuckSites = ServerSite::where('git_status', TaskStatus::Installing)
             ->where('updated_at', '<', $cutoffTime)
             ->get();
 
@@ -45,7 +45,7 @@ class CleanupStuckGitInstallations extends Command
         $this->info("Found {$stuckSites->count()} stuck Git installation(s).");
 
         foreach ($stuckSites as $site) {
-            $site->update(['git_status' => GitStatus::Failed]);
+            $site->update(['git_status' => TaskStatus::Failed]);
 
             $this->warn("Marked site #{$site->id} ({$site->domain}) as failed (stuck for more than {$timeoutMinutes} minutes).");
 

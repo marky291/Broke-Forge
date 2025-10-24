@@ -2,7 +2,7 @@
 
 namespace Tests\Unit\Policies;
 
-use App\Enums\SupervisorStatus;
+use App\Enums\TaskStatus;
 use App\Models\Server;
 use App\Models\User;
 use App\Policies\ServerSupervisorPolicy;
@@ -94,7 +94,7 @@ class ServerSupervisorPolicyTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'supervisor_status' => SupervisorStatus::Installing,
+            'supervisor_status' => TaskStatus::Installing,
         ]);
         $policy = new ServerSupervisorPolicy;
 
@@ -115,7 +115,7 @@ class ServerSupervisorPolicyTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'supervisor_status' => SupervisorStatus::Active,
+            'supervisor_status' => TaskStatus::Active,
         ]);
         $policy = new ServerSupervisorPolicy;
 
@@ -136,7 +136,7 @@ class ServerSupervisorPolicyTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'supervisor_status' => SupervisorStatus::Failed,
+            'supervisor_status' => TaskStatus::Failed,
         ]);
         $policy = new ServerSupervisorPolicy;
 
@@ -156,7 +156,7 @@ class ServerSupervisorPolicyTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'supervisor_status' => SupervisorStatus::Active,
+            'supervisor_status' => TaskStatus::Active,
         ]);
         $policy = new ServerSupervisorPolicy;
 
@@ -177,7 +177,7 @@ class ServerSupervisorPolicyTest extends TestCase
         $otherUser = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $owner->id,
-            'supervisor_status' => SupervisorStatus::Active,
+            'supervisor_status' => TaskStatus::Active,
         ]);
         $policy = new ServerSupervisorPolicy;
 
@@ -198,7 +198,7 @@ class ServerSupervisorPolicyTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'supervisor_status' => SupervisorStatus::Installing,
+            'supervisor_status' => TaskStatus::Installing,
         ]);
         $policy = new ServerSupervisorPolicy;
 
@@ -237,7 +237,7 @@ class ServerSupervisorPolicyTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'supervisor_status' => SupervisorStatus::Active,
+            'supervisor_status' => TaskStatus::Active,
         ]);
         $policy = new ServerSupervisorPolicy;
 
@@ -258,7 +258,7 @@ class ServerSupervisorPolicyTest extends TestCase
         $otherUser = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $owner->id,
-            'supervisor_status' => SupervisorStatus::Active,
+            'supervisor_status' => TaskStatus::Active,
         ]);
         $policy = new ServerSupervisorPolicy;
 
@@ -279,7 +279,7 @@ class ServerSupervisorPolicyTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'supervisor_status' => SupervisorStatus::Installing,
+            'supervisor_status' => TaskStatus::Installing,
         ]);
         $policy = new ServerSupervisorPolicy;
 
@@ -318,7 +318,7 @@ class ServerSupervisorPolicyTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'supervisor_status' => SupervisorStatus::Active,
+            'supervisor_status' => TaskStatus::Active,
         ]);
         $policy = new ServerSupervisorPolicy;
 
@@ -339,7 +339,7 @@ class ServerSupervisorPolicyTest extends TestCase
         $otherUser = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $owner->id,
-            'supervisor_status' => SupervisorStatus::Active,
+            'supervisor_status' => TaskStatus::Active,
         ]);
         $policy = new ServerSupervisorPolicy;
 
@@ -360,7 +360,7 @@ class ServerSupervisorPolicyTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'supervisor_status' => SupervisorStatus::Failed,
+            'supervisor_status' => TaskStatus::Failed,
         ]);
         $policy = new ServerSupervisorPolicy;
 
@@ -490,7 +490,7 @@ class ServerSupervisorPolicyTest extends TestCase
         $attacker = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $owner->id,
-            'supervisor_status' => SupervisorStatus::Active,
+            'supervisor_status' => TaskStatus::Active,
         ]);
         $policy = new ServerSupervisorPolicy;
 
@@ -514,7 +514,7 @@ class ServerSupervisorPolicyTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'supervisor_status' => SupervisorStatus::Uninstalled,
+            'supervisor_status' => null,
         ]);
         $policy = new ServerSupervisorPolicy;
 

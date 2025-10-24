@@ -54,7 +54,7 @@ class SiteRemoverJob implements ShouldQueue
         try {
             // Mark as uninstalling
             $this->site->update([
-                'status' => 'uninstalling',
+                'status' => 'removing',
             ]);
 
             // Create remover instance

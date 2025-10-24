@@ -2,7 +2,7 @@
 
 namespace App\Packages\Services\Database\PostgreSQL;
 
-use App\Enums\DatabaseStatus;
+use App\Enums\TaskStatus;
 use App\Packages\Base\PackageInstaller;
 
 class PostgreSqlUpdater extends PackageInstaller implements \App\Packages\Base\ServerPackage
@@ -49,7 +49,7 @@ class PostgreSqlUpdater extends PackageInstaller implements \App\Packages\Base\S
             "sudo -u postgres psql -c 'SELECT version();'",
 
             fn () => $this->server->databases()->latest()->first()?->update([
-                'status' => DatabaseStatus::Active->value,
+                'status' => TaskStatus::Active->value,
                 'version' => $targetVersion,
             ]),
 

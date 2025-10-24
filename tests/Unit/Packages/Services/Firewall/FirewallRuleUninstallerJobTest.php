@@ -2,7 +2,7 @@
 
 namespace Tests\Unit\Packages\Services\Firewall;
 
-use App\Enums\FirewallRuleStatus;
+use App\Enums\TaskStatus;
 use App\Models\Server;
 use App\Models\ServerFirewall;
 use App\Models\ServerFirewallRule;
@@ -76,7 +76,7 @@ class FirewallRuleUninstallerJobTest extends TestCase
         $exception = new Exception('Operation failed');
         $job->failed($exception);
         $rule->refresh();
-        $this->assertEquals(FirewallRuleStatus::Failed, $rule->status);
+        $this->assertEquals(TaskStatus::Failed, $rule->status);
     }
 
     public function test_failed_method_stores_error_log(): void

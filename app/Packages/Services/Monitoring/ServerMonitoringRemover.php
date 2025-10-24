@@ -2,7 +2,6 @@
 
 namespace App\Packages\Services\Monitoring;
 
-use App\Enums\MonitoringStatus;
 use App\Models\ServerMetric;
 use App\Packages\Base\PackageRemover;
 use App\Packages\Base\ServerPackage;
@@ -44,7 +43,7 @@ class ServerMonitoringRemover extends PackageRemover implements ServerPackage
 
             // Mark monitoring as uninstalled in database
             fn () => $this->server->update([
-                'monitoring_status' => MonitoringStatus::Uninstalled,
+                'monitoring_status' => null,
                 'monitoring_uninstalled_at' => now(),
             ]),
 

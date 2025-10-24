@@ -2,7 +2,7 @@
 
 namespace App\Packages\Services\Supervisor;
 
-use App\Enums\SupervisorStatus;
+use App\Enums\TaskStatus;
 use App\Packages\Base\PackageInstaller;
 use App\Packages\Base\ServerPackage;
 
@@ -52,7 +52,7 @@ class SupervisorInstaller extends PackageInstaller implements ServerPackage
 
             // Mark supervisor as active in database
             fn () => $this->server->update([
-                'supervisor_status' => SupervisorStatus::Active,
+                'supervisor_status' => TaskStatus::Active,
                 'supervisor_installed_at' => now(),
             ]),
 

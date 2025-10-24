@@ -86,7 +86,7 @@ class ServerDeployment extends Model
      */
     public function isRunning(): bool
     {
-        return $this->status === 'running';
+        return $this->status === 'updating';
     }
 
     /**

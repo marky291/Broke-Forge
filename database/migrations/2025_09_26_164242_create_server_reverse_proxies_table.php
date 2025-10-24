@@ -1,6 +1,6 @@
 <?php
 
-use App\Enums\ReverseProxyStatus;
+use App\Enums\TaskStatus;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('version')->nullable(); // e.g., "1.24.0"
             $table->string('worker_processes')->default('auto'); // auto or number
             $table->unsignedInteger('worker_connections')->default(1024);
-            $table->string('status')->default(ReverseProxyStatus::Installing->value);
+            $table->string('status')->default(TaskStatus::Installing->value);
             $table->timestamps();
 
             $table->unique('server_id'); // Only one reverse proxy per server

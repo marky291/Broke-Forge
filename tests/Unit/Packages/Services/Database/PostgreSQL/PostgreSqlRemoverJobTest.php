@@ -2,7 +2,7 @@
 
 namespace Tests\Unit\Packages\Services\Database\PostgreSQL;
 
-use App\Enums\DatabaseStatus;
+use App\Enums\TaskStatus;
 use App\Models\Server;
 use App\Models\ServerDatabase;
 use App\Packages\Services\Database\PostgreSQL\PostgreSQLRemoverJob;
@@ -99,7 +99,7 @@ class PostgreSQLRemoverJobTest extends TestCase
     }
 
     /**
-     * Test failed() method updates status to DatabaseStatus::Failed.
+     * Test failed() method updates status to TaskStatus::Failed.
      */
     public function test_failed_method_updates_status_to_failed(): void
     {
@@ -107,7 +107,7 @@ class PostgreSQLRemoverJobTest extends TestCase
         $server = Server::factory()->create();
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'status' => DatabaseStatus::Active,
+            'status' => TaskStatus::Active,
         ]);
 
         $job = new PostgreSQLRemoverJob($server, $database);
@@ -118,7 +118,7 @@ class PostgreSQLRemoverJobTest extends TestCase
 
         // Assert
         $database->refresh();
-        $this->assertEquals(DatabaseStatus::Failed, $database->status);
+        $this->assertEquals(TaskStatus::Failed, $database->status);
     }
 
     /**
@@ -130,7 +130,7 @@ class PostgreSQLRemoverJobTest extends TestCase
         $server = Server::factory()->create();
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'status' => DatabaseStatus::Active,
+            'status' => TaskStatus::Active,
             'error_log' => null,
         ]);
 
@@ -179,7 +179,7 @@ class PostgreSQLRemoverJobTest extends TestCase
         $server = Server::factory()->create();
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'status' => DatabaseStatus::Active,
+            'status' => TaskStatus::Active,
             'name' => 'postgresql',
             'version' => '8.0',
             'port' => 3306,

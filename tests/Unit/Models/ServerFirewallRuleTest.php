@@ -182,7 +182,7 @@ class ServerFirewallRuleTest extends TestCase
         $rule = ServerFirewallRule::factory()->create(['server_firewall_id' => $firewall->id]);
 
         // Assert
-        $this->assertInstanceOf(\App\Enums\FirewallRuleStatus::class, $rule->status);
+        $this->assertInstanceOf(\App\Enums\TaskStatus::class, $rule->status);
         $this->assertContains($rule->status->value, ['pending', 'installing', 'active', 'failed']);
     }
 
@@ -210,7 +210,7 @@ class ServerFirewallRuleTest extends TestCase
         $this->assertEquals(8080, $rule->port);
         $this->assertEquals('192.168.1.1', $rule->from_ip_address);
         $this->assertEquals('allow', $rule->rule_type);
-        $this->assertEquals(\App\Enums\FirewallRuleStatus::Active, $rule->status);
+        $this->assertEquals(\App\Enums\TaskStatus::Active, $rule->status);
     }
 
     /**
@@ -229,7 +229,7 @@ class ServerFirewallRuleTest extends TestCase
         ]);
 
         // Assert
-        $this->assertEquals(\App\Enums\FirewallRuleStatus::Pending, $rule->status);
+        $this->assertEquals(\App\Enums\TaskStatus::Pending, $rule->status);
     }
 
     /**
@@ -248,7 +248,7 @@ class ServerFirewallRuleTest extends TestCase
         ]);
 
         // Assert
-        $this->assertEquals(\App\Enums\FirewallRuleStatus::Installing, $rule->status);
+        $this->assertEquals(\App\Enums\TaskStatus::Installing, $rule->status);
     }
 
     /**
@@ -267,7 +267,7 @@ class ServerFirewallRuleTest extends TestCase
         ]);
 
         // Assert
-        $this->assertEquals(\App\Enums\FirewallRuleStatus::Active, $rule->status);
+        $this->assertEquals(\App\Enums\TaskStatus::Active, $rule->status);
     }
 
     /**
@@ -286,7 +286,7 @@ class ServerFirewallRuleTest extends TestCase
         ]);
 
         // Assert
-        $this->assertEquals(\App\Enums\FirewallRuleStatus::Failed, $rule->status);
+        $this->assertEquals(\App\Enums\TaskStatus::Failed, $rule->status);
     }
 
     /**

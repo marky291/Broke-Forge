@@ -2,8 +2,7 @@
 
 namespace Tests\Feature\Http\Controllers;
 
-use App\Enums\SupervisorStatus;
-use App\Enums\SupervisorTaskStatus;
+use App\Enums\TaskStatus;
 use App\Models\Server;
 use App\Models\ServerSupervisorTask;
 use App\Models\User;
@@ -98,7 +97,7 @@ class ServerSupervisorControllerTest extends TestCase
         $server = Server::factory()->create([
             'user_id' => $user->id,
             'vanity_name' => 'Production Server',
-            'supervisor_status' => SupervisorStatus::Active,
+            'supervisor_status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -124,14 +123,14 @@ class ServerSupervisorControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'supervisor_status' => SupervisorStatus::Active,
+            'supervisor_status' => TaskStatus::Active,
         ]);
 
         ServerSupervisorTask::factory()->create([
             'server_id' => $server->id,
             'name' => 'Queue Worker',
             'command' => 'php artisan queue:work',
-            'status' => SupervisorTaskStatus::Active,
+            'status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -161,7 +160,7 @@ class ServerSupervisorControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'supervisor_status' => SupervisorStatus::Active,
+            'supervisor_status' => TaskStatus::Active,
         ]);
 
         ServerSupervisorTask::factory()->count(3)->create([
@@ -189,7 +188,7 @@ class ServerSupervisorControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'supervisor_status' => SupervisorStatus::Active,
+            'supervisor_status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -213,7 +212,7 @@ class ServerSupervisorControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'supervisor_status' => SupervisorStatus::Active,
+            'supervisor_status' => TaskStatus::Active,
         ]);
 
         $task1 = ServerSupervisorTask::factory()->create([
@@ -270,7 +269,7 @@ class ServerSupervisorControllerTest extends TestCase
 
         $this->assertDatabaseHas('servers', [
             'id' => $server->id,
-            'supervisor_status' => SupervisorStatus::Installing->value,
+            'supervisor_status' => TaskStatus::Installing->value,
         ]);
     }
 
@@ -283,7 +282,7 @@ class ServerSupervisorControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'supervisor_status' => SupervisorStatus::Active,
+            'supervisor_status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -303,7 +302,7 @@ class ServerSupervisorControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'supervisor_status' => SupervisorStatus::Installing,
+            'supervisor_status' => TaskStatus::Installing,
         ]);
 
         // Act
@@ -325,7 +324,7 @@ class ServerSupervisorControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'supervisor_status' => SupervisorStatus::Active,
+            'supervisor_status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -338,7 +337,7 @@ class ServerSupervisorControllerTest extends TestCase
 
         $this->assertDatabaseHas('servers', [
             'id' => $server->id,
-            'supervisor_status' => SupervisorStatus::Uninstalling->value,
+            'supervisor_status' => TaskStatus::Removing->value,
         ]);
     }
 
@@ -394,7 +393,7 @@ class ServerSupervisorControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'supervisor_status' => SupervisorStatus::Active,
+            'supervisor_status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -431,7 +430,7 @@ class ServerSupervisorControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'supervisor_status' => SupervisorStatus::Active,
+            'supervisor_status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -459,7 +458,7 @@ class ServerSupervisorControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'supervisor_status' => SupervisorStatus::Active,
+            'supervisor_status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -487,7 +486,7 @@ class ServerSupervisorControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'supervisor_status' => SupervisorStatus::Active,
+            'supervisor_status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -515,7 +514,7 @@ class ServerSupervisorControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'supervisor_status' => SupervisorStatus::Active,
+            'supervisor_status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -543,7 +542,7 @@ class ServerSupervisorControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'supervisor_status' => SupervisorStatus::Active,
+            'supervisor_status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -572,7 +571,7 @@ class ServerSupervisorControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'supervisor_status' => SupervisorStatus::Active,
+            'supervisor_status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -601,7 +600,7 @@ class ServerSupervisorControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'supervisor_status' => SupervisorStatus::Active,
+            'supervisor_status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -658,7 +657,7 @@ class ServerSupervisorControllerTest extends TestCase
         $otherUser = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $otherUser->id,
-            'supervisor_status' => SupervisorStatus::Active,
+            'supervisor_status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -688,11 +687,11 @@ class ServerSupervisorControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'supervisor_status' => SupervisorStatus::Active,
+            'supervisor_status' => TaskStatus::Active,
         ]);
         $task = ServerSupervisorTask::factory()->create([
             'server_id' => $server->id,
-            'status' => SupervisorTaskStatus::Active,
+            'status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -719,7 +718,7 @@ class ServerSupervisorControllerTest extends TestCase
         $otherUser = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $otherUser->id,
-            'supervisor_status' => SupervisorStatus::Active,
+            'supervisor_status' => TaskStatus::Active,
         ]);
         $task = ServerSupervisorTask::factory()->create([
             'server_id' => $server->id,
@@ -759,7 +758,7 @@ class ServerSupervisorControllerTest extends TestCase
         $otherUser = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $otherUser->id,
-            'supervisor_status' => SupervisorStatus::Active,
+            'supervisor_status' => TaskStatus::Active,
         ]);
         $task = ServerSupervisorTask::factory()->active()->create([
             'server_id' => $server->id,
@@ -791,7 +790,7 @@ class ServerSupervisorControllerTest extends TestCase
         $otherUser = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $otherUser->id,
-            'supervisor_status' => SupervisorStatus::Active,
+            'supervisor_status' => TaskStatus::Active,
         ]);
         $task = ServerSupervisorTask::factory()->active()->create([
             'server_id' => $server->id,
@@ -816,11 +815,11 @@ class ServerSupervisorControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'supervisor_status' => SupervisorStatus::Active,
+            'supervisor_status' => TaskStatus::Active,
         ]);
         $task = ServerSupervisorTask::factory()->create([
             'server_id' => $server->id,
-            'status' => SupervisorTaskStatus::Failed,
+            'status' => TaskStatus::Failed,
         ]);
 
         // Act
@@ -833,7 +832,7 @@ class ServerSupervisorControllerTest extends TestCase
 
         $this->assertDatabaseHas('server_supervisor_tasks', [
             'id' => $task->id,
-            'status' => SupervisorTaskStatus::Pending->value,
+            'status' => TaskStatus::Pending->value,
         ]);
     }
 
@@ -846,7 +845,7 @@ class ServerSupervisorControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'supervisor_status' => SupervisorStatus::Active,
+            'supervisor_status' => TaskStatus::Active,
         ]);
         $task = ServerSupervisorTask::factory()->active()->create([
             'server_id' => $server->id,
@@ -871,7 +870,7 @@ class ServerSupervisorControllerTest extends TestCase
         $otherUser = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $otherUser->id,
-            'supervisor_status' => SupervisorStatus::Active,
+            'supervisor_status' => TaskStatus::Active,
         ]);
         $task = ServerSupervisorTask::factory()->failed()->create([
             'server_id' => $server->id,
@@ -894,7 +893,7 @@ class ServerSupervisorControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'supervisor_status' => SupervisorStatus::Active,
+            'supervisor_status' => TaskStatus::Active,
         ]);
 
         $activeTask = ServerSupervisorTask::factory()->active()->create([
@@ -910,7 +909,7 @@ class ServerSupervisorControllerTest extends TestCase
         $failedTask = ServerSupervisorTask::factory()->create([
             'server_id' => $server->id,
             'name' => 'Failed Task',
-            'status' => SupervisorTaskStatus::Failed,
+            'status' => TaskStatus::Failed,
         ]);
 
         // Act
@@ -929,7 +928,7 @@ class ServerSupervisorControllerTest extends TestCase
             )
             ->has('server.supervisorTasks.1', fn ($task) => $task
                 ->where('id', $inactiveTask->id)
-                ->where('status', 'inactive')
+                ->where('status', 'paused')
                 ->etc()
             )
             ->has('server.supervisorTasks.2', fn ($task) => $task

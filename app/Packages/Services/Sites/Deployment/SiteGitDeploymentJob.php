@@ -2,7 +2,7 @@
 
 namespace App\Packages\Services\Sites\Deployment;
 
-use App\Enums\DeploymentStatus;
+use App\Enums\TaskStatus;
 use App\Models\Server;
 use App\Models\ServerDeployment;
 use App\Packages\Taskable;
@@ -27,17 +27,17 @@ class SiteGitDeploymentJob extends Taskable
 
     protected function getInProgressStatus(): mixed
     {
-        return DeploymentStatus::Running;
+        return TaskStatus::Updating;
     }
 
     protected function getSuccessStatus(): mixed
     {
-        return DeploymentStatus::Success;
+        return TaskStatus::Success;
     }
 
     protected function getFailedStatus(): mixed
     {
-        return DeploymentStatus::Failed;
+        return TaskStatus::Failed;
     }
 
     protected function getAdditionalSuccessData(Model $model): array
@@ -53,12 +53,12 @@ class SiteGitDeploymentJob extends Taskable
     protected function updateStatus(Model $model, mixed $status, array $additionalData = []): void
     {
         // Add started_at timestamp when moving to Running status
-        if ($status === DeploymentStatus::Running) {
+        if ($status === TaskStatus::Updating) {
             $additionalData['started_at'] = now();
         }
 
         // Add completed_at timestamp for terminal statuses
-        if (in_array($status, [DeploymentStatus::Success, DeploymentStatus::Failed])) {
+        if (in_array($status, [TaskStatus::Success, TaskStatus::Failed])) {
             $additionalData['completed_at'] = now();
         }
 

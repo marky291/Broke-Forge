@@ -2,7 +2,7 @@
 
 namespace App\Packages\Services\PHP;
 
-use App\Enums\PhpStatus;
+use App\Enums\TaskStatus;
 use App\Models\Server;
 use App\Models\ServerPhp;
 use App\Packages\Enums\PhpVersion;
@@ -28,17 +28,17 @@ class PhpRemoverJob extends Taskable
 
     protected function getInProgressStatus(): mixed
     {
-        return PhpStatus::Removing;
+        return TaskStatus::Removing;
     }
 
     protected function getSuccessStatus(): mixed
     {
-        return PhpStatus::Active; // Not used since we delete
+        return TaskStatus::Active; // Not used since we delete
     }
 
     protected function getFailedStatus(): mixed
     {
-        return PhpStatus::Failed;
+        return TaskStatus::Failed;
     }
 
     protected function shouldDeleteOnSuccess(): bool

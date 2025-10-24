@@ -2,7 +2,7 @@
 
 namespace App\Packages\Services\Monitoring;
 
-use App\Enums\MonitoringStatus;
+use App\Enums\TaskStatus;
 use App\Models\Server;
 use Exception;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -53,7 +53,7 @@ class ServerMonitoringRemoverJob implements ShouldQueue
         try {
             // Mark as uninstalling
             $this->server->update([
-                'monitoring_status' => MonitoringStatus::Uninstalling,
+                'monitoring_status' => TaskStatus::Removing,
             ]);
 
             // Create remover instance
@@ -67,7 +67,7 @@ class ServerMonitoringRemoverJob implements ShouldQueue
         } catch (Exception $e) {
             // Mark as failed
             $this->server->update([
-                'monitoring_status' => MonitoringStatus::Failed,
+                'monitoring_status' => TaskStatus::Failed,
             ]);
 
             Log::error("Monitoring removal failed for server #{$this->server->id}", [
@@ -99,7 +99,7 @@ class ServerMonitoringRemoverJob implements ShouldQueue
 
         if ($this->server) {
             $this->server->update([
-                'monitoring_status' => MonitoringStatus::Failed,
+                'monitoring_status' => TaskStatus::Failed,
             ]);
         }
 

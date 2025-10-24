@@ -2,11 +2,11 @@
 
 namespace Tests\Unit\Models;
 
+use App\Enums\TaskStatus;
 use App\Events\ServerSiteUpdated;
 use App\Models\Server;
 use App\Models\ServerDeployment;
 use App\Models\ServerSite;
-use App\Packages\Enums\GitStatus;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Tests\TestCase;
@@ -40,12 +40,12 @@ class ServerSiteTest extends TestCase
     }
 
     /**
-     * Test that canInstallGitRepository returns true when git_status is NotInstalled.
+     * Test that canInstallGitRepository returns true when git_status is null.
      */
     public function test_can_install_git_repository_returns_true_when_git_status_is_not_installed(): void
     {
         // Arrange
-        $site = ServerSite::factory()->create(['git_status' => GitStatus::NotInstalled]);
+        $site = ServerSite::factory()->create(['git_status' => null]);
 
         // Act & Assert
         $this->assertTrue($site->canInstallGitRepository());
@@ -93,7 +93,7 @@ class ServerSiteTest extends TestCase
     public function test_is_git_processing_returns_true_when_git_status_is_updating(): void
     {
         // Arrange
-        $site = ServerSite::factory()->create(['git_status' => GitStatus::Updating]);
+        $site = ServerSite::factory()->create(['git_status' => TaskStatus::Updating]);
 
         // Act & Assert
         $this->assertTrue($site->isGitProcessing());
@@ -141,7 +141,7 @@ class ServerSiteTest extends TestCase
     public function test_has_git_repository_returns_false_when_git_status_is_not_installed(): void
     {
         // Arrange
-        $site = ServerSite::factory()->create(['git_status' => GitStatus::Failed]);
+        $site = ServerSite::factory()->create(['git_status' => TaskStatus::Failed]);
 
         // Act & Assert
         $this->assertFalse($site->hasGitRepository());
@@ -524,8 +524,8 @@ class ServerSiteTest extends TestCase
         $site = ServerSite::factory()->withGit()->create();
 
         // Act & Assert
-        $this->assertInstanceOf(GitStatus::class, $site->git_status);
-        $this->assertEquals(GitStatus::Installed, $site->git_status);
+        $this->assertInstanceOf(TaskStatus::class, $site->git_status);
+        $this->assertEquals(TaskStatus::Success, $site->git_status);
     }
 
     /**
@@ -662,7 +662,7 @@ class ServerSiteTest extends TestCase
         $site = ServerSite::factory()->withGit()->create();
 
         // Assert
-        $this->assertEquals(GitStatus::Installed, $site->git_status);
+        $this->assertEquals(TaskStatus::Success, $site->git_status);
         $this->assertNotNull($site->git_installed_at);
         $this->assertNotEmpty($site->configuration['git_repository']);
     }
@@ -676,7 +676,7 @@ class ServerSiteTest extends TestCase
         $site = ServerSite::factory()->gitInstalling()->create();
 
         // Assert
-        $this->assertEquals(GitStatus::Installing, $site->git_status);
+        $this->assertEquals(TaskStatus::Installing, $site->git_status);
     }
 
     /**
@@ -688,6 +688,6 @@ class ServerSiteTest extends TestCase
         $site = ServerSite::factory()->gitFailed()->create();
 
         // Assert
-        $this->assertEquals(GitStatus::Failed, $site->git_status);
+        $this->assertEquals(TaskStatus::Failed, $site->git_status);
     }
 }

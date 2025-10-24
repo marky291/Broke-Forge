@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\TaskStatus;
 use App\Http\Controllers\Concerns\PreparesSiteData;
 use App\Http\Requests\Servers\InstallSiteGitRepositoryRequest;
 use App\Models\Server;
 use App\Models\ServerSite;
-use App\Packages\Enums\GitStatus;
 use App\Packages\Services\Sites\Git\GitRepositoryInstallerJob;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Log;
@@ -24,7 +24,7 @@ class ServerSiteGitRepositoryController extends Controller
     {
         // Add success flash message if installation just completed
         $flash = [];
-        if ($site->git_status === GitStatus::Installed && $site->git_installed_at?->diffInSeconds(now()) < 10) {
+        if ($site->git_status === TaskStatus::Success && $site->git_installed_at?->diffInSeconds(now()) < 10) {
             $flash['success'] = 'Git repository installed successfully! Your application is ready for deployments.';
         }
 
@@ -55,7 +55,7 @@ class ServerSiteGitRepositoryController extends Controller
 
         // Store configuration and update status to installing
         $site->update([
-            'git_status' => GitStatus::Installing,
+            'git_status' => TaskStatus::Installing,
             'configuration' => array_merge(
                 $site->configuration ?? [],
                 [

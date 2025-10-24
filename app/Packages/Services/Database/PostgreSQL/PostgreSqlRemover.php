@@ -2,7 +2,7 @@
 
 namespace App\Packages\Services\Database\PostgreSQL;
 
-use App\Enums\DatabaseStatus;
+use App\Enums\TaskStatus;
 use App\Packages\Base\PackageRemover;
 
 class PostgreSqlRemover extends PackageRemover implements \App\Packages\Base\ServerPackage
@@ -13,7 +13,7 @@ class PostgreSqlRemover extends PackageRemover implements \App\Packages\Base\Ser
     protected function markResourceAsFailed(string $errorMessage): void
     {
         $this->server->databases()->latest()->first()?->update([
-            'status' => DatabaseStatus::Failed,
+            'status' => TaskStatus::Failed,
             'error_message' => $errorMessage,
         ]);
     }

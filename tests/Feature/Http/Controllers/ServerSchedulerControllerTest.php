@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\Http\Controllers;
 
-use App\Enums\SchedulerStatus;
 use App\Enums\TaskStatus;
 use App\Models\Server;
 use App\Models\ServerScheduledTask;
@@ -99,7 +98,7 @@ class ServerSchedulerControllerTest extends TestCase
         $server = Server::factory()->create([
             'user_id' => $user->id,
             'vanity_name' => 'Production Server',
-            'scheduler_status' => SchedulerStatus::Active,
+            'scheduler_status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -125,7 +124,7 @@ class ServerSchedulerControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'scheduler_status' => SchedulerStatus::Active,
+            'scheduler_status' => TaskStatus::Active,
         ]);
 
         ServerScheduledTask::factory()->create([
@@ -162,7 +161,7 @@ class ServerSchedulerControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'scheduler_status' => SchedulerStatus::Active,
+            'scheduler_status' => TaskStatus::Active,
         ]);
 
         ServerScheduledTask::factory()->count(3)->create([
@@ -190,7 +189,7 @@ class ServerSchedulerControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'scheduler_status' => SchedulerStatus::Active,
+            'scheduler_status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -229,7 +228,7 @@ class ServerSchedulerControllerTest extends TestCase
 
         $this->assertDatabaseHas('servers', [
             'id' => $server->id,
-            'scheduler_status' => SchedulerStatus::Installing->value,
+            'scheduler_status' => TaskStatus::Installing->value,
         ]);
     }
 
@@ -242,7 +241,7 @@ class ServerSchedulerControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'scheduler_status' => SchedulerStatus::Active,
+            'scheduler_status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -262,7 +261,7 @@ class ServerSchedulerControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'scheduler_status' => SchedulerStatus::Installing,
+            'scheduler_status' => TaskStatus::Installing,
         ]);
 
         // Act
@@ -284,7 +283,7 @@ class ServerSchedulerControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'scheduler_status' => SchedulerStatus::Active,
+            'scheduler_status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -297,7 +296,7 @@ class ServerSchedulerControllerTest extends TestCase
 
         $this->assertDatabaseHas('servers', [
             'id' => $server->id,
-            'scheduler_status' => SchedulerStatus::Uninstalling->value,
+            'scheduler_status' => TaskStatus::Removing->value,
         ]);
     }
 
@@ -353,7 +352,7 @@ class ServerSchedulerControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'scheduler_status' => SchedulerStatus::Active,
+            'scheduler_status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -388,7 +387,7 @@ class ServerSchedulerControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'scheduler_status' => SchedulerStatus::Active,
+            'scheduler_status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -412,7 +411,7 @@ class ServerSchedulerControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'scheduler_status' => SchedulerStatus::Active,
+            'scheduler_status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -436,7 +435,7 @@ class ServerSchedulerControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'scheduler_status' => SchedulerStatus::Active,
+            'scheduler_status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -460,7 +459,7 @@ class ServerSchedulerControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'scheduler_status' => SchedulerStatus::Active,
+            'scheduler_status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -485,7 +484,7 @@ class ServerSchedulerControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'scheduler_status' => SchedulerStatus::Active,
+            'scheduler_status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -512,7 +511,7 @@ class ServerSchedulerControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'scheduler_status' => SchedulerStatus::Active,
+            'scheduler_status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -571,7 +570,7 @@ class ServerSchedulerControllerTest extends TestCase
         $otherUser = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $otherUser->id,
-            'scheduler_status' => SchedulerStatus::Active,
+            'scheduler_status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -597,7 +596,7 @@ class ServerSchedulerControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'scheduler_status' => SchedulerStatus::Active,
+            'scheduler_status' => TaskStatus::Active,
         ]);
         $task = ServerScheduledTask::factory()->create([
             'server_id' => $server->id,
@@ -628,7 +627,7 @@ class ServerSchedulerControllerTest extends TestCase
         $otherUser = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $otherUser->id,
-            'scheduler_status' => SchedulerStatus::Active,
+            'scheduler_status' => TaskStatus::Active,
         ]);
         $task = ServerScheduledTask::factory()->create([
             'server_id' => $server->id,
@@ -653,7 +652,7 @@ class ServerSchedulerControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'scheduler_status' => SchedulerStatus::Active,
+            'scheduler_status' => TaskStatus::Active,
         ]);
         $task = ServerScheduledTask::factory()->active()->create([
             'server_id' => $server->id,
@@ -684,7 +683,7 @@ class ServerSchedulerControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'scheduler_status' => SchedulerStatus::Active,
+            'scheduler_status' => TaskStatus::Active,
         ]);
         $task = ServerScheduledTask::factory()->paused()->create([
             'server_id' => $server->id,
@@ -715,7 +714,7 @@ class ServerSchedulerControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'scheduler_status' => SchedulerStatus::Active,
+            'scheduler_status' => TaskStatus::Active,
         ]);
         $task = ServerScheduledTask::factory()->create([
             'server_id' => $server->id,
@@ -745,7 +744,7 @@ class ServerSchedulerControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'scheduler_status' => SchedulerStatus::Active,
+            'scheduler_status' => TaskStatus::Active,
         ]);
         $task = ServerScheduledTask::factory()->active()->create([
             'server_id' => $server->id,
@@ -800,7 +799,7 @@ class ServerSchedulerControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'scheduler_status' => SchedulerStatus::Active,
+            'scheduler_status' => TaskStatus::Active,
         ]);
         $task = ServerScheduledTask::factory()->create([
             'server_id' => $server->id,
@@ -832,7 +831,7 @@ class ServerSchedulerControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'scheduler_status' => SchedulerStatus::Active,
+            'scheduler_status' => TaskStatus::Active,
         ]);
         $task = ServerScheduledTask::factory()->create([
             'server_id' => $server->id,
@@ -868,7 +867,7 @@ class ServerSchedulerControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'scheduler_status' => SchedulerStatus::Active,
+            'scheduler_status' => TaskStatus::Active,
         ]);
         $task = ServerScheduledTask::factory()->create([
             'server_id' => $server->id,
@@ -904,7 +903,7 @@ class ServerSchedulerControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'scheduler_status' => SchedulerStatus::Active,
+            'scheduler_status' => TaskStatus::Active,
         ]);
 
         ServerScheduledTask::factory()->daily()->create([
@@ -940,7 +939,7 @@ class ServerSchedulerControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'scheduler_status' => SchedulerStatus::Active,
+            'scheduler_status' => TaskStatus::Active,
         ]);
 
         $activeTask = ServerScheduledTask::factory()->active()->create([

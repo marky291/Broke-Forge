@@ -96,7 +96,7 @@ class ServerProvisioningResource extends JsonResource
         $status = $provision->get($stepNumber, 'pending');
 
         return [
-            'isCompleted' => $status === 'completed',
+            'isCompleted' => $status === 'success',
             'isPending' => $status === 'pending',
             'isFailed' => $status === 'failed',
             'isInstalling' => in_array($status, ['installing', 'connecting']),

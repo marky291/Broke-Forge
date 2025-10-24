@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\TaskStatus;
 use App\Http\Controllers\Concerns\PreparesSiteData;
 use App\Http\Requests\Servers\StoreSiteRequest;
 use App\Http\Resources\ServerResource;
 use App\Models\Server;
 use App\Models\ServerSite;
-use App\Packages\Enums\GitStatus;
 use App\Packages\Services\Sites\ProvisionedSiteInstallerJob;
 use App\Packages\Services\Sites\SiteDeployKeyGenerator;
 use App\Packages\Services\Sites\SiteRemoverJob;
@@ -167,7 +167,7 @@ class ServerSitesController extends Controller
                 'document_root' => "/home/brokeforge/{$validated['domain']}/public",
                 'nginx_config_path' => "/etc/nginx/sites-available/{$validated['domain']}",
                 'configuration' => $configuration,
-                'git_status' => GitStatus::Installing,
+                'git_status' => TaskStatus::Installing,
             ]);
 
             // Dispatch site installation job with site ID

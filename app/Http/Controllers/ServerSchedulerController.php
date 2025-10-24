@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\SchedulerStatus;
 use App\Enums\TaskStatus;
 use App\Http\Controllers\Concerns\PreparesSiteData;
 use App\Http\Requests\StoreScheduledTaskRequest;
@@ -73,14 +72,13 @@ class ServerSchedulerController extends Controller
 
         // Update scheduler status immediately for UI feedback
         $server->update([
-            'scheduler_status' => SchedulerStatus::Installing,
+            'scheduler_status' => TaskStatus::Installing,
         ]);
 
         // Dispatch scheduler framework installation job
         ServerSchedulerInstallerJob::dispatch($server);
 
-        return redirect()
-            ->route('servers.scheduler', $server)
+        return back()
             ->with('success', 'Scheduler installation started');
     }
 
@@ -104,9 +102,9 @@ class ServerSchedulerController extends Controller
             'ip_address' => request()->ip(),
         ]);
 
-        // Update status to 'uninstalling' immediately for UI feedback
+        // Update status to 'removing' immediately for UI feedback
         $server->update([
-            'scheduler_status' => SchedulerStatus::Uninstalling,
+            'scheduler_status' => TaskStatus::Removing,
         ]);
 
         // Remove all tasks first
@@ -118,8 +116,7 @@ class ServerSchedulerController extends Controller
         // Dispatch scheduler framework removal job
         ServerSchedulerRemoverJob::dispatch($server);
 
-        return redirect()
-            ->route('servers.scheduler', $server)
+        return back()
             ->with('success', 'Scheduler uninstallation started');
     }
 
@@ -147,8 +144,7 @@ class ServerSchedulerController extends Controller
         // Dispatch task installation job with task model
         ServerScheduleTaskInstallerJob::dispatch($server, $task);
 
-        return redirect()
-            ->route('servers.scheduler', $server)
+        return back()
             ->with('success', 'Scheduled task created and installation started');
     }
 
@@ -180,8 +176,7 @@ class ServerSchedulerController extends Controller
         ServerScheduleTaskRemoverJob::dispatch($server, $scheduledTask);
         ServerScheduleTaskInstallerJob::dispatch($server, $scheduledTask);
 
-        return redirect()
-            ->route('servers.scheduler', $server)
+        return back()
             ->with('success', 'Scheduled task updated and reinstallation started');
     }
 
@@ -208,8 +203,7 @@ class ServerSchedulerController extends Controller
         // ✅ THEN dispatch job with task model
         ServerScheduleTaskRemoverJob::dispatch($server, $scheduledTask);
 
-        return redirect()
-            ->route('servers.scheduler', $server)
+        return back()
             ->with('success', 'Scheduled task removal started');
     }
 
@@ -233,8 +227,7 @@ class ServerSchedulerController extends Controller
             ServerScheduleTaskInstallerJob::dispatch($server, $scheduledTask);
         }
 
-        return redirect()
-            ->route('servers.scheduler', $server)
+        return back()
             ->with('success', "Task {$newStatus->value}");
     }
 
@@ -247,8 +240,7 @@ class ServerSchedulerController extends Controller
 
         // Only allow retry for failed tasks
         if ($scheduledTask->status !== TaskStatus::Failed) {
-            return redirect()
-                ->route('servers.scheduler', $server)
+            return back()
                 ->with('error', 'Only failed tasks can be retried');
         }
 
@@ -268,8 +260,7 @@ class ServerSchedulerController extends Controller
         // Dispatch task installation job with task model
         ServerScheduleTaskInstallerJob::dispatch($server, $scheduledTask);
 
-        return redirect()
-            ->route('servers.scheduler', $server)
+        return back()
             ->with('success', 'Task retry started');
     }
 
@@ -303,12 +294,10 @@ class ServerSchedulerController extends Controller
             $result = $ssh->execute("/opt/brokeforge/scheduler/tasks/{$scheduledTask->id}.sh");
 
             if ($result->getExitCode() === 0) {
-                return redirect()
-                    ->route('servers.scheduler', $server)
+                return back()
                     ->with('success', 'Task executed successfully');
             } else {
-                return redirect()
-                    ->route('servers.scheduler', $server)
+                return back()
                     ->with('error', 'Task execution failed with exit code: '.$result->getExitCode());
             }
         } catch (\Exception $e) {
@@ -318,8 +307,7 @@ class ServerSchedulerController extends Controller
                 'error' => $e->getMessage(),
             ]);
 
-            return redirect()
-                ->route('servers.scheduler', $server)
+            return back()
                 ->with('error', 'Failed to execute task: '.$e->getMessage());
         }
     }

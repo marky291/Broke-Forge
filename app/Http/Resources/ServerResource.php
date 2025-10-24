@@ -2,7 +2,7 @@
 
 namespace App\Http\Resources;
 
-use App\Enums\MonitoringStatus;
+use App\Enums\TaskStatus;
 use App\Packages\Services\PHP\Services\PhpConfigurationService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -97,7 +97,7 @@ class ServerResource extends JsonResource
      */
     protected function getLatestMetrics(): ?array
     {
-        if ($this->monitoring_status !== MonitoringStatus::Active) {
+        if ($this->monitoring_status !== TaskStatus::Active) {
             return null;
         }
 
@@ -122,7 +122,7 @@ class ServerResource extends JsonResource
     protected function transformRecentMetrics(Request $request): array
     {
         // Only load metrics if monitoring is active and timeframe is requested
-        if ($this->monitoring_status !== MonitoringStatus::Active) {
+        if ($this->monitoring_status !== TaskStatus::Active) {
             return [];
         }
 

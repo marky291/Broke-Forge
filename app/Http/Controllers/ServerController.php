@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\TaskStatus;
 use App\Http\Controllers\Concerns\PreparesSiteData;
 use App\Http\Requests\Servers\StoreServerRequest;
 use App\Http\Requests\Servers\UpdateServerRequest;
 use App\Models\Server;
-use App\Packages\Enums\ProvisionStatus;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -62,7 +62,7 @@ class ServerController extends Controller
     public function show(Server $server): RedirectResponse
     {
         // Redirect to provisioning page if not fully provisioned
-        if ($server->provision_status !== ProvisionStatus::Completed) {
+        if ($server->provision_status !== TaskStatus::Success) {
             return redirect()->route('servers.provisioning', $server);
         }
 

@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Enums\SupervisorTaskStatus;
+use App\Enums\TaskStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -29,7 +29,7 @@ class ServerSupervisorTask extends Model
     ];
 
     protected $casts = [
-        'status' => SupervisorTaskStatus::class,
+        'status' => TaskStatus::class,
         'processes' => 'integer',
         'auto_restart' => 'boolean',
         'autorestart_unexpected' => 'boolean',
@@ -50,7 +50,7 @@ class ServerSupervisorTask extends Model
      */
     public function isActive(): bool
     {
-        return $this->status === SupervisorTaskStatus::Active;
+        return $this->status === TaskStatus::Active;
     }
 
     /**
@@ -58,7 +58,7 @@ class ServerSupervisorTask extends Model
      */
     public function isInactive(): bool
     {
-        return $this->status === SupervisorTaskStatus::Inactive;
+        return $this->status === TaskStatus::Paused;
     }
 
     /**
@@ -66,7 +66,7 @@ class ServerSupervisorTask extends Model
      */
     public function isFailed(): bool
     {
-        return $this->status === SupervisorTaskStatus::Failed;
+        return $this->status === TaskStatus::Failed;
     }
 
     /**

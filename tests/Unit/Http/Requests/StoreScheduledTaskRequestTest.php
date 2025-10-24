@@ -3,7 +3,7 @@
 namespace Tests\Unit\Http\Requests;
 
 use App\Enums\ScheduleFrequency;
-use App\Enums\SchedulerStatus;
+use App\Enums\TaskStatus;
 use App\Http\Requests\StoreScheduledTaskRequest;
 use App\Models\Server;
 use App\Models\User;
@@ -517,7 +517,7 @@ class StoreScheduledTaskRequestTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'scheduler_status' => SchedulerStatus::Active,
+            'scheduler_status' => TaskStatus::Active,
         ]);
 
         $request = new StoreScheduledTaskRequest;
@@ -547,7 +547,7 @@ class StoreScheduledTaskRequestTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'scheduler_status' => SchedulerStatus::Uninstalled,
+            'scheduler_status' => null,
         ]);
 
         $request = new StoreScheduledTaskRequest;

@@ -2,7 +2,7 @@
 
 namespace Tests\Feature\Feature\Http\Controllers;
 
-use App\Enums\FirewallRuleStatus;
+use App\Enums\TaskStatus;
 use App\Models\Server;
 use App\Models\ServerFirewall;
 use App\Models\ServerFirewallRule;
@@ -31,7 +31,7 @@ class ServerFirewallControllerRetryTest extends TestCase
             'server_firewall_id' => $firewall->id,
             'name' => 'HTTP',
             'port' => '80',
-            'status' => FirewallRuleStatus::Failed,
+            'status' => TaskStatus::Failed,
             'error_log' => 'Installation failed',
         ]);
 
@@ -46,7 +46,7 @@ class ServerFirewallControllerRetryTest extends TestCase
         // Verify rule status reset to pending
         $this->assertDatabaseHas('server_firewall_rules', [
             'id' => $rule->id,
-            'status' => FirewallRuleStatus::Pending->value,
+            'status' => TaskStatus::Pending->value,
             'error_log' => null,
         ]);
 
@@ -69,7 +69,7 @@ class ServerFirewallControllerRetryTest extends TestCase
         $firewall = ServerFirewall::factory()->create(['server_id' => $server->id]);
         $rule = ServerFirewallRule::factory()->create([
             'server_firewall_id' => $firewall->id,
-            'status' => FirewallRuleStatus::Active,
+            'status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -83,7 +83,7 @@ class ServerFirewallControllerRetryTest extends TestCase
         // Verify status was not changed
         $this->assertDatabaseHas('server_firewall_rules', [
             'id' => $rule->id,
-            'status' => FirewallRuleStatus::Active->value,
+            'status' => TaskStatus::Active->value,
         ]);
 
         // Verify no job was dispatched
@@ -103,7 +103,7 @@ class ServerFirewallControllerRetryTest extends TestCase
         $firewall = ServerFirewall::factory()->create(['server_id' => $server->id]);
         $rule = ServerFirewallRule::factory()->create([
             'server_firewall_id' => $firewall->id,
-            'status' => FirewallRuleStatus::Failed,
+            'status' => TaskStatus::Failed,
         ]);
 
         // Act
@@ -116,7 +116,7 @@ class ServerFirewallControllerRetryTest extends TestCase
         // Verify status was not changed
         $this->assertDatabaseHas('server_firewall_rules', [
             'id' => $rule->id,
-            'status' => FirewallRuleStatus::Failed->value,
+            'status' => TaskStatus::Failed->value,
         ]);
 
         Queue::assertNothingPushed();
@@ -133,7 +133,7 @@ class ServerFirewallControllerRetryTest extends TestCase
         $firewall = ServerFirewall::factory()->create(['server_id' => $server->id]);
         $rule = ServerFirewallRule::factory()->create([
             'server_firewall_id' => $firewall->id,
-            'status' => FirewallRuleStatus::Failed,
+            'status' => TaskStatus::Failed,
         ]);
 
         // Act
@@ -158,7 +158,7 @@ class ServerFirewallControllerRetryTest extends TestCase
         $firewall = ServerFirewall::factory()->create(['server_id' => $server2->id]);
         $rule = ServerFirewallRule::factory()->create([
             'server_firewall_id' => $firewall->id,
-            'status' => FirewallRuleStatus::Failed,
+            'status' => TaskStatus::Failed,
         ]);
 
         // Act
@@ -186,7 +186,7 @@ class ServerFirewallControllerRetryTest extends TestCase
             'server_firewall_id' => $firewall->id,
             'name' => 'HTTPS',
             'port' => '443',
-            'status' => FirewallRuleStatus::Failed,
+            'status' => TaskStatus::Failed,
         ]);
 
         // Act
@@ -220,7 +220,7 @@ class ServerFirewallControllerRetryTest extends TestCase
         $firewall = ServerFirewall::factory()->create(['server_id' => $server->id]);
         $rule = ServerFirewallRule::factory()->create([
             'server_firewall_id' => $firewall->id,
-            'status' => FirewallRuleStatus::Failed,
+            'status' => TaskStatus::Failed,
             'error_log' => 'Previous error message',
         ]);
 
@@ -231,7 +231,7 @@ class ServerFirewallControllerRetryTest extends TestCase
         // Assert
         $this->assertDatabaseHas('server_firewall_rules', [
             'id' => $rule->id,
-            'status' => FirewallRuleStatus::Pending->value,
+            'status' => TaskStatus::Pending->value,
             'error_log' => null,
         ]);
     }
@@ -250,7 +250,7 @@ class ServerFirewallControllerRetryTest extends TestCase
             'server_firewall_id' => $firewall->id,
             'name' => 'SSH',
             'port' => '22',
-            'status' => FirewallRuleStatus::Failed,
+            'status' => TaskStatus::Failed,
         ]);
 
         // Act

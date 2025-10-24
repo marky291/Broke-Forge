@@ -2,7 +2,7 @@
 
 namespace Tests\Unit\Packages\Services\Sites\Deployment;
 
-use App\Enums\DeploymentStatus;
+use App\Enums\TaskStatus;
 use App\Models\Server;
 use App\Models\ServerDeployment;
 use App\Packages\Services\Sites\Deployment\SiteGitDeploymentJob;
@@ -69,7 +69,7 @@ class SiteGitDeploymentJobTest extends TestCase
         $exception = new Exception('Operation failed');
         $job->failed($exception);
         $deployment->refresh();
-        $this->assertEquals(DeploymentStatus::Failed->value, $deployment->status);
+        $this->assertEquals(TaskStatus::Failed->value, $deployment->status);
     }
 
     public function test_failed_method_stores_error_output(): void

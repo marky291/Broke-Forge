@@ -2,7 +2,7 @@
 
 namespace App\Packages\Services\Database\MySQL;
 
-use App\Enums\DatabaseStatus;
+use App\Enums\TaskStatus;
 use App\Packages\Base\PackageInstaller;
 
 class MySqlUpdater extends PackageInstaller implements \App\Packages\Base\ServerPackage
@@ -47,7 +47,7 @@ class MySqlUpdater extends PackageInstaller implements \App\Packages\Base\Server
             "mysql --password='{$rootPassword}' -e 'SELECT VERSION();' 2>/dev/null",
 
             fn () => $this->server->databases()->latest()->first()?->update([
-                'status' => DatabaseStatus::Active->value,
+                'status' => TaskStatus::Active->value,
                 'version' => $targetVersion,
             ]),
 

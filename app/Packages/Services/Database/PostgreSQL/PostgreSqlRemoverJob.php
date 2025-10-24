@@ -2,7 +2,7 @@
 
 namespace App\Packages\Services\Database\PostgreSQL;
 
-use App\Enums\DatabaseStatus;
+use App\Enums\TaskStatus;
 use App\Models\Server;
 use App\Models\ServerDatabase;
 use App\Packages\Taskable;
@@ -27,17 +27,17 @@ class PostgreSqlRemoverJob extends Taskable
 
     protected function getInProgressStatus(): mixed
     {
-        return DatabaseStatus::Uninstalling;
+        return TaskStatus::Removing;
     }
 
     protected function getSuccessStatus(): mixed
     {
-        return DatabaseStatus::Active; // Not used since we delete
+        return TaskStatus::Active; // Not used since we delete
     }
 
     protected function getFailedStatus(): mixed
     {
-        return DatabaseStatus::Failed;
+        return TaskStatus::Failed;
     }
 
     protected function shouldDeleteOnSuccess(): bool

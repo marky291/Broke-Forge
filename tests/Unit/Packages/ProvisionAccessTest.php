@@ -332,4 +332,138 @@ class ProvisionAccessTest extends TestCase
         $this->assertNotNull($brokeforgeCredential);
         $this->assertNotEquals($rootCredential->public_key, $brokeforgeCredential->public_key);
     }
+
+    /**
+     * Test makeScriptFor includes callback URL in script.
+     */
+    public function test_make_script_for_includes_callback_url_in_script(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+        $provisionAccess = new ProvisionAccess;
+
+        // Act
+        $script = $provisionAccess->makeScriptFor($server, 'test-password');
+
+        // Assert
+        $this->assertStringContainsString('CALLBACK_STEP_URL', $script);
+        $this->assertStringContainsString('/provision/step', $script);
+        $this->assertStringContainsString('signature=', $script);
+    }
+
+    /**
+     * Test makeScriptFor script uses correct TaskStatus values (success not completed).
+     */
+    public function test_make_script_for_script_uses_success_status_not_completed(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+        $provisionAccess = new ProvisionAccess;
+
+        // Act
+        $script = $provisionAccess->makeScriptFor($server, 'test-password');
+
+        // Assert - Should use 'success' for TaskStatus enum compatibility
+        $this->assertStringContainsString('notify_step 1 "success"', $script);
+        $this->assertStringContainsString('notify_step 2 "success"', $script);
+        $this->assertStringContainsString('notify_step 3 "success"', $script);
+
+        // Should NOT use old 'completed' status
+        $this->assertStringNotContainsString('notify_step 1 "completed"', $script);
+        $this->assertStringNotContainsString('notify_step 2 "completed"', $script);
+        $this->assertStringNotContainsString('notify_step 3 "completed"', $script);
+    }
+
+    /**
+     * Test makeScriptFor script includes bash error handling.
+     */
+    public function test_make_script_for_script_includes_bash_error_handling(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+        $provisionAccess = new ProvisionAccess;
+
+        // Act
+        $script = $provisionAccess->makeScriptFor($server, 'test-password');
+
+        // Assert - Script should have proper bash error handling
+        $this->assertStringContainsString('set -euo pipefail', $script);
+    }
+
+    /**
+     * Test makeScriptFor script includes notify_step function.
+     */
+    public function test_make_script_for_script_includes_notify_step_function(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+        $provisionAccess = new ProvisionAccess;
+
+        // Act
+        $script = $provisionAccess->makeScriptFor($server, 'test-password');
+
+        // Assert
+        $this->assertStringContainsString('notify_step()', $script);
+        $this->assertStringContainsString('local step=', $script);
+        $this->assertStringContainsString('local status=', $script);
+    }
+
+    /**
+     * Test makeScriptFor script includes both root and brokeforge users.
+     */
+    public function test_make_script_for_script_includes_both_users(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+        $provisionAccess = new ProvisionAccess;
+
+        // Act
+        $script = $provisionAccess->makeScriptFor($server, 'test-password');
+
+        // Assert
+        $this->assertStringContainsString('root', $script);
+        $this->assertStringContainsString('brokeforge', $script);
+    }
+
+    /**
+     * Test makeScriptFor script includes both public and private keys.
+     */
+    public function test_make_script_for_script_includes_public_and_private_keys(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+        $provisionAccess = new ProvisionAccess;
+
+        // Act
+        $script = $provisionAccess->makeScriptFor($server, 'test-password');
+
+        // Assert
+        $this->assertStringContainsString('id_rsa.pub', $script);
+        $this->assertStringContainsString('id_rsa', $script);
+        $this->assertStringContainsString('authorized_keys', $script);
+    }
+
+    /**
+     * Test makeScriptFor script includes installing status for intermediate steps.
+     */
+    public function test_make_script_for_script_includes_installing_status(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+        $provisionAccess = new ProvisionAccess;
+
+        // Act
+        $script = $provisionAccess->makeScriptFor($server, 'test-password');
+
+        // Assert
+        $this->assertStringContainsString('notify_step 2 "installing"', $script);
+        $this->assertStringContainsString('notify_step 3 "installing"', $script);
+    }
 }

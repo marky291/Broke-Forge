@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Concerns;
 
-use App\Enums\MonitoringStatus;
+use App\Enums\TaskStatus;
 use App\Models\Server;
 use App\Models\ServerSite;
 
@@ -31,7 +31,7 @@ trait PreparesSiteData
      */
     protected function getLatestMetrics(Server $server): ?array
     {
-        if ($server->monitoring_status !== MonitoringStatus::Active) {
+        if ($server->monitoring_status !== TaskStatus::Active) {
             return null;
         }
 

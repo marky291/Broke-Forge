@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\FirewallRuleStatus;
+use App\Enums\TaskStatus;
 use App\Http\Requests\Servers\FirewallRuleRequest;
 use App\Http\Resources\ServerResource;
 use App\Models\Server;
@@ -80,7 +80,7 @@ class ServerFirewallController extends Controller
             }
 
             // Update status to 'pending' for UI feedback
-            $rule->update(['status' => FirewallRuleStatus::Pending]);
+            $rule->update(['status' => TaskStatus::Pending]);
 
             // Dispatch job to remove the rule from the server
             FirewallRuleUninstallerJob::dispatch($server, $rule);
@@ -111,7 +111,7 @@ class ServerFirewallController extends Controller
         }
 
         // Only allow retry for failed firewall rules
-        if ($firewallRule->status !== \App\Enums\FirewallRuleStatus::Failed) {
+        if ($firewallRule->status !== \App\Enums\TaskStatus::Failed) {
             return back()->with('error', 'Only failed firewall rules can be retried');
         }
 
@@ -128,7 +128,7 @@ class ServerFirewallController extends Controller
         // Reset status to 'pending' and clear error log
         // Model events will broadcast automatically via Reverb
         $firewallRule->update([
-            'status' => \App\Enums\FirewallRuleStatus::Pending,
+            'status' => \App\Enums\TaskStatus::Pending,
             'error_log' => null,
         ]);
 

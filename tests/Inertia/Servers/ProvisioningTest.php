@@ -2,9 +2,9 @@
 
 namespace Tests\Inertia\Servers;
 
+use App\Enums\TaskStatus;
 use App\Models\Server;
 use App\Models\User;
-use App\Packages\Enums\ProvisionStatus;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -21,7 +21,7 @@ class ProvisioningTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'provision_status' => ProvisionStatus::Pending,
+            'provision_status' => TaskStatus::Pending,
         ]);
 
         // Act
@@ -47,7 +47,7 @@ class ProvisioningTest extends TestCase
             'vanity_name' => 'My Production Server',
             'public_ip' => '192.168.100.50',
             'ssh_port' => 2222,
-            'provision_status' => ProvisionStatus::Installing,
+            'provision_status' => TaskStatus::Installing,
         ]);
 
         // Act
@@ -76,7 +76,7 @@ class ProvisioningTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'provision_status' => ProvisionStatus::Pending,
+            'provision_status' => TaskStatus::Pending,
         ]);
 
         // Act
@@ -105,7 +105,7 @@ class ProvisioningTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'provision_status' => ProvisionStatus::Pending,
+            'provision_status' => TaskStatus::Pending,
             'ssh_root_password' => 'secure-password-456',
         ]);
 
@@ -131,7 +131,7 @@ class ProvisioningTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'provision_status' => ProvisionStatus::Pending,
+            'provision_status' => TaskStatus::Pending,
         ]);
 
         // Act
@@ -162,9 +162,9 @@ class ProvisioningTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'provision_status' => ProvisionStatus::Installing,
+            'provision_status' => TaskStatus::Installing,
             'provision' => collect([
-                1 => 'completed',
+                1 => 'success',
                 2 => 'installing',
             ]),
         ]);
@@ -203,7 +203,7 @@ class ProvisioningTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'provision_status' => ProvisionStatus::Pending,
+            'provision_status' => TaskStatus::Pending,
         ]);
 
         // Act
@@ -227,7 +227,7 @@ class ProvisioningTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'provision_status' => ProvisionStatus::Installing,
+            'provision_status' => TaskStatus::Installing,
         ]);
 
         // Act
@@ -251,7 +251,7 @@ class ProvisioningTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'provision_status' => ProvisionStatus::Failed,
+            'provision_status' => TaskStatus::Failed,
         ]);
 
         // Act
@@ -275,7 +275,7 @@ class ProvisioningTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'provision_status' => ProvisionStatus::Pending,
+            'provision_status' => TaskStatus::Pending,
             'provision' => null,
         ]);
 
@@ -300,7 +300,7 @@ class ProvisioningTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'provision_status' => ProvisionStatus::Pending,
+            'provision_status' => TaskStatus::Pending,
         ]);
 
         // Act
@@ -324,7 +324,7 @@ class ProvisioningTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'provision_status' => ProvisionStatus::Installing,
+            'provision_status' => TaskStatus::Installing,
         ]);
 
         // Act
@@ -360,7 +360,7 @@ class ProvisioningTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'provision_status' => ProvisionStatus::Pending,
+            'provision_status' => TaskStatus::Pending,
             'provision' => collect([
                 1 => 'installing',
             ]),
@@ -393,9 +393,9 @@ class ProvisioningTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'provision_status' => ProvisionStatus::Installing,
+            'provision_status' => TaskStatus::Installing,
             'provision' => collect([
-                1 => 'completed',
+                1 => 'success',
                 2 => 'installing',
             ]),
         ]);
@@ -433,10 +433,10 @@ class ProvisioningTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'provision_status' => ProvisionStatus::Installing,
+            'provision_status' => TaskStatus::Installing,
             'provision' => collect([
-                1 => 'completed',
-                2 => 'completed',
+                1 => 'success',
+                2 => 'success',
                 3 => 'installing',
             ]),
         ]);
@@ -470,11 +470,11 @@ class ProvisioningTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'provision_status' => ProvisionStatus::Installing,
+            'provision_status' => TaskStatus::Installing,
             'provision' => collect([
-                1 => 'completed',
-                2 => 'completed',
-                3 => 'completed',
+                1 => 'success',
+                2 => 'success',
+                3 => 'success',
                 4 => 'installing',
             ]),
         ]);
@@ -508,9 +508,9 @@ class ProvisioningTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'provision_status' => ProvisionStatus::Failed,
+            'provision_status' => TaskStatus::Failed,
             'provision' => collect([
-                1 => 'completed',
+                1 => 'success',
                 2 => 'failed',
             ]),
         ]);
@@ -543,10 +543,10 @@ class ProvisioningTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'provision_status' => ProvisionStatus::Failed,
+            'provision_status' => TaskStatus::Failed,
             'provision' => collect([
-                1 => 'completed',
-                2 => 'completed',
+                1 => 'success',
+                2 => 'success',
                 3 => 'failed',
             ]),
         ]);
@@ -577,7 +577,7 @@ class ProvisioningTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'provision_status' => ProvisionStatus::Pending,
+            'provision_status' => TaskStatus::Pending,
         ]);
 
         // Act
@@ -609,7 +609,7 @@ class ProvisioningTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'provision_status' => ProvisionStatus::Pending,
+            'provision_status' => TaskStatus::Pending,
         ]);
 
         // Act
@@ -636,12 +636,12 @@ class ProvisioningTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'provision_status' => ProvisionStatus::Installing,
+            'provision_status' => TaskStatus::Installing,
             'provision' => collect([
-                1 => 'completed',
-                2 => 'completed',
-                3 => 'completed',
-                4 => 'completed',
+                1 => 'success',
+                2 => 'success',
+                3 => 'success',
+                4 => 'success',
             ]),
         ]);
 
@@ -678,9 +678,9 @@ class ProvisioningTest extends TestCase
 
         // Test each status
         $statuses = [
-            ['enum' => ProvisionStatus::Pending, 'string' => 'pending'],
-            ['enum' => ProvisionStatus::Installing, 'string' => 'installing'],
-            ['enum' => ProvisionStatus::Failed, 'string' => 'failed'],
+            ['enum' => TaskStatus::Pending, 'string' => 'pending'],
+            ['enum' => TaskStatus::Installing, 'string' => 'installing'],
+            ['enum' => TaskStatus::Failed, 'string' => 'failed'],
         ];
 
         foreach ($statuses as $status) {
@@ -711,11 +711,11 @@ class ProvisioningTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'provision_status' => ProvisionStatus::Installing,
+            'provision_status' => TaskStatus::Installing,
             'provision' => collect([
-                1 => 'completed',
-                2 => 'completed',
-                3 => 'completed',
+                1 => 'success',
+                2 => 'success',
+                3 => 'success',
             ]),
         ]);
 
@@ -743,9 +743,9 @@ class ProvisioningTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'provision_status' => ProvisionStatus::Installing,
+            'provision_status' => TaskStatus::Installing,
             'provision' => collect([
-                1 => 'completed',
+                1 => 'success',
             ]),
         ]);
 

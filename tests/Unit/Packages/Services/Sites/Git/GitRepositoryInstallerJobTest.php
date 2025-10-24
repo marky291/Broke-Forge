@@ -2,9 +2,9 @@
 
 namespace Tests\Unit\Packages\Services\Sites\Git;
 
+use App\Enums\TaskStatus;
 use App\Models\Server;
 use App\Models\ServerSite;
-use App\Packages\Enums\GitStatus;
 use App\Packages\Services\Sites\Git\GitRepositoryInstallerJob;
 use Exception;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -63,18 +63,18 @@ class GitRepositoryInstallerJobTest extends TestCase
     public function test_failed_method_updates_git_status_to_failed(): void
     {
         $server = Server::factory()->create();
-        $site = ServerSite::factory()->create(['server_id' => $server->id, 'git_status' => GitStatus::Installing]);
+        $site = ServerSite::factory()->create(['server_id' => $server->id, 'git_status' => TaskStatus::Installing]);
         $job = new GitRepositoryInstallerJob($server, $site, []);
         $exception = new Exception('Operation failed');
         $job->failed($exception);
         $site->refresh();
-        $this->assertEquals(GitStatus::Failed, $site->git_status);
+        $this->assertEquals(TaskStatus::Failed, $site->git_status);
     }
 
     public function test_failed_method_stores_error_log(): void
     {
         $server = Server::factory()->create();
-        $site = ServerSite::factory()->create(['server_id' => $server->id, 'git_status' => GitStatus::Installing, 'error_log' => null]);
+        $site = ServerSite::factory()->create(['server_id' => $server->id, 'git_status' => TaskStatus::Installing, 'error_log' => null]);
         $job = new GitRepositoryInstallerJob($server, $site, []);
         $errorMessage = 'Test error message';
         $exception = new Exception($errorMessage);

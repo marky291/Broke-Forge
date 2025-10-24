@@ -2,7 +2,7 @@
 
 namespace Tests\Inertia\Servers;
 
-use App\Enums\MonitoringStatus;
+use App\Enums\TaskStatus;
 use App\Models\Server;
 use App\Models\ServerMetric;
 use App\Models\User;
@@ -136,7 +136,7 @@ class SettingsTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'monitoring_status' => MonitoringStatus::Active,
+            'monitoring_status' => TaskStatus::Active,
         ]);
 
         $metric = ServerMetric::factory()->create([
@@ -183,7 +183,7 @@ class SettingsTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'monitoring_status' => MonitoringStatus::Uninstalled,
+            'monitoring_status' => null,
         ]);
 
         // Act
@@ -206,7 +206,7 @@ class SettingsTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'monitoring_status' => MonitoringStatus::Active,
+            'monitoring_status' => TaskStatus::Active,
         ]);
 
         // Create older metric

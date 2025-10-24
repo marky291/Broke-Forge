@@ -38,7 +38,7 @@ notify_step() {
   fi
 }
 
-notify_step 1 "completed"
+notify_step 1 "success"
 
 notify_step 2 "installing"
 
@@ -239,7 +239,7 @@ EOF
   echo "[+] Firewall opened for SSH"
 fi
 
-notify_step 2 "completed"
+notify_step 2 "success"
 notify_step 3 "installing"
 
 # Wait for SSH to be fully ready before declaring completion
@@ -299,4 +299,4 @@ echo "SSH Port:    {{ $sshPort ?? 22 }}"
 echo "================================================"
 echo ""
 
-notify_step 3 "completed"
+notify_step 3 "success"

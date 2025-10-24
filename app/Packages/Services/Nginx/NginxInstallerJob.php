@@ -2,45 +2,22 @@
 
 namespace App\Packages\Services\Nginx;
 
+use App\Enums\TaskStatus;
 use App\Models\Server;
 use App\Packages\Enums\PhpVersion;
-use App\Packages\Enums\ProvisionStatus;
+use App\Packages\Orchestratable;
 use Exception;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Foundation\Queue\Queueable;
-use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Nginx Installation Job
+ * Nginx Installation Orchestrator Job
  *
- * Handles queued Nginx web server installation on remote servers
+ * Orchestrates Nginx web server installation by coordinating multiple sub-installer jobs.
+ * Extends Orchestratable to use separate lock key (orchestrator:{server_id}) preventing
+ * lock contention with child jobs that use package:action:{server_id}.
  */
-class NginxInstallerJob implements ShouldQueue
+class NginxInstallerJob extends Orchestratable
 {
-    use Queueable;
-
-    /**
-     * The number of seconds the job can run before timing out.
-     *
-     * @var int
-     */
-    public $timeout = 600;
-
-    /**
-     * The number of times the job may be attempted.
-     *
-     * @var int
-     */
-    public $tries = 0;
-
-    /**
-     * The number of exceptions to allow before failing.
-     *
-     * @var int
-     */
-    public $maxExceptions = 3;
-
     public function __construct(
         public Server $server,
         public PhpVersion $phpVersion,
@@ -59,7 +36,7 @@ class NginxInstallerJob implements ShouldQueue
             $installer = new NginxInstaller($this->server);
 
             if ($this->isProvisioningServer) {
-                $this->server->update(['provision_status' => ProvisionStatus::Installing]);
+                $this->server->update(['provision_status' => TaskStatus::Installing]);
             }
 
             // Execute installation - the installer handles all logic, database tracking, and dependencies
@@ -68,12 +45,12 @@ class NginxInstallerJob implements ShouldQueue
             Log::info("Nginx installation completed for server #{$this->server->id}");
 
             if ($this->isProvisioningServer) {
-                $this->server->update(['provision_status' => ProvisionStatus::Completed]);
+                $this->server->update(['provision_status' => TaskStatus::Success]);
             }
 
         } catch (Exception $e) {
             if ($this->isProvisioningServer) {
-                $this->server->update(['provision_status' => ProvisionStatus::Failed]);
+                $this->server->update(['provision_status' => TaskStatus::Failed]);
             }
             Log::error("Nginx installation failed for server #{$this->server->id}", [
                 'error' => $e->getMessage(),
@@ -83,27 +60,13 @@ class NginxInstallerJob implements ShouldQueue
         }
     }
 
-    /**
-     * Get the middleware the job should pass through.
-     *
-     * @return array<int, object>
-     */
-    public function middleware(): array
-    {
-        return [
-            (new WithoutOverlapping("package:action:{$this->server->id}"))->shared()
-                ->releaseAfter(15)
-                ->expireAfter(900),
-        ];
-    }
-
     public function failed(\Throwable $exception): void
     {
         $this->server->refresh();
 
         if ($this->server && $this->isProvisioningServer) {
             $this->server->update([
-                'provision_status' => ProvisionStatus::Failed,
+                'provision_status' => TaskStatus::Failed,
             ]);
         }
 

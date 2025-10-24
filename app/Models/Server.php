@@ -2,13 +2,9 @@
 
 namespace App\Models;
 
-use App\Enums\MonitoringStatus;
-use App\Enums\SchedulerStatus;
 use App\Enums\ServerProvider;
-use App\Enums\SupervisorStatus;
+use App\Enums\TaskStatus;
 use App\Packages\Credential\Ssh;
-use App\Packages\Enums\ConnectionStatus;
-use App\Packages\Enums\ProvisionStatus;
 use App\Packages\Services\SourceProvider\ServerSshKeyManager;
 use Illuminate\Database\Eloquent\Casts\AsCollection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -28,9 +24,10 @@ use Illuminate\Support\Facades\Log;
  * @property string|null $private_ip
  * @property string $connection
  * @property string $vanity_name
- * @property ProvisionStatus $provision_status
+ * @property TaskStatus $provision_status
  * @property \Illuminate\Support\Collection|null $provision
  * @property int $id
+ * @property TaskStatus|mixed $connection_status
  */
 class Server extends Model
 {
@@ -77,21 +74,21 @@ class Server extends Model
     {
         return [
             'ssh_port' => 'integer',
-            'connection_status' => ConnectionStatus::class,
+            'connection_status' => TaskStatus::class, // Only uses: Pending (initial), Success (connected), Failed (connection error)
             'provider' => ServerProvider::class,
-            'provision_status' => ProvisionStatus::class,
+            'provision_status' => TaskStatus::class,
             'provision' => AsCollection::class,
             'ssh_root_password' => 'encrypted',
             'monitoring_token' => 'encrypted',
-            'monitoring_status' => MonitoringStatus::class,
+            'monitoring_status' => TaskStatus::class,
             'monitoring_collection_interval' => 'integer',
             'monitoring_installed_at' => 'datetime',
             'monitoring_uninstalled_at' => 'datetime',
             'scheduler_token' => 'encrypted',
-            'scheduler_status' => SchedulerStatus::class,
+            'scheduler_status' => TaskStatus::class,
             'scheduler_installed_at' => 'datetime',
             'scheduler_uninstalled_at' => 'datetime',
-            'supervisor_status' => SupervisorStatus::class,
+            'supervisor_status' => TaskStatus::class,
             'supervisor_installed_at' => 'datetime',
             'supervisor_uninstalled_at' => 'datetime',
             'source_provider_ssh_key_added' => 'boolean',
@@ -134,7 +131,7 @@ class Server extends Model
      */
     public function isConnected(): bool
     {
-        return $this->connection_status === ConnectionStatus::CONNECTED;
+        return $this->connection_status === TaskStatus::Success;
     }
 
     /**
@@ -278,7 +275,7 @@ class Server extends Model
      */
     public function isProvisioned(): bool
     {
-        return $this->provision_status === ProvisionStatus::Completed;
+        return $this->provision_status === TaskStatus::Success;
     }
 
     /**
@@ -286,7 +283,7 @@ class Server extends Model
      */
     public function schedulerIsActive(): bool
     {
-        return $this->scheduler_status === SchedulerStatus::Active;
+        return $this->scheduler_status === TaskStatus::Active;
     }
 
     /**
@@ -294,7 +291,7 @@ class Server extends Model
      */
     public function schedulerIsInstalling(): bool
     {
-        return $this->scheduler_status === SchedulerStatus::Installing;
+        return $this->scheduler_status === TaskStatus::Installing;
     }
 
     /**
@@ -302,7 +299,7 @@ class Server extends Model
      */
     public function schedulerIsFailed(): bool
     {
-        return $this->scheduler_status === SchedulerStatus::Failed;
+        return $this->scheduler_status === TaskStatus::Failed;
     }
 
     /**
@@ -310,7 +307,7 @@ class Server extends Model
      */
     public function monitoringIsActive(): bool
     {
-        return $this->monitoring_status === MonitoringStatus::Active;
+        return $this->monitoring_status === TaskStatus::Active;
     }
 
     /**
@@ -318,7 +315,7 @@ class Server extends Model
      */
     public function monitoringIsInstalling(): bool
     {
-        return $this->monitoring_status === MonitoringStatus::Installing;
+        return $this->monitoring_status === TaskStatus::Installing;
     }
 
     /**
@@ -326,7 +323,7 @@ class Server extends Model
      */
     public function monitoringIsFailed(): bool
     {
-        return $this->monitoring_status === MonitoringStatus::Failed;
+        return $this->monitoring_status === TaskStatus::Failed;
     }
 
     /**
@@ -334,7 +331,7 @@ class Server extends Model
      */
     public function supervisorIsActive(): bool
     {
-        return $this->supervisor_status === SupervisorStatus::Active;
+        return $this->supervisor_status === TaskStatus::Active;
     }
 
     /**
@@ -342,7 +339,7 @@ class Server extends Model
      */
     public function supervisorIsInstalling(): bool
     {
-        return $this->supervisor_status === SupervisorStatus::Installing;
+        return $this->supervisor_status === TaskStatus::Installing;
     }
 
     /**
@@ -350,7 +347,7 @@ class Server extends Model
      */
     public function supervisorIsFailed(): bool
     {
-        return $this->supervisor_status === SupervisorStatus::Failed;
+        return $this->supervisor_status === TaskStatus::Failed;
     }
 
     protected static function booted(): void

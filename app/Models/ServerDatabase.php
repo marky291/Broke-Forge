@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use App\Enums\DatabaseStatus;
 use App\Enums\DatabaseType;
+use App\Enums\TaskStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -31,7 +31,7 @@ class ServerDatabase extends Model
     {
         return [
             'type' => DatabaseType::class,
-            'status' => DatabaseStatus::class,
+            'status' => TaskStatus::class,
             'port' => 'integer',
         ];
     }

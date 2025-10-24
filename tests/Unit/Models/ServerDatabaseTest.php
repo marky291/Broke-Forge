@@ -2,8 +2,8 @@
 
 namespace Tests\Unit\Models;
 
-use App\Enums\DatabaseStatus;
 use App\Enums\DatabaseType;
+use App\Enums\TaskStatus;
 use App\Events\ServerUpdated;
 use App\Models\Server;
 use App\Models\ServerDatabase;
@@ -63,7 +63,7 @@ class ServerDatabaseTest extends TestCase
         Event::fake([ServerUpdated::class]);
 
         // Act
-        $database->update(['status' => DatabaseStatus::Failed]);
+        $database->update(['status' => TaskStatus::Failed]);
 
         // Assert
         Event::assertDispatched(ServerUpdated::class, function ($event) use ($server) {
@@ -110,11 +110,11 @@ class ServerDatabaseTest extends TestCase
     public function test_status_is_cast_to_database_status_enum(): void
     {
         // Arrange
-        $database = ServerDatabase::factory()->create(['status' => DatabaseStatus::Active]);
+        $database = ServerDatabase::factory()->create(['status' => TaskStatus::Active]);
 
         // Act & Assert
-        $this->assertInstanceOf(DatabaseStatus::class, $database->status);
-        $this->assertEquals(DatabaseStatus::Active, $database->status);
+        $this->assertInstanceOf(TaskStatus::class, $database->status);
+        $this->assertEquals(TaskStatus::Active, $database->status);
     }
 
     /**
@@ -176,7 +176,7 @@ class ServerDatabaseTest extends TestCase
             'type' => DatabaseType::PostgreSQL,
             'version' => '15.2',
             'port' => 5432,
-            'status' => DatabaseStatus::Pending,
+            'status' => TaskStatus::Pending,
             'root_password' => 'password123',
             'error_log' => 'Test error',
         ]);
@@ -186,7 +186,7 @@ class ServerDatabaseTest extends TestCase
         $this->assertEquals(DatabaseType::PostgreSQL, $database->type);
         $this->assertEquals('15.2', $database->version);
         $this->assertEquals(5432, $database->port);
-        $this->assertEquals(DatabaseStatus::Pending, $database->status);
+        $this->assertEquals(TaskStatus::Pending, $database->status);
         $this->assertEquals('password123', $database->root_password);
         $this->assertEquals('Test error', $database->error_log);
     }
@@ -206,7 +206,7 @@ class ServerDatabaseTest extends TestCase
         $this->assertInstanceOf(DatabaseType::class, $database->type);
         $this->assertNotNull($database->version);
         $this->assertIsInt($database->port);
-        $this->assertInstanceOf(DatabaseStatus::class, $database->status);
+        $this->assertInstanceOf(TaskStatus::class, $database->status);
         $this->assertNotNull($database->root_password);
     }
 
@@ -216,10 +216,10 @@ class ServerDatabaseTest extends TestCase
     public function test_database_can_have_pending_status(): void
     {
         // Arrange & Act
-        $database = ServerDatabase::factory()->create(['status' => DatabaseStatus::Pending]);
+        $database = ServerDatabase::factory()->create(['status' => TaskStatus::Pending]);
 
         // Assert
-        $this->assertEquals(DatabaseStatus::Pending, $database->status);
+        $this->assertEquals(TaskStatus::Pending, $database->status);
     }
 
     /**
@@ -228,10 +228,10 @@ class ServerDatabaseTest extends TestCase
     public function test_database_can_have_installing_status(): void
     {
         // Arrange & Act
-        $database = ServerDatabase::factory()->create(['status' => DatabaseStatus::Installing]);
+        $database = ServerDatabase::factory()->create(['status' => TaskStatus::Installing]);
 
         // Assert
-        $this->assertEquals(DatabaseStatus::Installing, $database->status);
+        $this->assertEquals(TaskStatus::Installing, $database->status);
     }
 
     /**
@@ -240,10 +240,10 @@ class ServerDatabaseTest extends TestCase
     public function test_database_can_have_active_status(): void
     {
         // Arrange & Act
-        $database = ServerDatabase::factory()->create(['status' => DatabaseStatus::Active]);
+        $database = ServerDatabase::factory()->create(['status' => TaskStatus::Active]);
 
         // Assert
-        $this->assertEquals(DatabaseStatus::Active, $database->status);
+        $this->assertEquals(TaskStatus::Active, $database->status);
     }
 
     /**
@@ -252,10 +252,10 @@ class ServerDatabaseTest extends TestCase
     public function test_database_can_have_failed_status(): void
     {
         // Arrange & Act
-        $database = ServerDatabase::factory()->create(['status' => DatabaseStatus::Failed]);
+        $database = ServerDatabase::factory()->create(['status' => TaskStatus::Failed]);
 
         // Assert
-        $this->assertEquals(DatabaseStatus::Failed, $database->status);
+        $this->assertEquals(TaskStatus::Failed, $database->status);
     }
 
     /**
@@ -264,10 +264,10 @@ class ServerDatabaseTest extends TestCase
     public function test_database_can_have_stopped_status(): void
     {
         // Arrange & Act
-        $database = ServerDatabase::factory()->create(['status' => DatabaseStatus::Stopped]);
+        $database = ServerDatabase::factory()->create(['status' => TaskStatus::Paused]);
 
         // Assert
-        $this->assertEquals(DatabaseStatus::Stopped, $database->status);
+        $this->assertEquals(TaskStatus::Paused, $database->status);
     }
 
     /**
@@ -276,10 +276,10 @@ class ServerDatabaseTest extends TestCase
     public function test_database_can_have_uninstalling_status(): void
     {
         // Arrange & Act
-        $database = ServerDatabase::factory()->create(['status' => DatabaseStatus::Uninstalling]);
+        $database = ServerDatabase::factory()->create(['status' => TaskStatus::Removing]);
 
         // Assert
-        $this->assertEquals(DatabaseStatus::Uninstalling, $database->status);
+        $this->assertEquals(TaskStatus::Removing, $database->status);
     }
 
     /**
@@ -288,10 +288,10 @@ class ServerDatabaseTest extends TestCase
     public function test_database_can_have_updating_status(): void
     {
         // Arrange & Act
-        $database = ServerDatabase::factory()->create(['status' => DatabaseStatus::Updating]);
+        $database = ServerDatabase::factory()->create(['status' => TaskStatus::Updating]);
 
         // Assert
-        $this->assertEquals(DatabaseStatus::Updating, $database->status);
+        $this->assertEquals(TaskStatus::Updating, $database->status);
     }
 
     /**
@@ -364,7 +364,7 @@ class ServerDatabaseTest extends TestCase
 
         // Act
         $database = ServerDatabase::factory()->create([
-            'status' => DatabaseStatus::Failed,
+            'status' => TaskStatus::Failed,
             'error_log' => $errorMessage,
         ]);
 

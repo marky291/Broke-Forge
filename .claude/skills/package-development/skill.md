@@ -136,17 +136,28 @@ These are DIFFERENT locks and won't prevent concurrent execution! Using a custom
 
 ### 1. Status Enum
 
+**BrokeForge uses a unified TaskStatus enum for all packages.** All packages share the same 8-value enum:
+
 ```php
-// app/Enums/FirewallRuleStatus.php
-enum FirewallRuleStatus: string
+// app/Enums/TaskStatus.php
+enum TaskStatus: string
 {
-    case Pending = 'pending';      // Record created, job not started
-    case Installing = 'installing'; // Job actively running
-    case Active = 'active';        // Installation completed successfully
-    case Failed = 'failed';        // Installation failed with errors
-    case Removing = 'removing';    // Removal in progress
+    case Pending = 'pending';       // Waiting to start
+    case Installing = 'installing'; // In progress (installation/setup)
+    case Active = 'active';         // Running services (e.g., scheduler, supervisor, monitoring)
+    case Success = 'success';       // Completed tasks (e.g., deployments, connections)
+    case Failed = 'failed';         // Failed/errored state
+    case Updating = 'updating';     // Updates in progress (e.g., deployments)
+    case Removing = 'removing';     // Removal/uninstallation in progress
+    case Paused = 'paused';         // Disabled/stopped state
 }
 ```
+
+**Status Usage Guide:**
+- **Lifecycle operations** (firewall rules, tasks): Use `Pending → Installing → Active/Failed`
+- **One-time operations** (deployments): Use `Pending → Updating → Success/Failed`
+- **Service states**: Use `Active` (running), `Paused` (disabled), `Failed` (errored)
+- **Removals**: Use `Removing → deleted` (or restore to original status on failure)
 
 ### 2. Database Migration
 
@@ -179,7 +190,7 @@ class ServerFirewallRule extends Model
     ];
 
     protected $casts = [
-        'status' => FirewallRuleStatus::class,
+        'status' => TaskStatus::class,
     ];
 
     /**
@@ -271,17 +282,17 @@ class FirewallRuleInstallerJob extends Taskable
 
     protected function getInProgressStatus(): mixed
     {
-        return FirewallRuleStatus::Installing;
+        return TaskStatus::Installing;
     }
 
     protected function getSuccessStatus(): mixed
     {
-        return FirewallRuleStatus::Active;
+        return TaskStatus::Active;
     }
 
     protected function getFailedStatus(): mixed
     {
-        return FirewallRuleStatus::Failed;
+        return TaskStatus::Failed;
     }
 
     protected function executeOperation(Model $model): void
@@ -490,17 +501,17 @@ class FirewallRuleRemoverJob extends Taskable
 
     protected function getInProgressStatus(): mixed
     {
-        return FirewallRuleStatus::Removing;
+        return TaskStatus::Removing;
     }
 
     protected function getSuccessStatus(): mixed
     {
-        return FirewallRuleStatus::Active; // Not used since we delete
+        return TaskStatus::Active; // Not used since we delete
     }
 
     protected function getFailedStatus(): mixed
     {
-        return FirewallRuleStatus::Failed;
+        return TaskStatus::Failed;
     }
 
     protected function shouldDeleteOnSuccess(): bool

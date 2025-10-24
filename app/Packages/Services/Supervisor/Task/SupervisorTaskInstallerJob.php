@@ -2,7 +2,7 @@
 
 namespace App\Packages\Services\Supervisor\Task;
 
-use App\Enums\SupervisorTaskStatus;
+use App\Enums\TaskStatus;
 use App\Models\Server;
 use App\Models\ServerSupervisorTask;
 use App\Packages\Taskable;
@@ -27,17 +27,17 @@ class SupervisorTaskInstallerJob extends Taskable
 
     protected function getInProgressStatus(): mixed
     {
-        return SupervisorTaskStatus::Installing;
+        return TaskStatus::Installing;
     }
 
     protected function getSuccessStatus(): mixed
     {
-        return SupervisorTaskStatus::Active;
+        return TaskStatus::Active;
     }
 
     protected function getFailedStatus(): mixed
     {
-        return SupervisorTaskStatus::Failed;
+        return TaskStatus::Failed;
     }
 
     protected function getAdditionalSuccessData(Model $model): array

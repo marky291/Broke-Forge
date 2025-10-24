@@ -90,7 +90,7 @@ class ProvisionedSiteInstaller extends PackageInstaller implements \App\Packages
 
                 // Update git_status if repository was cloned
                 if (isset($config['git_repository'])) {
-                    $updates['git_status'] = \App\Packages\Enums\GitStatus::Installed;
+                    $updates['git_status'] = \App\Packages\Enums\TaskStatus::Success;
                     $updates['git_installed_at'] = now();
                 }
 

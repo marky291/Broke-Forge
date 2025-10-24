@@ -2,7 +2,7 @@
 
 namespace Tests\Unit\Models;
 
-use App\Enums\SupervisorTaskStatus;
+use App\Enums\TaskStatus;
 use App\Events\ServerUpdated;
 use App\Models\Server;
 use App\Models\ServerSupervisorTask;
@@ -113,8 +113,8 @@ class ServerSupervisorTaskTest extends TestCase
         $task = ServerSupervisorTask::factory()->active()->create();
 
         // Act & Assert
-        $this->assertInstanceOf(SupervisorTaskStatus::class, $task->status);
-        $this->assertEquals(SupervisorTaskStatus::Active, $task->status);
+        $this->assertInstanceOf(TaskStatus::class, $task->status);
+        $this->assertEquals(TaskStatus::Active, $task->status);
     }
 
     /**
@@ -229,7 +229,7 @@ class ServerSupervisorTaskTest extends TestCase
         Event::fake([ServerUpdated::class]);
 
         // Act
-        $task->update(['status' => SupervisorTaskStatus::Inactive]);
+        $task->update(['status' => TaskStatus::Paused]);
 
         // Assert
         Event::assertDispatched(ServerUpdated::class, function ($event) use ($task) {
@@ -308,7 +308,7 @@ class ServerSupervisorTaskTest extends TestCase
         $task = ServerSupervisorTask::factory()->active()->create();
 
         // Assert
-        $this->assertEquals(SupervisorTaskStatus::Active, $task->status);
+        $this->assertEquals(TaskStatus::Active, $task->status);
         $this->assertTrue($task->isActive());
     }
 
@@ -321,7 +321,7 @@ class ServerSupervisorTaskTest extends TestCase
         $task = ServerSupervisorTask::factory()->inactive()->create();
 
         // Assert
-        $this->assertEquals(SupervisorTaskStatus::Inactive, $task->status);
+        $this->assertEquals(TaskStatus::Paused, $task->status);
         $this->assertTrue($task->isInactive());
     }
 
@@ -334,7 +334,7 @@ class ServerSupervisorTaskTest extends TestCase
         $task = ServerSupervisorTask::factory()->failed()->create();
 
         // Assert
-        $this->assertEquals(SupervisorTaskStatus::Failed, $task->status);
+        $this->assertEquals(TaskStatus::Failed, $task->status);
         $this->assertTrue($task->isFailed());
     }
 
@@ -455,14 +455,14 @@ class ServerSupervisorTaskTest extends TestCase
     public function test_status_can_transition_from_pending_to_active(): void
     {
         // Arrange
-        $task = ServerSupervisorTask::factory()->create(['status' => SupervisorTaskStatus::Pending]);
-        $this->assertEquals(SupervisorTaskStatus::Pending, $task->status);
+        $task = ServerSupervisorTask::factory()->create(['status' => TaskStatus::Pending]);
+        $this->assertEquals(TaskStatus::Pending, $task->status);
 
         // Act
-        $task->update(['status' => SupervisorTaskStatus::Active]);
+        $task->update(['status' => TaskStatus::Active]);
 
         // Assert
-        $this->assertEquals(SupervisorTaskStatus::Active, $task->status);
+        $this->assertEquals(TaskStatus::Active, $task->status);
         $this->assertTrue($task->isActive());
     }
 
@@ -472,14 +472,14 @@ class ServerSupervisorTaskTest extends TestCase
     public function test_status_can_transition_to_failed(): void
     {
         // Arrange
-        $task = ServerSupervisorTask::factory()->create(['status' => SupervisorTaskStatus::Installing]);
-        $this->assertEquals(SupervisorTaskStatus::Installing, $task->status);
+        $task = ServerSupervisorTask::factory()->create(['status' => TaskStatus::Installing]);
+        $this->assertEquals(TaskStatus::Installing, $task->status);
 
         // Act
-        $task->update(['status' => SupervisorTaskStatus::Failed]);
+        $task->update(['status' => TaskStatus::Failed]);
 
         // Assert
-        $this->assertEquals(SupervisorTaskStatus::Failed, $task->status);
+        $this->assertEquals(TaskStatus::Failed, $task->status);
         $this->assertTrue($task->isFailed());
     }
 }

@@ -2,7 +2,7 @@
 
 namespace App\Packages\Services\Firewall;
 
-use App\Enums\FirewallRuleStatus;
+use App\Enums\TaskStatus;
 use App\Models\Server;
 use App\Models\ServerFirewallRule;
 use App\Packages\Taskable;
@@ -33,17 +33,17 @@ class FirewallRuleInstallerJob extends Taskable
 
     protected function getInProgressStatus(): mixed
     {
-        return FirewallRuleStatus::Installing;
+        return TaskStatus::Installing;
     }
 
     protected function getSuccessStatus(): mixed
     {
-        return FirewallRuleStatus::Active;
+        return TaskStatus::Active;
     }
 
     protected function getFailedStatus(): mixed
     {
-        return FirewallRuleStatus::Failed;
+        return TaskStatus::Failed;
     }
 
     protected function executeOperation(Model $model): void

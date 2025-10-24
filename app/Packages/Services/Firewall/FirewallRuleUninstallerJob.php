@@ -2,7 +2,7 @@
 
 namespace App\Packages\Services\Firewall;
 
-use App\Enums\FirewallRuleStatus;
+use App\Enums\TaskStatus;
 use App\Models\Server;
 use App\Models\ServerFirewallRule;
 use App\Packages\Taskable;
@@ -40,17 +40,17 @@ class FirewallRuleUninstallerJob extends Taskable
 
     protected function getInProgressStatus(): mixed
     {
-        return FirewallRuleStatus::Removing;
+        return TaskStatus::Removing;
     }
 
     protected function getSuccessStatus(): mixed
     {
-        return FirewallRuleStatus::Active; // Not used since we delete
+        return TaskStatus::Active; // Not used since we delete
     }
 
     protected function getFailedStatus(): mixed
     {
-        return FirewallRuleStatus::Failed;
+        return TaskStatus::Failed;
     }
 
     protected function shouldDeleteOnSuccess(): bool

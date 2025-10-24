@@ -2,7 +2,7 @@
 
 namespace App\Packages\Services\Database\Redis;
 
-use App\Enums\DatabaseStatus;
+use App\Enums\TaskStatus;
 use App\Models\Server;
 use App\Models\ServerDatabase;
 use App\Packages\Taskable;
@@ -27,23 +27,23 @@ class RedisInstallerJob extends Taskable
 
     protected function getInProgressStatus(): mixed
     {
-        return DatabaseStatus::Installing;
+        return TaskStatus::Installing;
     }
 
     protected function getSuccessStatus(): mixed
     {
-        return DatabaseStatus::Active;
+        return TaskStatus::Active;
     }
 
     protected function getFailedStatus(): mixed
     {
-        return DatabaseStatus::Failed;
+        return TaskStatus::Failed;
     }
 
     protected function executeOperation(Model $model): void
     {
         $installer = new RedisInstaller($this->server);
-        $installer->execute($model->version, $model->root_password);
+        $installer->execute($model->version, $model->port, $model->root_password);
     }
 
     protected function getLogContext(Model $model): array

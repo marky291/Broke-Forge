@@ -2,7 +2,7 @@
 
 namespace Tests\Unit\Models;
 
-use App\Enums\PhpStatus;
+use App\Enums\TaskStatus;
 use App\Events\ServerUpdated;
 use App\Models\Server;
 use App\Models\ServerPhp;
@@ -107,15 +107,15 @@ class ServerPhpTest extends TestCase
         // Arrange
         Event::fake();
         $serverPhp = ServerPhp::factory()->create([
-            'status' => PhpStatus::Active,
+            'status' => TaskStatus::Active,
         ]);
 
         // Act
         $status = $serverPhp->status;
 
         // Assert
-        $this->assertInstanceOf(PhpStatus::class, $status);
-        $this->assertEquals(PhpStatus::Active, $status);
+        $this->assertInstanceOf(TaskStatus::class, $status);
+        $this->assertEquals(TaskStatus::Active, $status);
     }
 
     /**
@@ -126,17 +126,17 @@ class ServerPhpTest extends TestCase
         // Arrange & Act
         Event::fake();
         $serverPhp = ServerPhp::factory()->create([
-            'status' => PhpStatus::Pending,
+            'status' => TaskStatus::Pending,
         ]);
 
         // Assert
-        $this->assertEquals(PhpStatus::Pending, $serverPhp->status);
+        $this->assertEquals(TaskStatus::Pending, $serverPhp->status);
 
         // Act - update status
-        $serverPhp->update(['status' => PhpStatus::Installing]);
+        $serverPhp->update(['status' => TaskStatus::Installing]);
 
         // Assert
-        $this->assertEquals(PhpStatus::Installing, $serverPhp->fresh()->status);
+        $this->assertEquals(TaskStatus::Installing, $serverPhp->fresh()->status);
     }
 
     /**
@@ -164,10 +164,10 @@ class ServerPhpTest extends TestCase
     {
         // Arrange
         Event::fake([ServerUpdated::class]);
-        $serverPhp = ServerPhp::factory()->create(['status' => PhpStatus::Pending]);
+        $serverPhp = ServerPhp::factory()->create(['status' => TaskStatus::Pending]);
 
         // Act
-        $serverPhp->update(['status' => PhpStatus::Active]);
+        $serverPhp->update(['status' => TaskStatus::Active]);
 
         // Assert - should have dispatched twice (once for create, once for update)
         Event::assertDispatched(ServerUpdated::class, 2);
@@ -268,8 +268,8 @@ class ServerPhpTest extends TestCase
         $this->assertNotNull($serverPhp->version);
         $this->assertIsBool($serverPhp->is_cli_default);
         $this->assertIsBool($serverPhp->is_site_default);
-        $this->assertInstanceOf(PhpStatus::class, $serverPhp->status);
-        $this->assertEquals(PhpStatus::Active, $serverPhp->status);
+        $this->assertInstanceOf(TaskStatus::class, $serverPhp->status);
+        $this->assertEquals(TaskStatus::Active, $serverPhp->status);
     }
 
     /**

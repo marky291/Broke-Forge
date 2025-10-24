@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Packages\Enums\GitStatus;
+use App\Enums\TaskStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -60,7 +60,7 @@ class ServerSite extends Model
             'has_dedicated_deploy_key' => 'boolean',
             'webhook_secret' => 'encrypted',
             'configuration' => 'array',
-            'git_status' => GitStatus::class,
+            'git_status' => TaskStatus::class,
             'provisioned_at' => 'datetime',
             'git_installed_at' => 'datetime',
             'last_deployed_at' => 'datetime',
@@ -118,7 +118,7 @@ class ServerSite extends Model
      */
     public function canInstallGitRepository(): bool
     {
-        return ! $this->git_status || $this->git_status->canRetry();
+        return ! $this->git_status || $this->git_status === TaskStatus::Failed;
     }
 
     /**
@@ -126,7 +126,7 @@ class ServerSite extends Model
      */
     public function isGitProcessing(): bool
     {
-        return $this->git_status?->isProcessing() ?? false;
+        return $this->git_status && in_array($this->git_status, [TaskStatus::Installing, TaskStatus::Updating], true);
     }
 
     /**
@@ -167,7 +167,7 @@ class ServerSite extends Model
      */
     public function hasGitRepository(): bool
     {
-        return $this->git_status === GitStatus::Installed;
+        return $this->git_status === TaskStatus::Success;
     }
 
     protected static function booted(): void

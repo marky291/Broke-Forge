@@ -2,7 +2,7 @@
 
 namespace App\Packages\Services\Database\MySQL;
 
-use App\Enums\DatabaseStatus;
+use App\Enums\TaskStatus;
 use App\Models\Server;
 use App\Models\ServerDatabase;
 use App\Packages\Taskable;
@@ -27,17 +27,17 @@ class MySqlInstallerJob extends Taskable
 
     protected function getInProgressStatus(): mixed
     {
-        return DatabaseStatus::Installing;
+        return TaskStatus::Installing;
     }
 
     protected function getSuccessStatus(): mixed
     {
-        return DatabaseStatus::Active;
+        return TaskStatus::Active;
     }
 
     protected function getFailedStatus(): mixed
     {
-        return DatabaseStatus::Failed;
+        return TaskStatus::Failed;
     }
 
     protected function executeOperation(Model $model): void

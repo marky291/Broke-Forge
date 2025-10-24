@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
-use App\Enums\DatabaseStatus;
 use App\Enums\DatabaseType;
+use App\Enums\TaskStatus;
 use App\Models\Server;
 use App\Models\ServerDatabase;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -28,7 +28,7 @@ class ServerDatabaseFactory extends Factory
             'type' => $this->faker->randomElement(DatabaseType::cases()),
             'version' => $this->faker->randomElement(['8.0', '8.4', '5.7', '14', '15']),
             'port' => $this->faker->randomElement([3306, 5432, 3307]),
-            'status' => DatabaseStatus::Active,
+            'status' => TaskStatus::Active,
             'root_password' => $this->faker->password(16),
         ];
     }

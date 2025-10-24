@@ -2,8 +2,8 @@
 
 namespace Tests\Feature\Http\Controllers;
 
-use App\Enums\DatabaseStatus;
 use App\Enums\DatabaseType;
+use App\Enums\TaskStatus;
 use App\Models\Server;
 use App\Models\ServerDatabase;
 use App\Models\User;
@@ -130,7 +130,7 @@ class ServerCacheQueueControllerTest extends TestCase
             'type' => DatabaseType::Redis,
             'version' => '7.2',
             'port' => 6379,
-            'status' => DatabaseStatus::Active,
+            'status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -179,7 +179,7 @@ class ServerCacheQueueControllerTest extends TestCase
         ServerDatabase::factory()->create([
             'server_id' => $server->id,
             'type' => DatabaseType::Redis,
-            'status' => DatabaseStatus::Installing,
+            'status' => TaskStatus::Installing,
         ]);
 
         // Act
@@ -191,7 +191,7 @@ class ServerCacheQueueControllerTest extends TestCase
         $response->assertInertia(fn ($page) => $page
             ->component('servers/services')
             ->has('server.databases', 1)
-            ->where('server.databases.0.status', DatabaseStatus::Installing->value)
+            ->where('server.databases.0.status', TaskStatus::Installing->value)
         );
     }
 
@@ -225,7 +225,7 @@ class ServerCacheQueueControllerTest extends TestCase
             'type' => 'redis',
             'version' => '7.2',
             'port' => 6379,
-            'status' => DatabaseStatus::Pending->value,
+            'status' => TaskStatus::Pending->value,
         ]);
 
         Queue::assertPushed(RedisInstallerJob::class);
@@ -299,7 +299,7 @@ class ServerCacheQueueControllerTest extends TestCase
             'server_id' => $server->id,
             'type' => DatabaseType::Redis,
             'version' => '7.0',
-            'status' => DatabaseStatus::Active,
+            'status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -315,7 +315,7 @@ class ServerCacheQueueControllerTest extends TestCase
         $this->assertDatabaseHas('server_databases', [
             'id' => $redis->id,
             'version' => '7.2',
-            'status' => DatabaseStatus::Updating->value,
+            'status' => TaskStatus::Updating->value,
         ]);
 
         Queue::assertPushed(RedisUpdaterJob::class);
@@ -333,7 +333,7 @@ class ServerCacheQueueControllerTest extends TestCase
         $redis = ServerDatabase::factory()->create([
             'server_id' => $server->id,
             'type' => DatabaseType::Redis,
-            'status' => DatabaseStatus::Installing,
+            'status' => TaskStatus::Installing,
         ]);
 
         // Act
@@ -360,7 +360,7 @@ class ServerCacheQueueControllerTest extends TestCase
         $redis = ServerDatabase::factory()->create([
             'server_id' => $server->id,
             'type' => DatabaseType::Redis,
-            'status' => DatabaseStatus::Active,
+            'status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -373,7 +373,7 @@ class ServerCacheQueueControllerTest extends TestCase
 
         $this->assertDatabaseHas('server_databases', [
             'id' => $redis->id,
-            'status' => DatabaseStatus::Pending->value,
+            'status' => TaskStatus::Pending->value,
         ]);
 
         Queue::assertPushed(RedisRemoverJob::class);

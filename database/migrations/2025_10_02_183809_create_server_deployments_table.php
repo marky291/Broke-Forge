@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('server_id')->constrained()->onDelete('cascade');
             $table->foreignId('server_site_id')->constrained('server_sites')->onDelete('cascade');
-            $table->enum('status', ['pending', 'running', 'success', 'failed'])->default('pending');
+            $table->enum('status', ['pending', 'updating', 'success', 'failed'])->default('pending');
             $table->text('deployment_script'); // Commands executed
             $table->text('output')->nullable(); // Command stdout
             $table->text('error_output')->nullable(); // Command stderr

@@ -2,7 +2,7 @@
 
 namespace Tests\Feature\Http\Controllers;
 
-use App\Enums\MonitoringStatus;
+use App\Enums\TaskStatus;
 use App\Models\Server;
 use App\Models\ServerMetric;
 use App\Models\User;
@@ -26,7 +26,7 @@ class ServerMonitoringControllerTest extends TestCase
         $user = User::factory()->create(['email_verified_at' => now()]);
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'monitoring_status' => MonitoringStatus::Active,
+            'monitoring_status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -79,7 +79,7 @@ class ServerMonitoringControllerTest extends TestCase
         $user = User::factory()->create(['email_verified_at' => now()]);
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'monitoring_status' => MonitoringStatus::Active,
+            'monitoring_status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -98,7 +98,7 @@ class ServerMonitoringControllerTest extends TestCase
         $user = User::factory()->create(['email_verified_at' => now()]);
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'monitoring_status' => MonitoringStatus::Active,
+            'monitoring_status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -133,7 +133,7 @@ class ServerMonitoringControllerTest extends TestCase
         // Verify status updated
         $this->assertDatabaseHas('servers', [
             'id' => $server->id,
-            'monitoring_status' => MonitoringStatus::Installing->value,
+            'monitoring_status' => TaskStatus::Installing->value,
         ]);
 
         // Verify job dispatched
@@ -150,7 +150,7 @@ class ServerMonitoringControllerTest extends TestCase
         $user = User::factory()->create(['email_verified_at' => now()]);
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'monitoring_status' => MonitoringStatus::Active,
+            'monitoring_status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -192,7 +192,7 @@ class ServerMonitoringControllerTest extends TestCase
         $user = User::factory()->create(['email_verified_at' => now()]);
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'monitoring_status' => MonitoringStatus::Active,
+            'monitoring_status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -206,7 +206,7 @@ class ServerMonitoringControllerTest extends TestCase
         // Verify status updated
         $this->assertDatabaseHas('servers', [
             'id' => $server->id,
-            'monitoring_status' => MonitoringStatus::Uninstalling->value,
+            'monitoring_status' => TaskStatus::Removing->value,
         ]);
 
         // Verify job dispatched
@@ -248,7 +248,7 @@ class ServerMonitoringControllerTest extends TestCase
         $user = User::factory()->create(['email_verified_at' => now()]);
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'monitoring_status' => MonitoringStatus::Active,
+            'monitoring_status' => TaskStatus::Active,
             'monitoring_collection_interval' => 300,
         ]);
 
@@ -278,7 +278,7 @@ class ServerMonitoringControllerTest extends TestCase
         $user = User::factory()->create(['email_verified_at' => now()]);
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'monitoring_status' => MonitoringStatus::Active,
+            'monitoring_status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -328,7 +328,7 @@ class ServerMonitoringControllerTest extends TestCase
         $user = User::factory()->create(['email_verified_at' => now()]);
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'monitoring_status' => MonitoringStatus::Active,
+            'monitoring_status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -351,7 +351,7 @@ class ServerMonitoringControllerTest extends TestCase
         $user = User::factory()->create(['email_verified_at' => now()]);
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'monitoring_status' => MonitoringStatus::Active,
+            'monitoring_status' => TaskStatus::Active,
             'monitoring_token' => 'test-token-12345',
         ]);
 
@@ -395,7 +395,7 @@ class ServerMonitoringControllerTest extends TestCase
         $user = User::factory()->create(['email_verified_at' => now()]);
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'monitoring_status' => MonitoringStatus::Active,
+            'monitoring_status' => TaskStatus::Active,
         ]);
 
         // Create metrics at different times
@@ -426,7 +426,7 @@ class ServerMonitoringControllerTest extends TestCase
         $user = User::factory()->create(['email_verified_at' => now()]);
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'monitoring_status' => MonitoringStatus::Active,
+            'monitoring_status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -446,7 +446,7 @@ class ServerMonitoringControllerTest extends TestCase
         $user = User::factory()->create(['email_verified_at' => now()]);
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'monitoring_status' => MonitoringStatus::Active,
+            'monitoring_status' => TaskStatus::Active,
         ]);
 
         ServerMetric::factory()->create([

@@ -43,7 +43,7 @@ class ServerPhpController extends Controller
         if ($existingPhp) {
             // Update existing PHP version
             $existingPhp->update([
-                'status' => \App\Enums\PhpStatus::Installing,
+                'status' => \App\Enums\TaskStatus::Installing,
                 'is_cli_default' => $validated['is_cli_default'] ?? $existingPhp->is_cli_default,
             ]);
 
@@ -67,7 +67,7 @@ class ServerPhpController extends Controller
             $php = ServerPhp::create([
                 'server_id' => $server->id,
                 'version' => $validated['version'],
-                'status' => \App\Enums\PhpStatus::Pending,
+                'status' => \App\Enums\TaskStatus::Pending,
                 'is_cli_default' => $validated['is_cli_default'] ?? false,
             ]);
 
@@ -119,7 +119,7 @@ class ServerPhpController extends Controller
         $php = ServerPhp::create([
             'server_id' => $server->id,
             'version' => $validated['version'],
-            'status' => \App\Enums\PhpStatus::Pending,
+            'status' => \App\Enums\TaskStatus::Pending,
             'is_cli_default' => $isFirstPhp, // First PHP version becomes CLI default
             'is_site_default' => $isFirstPhp, // First PHP version becomes Site default
         ]);
@@ -199,7 +199,7 @@ class ServerPhpController extends Controller
         }
 
         // Update PHP record to pending status
-        $php->update(['status' => \App\Enums\PhpStatus::Pending]);
+        $php->update(['status' => \App\Enums\TaskStatus::Pending]);
 
         // Dispatch removal job with PHP record
         \App\Packages\Services\PHP\PhpRemoverJob::dispatch($server, $php);
@@ -222,7 +222,7 @@ class ServerPhpController extends Controller
         }
 
         // Only allow retry for failed PHP installations
-        if ($php->status !== \App\Enums\PhpStatus::Failed) {
+        if ($php->status !== \App\Enums\TaskStatus::Failed) {
             return back()->with('error', 'Only failed PHP installations can be retried');
         }
 
@@ -238,7 +238,7 @@ class ServerPhpController extends Controller
         // Reset status to 'pending' and clear error log
         // Model events will broadcast automatically via Reverb
         $php->update([
-            'status' => \App\Enums\PhpStatus::Pending,
+            'status' => \App\Enums\TaskStatus::Pending,
             'error_log' => null,
         ]);
 

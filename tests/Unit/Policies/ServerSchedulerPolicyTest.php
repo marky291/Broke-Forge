@@ -2,7 +2,7 @@
 
 namespace Tests\Unit\Policies;
 
-use App\Enums\SchedulerStatus;
+use App\Enums\TaskStatus;
 use App\Models\Server;
 use App\Models\ServerScheduledTask;
 use App\Models\User;
@@ -95,7 +95,7 @@ class ServerSchedulerPolicyTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'scheduler_status' => SchedulerStatus::Installing,
+            'scheduler_status' => TaskStatus::Installing,
         ]);
         $policy = new ServerSchedulerPolicy;
 
@@ -116,7 +116,7 @@ class ServerSchedulerPolicyTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'scheduler_status' => SchedulerStatus::Active,
+            'scheduler_status' => TaskStatus::Active,
         ]);
         $policy = new ServerSchedulerPolicy;
 
@@ -137,7 +137,7 @@ class ServerSchedulerPolicyTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'scheduler_status' => SchedulerStatus::Failed,
+            'scheduler_status' => TaskStatus::Failed,
         ]);
         $policy = new ServerSchedulerPolicy;
 
@@ -157,7 +157,7 @@ class ServerSchedulerPolicyTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'scheduler_status' => SchedulerStatus::Active,
+            'scheduler_status' => TaskStatus::Active,
         ]);
         $policy = new ServerSchedulerPolicy;
 
@@ -178,7 +178,7 @@ class ServerSchedulerPolicyTest extends TestCase
         $otherUser = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $owner->id,
-            'scheduler_status' => SchedulerStatus::Active,
+            'scheduler_status' => TaskStatus::Active,
         ]);
         $policy = new ServerSchedulerPolicy;
 
@@ -199,7 +199,7 @@ class ServerSchedulerPolicyTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'scheduler_status' => SchedulerStatus::Installing,
+            'scheduler_status' => TaskStatus::Installing,
         ]);
         $policy = new ServerSchedulerPolicy;
 
@@ -238,7 +238,7 @@ class ServerSchedulerPolicyTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'scheduler_status' => SchedulerStatus::Active,
+            'scheduler_status' => TaskStatus::Active,
         ]);
         $policy = new ServerSchedulerPolicy;
 
@@ -259,7 +259,7 @@ class ServerSchedulerPolicyTest extends TestCase
         $otherUser = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $owner->id,
-            'scheduler_status' => SchedulerStatus::Active,
+            'scheduler_status' => TaskStatus::Active,
         ]);
         $policy = new ServerSchedulerPolicy;
 
@@ -280,7 +280,7 @@ class ServerSchedulerPolicyTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'scheduler_status' => SchedulerStatus::Installing,
+            'scheduler_status' => TaskStatus::Installing,
         ]);
         $policy = new ServerSchedulerPolicy;
 
@@ -302,7 +302,7 @@ class ServerSchedulerPolicyTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'scheduler_status' => SchedulerStatus::Active,
+            'scheduler_status' => TaskStatus::Active,
         ]);
 
         // Create 2 tasks to reach the limit
@@ -328,7 +328,7 @@ class ServerSchedulerPolicyTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'scheduler_status' => SchedulerStatus::Active,
+            'scheduler_status' => TaskStatus::Active,
         ]);
         $policy = new ServerSchedulerPolicy;
 
@@ -349,7 +349,7 @@ class ServerSchedulerPolicyTest extends TestCase
         $otherUser = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $owner->id,
-            'scheduler_status' => SchedulerStatus::Active,
+            'scheduler_status' => TaskStatus::Active,
         ]);
         $policy = new ServerSchedulerPolicy;
 
@@ -370,7 +370,7 @@ class ServerSchedulerPolicyTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'scheduler_status' => SchedulerStatus::Failed,
+            'scheduler_status' => TaskStatus::Failed,
         ]);
         $policy = new ServerSchedulerPolicy;
 
@@ -427,7 +427,7 @@ class ServerSchedulerPolicyTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'scheduler_status' => SchedulerStatus::Active,
+            'scheduler_status' => TaskStatus::Active,
         ]);
         $policy = new ServerSchedulerPolicy;
 
@@ -448,7 +448,7 @@ class ServerSchedulerPolicyTest extends TestCase
         $otherUser = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $owner->id,
-            'scheduler_status' => SchedulerStatus::Active,
+            'scheduler_status' => TaskStatus::Active,
         ]);
         $policy = new ServerSchedulerPolicy;
 
@@ -469,7 +469,7 @@ class ServerSchedulerPolicyTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'scheduler_status' => SchedulerStatus::Uninstalled,
+            'scheduler_status' => null,
         ]);
         $policy = new ServerSchedulerPolicy;
 
@@ -491,7 +491,7 @@ class ServerSchedulerPolicyTest extends TestCase
         $attacker = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $owner->id,
-            'scheduler_status' => SchedulerStatus::Active,
+            'scheduler_status' => TaskStatus::Active,
         ]);
         $policy = new ServerSchedulerPolicy;
 

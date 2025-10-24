@@ -2,10 +2,10 @@
 
 namespace Tests\Feature\Http\Controllers;
 
+use App\Enums\TaskStatus;
 use App\Models\Server;
 use App\Models\ServerSite;
 use App\Models\User;
-use App\Packages\Enums\GitStatus;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -270,7 +270,7 @@ class ServerSitesControllerTest extends TestCase
         $response->assertInertia(fn ($page) => $page
             ->component('servers/sites')
             ->has('server.sites', 1)
-            ->where('server.sites.0.git_status', GitStatus::Installed->value)
+            ->where('server.sites.0.git_status', TaskStatus::Success->value)
             ->has('server.sites.0.configuration.git_repository')
         );
     }

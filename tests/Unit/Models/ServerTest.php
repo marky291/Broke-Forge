@@ -2,10 +2,8 @@
 
 namespace Tests\Unit\Models;
 
-use App\Enums\MonitoringStatus;
-use App\Enums\SchedulerStatus;
 use App\Enums\ServerProvider;
-use App\Enums\SupervisorStatus;
+use App\Enums\TaskStatus;
 use App\Events\ServerUpdated;
 use App\Models\Server;
 use App\Models\ServerCredential;
@@ -20,8 +18,6 @@ use App\Models\ServerSite;
 use App\Models\ServerSupervisorTask;
 use App\Models\SourceProvider;
 use App\Models\User;
-use App\Packages\Enums\ConnectionStatus;
-use App\Packages\Enums\ProvisionStatus;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Event;
@@ -178,7 +174,7 @@ class ServerTest extends TestCase
     public function test_is_provisioned_returns_true_when_server_is_provisioned(): void
     {
         // Arrange
-        $server = Server::factory()->create(['provision_status' => ProvisionStatus::Completed]);
+        $server = Server::factory()->create(['provision_status' => TaskStatus::Success]);
 
         // Act & Assert
         $this->assertTrue($server->isProvisioned());
@@ -190,7 +186,7 @@ class ServerTest extends TestCase
     public function test_is_provisioned_returns_false_when_server_is_not_provisioned(): void
     {
         // Arrange
-        $server = Server::factory()->create(['provision_status' => ProvisionStatus::Pending]);
+        $server = Server::factory()->create(['provision_status' => TaskStatus::Pending]);
 
         // Act & Assert
         $this->assertFalse($server->isProvisioned());
@@ -202,7 +198,7 @@ class ServerTest extends TestCase
     public function test_scheduler_is_active_returns_true_when_active(): void
     {
         // Arrange
-        $server = Server::factory()->create(['scheduler_status' => SchedulerStatus::Active]);
+        $server = Server::factory()->create(['scheduler_status' => TaskStatus::Active]);
 
         // Act & Assert
         $this->assertTrue($server->schedulerIsActive());
@@ -214,7 +210,7 @@ class ServerTest extends TestCase
     public function test_scheduler_is_installing_returns_true_when_installing(): void
     {
         // Arrange
-        $server = Server::factory()->create(['scheduler_status' => SchedulerStatus::Installing]);
+        $server = Server::factory()->create(['scheduler_status' => TaskStatus::Installing]);
 
         // Act & Assert
         $this->assertTrue($server->schedulerIsInstalling());
@@ -226,7 +222,7 @@ class ServerTest extends TestCase
     public function test_scheduler_is_failed_returns_true_when_failed(): void
     {
         // Arrange
-        $server = Server::factory()->create(['scheduler_status' => SchedulerStatus::Failed]);
+        $server = Server::factory()->create(['scheduler_status' => TaskStatus::Failed]);
 
         // Act & Assert
         $this->assertTrue($server->schedulerIsFailed());
@@ -238,7 +234,7 @@ class ServerTest extends TestCase
     public function test_monitoring_is_active_returns_true_when_active(): void
     {
         // Arrange
-        $server = Server::factory()->create(['monitoring_status' => MonitoringStatus::Active]);
+        $server = Server::factory()->create(['monitoring_status' => TaskStatus::Active]);
 
         // Act & Assert
         $this->assertTrue($server->monitoringIsActive());
@@ -250,7 +246,7 @@ class ServerTest extends TestCase
     public function test_monitoring_is_installing_returns_true_when_installing(): void
     {
         // Arrange
-        $server = Server::factory()->create(['monitoring_status' => MonitoringStatus::Installing]);
+        $server = Server::factory()->create(['monitoring_status' => TaskStatus::Installing]);
 
         // Act & Assert
         $this->assertTrue($server->monitoringIsInstalling());
@@ -262,7 +258,7 @@ class ServerTest extends TestCase
     public function test_monitoring_is_failed_returns_true_when_failed(): void
     {
         // Arrange
-        $server = Server::factory()->create(['monitoring_status' => MonitoringStatus::Failed]);
+        $server = Server::factory()->create(['monitoring_status' => TaskStatus::Failed]);
 
         // Act & Assert
         $this->assertTrue($server->monitoringIsFailed());
@@ -274,7 +270,7 @@ class ServerTest extends TestCase
     public function test_supervisor_is_active_returns_true_when_active(): void
     {
         // Arrange
-        $server = Server::factory()->create(['supervisor_status' => SupervisorStatus::Active]);
+        $server = Server::factory()->create(['supervisor_status' => TaskStatus::Active]);
 
         // Act & Assert
         $this->assertTrue($server->supervisorIsActive());
@@ -286,7 +282,7 @@ class ServerTest extends TestCase
     public function test_supervisor_is_installing_returns_true_when_installing(): void
     {
         // Arrange
-        $server = Server::factory()->create(['supervisor_status' => SupervisorStatus::Installing]);
+        $server = Server::factory()->create(['supervisor_status' => TaskStatus::Installing]);
 
         // Act & Assert
         $this->assertTrue($server->supervisorIsInstalling());
@@ -298,7 +294,7 @@ class ServerTest extends TestCase
     public function test_supervisor_is_failed_returns_true_when_failed(): void
     {
         // Arrange
-        $server = Server::factory()->create(['supervisor_status' => SupervisorStatus::Failed]);
+        $server = Server::factory()->create(['supervisor_status' => TaskStatus::Failed]);
 
         // Act & Assert
         $this->assertTrue($server->supervisorIsFailed());
@@ -477,10 +473,10 @@ class ServerTest extends TestCase
     {
         // Arrange
         Event::fake([ServerUpdated::class]);
-        $server = Server::factory()->create(['provision_status' => ProvisionStatus::Pending]);
+        $server = Server::factory()->create(['provision_status' => TaskStatus::Pending]);
 
         // Act
-        $server->update(['provision_status' => ProvisionStatus::Completed]);
+        $server->update(['provision_status' => TaskStatus::Success]);
 
         // Assert
         Event::assertDispatched(ServerUpdated::class, function ($event) use ($server) {
@@ -850,10 +846,10 @@ class ServerTest extends TestCase
     public function test_connection_status_enum_cast(): void
     {
         // Act
-        $server = Server::factory()->create(['connection_status' => 'connected']);
+        $server = Server::factory()->create(['connection_status' => 'success']);
 
         // Assert
-        $this->assertInstanceOf(ConnectionStatus::class, $server->connection_status);
+        $this->assertInstanceOf(TaskStatus::class, $server->connection_status);
     }
 
     /**
@@ -874,10 +870,10 @@ class ServerTest extends TestCase
     public function test_provision_status_enum_cast(): void
     {
         // Act
-        $server = Server::factory()->create(['provision_status' => ProvisionStatus::Completed]);
+        $server = Server::factory()->create(['provision_status' => TaskStatus::Success]);
 
         // Assert
-        $this->assertInstanceOf(ProvisionStatus::class, $server->provision_status);
+        $this->assertInstanceOf(TaskStatus::class, $server->provision_status);
     }
 
     /**
@@ -886,10 +882,10 @@ class ServerTest extends TestCase
     public function test_monitoring_status_enum_cast(): void
     {
         // Act
-        $server = Server::factory()->create(['monitoring_status' => MonitoringStatus::Active]);
+        $server = Server::factory()->create(['monitoring_status' => TaskStatus::Active]);
 
         // Assert
-        $this->assertInstanceOf(MonitoringStatus::class, $server->monitoring_status);
+        $this->assertInstanceOf(TaskStatus::class, $server->monitoring_status);
     }
 
     /**
@@ -898,10 +894,10 @@ class ServerTest extends TestCase
     public function test_scheduler_status_enum_cast(): void
     {
         // Act
-        $server = Server::factory()->create(['scheduler_status' => SchedulerStatus::Active]);
+        $server = Server::factory()->create(['scheduler_status' => TaskStatus::Active]);
 
         // Assert
-        $this->assertInstanceOf(SchedulerStatus::class, $server->scheduler_status);
+        $this->assertInstanceOf(TaskStatus::class, $server->scheduler_status);
     }
 
     /**
@@ -910,10 +906,10 @@ class ServerTest extends TestCase
     public function test_supervisor_status_enum_cast(): void
     {
         // Act
-        $server = Server::factory()->create(['supervisor_status' => SupervisorStatus::Active]);
+        $server = Server::factory()->create(['supervisor_status' => TaskStatus::Active]);
 
         // Assert
-        $this->assertInstanceOf(SupervisorStatus::class, $server->supervisor_status);
+        $this->assertInstanceOf(TaskStatus::class, $server->supervisor_status);
     }
 
     /**
@@ -922,7 +918,7 @@ class ServerTest extends TestCase
     public function test_provision_collection_cast(): void
     {
         // Act
-        $server = Server::factory()->create(['provision' => ['1' => 'installing', '2' => 'completed']]);
+        $server = Server::factory()->create(['provision' => ['1' => 'installing', '2' => 'success']]);
 
         // Assert
         $this->assertInstanceOf(\Illuminate\Support\Collection::class, $server->provision);

@@ -2,14 +2,13 @@
 
 namespace Tests\Feature\Http\Controllers;
 
+use App\Enums\TaskStatus;
 use App\Models\Server;
 use App\Models\ServerDatabase;
 use App\Models\ServerFirewall;
 use App\Models\ServerPhp;
 use App\Models\ServerReverseProxy;
 use App\Models\User;
-use App\Packages\Enums\ConnectionStatus;
-use App\Packages\Enums\ProvisionStatus;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\URL;
@@ -77,7 +76,7 @@ class ProvisionCallbackControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'provision' => collect([1 => 'completed']),
+            'provision' => collect([1 => 'success']),
         ]);
 
         $signedUrl = URL::signedRoute('servers.provision.step', [
@@ -104,7 +103,7 @@ class ProvisionCallbackControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'provision' => collect([1 => 'completed', 2 => 'completed']),
+            'provision' => collect([1 => 'success', 2 => 'success']),
         ]);
 
         $signedUrl = URL::signedRoute('servers.provision.step', [
@@ -219,7 +218,7 @@ class ProvisionCallbackControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'provision_status' => ProvisionStatus::Installing,
+            'provision_status' => TaskStatus::Installing,
         ]);
 
         $signedUrl = URL::signedRoute('servers.provision.step', [
@@ -234,7 +233,7 @@ class ProvisionCallbackControllerTest extends TestCase
         // Assert
         $response->assertStatus(200);
         $server->refresh();
-        $this->assertEquals(ProvisionStatus::Failed, $server->provision_status);
+        $this->assertEquals(TaskStatus::Failed, $server->provision_status);
         $this->assertEquals('failed', $server->provision->get(2));
     }
 
@@ -257,7 +256,7 @@ class ProvisionCallbackControllerTest extends TestCase
         $signedUrl = URL::signedRoute('servers.provision.step', [
             'server' => $server->id,
             'step' => 1,
-            'status' => 'completed',
+            'status' => 'success',
         ]);
 
         // Act
@@ -275,9 +274,9 @@ class ProvisionCallbackControllerTest extends TestCase
         $this->assertNull($server->firewall);
 
         // Verify server status updated
-        $this->assertEquals(ConnectionStatus::CONNECTED, $server->connection_status);
-        $this->assertEquals(ProvisionStatus::Installing, $server->provision_status);
-        $this->assertEquals('completed', $server->provision->get(1));
+        $this->assertEquals(TaskStatus::Success, $server->connection_status);
+        $this->assertEquals(TaskStatus::Installing, $server->provision_status);
+        $this->assertEquals('success', $server->provision->get(1));
     }
 
     /**
@@ -299,7 +298,7 @@ class ProvisionCallbackControllerTest extends TestCase
         $signedUrl = URL::signedRoute('servers.provision.step', [
             'server' => $server->id,
             'step' => 1,
-            'status' => 'completed',
+            'status' => 'success',
         ]);
 
         // Act
@@ -311,7 +310,7 @@ class ProvisionCallbackControllerTest extends TestCase
 
         // Provision should only have step 1 completed
         $this->assertEquals(1, $server->provision->count());
-        $this->assertEquals('completed', $server->provision->get(1));
+        $this->assertEquals('success', $server->provision->get(1));
     }
 
     /**
@@ -470,5 +469,327 @@ class ProvisionCallbackControllerTest extends TestCase
         $response->assertStatus(200);
         $response->assertJson(['ok' => true]);
         $response->assertJsonStructure(['ok']);
+    }
+
+    /**
+     * Test step 3 success completion triggers next provision steps.
+     */
+    public function test_step_3_success_completion_triggers_next_provision_steps(): void
+    {
+        // Arrange
+        \Illuminate\Support\Facades\Queue::fake();
+
+        $user = User::factory()->create();
+        $server = Server::factory()->create([
+            'user_id' => $user->id,
+            'provision' => collect([
+                1 => 'success',
+                2 => 'success',
+                3 => 'installing',
+            ]),
+            'provision_status' => TaskStatus::Installing,
+        ]);
+
+        // Create credentials for SSH
+        \App\Models\ServerCredential::factory()->create([
+            'server_id' => $server->id,
+            'user' => 'root',
+        ]);
+        \App\Models\ServerCredential::factory()->create([
+            'server_id' => $server->id,
+            'user' => 'brokeforge',
+        ]);
+
+        // Create a partial mock of the server
+        $mockServer = Mockery::mock($server)->makePartial()->shouldAllowMockingProtectedMethods();
+        $mockServer->id = $server->id;
+
+        // Mock SSH to return successful results
+        $mockSshRoot = Mockery::mock(\Spatie\Ssh\Ssh::class);
+        $mockProcessRoot = Mockery::mock(\Symfony\Component\Process\Process::class);
+        $mockProcessRoot->shouldReceive('getOutput')->andReturn('root');
+        $mockProcessRoot->shouldReceive('getErrorOutput')->andReturn('');
+        $mockProcessRoot->shouldReceive('getExitCode')->andReturn(0);
+        $mockSshRoot->shouldReceive('execute')->with('whoami')->andReturn($mockProcessRoot);
+
+        $mockSshBrokeforge = Mockery::mock(\Spatie\Ssh\Ssh::class);
+        $mockProcessBrokeforge = Mockery::mock(\Symfony\Component\Process\Process::class);
+        $mockProcessBrokeforge->shouldReceive('getOutput')->andReturn('brokeforge');
+        $mockProcessBrokeforge->shouldReceive('getErrorOutput')->andReturn('');
+        $mockProcessBrokeforge->shouldReceive('getExitCode')->andReturn(0);
+        $mockSshBrokeforge->shouldReceive('execute')->with('whoami')->andReturn($mockProcessBrokeforge);
+
+        $mockServer->shouldReceive('ssh')->with('root')->andReturn($mockSshRoot);
+        $mockServer->shouldReceive('ssh')->with('brokeforge')->andReturn($mockSshBrokeforge);
+
+        $mockServer->shouldReceive('detectOsInfo')->once()->andReturn(true);
+
+        // Override route model binding to use our mock
+        \Illuminate\Support\Facades\Route::bind('server', function ($value) use ($mockServer, $server) {
+            if ($value == $server->id) {
+                return $mockServer;
+            }
+
+            return Server::findOrFail($value);
+        });
+
+        $signedUrl = URL::signedRoute('servers.provision.step', [
+            'server' => $server->id,
+            'step' => 3,
+            'status' => 'success',
+        ]);
+
+        // Act
+        $response = $this->postJson($signedUrl);
+
+        // Assert
+        $response->assertStatus(200);
+
+        $server->refresh();
+        $this->assertEquals('success', $server->provision->get(4));
+        $this->assertEquals('installing', $server->provision->get(5));
+        $this->assertEquals(TaskStatus::Installing, $server->provision_status);
+    }
+
+    /**
+     * Test step 3 success updates status to installing.
+     */
+    public function test_step_3_success_updates_status_to_installing(): void
+    {
+        // Arrange
+        \Illuminate\Support\Facades\Queue::fake();
+
+        $user = User::factory()->create();
+        $server = Server::factory()->create([
+            'user_id' => $user->id,
+            'provision' => collect([1 => 'success', 2 => 'success']),
+            'provision_status' => TaskStatus::Pending,
+        ]);
+
+        // Create credentials
+        \App\Models\ServerCredential::factory()->create([
+            'server_id' => $server->id,
+            'user' => 'root',
+        ]);
+        \App\Models\ServerCredential::factory()->create([
+            'server_id' => $server->id,
+            'user' => 'brokeforge',
+        ]);
+
+        // Mock successful SSH
+        $mockServer = Mockery::mock($server)->makePartial()->shouldAllowMockingProtectedMethods();
+        $mockServer->id = $server->id;
+
+        $mockSshRoot = Mockery::mock(\Spatie\Ssh\Ssh::class);
+        $mockProcessRoot = Mockery::mock(\Symfony\Component\Process\Process::class);
+        $mockProcessRoot->shouldReceive('getOutput')->andReturn('root');
+        $mockProcessRoot->shouldReceive('getErrorOutput')->andReturn('');
+        $mockProcessRoot->shouldReceive('getExitCode')->andReturn(0);
+        $mockSshRoot->shouldReceive('execute')->with('whoami')->andReturn($mockProcessRoot);
+
+        $mockSshBrokeforge = Mockery::mock(\Spatie\Ssh\Ssh::class);
+        $mockProcessBrokeforge = Mockery::mock(\Symfony\Component\Process\Process::class);
+        $mockProcessBrokeforge->shouldReceive('getOutput')->andReturn('brokeforge');
+        $mockProcessBrokeforge->shouldReceive('getErrorOutput')->andReturn('');
+        $mockProcessBrokeforge->shouldReceive('getExitCode')->andReturn(0);
+        $mockSshBrokeforge->shouldReceive('execute')->with('whoami')->andReturn($mockProcessBrokeforge);
+
+        $mockServer->shouldReceive('ssh')->with('root')->andReturn($mockSshRoot);
+        $mockServer->shouldReceive('ssh')->with('brokeforge')->andReturn($mockSshBrokeforge);
+        $mockServer->shouldReceive('detectOsInfo')->once()->andReturn(true);
+
+        // Override route model binding
+        \Illuminate\Support\Facades\Route::bind('server', function ($value) use ($mockServer, $server) {
+            if ($value == $server->id) {
+                return $mockServer;
+            }
+
+            return Server::findOrFail($value);
+        });
+
+        $signedUrl = URL::signedRoute('servers.provision.step', [
+            'server' => $server->id,
+            'step' => 3,
+            'status' => 'success',
+        ]);
+
+        // Act
+        $response = $this->postJson($signedUrl);
+
+        // Assert
+        $response->assertStatus(200);
+        $server->refresh();
+        $this->assertEquals(TaskStatus::Installing, $server->provision_status);
+    }
+
+    /**
+     * Test step 3 success with success status value.
+     */
+    public function test_step_3_accepts_success_status(): void
+    {
+        // Arrange
+        \Illuminate\Support\Facades\Queue::fake();
+
+        $user = User::factory()->create();
+        $server = Server::factory()->create([
+            'user_id' => $user->id,
+            'provision' => collect([1 => 'success', 2 => 'success']),
+        ]);
+
+        // Create credentials
+        \App\Models\ServerCredential::factory()->create([
+            'server_id' => $server->id,
+            'user' => 'root',
+        ]);
+        \App\Models\ServerCredential::factory()->create([
+            'server_id' => $server->id,
+            'user' => 'brokeforge',
+        ]);
+
+        // Mock successful SSH
+        $mockServer = Mockery::mock($server)->makePartial()->shouldAllowMockingProtectedMethods();
+        $mockServer->id = $server->id;
+
+        $mockSshRoot = Mockery::mock(\Spatie\Ssh\Ssh::class);
+        $mockProcessRoot = Mockery::mock(\Symfony\Component\Process\Process::class);
+        $mockProcessRoot->shouldReceive('getOutput')->andReturn('root');
+        $mockProcessRoot->shouldReceive('getErrorOutput')->andReturn('');
+        $mockProcessRoot->shouldReceive('getExitCode')->andReturn(0);
+        $mockSshRoot->shouldReceive('execute')->with('whoami')->andReturn($mockProcessRoot);
+
+        $mockSshBrokeforge = Mockery::mock(\Spatie\Ssh\Ssh::class);
+        $mockProcessBrokeforge = Mockery::mock(\Symfony\Component\Process\Process::class);
+        $mockProcessBrokeforge->shouldReceive('getOutput')->andReturn('brokeforge');
+        $mockProcessBrokeforge->shouldReceive('getErrorOutput')->andReturn('');
+        $mockProcessBrokeforge->shouldReceive('getExitCode')->andReturn(0);
+        $mockSshBrokeforge->shouldReceive('execute')->with('whoami')->andReturn($mockProcessBrokeforge);
+
+        $mockServer->shouldReceive('ssh')->with('root')->andReturn($mockSshRoot);
+        $mockServer->shouldReceive('ssh')->with('brokeforge')->andReturn($mockSshBrokeforge);
+        $mockServer->shouldReceive('detectOsInfo')->once()->andReturn(true);
+
+        // Override route model binding
+        \Illuminate\Support\Facades\Route::bind('server', function ($value) use ($mockServer, $server) {
+            if ($value == $server->id) {
+                return $mockServer;
+            }
+
+            return Server::findOrFail($value);
+        });
+
+        $signedUrl = URL::signedRoute('servers.provision.step', [
+            'server' => $server->id,
+            'step' => 3,
+            'status' => 'success',
+        ]);
+
+        // Act
+        $response = $this->postJson($signedUrl);
+
+        // Assert - Should accept 'success' (not 'completed')
+        $response->assertStatus(200);
+        $response->assertJson(['ok' => true]);
+    }
+
+    /**
+     * Test step 1 success clears provision and sets connection status.
+     */
+    public function test_step_1_success_sets_connection_status_to_success(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create([
+            'user_id' => $user->id,
+            'connection_status' => TaskStatus::Pending,
+            'provision_status' => TaskStatus::Pending,
+        ]);
+
+        $signedUrl = URL::signedRoute('servers.provision.step', [
+            'server' => $server->id,
+            'step' => 1,
+            'status' => 'success',
+        ]);
+
+        // Act
+        $response = $this->postJson($signedUrl);
+
+        // Assert
+        $response->assertStatus(200);
+        $server->refresh();
+        $this->assertEquals(TaskStatus::Success, $server->connection_status);
+        $this->assertEquals(TaskStatus::Installing, $server->provision_status);
+    }
+
+    /**
+     * Test step 4 status updates via callback.
+     */
+    public function test_step_4_installing_status_is_set_by_step_3_success(): void
+    {
+        // Arrange
+        \Illuminate\Support\Facades\Queue::fake();
+
+        $user = User::factory()->create();
+        $server = Server::factory()->create([
+            'user_id' => $user->id,
+            'provision' => collect([1 => 'success', 2 => 'success']),
+        ]);
+
+        // Create credentials
+        \App\Models\ServerCredential::factory()->create([
+            'server_id' => $server->id,
+            'user' => 'root',
+        ]);
+        \App\Models\ServerCredential::factory()->create([
+            'server_id' => $server->id,
+            'user' => 'brokeforge',
+        ]);
+
+        // Mock successful SSH
+        $mockServer = Mockery::mock($server)->makePartial()->shouldAllowMockingProtectedMethods();
+        $mockServer->id = $server->id;
+
+        $mockSshRoot = Mockery::mock(\Spatie\Ssh\Ssh::class);
+        $mockProcessRoot = Mockery::mock(\Symfony\Component\Process\Process::class);
+        $mockProcessRoot->shouldReceive('getOutput')->andReturn('root');
+        $mockProcessRoot->shouldReceive('getErrorOutput')->andReturn('');
+        $mockProcessRoot->shouldReceive('getExitCode')->andReturn(0);
+        $mockSshRoot->shouldReceive('execute')->with('whoami')->andReturn($mockProcessRoot);
+
+        $mockSshBrokeforge = Mockery::mock(\Spatie\Ssh\Ssh::class);
+        $mockProcessBrokeforge = Mockery::mock(\Symfony\Component\Process\Process::class);
+        $mockProcessBrokeforge->shouldReceive('getOutput')->andReturn('brokeforge');
+        $mockProcessBrokeforge->shouldReceive('getErrorOutput')->andReturn('');
+        $mockProcessBrokeforge->shouldReceive('getExitCode')->andReturn(0);
+        $mockSshBrokeforge->shouldReceive('execute')->with('whoami')->andReturn($mockProcessBrokeforge);
+
+        $mockServer->shouldReceive('ssh')->with('root')->andReturn($mockSshRoot);
+        $mockServer->shouldReceive('ssh')->with('brokeforge')->andReturn($mockSshBrokeforge);
+        $mockServer->shouldReceive('detectOsInfo')->once()->andReturn(true);
+
+        // Override route model binding
+        \Illuminate\Support\Facades\Route::bind('server', function ($value) use ($mockServer, $server) {
+            if ($value == $server->id) {
+                return $mockServer;
+            }
+
+            return Server::findOrFail($value);
+        });
+
+        $signedUrl = URL::signedRoute('servers.provision.step', [
+            'server' => $server->id,
+            'step' => 3,
+            'status' => 'success',
+        ]);
+
+        // Act
+        $response = $this->postJson($signedUrl);
+
+        // Assert
+        $response->assertStatus(200);
+        $server->refresh();
+
+        // Step 4 should be set to 'success' and step 5 to 'installing' after step 3 completes
+        $this->assertEquals('success', $server->provision->get(4));
+        $this->assertEquals('installing', $server->provision->get(5));
     }
 }

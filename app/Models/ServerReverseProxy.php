@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use App\Enums\ReverseProxyStatus;
 use App\Enums\ReverseProxyType;
+use App\Enums\TaskStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -25,7 +25,7 @@ class ServerReverseProxy extends Model
     {
         return [
             'type' => ReverseProxyType::class,
-            'status' => ReverseProxyStatus::class,
+            'status' => TaskStatus::class,
             'worker_connections' => 'integer',
         ];
     }

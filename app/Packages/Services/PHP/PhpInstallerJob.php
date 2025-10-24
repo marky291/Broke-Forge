@@ -2,7 +2,7 @@
 
 namespace App\Packages\Services\PHP;
 
-use App\Enums\PhpStatus;
+use App\Enums\TaskStatus;
 use App\Models\Server;
 use App\Models\ServerPhp;
 use App\Packages\Enums\PhpVersion;
@@ -28,17 +28,17 @@ class PhpInstallerJob extends Taskable
 
     protected function getInProgressStatus(): mixed
     {
-        return PhpStatus::Installing;
+        return TaskStatus::Installing;
     }
 
     protected function getSuccessStatus(): mixed
     {
-        return PhpStatus::Active;
+        return TaskStatus::Active;
     }
 
     protected function getFailedStatus(): mixed
     {
-        return PhpStatus::Failed;
+        return TaskStatus::Failed;
     }
 
     protected function executeOperation(Model $model): void

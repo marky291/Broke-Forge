@@ -2,7 +2,7 @@
 
 namespace Tests\Feature\Feature\Http\Controllers;
 
-use App\Enums\MonitoringStatus;
+use App\Enums\TaskStatus;
 use App\Models\Server;
 use App\Models\User;
 use App\Packages\Services\Monitoring\ServerMonitoringInstallerJob;
@@ -25,7 +25,7 @@ class ServerMonitoringControllerRetryTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'monitoring_status' => MonitoringStatus::Failed,
+            'monitoring_status' => TaskStatus::Failed,
         ]);
 
         // Act
@@ -39,7 +39,7 @@ class ServerMonitoringControllerRetryTest extends TestCase
         // Verify monitoring status reset to installing
         $this->assertDatabaseHas('servers', [
             'id' => $server->id,
-            'monitoring_status' => MonitoringStatus::Installing->value,
+            'monitoring_status' => TaskStatus::Installing->value,
         ]);
 
         // Verify job was dispatched
@@ -58,7 +58,7 @@ class ServerMonitoringControllerRetryTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'monitoring_status' => MonitoringStatus::Active,
+            'monitoring_status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -72,7 +72,7 @@ class ServerMonitoringControllerRetryTest extends TestCase
         // Verify status was not changed
         $this->assertDatabaseHas('servers', [
             'id' => $server->id,
-            'monitoring_status' => MonitoringStatus::Active->value,
+            'monitoring_status' => TaskStatus::Active->value,
         ]);
 
         // Verify no job was dispatched
@@ -90,7 +90,7 @@ class ServerMonitoringControllerRetryTest extends TestCase
         $otherUser = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $otherUser->id,
-            'monitoring_status' => MonitoringStatus::Failed,
+            'monitoring_status' => TaskStatus::Failed,
         ]);
 
         // Act
@@ -103,7 +103,7 @@ class ServerMonitoringControllerRetryTest extends TestCase
         // Verify status was not changed
         $this->assertDatabaseHas('servers', [
             'id' => $server->id,
-            'monitoring_status' => MonitoringStatus::Failed->value,
+            'monitoring_status' => TaskStatus::Failed->value,
         ]);
 
         Queue::assertNothingPushed();
@@ -117,7 +117,7 @@ class ServerMonitoringControllerRetryTest extends TestCase
         // Arrange
         Queue::fake();
         $server = Server::factory()->create([
-            'monitoring_status' => MonitoringStatus::Failed,
+            'monitoring_status' => TaskStatus::Failed,
         ]);
 
         // Act
@@ -140,7 +140,7 @@ class ServerMonitoringControllerRetryTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'monitoring_status' => MonitoringStatus::Failed,
+            'monitoring_status' => TaskStatus::Failed,
         ]);
 
         // Act
@@ -169,7 +169,7 @@ class ServerMonitoringControllerRetryTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'monitoring_status' => MonitoringStatus::Failed,
+            'monitoring_status' => TaskStatus::Failed,
         ]);
 
         // Act
@@ -179,7 +179,7 @@ class ServerMonitoringControllerRetryTest extends TestCase
         // Assert
         $this->assertDatabaseHas('servers', [
             'id' => $server->id,
-            'monitoring_status' => MonitoringStatus::Installing->value,
+            'monitoring_status' => TaskStatus::Installing->value,
         ]);
     }
 
@@ -193,7 +193,7 @@ class ServerMonitoringControllerRetryTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'monitoring_status' => MonitoringStatus::Failed,
+            'monitoring_status' => TaskStatus::Failed,
         ]);
 
         // Act

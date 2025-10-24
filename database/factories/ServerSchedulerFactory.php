@@ -19,7 +19,7 @@ class ServerSchedulerFactory extends Factory
     {
         return [
             'server_id' => Server::factory(),
-            'status' => fake()->randomElement(['installing', 'active', 'failed', 'uninstalling', 'uninstalled']),
+            'status' => fake()->randomElement(['installing', 'active', 'failed', 'removing', null]),
             'installed_at' => now(),
             'uninstalled_at' => null,
         ];
@@ -55,7 +55,7 @@ class ServerSchedulerFactory extends Factory
     public function uninstalled(): static
     {
         return $this->state(fn (array $attributes) => [
-            'status' => 'uninstalled',
+            'status' => null,
             'installed_at' => null,
             'uninstalled_at' => now(),
         ]);

@@ -2,7 +2,7 @@
 
 namespace App\Packages\Services\Database\Redis;
 
-use App\Enums\DatabaseStatus;
+use App\Enums\TaskStatus;
 use App\Models\Server;
 use App\Models\ServerDatabase;
 use App\Packages\Taskable;
@@ -27,17 +27,17 @@ class RedisUpdaterJob extends Taskable
 
     protected function getInProgressStatus(): mixed
     {
-        return DatabaseStatus::Updating;
+        return TaskStatus::Updating;
     }
 
     protected function getSuccessStatus(): mixed
     {
-        return DatabaseStatus::Active;
+        return TaskStatus::Active;
     }
 
     protected function getFailedStatus(): mixed
     {
-        return DatabaseStatus::Failed;
+        return TaskStatus::Failed;
     }
 
     protected function executeOperation(Model $model): void

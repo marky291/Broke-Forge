@@ -79,7 +79,7 @@ class ServerMonitoringController extends Controller
         }
 
         // Set status to uninstalling immediately
-        $server->update(['monitoring_status' => 'uninstalling']);
+        $server->update(['monitoring_status' => 'removing']);
 
         // Dispatch monitoring removal job
         ServerMonitoringRemoverJob::dispatch($server);
@@ -172,7 +172,7 @@ class ServerMonitoringController extends Controller
         $this->authorize('update', $server);
 
         // Only allow retry for failed monitoring
-        if ($server->monitoring_status !== \App\Enums\MonitoringStatus::Failed) {
+        if ($server->monitoring_status !== \App\Enums\TaskStatus::Failed) {
             return back()->with('error', 'Only failed monitoring installations can be retried');
         }
 
@@ -185,7 +185,7 @@ class ServerMonitoringController extends Controller
 
         // Reset status to 'installing'
         // Model events will broadcast automatically via Reverb
-        $server->update(['monitoring_status' => \App\Enums\MonitoringStatus::Installing]);
+        $server->update(['monitoring_status' => \App\Enums\TaskStatus::Installing]);
 
         // Re-dispatch installer job
         ServerMonitoringInstallerJob::dispatch($server);

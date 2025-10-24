@@ -2,8 +2,8 @@
 
 namespace Tests\Feature\Feature\Http\Controllers;
 
-use App\Enums\DatabaseStatus;
 use App\Enums\DatabaseType;
+use App\Enums\TaskStatus;
 use App\Models\Server;
 use App\Models\ServerDatabase;
 use App\Models\User;
@@ -32,7 +32,7 @@ class ServerDatabaseControllerRetryTest extends TestCase
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
             'type' => DatabaseType::MySQL,
-            'status' => DatabaseStatus::Failed,
+            'status' => TaskStatus::Failed,
             'error_log' => 'Installation failed',
         ]);
 
@@ -47,7 +47,7 @@ class ServerDatabaseControllerRetryTest extends TestCase
         // Verify database status reset to pending
         $this->assertDatabaseHas('server_databases', [
             'id' => $database->id,
-            'status' => DatabaseStatus::Pending->value,
+            'status' => TaskStatus::Pending->value,
             'error_log' => null,
         ]);
 
@@ -70,7 +70,7 @@ class ServerDatabaseControllerRetryTest extends TestCase
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
             'type' => DatabaseType::MariaDB,
-            'status' => DatabaseStatus::Failed,
+            'status' => TaskStatus::Failed,
         ]);
 
         // Act
@@ -94,7 +94,7 @@ class ServerDatabaseControllerRetryTest extends TestCase
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
             'type' => DatabaseType::PostgreSQL,
-            'status' => DatabaseStatus::Failed,
+            'status' => TaskStatus::Failed,
         ]);
 
         // Act
@@ -117,7 +117,7 @@ class ServerDatabaseControllerRetryTest extends TestCase
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
             'type' => DatabaseType::Redis,
-            'status' => DatabaseStatus::Failed,
+            'status' => TaskStatus::Failed,
         ]);
 
         // Act
@@ -139,7 +139,7 @@ class ServerDatabaseControllerRetryTest extends TestCase
         $server = Server::factory()->create(['user_id' => $user->id]);
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'status' => DatabaseStatus::Active,
+            'status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -153,7 +153,7 @@ class ServerDatabaseControllerRetryTest extends TestCase
         // Verify status was not changed
         $this->assertDatabaseHas('server_databases', [
             'id' => $database->id,
-            'status' => DatabaseStatus::Active->value,
+            'status' => TaskStatus::Active->value,
         ]);
 
         // Verify no job was dispatched
@@ -172,7 +172,7 @@ class ServerDatabaseControllerRetryTest extends TestCase
         $server = Server::factory()->create(['user_id' => $otherUser->id]);
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'status' => DatabaseStatus::Failed,
+            'status' => TaskStatus::Failed,
         ]);
 
         // Act
@@ -185,7 +185,7 @@ class ServerDatabaseControllerRetryTest extends TestCase
         // Verify status was not changed
         $this->assertDatabaseHas('server_databases', [
             'id' => $database->id,
-            'status' => DatabaseStatus::Failed->value,
+            'status' => TaskStatus::Failed->value,
         ]);
 
         Queue::assertNothingPushed();
@@ -201,7 +201,7 @@ class ServerDatabaseControllerRetryTest extends TestCase
         $server = Server::factory()->create();
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'status' => DatabaseStatus::Failed,
+            'status' => TaskStatus::Failed,
         ]);
 
         // Act
@@ -225,7 +225,7 @@ class ServerDatabaseControllerRetryTest extends TestCase
         $server2 = Server::factory()->create(['user_id' => $user->id]);
         $database = ServerDatabase::factory()->create([
             'server_id' => $server2->id,
-            'status' => DatabaseStatus::Failed,
+            'status' => TaskStatus::Failed,
         ]);
 
         // Act
@@ -251,7 +251,7 @@ class ServerDatabaseControllerRetryTest extends TestCase
             'server_id' => $server->id,
             'type' => DatabaseType::MySQL,
             'version' => '8.0',
-            'status' => DatabaseStatus::Failed,
+            'status' => TaskStatus::Failed,
         ]);
 
         // Act
@@ -285,7 +285,7 @@ class ServerDatabaseControllerRetryTest extends TestCase
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
             'type' => DatabaseType::MySQL,
-            'status' => DatabaseStatus::Failed,
+            'status' => TaskStatus::Failed,
             'error_log' => 'Previous error message',
         ]);
 
@@ -296,7 +296,7 @@ class ServerDatabaseControllerRetryTest extends TestCase
         // Assert
         $this->assertDatabaseHas('server_databases', [
             'id' => $database->id,
-            'status' => DatabaseStatus::Pending->value,
+            'status' => TaskStatus::Pending->value,
             'error_log' => null,
         ]);
     }

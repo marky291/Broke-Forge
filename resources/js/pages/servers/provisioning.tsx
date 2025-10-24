@@ -83,7 +83,7 @@ export default function ProvisioningPage({ server, provision }: ProvisioningPage
 
     // Auto-redirect when provisioning completes
     useEffect(() => {
-        if (server.provision_status === 'completed') {
+        if (server.provision_status === 'success') {
             router.visit(showServer(server.id).url);
         }
     }, [server.provision_status, server.id]);
@@ -111,7 +111,7 @@ export default function ProvisioningPage({ server, provision }: ProvisioningPage
                 return <Clock className="h-5 w-5 text-amber-600" />;
             case 'installing':
                 return <Loader2 className="h-5 w-5 animate-spin text-blue-600" />;
-            case 'completed':
+            case 'success':
                 return <CheckCircle2 className="h-5 w-5 text-green-600" />;
             case 'failed':
                 return <XCircle className="h-5 w-5 text-red-600" />;
@@ -127,7 +127,7 @@ export default function ProvisioningPage({ server, provision }: ProvisioningPage
                 return 'Pending';
             case 'installing':
                 return 'Installing';
-            case 'completed':
+            case 'success':
                 return 'Completed';
             case 'failed':
                 return 'Failed';

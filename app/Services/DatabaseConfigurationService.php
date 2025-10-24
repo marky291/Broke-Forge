@@ -161,7 +161,7 @@ class DatabaseConfigurationService
                     $query->where('type', 'redis');
                 }
             })
-            ->whereNotIn('status', ['failed', 'uninstalling'])
+            ->whereNotIn('status', ['failed', 'removing'])
             ->exists();
     }
 }

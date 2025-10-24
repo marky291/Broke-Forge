@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\TaskStatus;
 use App\Models\Server;
 use App\Models\ServerSite;
-use App\Packages\Enums\GitStatus;
 use Illuminate\Http\RedirectResponse;
 
 class ServerSiteGitController extends Controller
@@ -15,13 +15,13 @@ class ServerSiteGitController extends Controller
     public function cancel(Server $server, ServerSite $site): RedirectResponse
     {
         // Only allow cancellation if currently installing
-        if ($site->git_status !== GitStatus::Installing) {
+        if ($site->git_status !== TaskStatus::Installing) {
             return back()->with('error', 'Installation is not in progress.');
         }
 
         // Reset to failed state so user can retry
         $site->update([
-            'git_status' => GitStatus::Failed,
+            'git_status' => TaskStatus::Failed,
         ]);
 
         return redirect()

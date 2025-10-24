@@ -646,7 +646,7 @@ class DatabaseConfigurationServiceTest extends TestCase
             'type' => 'mysql',
             'version' => '8.0',
             'port' => 3306,
-            'status' => 'uninstalling',
+            'status' => 'removing',
             'root_password' => 'password123',
         ]);
 

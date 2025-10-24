@@ -2,7 +2,7 @@
 
 namespace App\Packages\Services\Supervisor\Task;
 
-use App\Enums\SupervisorTaskStatus;
+use App\Enums\TaskStatus;
 use App\Models\Server;
 use App\Models\ServerSupervisorTask;
 use App\Packages\Taskable;
@@ -27,17 +27,17 @@ class SupervisorTaskRemoverJob extends Taskable
 
     protected function getInProgressStatus(): mixed
     {
-        return SupervisorTaskStatus::Removing;
+        return TaskStatus::Removing;
     }
 
     protected function getSuccessStatus(): mixed
     {
-        return SupervisorTaskStatus::Active; // Not used since we delete
+        return TaskStatus::Active; // Not used since we delete
     }
 
     protected function getFailedStatus(): mixed
     {
-        return SupervisorTaskStatus::Failed;
+        return TaskStatus::Failed;
     }
 
     protected function shouldDeleteOnSuccess(): bool

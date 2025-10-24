@@ -2,10 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\TaskStatus;
 use App\Http\Resources\ServerProvisioningResource;
 use App\Models\Server;
-use App\Packages\Enums\ConnectionStatus;
-use App\Packages\Enums\ProvisionStatus;
 use App\Packages\ProvisionAccess;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Str;
@@ -21,7 +20,7 @@ class ServerProvisioningController extends Controller
         $this->authorize('view', $server);
 
         // Redirect to server page if fully provisioned
-        if ($server->provision_status === ProvisionStatus::Completed) {
+        if ($server->provision_status === TaskStatus::Success) {
             return redirect()->route('servers.show', $server);
         }
 
@@ -72,7 +71,7 @@ class ServerProvisioningController extends Controller
         // Authorize user can update this server
         $this->authorize('update', $server);
 
-        if ($server->provision_status !== ProvisionStatus::Failed) {
+        if ($server->provision_status !== TaskStatus::Failed) {
             return redirect()
                 ->route('servers.provisioning', $server)
                 ->with('error', 'Provisioning is not in a failed state.');
@@ -81,8 +80,8 @@ class ServerProvisioningController extends Controller
         // Generate new root password for the next attempt
         $server->ssh_root_password = Server::generatePassword();
 
-        $server->connection_status = ConnectionStatus::PENDING;
-        $server->provision_status = ProvisionStatus::Pending;
+        $server->connection_status = TaskStatus::Pending;
+        $server->provision_status = TaskStatus::Pending;
         $server->save();
 
         return redirect()

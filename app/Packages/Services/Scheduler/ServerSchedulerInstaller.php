@@ -2,7 +2,7 @@
 
 namespace App\Packages\Services\Scheduler;
 
-use App\Enums\SchedulerStatus;
+use App\Enums\TaskStatus;
 use App\Packages\Base\PackageInstaller;
 use App\Packages\Base\ServerPackage;
 
@@ -64,7 +64,7 @@ class ServerSchedulerInstaller extends PackageInstaller implements ServerPackage
 
             // Mark scheduler as active in database
             fn () => $this->server->update([
-                'scheduler_status' => SchedulerStatus::Active,
+                'scheduler_status' => TaskStatus::Active,
                 'scheduler_installed_at' => now(),
             ]),
 

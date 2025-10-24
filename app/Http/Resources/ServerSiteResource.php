@@ -2,7 +2,7 @@
 
 namespace App\Http\Resources;
 
-use App\Enums\MonitoringStatus;
+use App\Enums\TaskStatus;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -69,7 +69,7 @@ class ServerSiteResource extends JsonResource
         ];
 
         // Get latest metrics for server header display if monitoring is active
-        if ($server->monitoring_status === MonitoringStatus::Active) {
+        if ($server->monitoring_status === TaskStatus::Active) {
             $metric = $server->metrics()->latest('collected_at')->first();
 
             if ($metric) {

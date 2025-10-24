@@ -2,8 +2,8 @@
 
 namespace Tests\Feature\Http\Controllers;
 
-use App\Enums\DatabaseStatus;
 use App\Enums\DatabaseType;
+use App\Enums\TaskStatus;
 use App\Models\Server;
 use App\Models\ServerDatabase;
 use App\Models\User;
@@ -126,7 +126,7 @@ class ServerDatabaseControllerTest extends TestCase
             'type' => DatabaseType::MySQL,
             'version' => '8.0',
             'port' => 3306,
-            'status' => DatabaseStatus::Active,
+            'status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -174,7 +174,7 @@ class ServerDatabaseControllerTest extends TestCase
         ServerDatabase::factory()->create([
             'server_id' => $server->id,
             'type' => DatabaseType::PostgreSQL,
-            'status' => DatabaseStatus::Installing,
+            'status' => TaskStatus::Installing,
         ]);
 
         // Act
@@ -186,7 +186,7 @@ class ServerDatabaseControllerTest extends TestCase
         $response->assertInertia(fn ($page) => $page
             ->component('servers/services')
             ->has('server.databases', 1)
-            ->where('server.databases.0.status', DatabaseStatus::Installing->value)
+            ->where('server.databases.0.status', TaskStatus::Installing->value)
         );
     }
 
@@ -222,7 +222,7 @@ class ServerDatabaseControllerTest extends TestCase
             'type' => DatabaseType::MySQL->value,
             'version' => '8.0',
             'port' => 3306,
-            'status' => DatabaseStatus::Pending->value,
+            'status' => TaskStatus::Pending->value,
         ]);
 
         \Illuminate\Support\Facades\Queue::assertPushed(\App\Packages\Services\Database\MySQL\MySqlInstallerJob::class);
@@ -255,7 +255,7 @@ class ServerDatabaseControllerTest extends TestCase
             'server_id' => $server->id,
             'type' => DatabaseType::MariaDB->value,
             'version' => '10.11',
-            'status' => DatabaseStatus::Pending->value,
+            'status' => TaskStatus::Pending->value,
         ]);
 
         \Illuminate\Support\Facades\Queue::assertPushed(\App\Packages\Services\Database\MariaDB\MariaDbInstallerJob::class);
@@ -290,7 +290,7 @@ class ServerDatabaseControllerTest extends TestCase
             'type' => DatabaseType::PostgreSQL->value,
             'version' => '15',
             'port' => 5432,
-            'status' => DatabaseStatus::Pending->value,
+            'status' => TaskStatus::Pending->value,
         ]);
 
         \Illuminate\Support\Facades\Queue::assertPushed(\App\Packages\Services\Database\PostgreSQL\PostgreSqlInstallerJob::class);
@@ -571,12 +571,12 @@ class ServerDatabaseControllerTest extends TestCase
 
         $database = $server->databases()->first();
         $this->assertNotNull($database);
-        $this->assertEquals(DatabaseStatus::Pending, $database->status);
+        $this->assertEquals(TaskStatus::Pending, $database->status);
 
         $this->assertDatabaseHas('server_databases', [
             'server_id' => $server->id,
             'type' => DatabaseType::PostgreSQL->value,
-            'status' => DatabaseStatus::Pending->value,
+            'status' => TaskStatus::Pending->value,
         ]);
     }
 
@@ -595,7 +595,7 @@ class ServerDatabaseControllerTest extends TestCase
             'type' => DatabaseType::MySQL,
             'version' => '8.0',
             'port' => 3306,
-            'status' => DatabaseStatus::Failed,
+            'status' => TaskStatus::Failed,
             'error_log' => 'Installation failed: Connection timeout',
         ]);
 
@@ -604,11 +604,11 @@ class ServerDatabaseControllerTest extends TestCase
 
         // Assert - error_log should be accessible
         $this->assertEquals('Installation failed: Connection timeout', $database->error_log);
-        $this->assertEquals(DatabaseStatus::Failed, $database->status);
+        $this->assertEquals(TaskStatus::Failed, $database->status);
 
         $this->assertDatabaseHas('server_databases', [
             'id' => $database->id,
-            'status' => DatabaseStatus::Failed->value,
+            'status' => TaskStatus::Failed->value,
             'error_log' => 'Installation failed: Connection timeout',
         ]);
     }
@@ -628,24 +628,24 @@ class ServerDatabaseControllerTest extends TestCase
             'type' => DatabaseType::MariaDB,
             'version' => '11.4',
             'port' => 3310,
-            'status' => DatabaseStatus::Pending,
+            'status' => TaskStatus::Pending,
             'error_log' => null,
         ]);
 
         // Act - Simulate job failure by updating to failed status with error message
         $database->update([
-            'status' => DatabaseStatus::Failed,
+            'status' => TaskStatus::Failed,
             'error_log' => 'Package installation failed: mariadb-server not found',
         ]);
 
         // Assert
         $database->refresh();
-        $this->assertEquals(DatabaseStatus::Failed, $database->status);
+        $this->assertEquals(TaskStatus::Failed, $database->status);
         $this->assertEquals('Package installation failed: mariadb-server not found', $database->error_log);
 
         $this->assertDatabaseHas('server_databases', [
             'id' => $database->id,
-            'status' => DatabaseStatus::Failed->value,
+            'status' => TaskStatus::Failed->value,
             'error_log' => 'Package installation failed: mariadb-server not found',
         ]);
     }
@@ -665,7 +665,7 @@ class ServerDatabaseControllerTest extends TestCase
             'server_id' => $server->id,
             'type' => DatabaseType::MySQL,
             'version' => '8.0',
-            'status' => DatabaseStatus::Active,
+            'status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -680,7 +680,7 @@ class ServerDatabaseControllerTest extends TestCase
         $response->assertSessionHas('success', 'Database update started.');
 
         $database->refresh();
-        $this->assertEquals(DatabaseStatus::Updating, $database->status);
+        $this->assertEquals(TaskStatus::Updating, $database->status);
 
         \Illuminate\Support\Facades\Queue::assertPushed(\App\Packages\Services\Database\MySQL\MySqlUpdaterJob::class);
     }
@@ -700,7 +700,7 @@ class ServerDatabaseControllerTest extends TestCase
             'server_id' => $server->id,
             'type' => DatabaseType::MySQL,
             'version' => '8.0',
-            'status' => DatabaseStatus::Active,
+            'status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -712,7 +712,7 @@ class ServerDatabaseControllerTest extends TestCase
         // Assert - new version should be stored on record
         $database->refresh();
         $this->assertEquals('8.4', $database->version);
-        $this->assertEquals(DatabaseStatus::Updating, $database->status);
+        $this->assertEquals(TaskStatus::Updating, $database->status);
     }
 
     /**
@@ -730,7 +730,7 @@ class ServerDatabaseControllerTest extends TestCase
             'server_id' => $server->id,
             'type' => DatabaseType::MySQL,
             'version' => '8.0',
-            'status' => DatabaseStatus::Active,
+            'status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -779,7 +779,7 @@ class ServerDatabaseControllerTest extends TestCase
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
             'type' => DatabaseType::MySQL,
-            'status' => DatabaseStatus::Installing,
+            'status' => TaskStatus::Installing,
         ]);
 
         // Act
@@ -806,7 +806,7 @@ class ServerDatabaseControllerTest extends TestCase
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
             'type' => DatabaseType::MySQL,
-            'status' => DatabaseStatus::Uninstalling,
+            'status' => TaskStatus::Removing,
         ]);
 
         // Act
@@ -833,7 +833,7 @@ class ServerDatabaseControllerTest extends TestCase
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
             'type' => DatabaseType::MySQL,
-            'status' => DatabaseStatus::Updating,
+            'status' => TaskStatus::Updating,
         ]);
 
         // Act
@@ -860,7 +860,7 @@ class ServerDatabaseControllerTest extends TestCase
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
             'type' => DatabaseType::MySQL,
-            'status' => DatabaseStatus::Active,
+            'status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -885,7 +885,7 @@ class ServerDatabaseControllerTest extends TestCase
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
             'type' => DatabaseType::MySQL,
-            'status' => DatabaseStatus::Active,
+            'status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -910,7 +910,7 @@ class ServerDatabaseControllerTest extends TestCase
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
             'type' => DatabaseType::MySQL,
-            'status' => DatabaseStatus::Active,
+            'status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -937,7 +937,7 @@ class ServerDatabaseControllerTest extends TestCase
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
             'type' => DatabaseType::PostgreSQL,
-            'status' => DatabaseStatus::Active,
+            'status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -950,7 +950,7 @@ class ServerDatabaseControllerTest extends TestCase
         $response->assertSessionHas('success', 'Database uninstallation started.');
 
         $database->refresh();
-        $this->assertEquals(DatabaseStatus::Pending, $database->status);
+        $this->assertEquals(TaskStatus::Pending, $database->status);
 
         \Illuminate\Support\Facades\Queue::assertPushed(\App\Packages\Services\Database\PostgreSQL\PostgreSqlRemoverJob::class);
     }
@@ -985,7 +985,7 @@ class ServerDatabaseControllerTest extends TestCase
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
             'type' => DatabaseType::MySQL,
-            'status' => DatabaseStatus::Active,
+            'status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -1008,7 +1008,7 @@ class ServerDatabaseControllerTest extends TestCase
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
             'type' => DatabaseType::MySQL,
-            'status' => DatabaseStatus::Active,
+            'status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -1185,14 +1185,14 @@ class ServerDatabaseControllerTest extends TestCase
             'server_id' => $server->id,
             'type' => DatabaseType::MySQL,
             'port' => 3306,
-            'status' => DatabaseStatus::Active,
+            'status' => TaskStatus::Active,
         ]);
 
         $cacheService = ServerDatabase::factory()->create([
             'server_id' => $server->id,
             'type' => DatabaseType::Redis,
             'port' => 6379,
-            'status' => DatabaseStatus::Active,
+            'status' => TaskStatus::Active,
         ]);
 
         // Act - delete the database
@@ -1206,11 +1206,11 @@ class ServerDatabaseControllerTest extends TestCase
 
         // Verify database status changed to Pending
         $database->refresh();
-        $this->assertEquals(DatabaseStatus::Pending, $database->status);
+        $this->assertEquals(TaskStatus::Pending, $database->status);
 
         // Verify cache service still exists and is unchanged
         $cacheService->refresh();
-        $this->assertEquals(DatabaseStatus::Active, $cacheService->status);
+        $this->assertEquals(TaskStatus::Active, $cacheService->status);
         $this->assertEquals(2, $server->databases()->count());
     }
 
@@ -1255,7 +1255,7 @@ class ServerDatabaseControllerTest extends TestCase
             'type' => DatabaseType::MySQL,
             'version' => '8.0',
             'port' => 3306,
-            'status' => DatabaseStatus::Active,
+            'status' => TaskStatus::Active,
         ]);
 
         ServerDatabase::factory()->create([
@@ -1263,7 +1263,7 @@ class ServerDatabaseControllerTest extends TestCase
             'type' => DatabaseType::Redis,
             'version' => '7.2',
             'port' => 6379,
-            'status' => DatabaseStatus::Active,
+            'status' => TaskStatus::Active,
         ]);
 
         // Act

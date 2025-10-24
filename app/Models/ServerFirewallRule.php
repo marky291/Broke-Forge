@@ -23,7 +23,7 @@ class ServerFirewallRule extends Model
     protected function casts(): array
     {
         return [
-            'status' => \App\Enums\FirewallRuleStatus::class,
+            'status' => \App\Enums\TaskStatus::class,
         ];
     }
 

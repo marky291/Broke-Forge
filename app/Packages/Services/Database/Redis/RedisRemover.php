@@ -2,7 +2,7 @@
 
 namespace App\Packages\Services\Database\Redis;
 
-use App\Enums\DatabaseStatus;
+use App\Enums\TaskStatus;
 use App\Packages\Base\PackageRemover;
 
 /**
@@ -18,7 +18,7 @@ class RedisRemover extends PackageRemover implements \App\Packages\Base\ServerPa
     protected function markResourceAsFailed(string $errorMessage): void
     {
         $this->server->databases()->where('type', 'redis')->latest()->first()?->update([
-            'status' => DatabaseStatus::Failed,
+            'status' => TaskStatus::Failed,
             'error_message' => $errorMessage,
         ]);
     }

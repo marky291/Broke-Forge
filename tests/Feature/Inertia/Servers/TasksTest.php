@@ -2,9 +2,6 @@
 
 namespace Tests\Feature\Inertia\Servers;
 
-use App\Enums\SchedulerStatus;
-use App\Enums\SupervisorStatus;
-use App\Enums\SupervisorTaskStatus;
 use App\Enums\TaskStatus;
 use App\Models\Server;
 use App\Models\ServerScheduledTask;
@@ -73,7 +70,7 @@ class TasksTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'scheduler_status' => SchedulerStatus::Active,
+            'scheduler_status' => TaskStatus::Active,
         ]);
 
         ServerScheduledTask::factory()->create([
@@ -113,7 +110,7 @@ class TasksTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'supervisor_status' => SupervisorStatus::Active,
+            'supervisor_status' => TaskStatus::Active,
         ]);
 
         ServerSupervisorTask::factory()->create([
@@ -145,8 +142,8 @@ class TasksTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'scheduler_status' => SchedulerStatus::Active,
-            'supervisor_status' => SupervisorStatus::Active,
+            'scheduler_status' => TaskStatus::Active,
+            'supervisor_status' => TaskStatus::Active,
         ]);
 
         // Create scheduled task
@@ -207,7 +204,7 @@ class TasksTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'scheduler_status' => SchedulerStatus::Installing,
+            'scheduler_status' => TaskStatus::Installing,
         ]);
 
         // Act
@@ -218,7 +215,7 @@ class TasksTest extends TestCase
         $response->assertStatus(200);
         $response->assertInertia(fn ($page) => $page
             ->component('servers/tasks')
-            ->where('server.scheduler_status', SchedulerStatus::Installing->value)
+            ->where('server.scheduler_status', TaskStatus::Installing->value)
         );
     }
 
@@ -231,7 +228,7 @@ class TasksTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'supervisor_status' => SupervisorStatus::Active,
+            'supervisor_status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -242,7 +239,7 @@ class TasksTest extends TestCase
         $response->assertStatus(200);
         $response->assertInertia(fn ($page) => $page
             ->component('servers/tasks')
-            ->where('server.supervisor_status', SupervisorStatus::Active->value)
+            ->where('server.supervisor_status', TaskStatus::Active->value)
         );
     }
 
@@ -255,8 +252,8 @@ class TasksTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'scheduler_status' => SchedulerStatus::Active,
-            'supervisor_status' => SupervisorStatus::Active,
+            'scheduler_status' => TaskStatus::Active,
+            'supervisor_status' => TaskStatus::Active,
         ]);
 
         ServerScheduledTask::factory()->create([
@@ -266,7 +263,7 @@ class TasksTest extends TestCase
 
         ServerSupervisorTask::factory()->create([
             'server_id' => $server->id,
-            'status' => SupervisorTaskStatus::Active,
+            'status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -280,7 +277,7 @@ class TasksTest extends TestCase
             ->has('server.scheduledTasks', 1)
             ->has('server.supervisorTasks', 1)
             ->where('server.scheduledTasks.0.status', TaskStatus::Active->value)
-            ->where('server.supervisorTasks.0.status', SupervisorTaskStatus::Active->value)
+            ->where('server.supervisorTasks.0.status', TaskStatus::Active->value)
         );
     }
 
@@ -328,7 +325,7 @@ class TasksTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'scheduler_status' => SchedulerStatus::Active,
+            'scheduler_status' => TaskStatus::Active,
         ]);
 
         ServerScheduledTask::factory()->create([
@@ -366,7 +363,7 @@ class TasksTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'supervisor_status' => SupervisorStatus::Active,
+            'supervisor_status' => TaskStatus::Active,
         ]);
 
         ServerSupervisorTask::factory()->create([

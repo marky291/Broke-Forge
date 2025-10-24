@@ -2,15 +2,14 @@
 
 namespace App\Packages\Services\Nginx;
 
-use App\Enums\ReverseProxyStatus;
 use App\Enums\ReverseProxyType;
 use App\Enums\ScheduleFrequency;
+use App\Enums\TaskStatus;
 use App\Models\ServerPhp;
 use App\Models\ServerReverseProxy;
 use App\Packages\Base\Package;
 use App\Packages\Base\PackageInstaller;
 use App\Packages\Enums\PhpVersion;
-use App\Packages\Enums\ProvisionStatus;
 use App\Packages\Services\Firewall\FirewallInstallerJob;
 use App\Packages\Services\Firewall\FirewallRuleInstallerJob;
 use App\Packages\Services\PHP\PhpInstallerJob;
@@ -55,8 +54,8 @@ class NginxInstaller extends PackageInstaller implements \App\Packages\Base\Serv
             FirewallRuleInstallerJob::dispatchSync($this->server, $rule);
         }
 
-        $this->server->provision->put(5, ProvisionStatus::Completed->value);
-        $this->server->provision->put(6, ProvisionStatus::Installing->value);
+        $this->server->provision->put(5, TaskStatus::Success->value);
+        $this->server->provision->put(6, TaskStatus::Installing->value);
         $this->server->save();
 
         // Create ServerPhp record FIRST with 'pending' status (Reverb Package Lifecycle)
@@ -64,7 +63,7 @@ class NginxInstaller extends PackageInstaller implements \App\Packages\Base\Serv
         $php = ServerPhp::create([
             'server_id' => $this->server->id,
             'version' => $phpVersion->value,
-            'status' => \App\Enums\PhpStatus::Pending,
+            'status' => \App\Enums\TaskStatus::Pending,
             'is_cli_default' => $isFirstPhp,
             'is_site_default' => $isFirstPhp,
         ]);
@@ -72,14 +71,14 @@ class NginxInstaller extends PackageInstaller implements \App\Packages\Base\Serv
         // Pass the record to the job (not the ID)
         PhpInstallerJob::dispatchSync($this->server, $php);
 
-        $this->server->provision->put(6, ProvisionStatus::Completed->value);
-        $this->server->provision->put(7, ProvisionStatus::Installing->value);
+        $this->server->provision->put(6, TaskStatus::Success->value);
+        $this->server->provision->put(7, TaskStatus::Installing->value);
         $this->server->save();
 
         $this->install($this->commands($phpVersion));
 
-        $this->server->provision->put(7, ProvisionStatus::Completed->value);
-        $this->server->provision->put(8, ProvisionStatus::Installing->value);
+        $this->server->provision->put(7, TaskStatus::Success->value);
+        $this->server->provision->put(8, TaskStatus::Installing->value);
         $this->server->save();
 
         // Install Task scheduler and default task schedule job.
@@ -99,7 +98,7 @@ class NginxInstaller extends PackageInstaller implements \App\Packages\Base\Serv
         // Install the supervisor as it has low overhead and provides benefit to user.
         SupervisorInstallerJob::dispatchSync($this->server);
 
-        $this->server->provision->put(8, ProvisionStatus::Completed->value);
+        $this->server->provision->put(8, TaskStatus::Success->value);
         $this->server->save();
     }
 
@@ -196,7 +195,7 @@ class NginxInstaller extends PackageInstaller implements \App\Packages\Base\Serv
                     'version' => null,
                     'worker_processes' => 'auto',
                     'worker_connections' => 1024,
-                    'status' => ReverseProxyStatus::Active->value,
+                    'status' => TaskStatus::Active->value,
                 ]);
             },
 

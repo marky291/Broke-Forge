@@ -2,10 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\TaskStatus;
 use App\Models\Server;
-use App\Packages\Enums\ConnectionStatus;
 use App\Packages\Enums\PhpVersion;
-use App\Packages\Enums\ProvisionStatus;
 use App\Packages\Services\Nginx\NginxInstallerJob;
 use App\Packages\Services\SourceProvider\ServerSshKeyManager;
 use Illuminate\Http\JsonResponse;
@@ -19,6 +18,9 @@ class ProvisionCallbackController extends Controller
      */
     public function step(Request $request, Server $server): JsonResponse
     {
+        // Allow unlimited execution time for SSH operations during provisioning
+        set_time_limit(0);
+
         // Get from query params (appended to signed URL) or POST body
         $step = (int) ($request->query('step') ?? $request->input('step'));
         $status = $request->query('status') ?? $request->input('status');
@@ -28,7 +30,7 @@ class ProvisionCallbackController extends Controller
             abort(400, 'Invalid step');
         }
 
-        if (! in_array($status, ['pending', 'installing', 'completed', 'failed'], true)) {
+        if (! in_array($status, ['pending', 'installing', 'success', 'failed'], true)) {
             abort(400, 'Invalid status');
         }
 
@@ -40,7 +42,7 @@ class ProvisionCallbackController extends Controller
 
         // If any step fails, mark the entire provisioning as failed
         if ($status === 'failed') {
-            $server->provision_status = ProvisionStatus::Failed;
+            $server->provision_status = TaskStatus::Failed;
             $server->save();
 
             Log::error("Provision step {$step} failed for server #{$server->id}");
@@ -48,7 +50,7 @@ class ProvisionCallbackController extends Controller
             return response()->json(['ok' => true]);
         }
 
-        if ($step == 1 && $status === ProvisionStatus::Completed->value) {
+        if ($step == 1 && $status === TaskStatus::Success->value) {
             // Let's treat this as a brand-new installation for server
             // great when server testing, production should never be able to run
             // this after first installation anyway...
@@ -58,15 +60,15 @@ class ProvisionCallbackController extends Controller
             $server->firewall?->rules()->delete();
             $server->firewall()->delete(); // delete all firewall for this server
             $server->provision = collect(); // clear out the steps.
-            $server->provision->put(1, ProvisionStatus::Completed->value); // complete the connection step.
-            $server->connection_status = ConnectionStatus::CONNECTED;
-            $server->provision_status = ProvisionStatus::Installing;
+            $server->provision->put(1, TaskStatus::Success->value); // complete the connection step.
+            $server->connection_status = TaskStatus::Success;
+            $server->provision_status = TaskStatus::Installing;
             $server->save();
         }
 
-        if ($step == 3 && $status == ProvisionStatus::Completed->value) {
+        if ($step == 3 && $status == TaskStatus::Success->value) {
 
-            $server->provision->put(4, ProvisionStatus::Installing->value);
+            $server->provision->put(4, TaskStatus::Installing->value);
             $server->save();
 
             // Initialize success flags
@@ -104,7 +106,7 @@ class ProvisionCallbackController extends Controller
 
             // Connection failed if we cannot connect with SSH for either user
             if (! $rootUserSuccess || ! $brokeforgeUserSuccess) {
-                $server->provision_status = ProvisionStatus::Failed;
+                $server->provision_status = TaskStatus::Failed;
                 $server->save();
             } else {
                 // Connection successful - detect OS information before provisioning
@@ -137,9 +139,9 @@ class ProvisionCallbackController extends Controller
                     }
                 }
 
-                $server->provision->put(4, ProvisionStatus::Completed->value);
-                $server->provision->put(5, ProvisionStatus::Installing->value);
-                $server->provision_status = ProvisionStatus::Installing;
+                $server->provision->put(4, TaskStatus::Success->value);
+                $server->provision->put(5, TaskStatus::Installing->value);
+                $server->provision_status = TaskStatus::Installing;
                 $server->save();
 
                 // Update status and dispatch web service provisioning job

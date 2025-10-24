@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\DatabaseStatus;
 use App\Enums\DatabaseType;
+use App\Enums\TaskStatus;
 use App\Http\Controllers\Concerns\PreparesSiteData;
 use App\Http\Requests\Servers\InstallDatabaseRequest;
 use App\Http\Resources\ServerResource;
@@ -68,7 +68,7 @@ class ServerDatabaseController extends Controller
             'type' => $validated['type'],
             'version' => $validated['version'],
             'port' => $port,
-            'status' => DatabaseStatus::Pending->value,
+            'status' => TaskStatus::Pending->value,
             'root_password' => $validated['root_password'],
         ]);
 
@@ -87,7 +87,7 @@ class ServerDatabaseController extends Controller
                 RedisInstallerJob::dispatch($server, $database);
                 break;
             default:
-                $database->update(['status' => DatabaseStatus::Failed->value]);
+                $database->update(['status' => TaskStatus::Failed->value]);
 
                 return redirect()
                     ->route('servers.services', $server)
@@ -113,9 +113,9 @@ class ServerDatabaseController extends Controller
             'version' => 'required|string',
         ]);
 
-        if ($database->status === DatabaseStatus::Installing ||
-            $database->status === DatabaseStatus::Uninstalling ||
-            $database->status === DatabaseStatus::Updating) {
+        if ($database->status === TaskStatus::Installing ||
+            $database->status === TaskStatus::Removing ||
+            $database->status === TaskStatus::Updating) {
             return redirect()
                 ->route('servers.services', $server)
                 ->with('error', 'Database is currently being modified. Please wait.');
@@ -128,7 +128,7 @@ class ServerDatabaseController extends Controller
         // Store new version on database record and set status to updating
         $database->update([
             'version' => $validated['version'],
-            'status' => DatabaseStatus::Updating,
+            'status' => TaskStatus::Updating,
         ]);
 
         // Dispatch updater job with database model
@@ -146,7 +146,7 @@ class ServerDatabaseController extends Controller
                 RedisUpdaterJob::dispatch($server, $database);
                 break;
             default:
-                $database->update(['status' => DatabaseStatus::Failed->value]);
+                $database->update(['status' => TaskStatus::Failed->value]);
 
                 return redirect()
                     ->route('servers.services', $server)
@@ -169,7 +169,7 @@ class ServerDatabaseController extends Controller
         }
 
         // Update database record to pending status
-        $database->update(['status' => DatabaseStatus::Pending->value]);
+        $database->update(['status' => TaskStatus::Pending->value]);
 
         $databaseType = $database->type instanceof DatabaseType
             ? $database->type
@@ -190,7 +190,7 @@ class ServerDatabaseController extends Controller
                 RedisRemoverJob::dispatch($server, $database);
                 break;
             default:
-                $database->update(['status' => DatabaseStatus::Failed->value]);
+                $database->update(['status' => TaskStatus::Failed->value]);
 
                 return redirect()
                     ->route('servers.services', $server)
@@ -215,7 +215,7 @@ class ServerDatabaseController extends Controller
         }
 
         // Only allow retry for failed databases
-        if ($database->status !== DatabaseStatus::Failed) {
+        if ($database->status !== TaskStatus::Failed) {
             return back()->with('error', 'Only failed databases can be retried');
         }
 
@@ -232,7 +232,7 @@ class ServerDatabaseController extends Controller
         // Reset status to 'pending' and clear error log
         // Model events will broadcast automatically via Reverb
         $database->update([
-            'status' => DatabaseStatus::Pending,
+            'status' => TaskStatus::Pending,
             'error_log' => null,
         ]);
 
@@ -255,7 +255,7 @@ class ServerDatabaseController extends Controller
                 RedisInstallerJob::dispatch($server, $database);
                 break;
             default:
-                $database->update(['status' => DatabaseStatus::Failed->value]);
+                $database->update(['status' => TaskStatus::Failed->value]);
 
                 return back()->with('error', 'Selected database type is not supported yet.');
         }

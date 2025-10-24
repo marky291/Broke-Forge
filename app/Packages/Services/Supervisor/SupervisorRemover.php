@@ -2,7 +2,6 @@
 
 namespace App\Packages\Services\Supervisor;
 
-use App\Enums\SupervisorStatus;
 use App\Packages\Base\PackageRemover;
 use App\Packages\Base\ServerPackage;
 
@@ -44,7 +43,7 @@ class SupervisorRemover extends PackageRemover implements ServerPackage
 
             // Mark supervisor as uninstalled in database
             fn () => $this->server->update([
-                'supervisor_status' => SupervisorStatus::Uninstalled,
+                'supervisor_status' => null,
                 'supervisor_uninstalled_at' => now(),
             ]),
 

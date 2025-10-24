@@ -2,9 +2,9 @@
 
 namespace App\Packages\Services\Sites\Git;
 
+use App\Enums\TaskStatus;
 use App\Models\Server;
 use App\Models\ServerSite;
-use App\Packages\Enums\GitStatus;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\Middleware\WithoutOverlapping;
@@ -78,7 +78,7 @@ class GitRepositoryInstallerJob implements ShouldQueue
         try {
             // ✅ UPDATE: pending/null → installing
             // Model event broadcasts automatically via Reverb
-            $this->site->update(['git_status' => GitStatus::Installing]);
+            $this->site->update(['git_status' => TaskStatus::Installing]);
 
             // Create installer instance
             $installer = new GitRepositoryInstaller($this->server);
@@ -93,7 +93,7 @@ class GitRepositoryInstallerJob implements ShouldQueue
             // Model event broadcasts automatically via Reverb
             // Update git status to installed and site status to active on success
             $this->site->update([
-                'git_status' => GitStatus::Installed,
+                'git_status' => TaskStatus::Success,
                 'git_installed_at' => now(),
                 'status' => 'active',
                 'provisioned_at' => now(),
@@ -104,7 +104,7 @@ class GitRepositoryInstallerJob implements ShouldQueue
             // ✅ UPDATE: installing → failed
             // Model event broadcasts automatically via Reverb
             $this->site->update([
-                'git_status' => GitStatus::Failed,
+                'git_status' => TaskStatus::Failed,
                 'error_log' => $e->getMessage(),
             ]);
 
@@ -124,7 +124,7 @@ class GitRepositoryInstallerJob implements ShouldQueue
 
         if ($site) {
             $site->update([
-                'git_status' => GitStatus::Failed,
+                'git_status' => TaskStatus::Failed,
                 'error_log' => $exception->getMessage(),
             ]);
         }

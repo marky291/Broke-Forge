@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
+use App\Enums\TaskStatus;
 use App\Models\Server;
-use App\Packages\Enums\GitStatus;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -69,7 +69,7 @@ class ServerSiteFactory extends Factory
     public function withGit(): static
     {
         return $this->state(fn (array $attributes) => [
-            'git_status' => GitStatus::Installed,
+            'git_status' => TaskStatus::Success,
             'git_installed_at' => now(),
             'configuration' => [
                 'git_repository' => [
@@ -87,7 +87,7 @@ class ServerSiteFactory extends Factory
     public function gitInstalling(): static
     {
         return $this->state(fn (array $attributes) => [
-            'git_status' => GitStatus::Installing,
+            'git_status' => TaskStatus::Installing,
         ]);
     }
 
@@ -97,7 +97,7 @@ class ServerSiteFactory extends Factory
     public function gitFailed(): static
     {
         return $this->state(fn (array $attributes) => [
-            'git_status' => GitStatus::Failed,
+            'git_status' => TaskStatus::Failed,
         ]);
     }
 }

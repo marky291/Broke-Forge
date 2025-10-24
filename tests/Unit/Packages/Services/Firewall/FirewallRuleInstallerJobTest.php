@@ -2,7 +2,7 @@
 
 namespace Tests\Unit\Packages\Services\Firewall;
 
-use App\Enums\FirewallRuleStatus;
+use App\Enums\TaskStatus;
 use App\Models\Server;
 use App\Models\ServerFirewallRule;
 use App\Packages\Services\Firewall\FirewallRuleInstallerJob;
@@ -79,7 +79,7 @@ class FirewallRuleInstallerJobTest extends TestCase
     }
 
     /**
-     * Test failed() method updates status to FirewallRuleStatus::Failed.
+     * Test failed() method updates status to TaskStatus::Failed.
      */
     public function test_failed_method_updates_status_to_failed(): void
     {
@@ -90,7 +90,7 @@ class FirewallRuleInstallerJobTest extends TestCase
         ]);
         $rule = ServerFirewallRule::factory()->create([
             'server_firewall_id' => $firewall->id,
-            'status' => FirewallRuleStatus::Installing->value,
+            'status' => TaskStatus::Installing->value,
         ]);
 
         $job = new FirewallRuleInstallerJob($server, $rule);
@@ -101,7 +101,7 @@ class FirewallRuleInstallerJobTest extends TestCase
 
         // Assert
         $rule->refresh();
-        $this->assertEquals(FirewallRuleStatus::Failed, $rule->status);
+        $this->assertEquals(TaskStatus::Failed, $rule->status);
     }
 
     /**
@@ -116,7 +116,7 @@ class FirewallRuleInstallerJobTest extends TestCase
         ]);
         $rule = ServerFirewallRule::factory()->create([
             'server_firewall_id' => $firewall->id,
-            'status' => FirewallRuleStatus::Installing->value,
+            'status' => TaskStatus::Installing->value,
             'error_log' => null,
         ]);
 
@@ -169,7 +169,7 @@ class FirewallRuleInstallerJobTest extends TestCase
         ]);
         $rule = ServerFirewallRule::factory()->create([
             'server_firewall_id' => $firewall->id,
-            'status' => FirewallRuleStatus::Pending->value,
+            'status' => TaskStatus::Pending->value,
             'port' => 8080,
         ]);
 
@@ -185,7 +185,7 @@ class FirewallRuleInstallerJobTest extends TestCase
 
         // Assert
         $rule->refresh();
-        $this->assertEquals(FirewallRuleStatus::Failed, $rule->status);
+        $this->assertEquals(TaskStatus::Failed, $rule->status);
         $this->assertNotNull($rule->error_log);
     }
 
@@ -201,7 +201,7 @@ class FirewallRuleInstallerJobTest extends TestCase
         ]);
         $rule = ServerFirewallRule::factory()->create([
             'server_firewall_id' => $firewall->id,
-            'status' => FirewallRuleStatus::Pending->value,
+            'status' => TaskStatus::Pending->value,
         ]);
 
         $job = new FirewallRuleInstallerJob($server, $rule);
@@ -212,7 +212,7 @@ class FirewallRuleInstallerJobTest extends TestCase
 
         // Assert
         $rule->refresh();
-        $this->assertEquals(FirewallRuleStatus::Failed, $rule->status);
+        $this->assertEquals(TaskStatus::Failed, $rule->status);
         $this->assertEquals('Network timeout error', $rule->error_log);
     }
 
@@ -228,7 +228,7 @@ class FirewallRuleInstallerJobTest extends TestCase
         ]);
         $rule = ServerFirewallRule::factory()->create([
             'server_firewall_id' => $firewall->id,
-            'status' => FirewallRuleStatus::Installing->value,
+            'status' => TaskStatus::Installing->value,
             'name' => 'HTTP Access',
             'port' => 80,
             'from_ip_address' => '192.168.1.1',
@@ -262,7 +262,7 @@ class FirewallRuleInstallerJobTest extends TestCase
         ]);
         $rule = ServerFirewallRule::factory()->create([
             'server_firewall_id' => $firewall->id,
-            'status' => FirewallRuleStatus::Installing->value,
+            'status' => TaskStatus::Installing->value,
         ]);
 
         $job = new FirewallRuleInstallerJob($server, $rule);
@@ -273,7 +273,7 @@ class FirewallRuleInstallerJobTest extends TestCase
 
         // Assert
         $rule->refresh();
-        $this->assertEquals(FirewallRuleStatus::Failed, $rule->status);
+        $this->assertEquals(TaskStatus::Failed, $rule->status);
         $this->assertEquals('Runtime error occurred', $rule->error_log);
     }
 }

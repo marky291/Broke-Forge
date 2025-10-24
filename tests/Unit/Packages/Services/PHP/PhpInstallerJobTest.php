@@ -2,7 +2,7 @@
 
 namespace Tests\Unit\Packages\Services\PHP;
 
-use App\Enums\PhpStatus;
+use App\Enums\TaskStatus;
 use App\Models\Server;
 use App\Models\ServerPhp;
 use App\Packages\Services\PHP\PhpInstallerJob;
@@ -96,7 +96,7 @@ class PhpInstallerJobTest extends TestCase
     }
 
     /**
-     * Test failed() method updates status to PhpStatus::Failed.
+     * Test failed() method updates status to TaskStatus::Failed.
      */
     public function test_failed_method_updates_status_to_failed(): void
     {
@@ -104,7 +104,7 @@ class PhpInstallerJobTest extends TestCase
         $server = Server::factory()->create();
         $php = ServerPhp::factory()->create([
             'server_id' => $server->id,
-            'status' => PhpStatus::Installing,
+            'status' => TaskStatus::Installing,
         ]);
 
         $job = new PhpInstallerJob($server, $php);
@@ -115,7 +115,7 @@ class PhpInstallerJobTest extends TestCase
 
         // Assert
         $php->refresh();
-        $this->assertEquals(PhpStatus::Failed, $php->status);
+        $this->assertEquals(TaskStatus::Failed, $php->status);
     }
 
     /**
@@ -127,7 +127,7 @@ class PhpInstallerJobTest extends TestCase
         $server = Server::factory()->create();
         $php = ServerPhp::factory()->create([
             'server_id' => $server->id,
-            'status' => PhpStatus::Installing,
+            'status' => TaskStatus::Installing,
             'error_log' => null,
         ]);
 
@@ -176,7 +176,7 @@ class PhpInstallerJobTest extends TestCase
         $server = Server::factory()->create();
         $php = ServerPhp::factory()->create([
             'server_id' => $server->id,
-            'status' => PhpStatus::Installing,
+            'status' => TaskStatus::Installing,
             'version' => '8.3',
         ]);
 

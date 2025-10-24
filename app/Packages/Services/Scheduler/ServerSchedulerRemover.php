@@ -2,7 +2,6 @@
 
 namespace App\Packages\Services\Scheduler;
 
-use App\Enums\SchedulerStatus;
 use App\Packages\Base\PackageRemover;
 use App\Packages\Base\ServerPackage;
 
@@ -39,7 +38,7 @@ class ServerSchedulerRemover extends PackageRemover implements ServerPackage
 
             // Mark scheduler as uninstalled in database
             fn () => $this->server->update([
-                'scheduler_status' => SchedulerStatus::Uninstalled,
+                'scheduler_status' => null,
                 'scheduler_uninstalled_at' => now(),
             ]),
 

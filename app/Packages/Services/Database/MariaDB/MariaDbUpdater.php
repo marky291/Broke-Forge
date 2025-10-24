@@ -2,7 +2,7 @@
 
 namespace App\Packages\Services\Database\MariaDB;
 
-use App\Enums\DatabaseStatus;
+use App\Enums\TaskStatus;
 use App\Packages\Base\PackageInstaller;
 
 class MariaDbUpdater extends PackageInstaller implements \App\Packages\Base\ServerPackage
@@ -52,7 +52,7 @@ class MariaDbUpdater extends PackageInstaller implements \App\Packages\Base\Serv
             "mysql --password='{$rootPassword}' -e 'SELECT VERSION();' 2>/dev/null",
 
             fn () => $this->server->databases()->latest()->first()?->update([
-                'status' => DatabaseStatus::Active->value,
+                'status' => TaskStatus::Active->value,
                 'version' => $targetVersion,
             ]),
 

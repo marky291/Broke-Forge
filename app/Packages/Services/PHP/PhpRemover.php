@@ -2,7 +2,7 @@
 
 namespace App\Packages\Services\PHP;
 
-use App\Enums\PhpStatus;
+use App\Enums\TaskStatus;
 use App\Models\ServerPhp;
 use App\Packages\Base\PackageRemover;
 use App\Packages\Base\ServerPackage;
@@ -31,7 +31,7 @@ class PhpRemover extends PackageRemover implements ServerPackage
     protected function markResourceAsFailed(string $errorMessage): void
     {
         ServerPhp::where('id', $this->phpId)
-            ->update(['status' => PhpStatus::Failed]);
+            ->update(['status' => TaskStatus::Failed]);
     }
 
     /**

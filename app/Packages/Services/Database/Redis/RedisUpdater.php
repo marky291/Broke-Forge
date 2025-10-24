@@ -2,7 +2,7 @@
 
 namespace App\Packages\Services\Database\Redis;
 
-use App\Enums\DatabaseStatus;
+use App\Enums\TaskStatus;
 use App\Packages\Base\PackageInstaller;
 
 class RedisUpdater extends PackageInstaller implements \App\Packages\Base\ServerPackage
@@ -44,7 +44,7 @@ class RedisUpdater extends PackageInstaller implements \App\Packages\Base\Server
             "redis-cli -p {$port} -a {$password} info server | grep redis_version",
 
             fn () => $this->server->databases()->where('type', 'redis')->latest()->first()?->update([
-                'status' => DatabaseStatus::Active->value,
+                'status' => TaskStatus::Active->value,
                 'version' => $targetVersion,
             ]),
 

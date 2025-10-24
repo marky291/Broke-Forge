@@ -2,7 +2,7 @@
 
 namespace Tests\Unit\Packages\Services\Supervisor\Task;
 
-use App\Enums\SupervisorTaskStatus;
+use App\Enums\TaskStatus;
 use App\Models\Server;
 use App\Models\ServerSupervisorTask;
 use App\Packages\Services\Supervisor\Task\SupervisorTaskInstallerJob;
@@ -69,7 +69,7 @@ class SupervisorTaskInstallerJobTest extends TestCase
         $exception = new Exception('Operation failed');
         $job->failed($exception);
         $record->refresh();
-        $this->assertEquals(SupervisorTaskStatus::Failed, $record->status);
+        $this->assertEquals(TaskStatus::Failed, $record->status);
     }
 
     public function test_failed_method_stores_error_log(): void

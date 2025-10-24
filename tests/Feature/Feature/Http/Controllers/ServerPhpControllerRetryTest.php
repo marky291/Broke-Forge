@@ -2,7 +2,7 @@
 
 namespace Tests\Feature\Feature\Http\Controllers;
 
-use App\Enums\PhpStatus;
+use App\Enums\TaskStatus;
 use App\Models\Server;
 use App\Models\ServerPhp;
 use App\Models\User;
@@ -28,7 +28,7 @@ class ServerPhpControllerRetryTest extends TestCase
         $php = ServerPhp::factory()->create([
             'server_id' => $server->id,
             'version' => '8.3',
-            'status' => PhpStatus::Failed,
+            'status' => TaskStatus::Failed,
             'error_log' => 'Installation failed',
         ]);
 
@@ -43,7 +43,7 @@ class ServerPhpControllerRetryTest extends TestCase
         // Verify PHP status reset to pending
         $this->assertDatabaseHas('server_phps', [
             'id' => $php->id,
-            'status' => PhpStatus::Pending->value,
+            'status' => TaskStatus::Pending->value,
             'error_log' => null,
         ]);
 
@@ -65,7 +65,7 @@ class ServerPhpControllerRetryTest extends TestCase
         $server = Server::factory()->create(['user_id' => $user->id]);
         $php = ServerPhp::factory()->create([
             'server_id' => $server->id,
-            'status' => PhpStatus::Active,
+            'status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -79,7 +79,7 @@ class ServerPhpControllerRetryTest extends TestCase
         // Verify status was not changed
         $this->assertDatabaseHas('server_phps', [
             'id' => $php->id,
-            'status' => PhpStatus::Active->value,
+            'status' => TaskStatus::Active->value,
         ]);
 
         // Verify no job was dispatched
@@ -98,7 +98,7 @@ class ServerPhpControllerRetryTest extends TestCase
         $server = Server::factory()->create(['user_id' => $otherUser->id]);
         $php = ServerPhp::factory()->create([
             'server_id' => $server->id,
-            'status' => PhpStatus::Failed,
+            'status' => TaskStatus::Failed,
         ]);
 
         // Act
@@ -111,7 +111,7 @@ class ServerPhpControllerRetryTest extends TestCase
         // Verify status was not changed
         $this->assertDatabaseHas('server_phps', [
             'id' => $php->id,
-            'status' => PhpStatus::Failed->value,
+            'status' => TaskStatus::Failed->value,
         ]);
 
         Queue::assertNothingPushed();
@@ -127,7 +127,7 @@ class ServerPhpControllerRetryTest extends TestCase
         $server = Server::factory()->create();
         $php = ServerPhp::factory()->create([
             'server_id' => $server->id,
-            'status' => PhpStatus::Failed,
+            'status' => TaskStatus::Failed,
         ]);
 
         // Act
@@ -151,7 +151,7 @@ class ServerPhpControllerRetryTest extends TestCase
         $server2 = Server::factory()->create(['user_id' => $user->id]);
         $php = ServerPhp::factory()->create([
             'server_id' => $server2->id,
-            'status' => PhpStatus::Failed,
+            'status' => TaskStatus::Failed,
         ]);
 
         // Act
@@ -176,7 +176,7 @@ class ServerPhpControllerRetryTest extends TestCase
         $php = ServerPhp::factory()->create([
             'server_id' => $server->id,
             'version' => '8.3',
-            'status' => PhpStatus::Failed,
+            'status' => TaskStatus::Failed,
         ]);
 
         // Act
@@ -209,7 +209,7 @@ class ServerPhpControllerRetryTest extends TestCase
         $php = ServerPhp::factory()->create([
             'server_id' => $server->id,
             'version' => '8.3',
-            'status' => PhpStatus::Failed,
+            'status' => TaskStatus::Failed,
             'error_log' => 'Previous error message',
         ]);
 
@@ -220,7 +220,7 @@ class ServerPhpControllerRetryTest extends TestCase
         // Assert
         $this->assertDatabaseHas('server_phps', [
             'id' => $php->id,
-            'status' => PhpStatus::Pending->value,
+            'status' => TaskStatus::Pending->value,
             'error_log' => null,
         ]);
     }
@@ -237,7 +237,7 @@ class ServerPhpControllerRetryTest extends TestCase
         $php = ServerPhp::factory()->create([
             'server_id' => $server->id,
             'version' => '8.4',
-            'status' => PhpStatus::Failed,
+            'status' => TaskStatus::Failed,
         ]);
 
         // Act

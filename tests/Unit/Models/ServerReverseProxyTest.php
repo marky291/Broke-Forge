@@ -2,8 +2,8 @@
 
 namespace Tests\Unit\Models;
 
-use App\Enums\ReverseProxyStatus;
 use App\Enums\ReverseProxyType;
+use App\Enums\TaskStatus;
 use App\Models\Server;
 use App\Models\ServerReverseProxy;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -57,15 +57,15 @@ class ServerReverseProxyTest extends TestCase
     {
         // Arrange
         $reverseProxy = ServerReverseProxy::factory()->create([
-            'status' => ReverseProxyStatus::Active,
+            'status' => TaskStatus::Active,
         ]);
 
         // Act
         $status = $reverseProxy->status;
 
         // Assert
-        $this->assertInstanceOf(ReverseProxyStatus::class, $status);
-        $this->assertEquals(ReverseProxyStatus::Active, $status);
+        $this->assertInstanceOf(TaskStatus::class, $status);
+        $this->assertEquals(TaskStatus::Active, $status);
     }
 
     /**
@@ -141,17 +141,17 @@ class ServerReverseProxyTest extends TestCase
     {
         // Arrange & Act
         $reverseProxy = ServerReverseProxy::factory()->create([
-            'status' => ReverseProxyStatus::Installing,
+            'status' => TaskStatus::Installing,
         ]);
 
         // Assert
-        $this->assertEquals(ReverseProxyStatus::Installing, $reverseProxy->status);
+        $this->assertEquals(TaskStatus::Installing, $reverseProxy->status);
 
         // Act - update status
-        $reverseProxy->update(['status' => ReverseProxyStatus::Active]);
+        $reverseProxy->update(['status' => TaskStatus::Active]);
 
         // Assert
-        $this->assertEquals(ReverseProxyStatus::Active, $reverseProxy->fresh()->status);
+        $this->assertEquals(TaskStatus::Active, $reverseProxy->fresh()->status);
     }
 
     /**
@@ -161,11 +161,11 @@ class ServerReverseProxyTest extends TestCase
     {
         // Arrange & Act
         $reverseProxy = ServerReverseProxy::factory()->create([
-            'status' => ReverseProxyStatus::Failed,
+            'status' => TaskStatus::Failed,
         ]);
 
         // Assert
-        $this->assertEquals(ReverseProxyStatus::Failed, $reverseProxy->status);
+        $this->assertEquals(TaskStatus::Failed, $reverseProxy->status);
     }
 
     /**
@@ -175,11 +175,11 @@ class ServerReverseProxyTest extends TestCase
     {
         // Arrange & Act
         $reverseProxy = ServerReverseProxy::factory()->create([
-            'status' => ReverseProxyStatus::Stopped,
+            'status' => TaskStatus::Paused,
         ]);
 
         // Assert
-        $this->assertEquals(ReverseProxyStatus::Stopped, $reverseProxy->status);
+        $this->assertEquals(TaskStatus::Paused, $reverseProxy->status);
     }
 
     /**
@@ -270,8 +270,8 @@ class ServerReverseProxyTest extends TestCase
         $this->assertNotNull($reverseProxy->version);
         $this->assertNotNull($reverseProxy->worker_processes);
         $this->assertIsInt($reverseProxy->worker_connections);
-        $this->assertInstanceOf(ReverseProxyStatus::class, $reverseProxy->status);
-        $this->assertEquals(ReverseProxyStatus::Active, $reverseProxy->status);
+        $this->assertInstanceOf(TaskStatus::class, $reverseProxy->status);
+        $this->assertEquals(TaskStatus::Active, $reverseProxy->status);
     }
 
     /**
@@ -308,7 +308,7 @@ class ServerReverseProxyTest extends TestCase
             'version' => '1.25.0',
             'worker_processes' => '8',
             'worker_connections' => 2048,
-            'status' => ReverseProxyStatus::Active,
+            'status' => TaskStatus::Active,
         ]);
 
         // Assert
@@ -317,7 +317,7 @@ class ServerReverseProxyTest extends TestCase
         $this->assertEquals('1.25.0', $reverseProxy->version);
         $this->assertEquals('8', $reverseProxy->worker_processes);
         $this->assertEquals(2048, $reverseProxy->worker_connections);
-        $this->assertEquals(ReverseProxyStatus::Active, $reverseProxy->status);
+        $this->assertEquals(TaskStatus::Active, $reverseProxy->status);
     }
 
     /**

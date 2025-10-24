@@ -2,7 +2,7 @@
 
 namespace Tests\Inertia\Servers;
 
-use App\Enums\PhpStatus;
+use App\Enums\TaskStatus;
 use App\Models\Server;
 use App\Models\ServerPhp;
 use App\Models\ServerPhpModule;
@@ -92,7 +92,7 @@ class PhpTest extends TestCase
         $php = ServerPhp::factory()->create([
             'server_id' => $server->id,
             'version' => '8.3',
-            'status' => PhpStatus::Active,
+            'status' => TaskStatus::Active,
             'is_cli_default' => true,
             'is_site_default' => true,
         ]);
@@ -119,7 +119,7 @@ class PhpTest extends TestCase
             ->has('server.phps', 1)
             ->has('server.phps.0', fn ($phpData) => $phpData
                 ->where('version', '8.3')
-                ->where('status', PhpStatus::Active->value)
+                ->where('status', TaskStatus::Active->value)
                 ->where('is_cli_default', true)
                 ->where('is_site_default', true)
                 ->has('modules', 2)
@@ -203,7 +203,7 @@ class PhpTest extends TestCase
         $this->assertDatabaseHas('server_phps', [
             'server_id' => $server->id,
             'version' => '8.3',
-            'status' => PhpStatus::Pending->value,
+            'status' => TaskStatus::Pending->value,
         ]);
 
         $php = $server->phps()->first();
@@ -283,13 +283,13 @@ class PhpTest extends TestCase
         ServerPhp::factory()->create([
             'server_id' => $server->id,
             'version' => '8.3',
-            'status' => PhpStatus::Pending,
+            'status' => TaskStatus::Pending,
         ]);
 
         ServerPhp::factory()->create([
             'server_id' => $server->id,
             'version' => '8.4',
-            'status' => PhpStatus::Active,
+            'status' => TaskStatus::Active,
         ]);
 
         // Act
@@ -300,8 +300,8 @@ class PhpTest extends TestCase
         $response->assertInertia(fn ($page) => $page
             ->component('servers/php')
             ->has('server.phps', 2)
-            ->where('server.phps.0.status', PhpStatus::Pending->value)
-            ->where('server.phps.1.status', PhpStatus::Active->value)
+            ->where('server.phps.0.status', TaskStatus::Pending->value)
+            ->where('server.phps.1.status', TaskStatus::Active->value)
         );
     }
 
@@ -465,7 +465,7 @@ class PhpTest extends TestCase
         $php = ServerPhp::factory()->create([
             'server_id' => $server->id,
             'version' => '8.3',
-            'status' => PhpStatus::Active,
+            'status' => TaskStatus::Active,
         ]);
 
         // Act - resubmit same version with different extensions
@@ -480,7 +480,7 @@ class PhpTest extends TestCase
         $response->assertRedirect("/servers/{$server->id}/php");
 
         $php->refresh();
-        $this->assertEquals(PhpStatus::Installing, $php->status);
+        $this->assertEquals(TaskStatus::Installing, $php->status);
     }
 
     /**
@@ -509,7 +509,7 @@ class PhpTest extends TestCase
         $this->assertDatabaseHas('server_phps', [
             'server_id' => $server->id,
             'version' => '8.3',
-            'status' => PhpStatus::Pending->value,
+            'status' => TaskStatus::Pending->value,
         ]);
     }
 

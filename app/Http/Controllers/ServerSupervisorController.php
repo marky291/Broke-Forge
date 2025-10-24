@@ -2,8 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\SupervisorStatus;
-use App\Enums\SupervisorTaskStatus;
+use App\Enums\TaskStatus;
 use App\Http\Controllers\Concerns\PreparesSiteData;
 use App\Http\Requests\StoreSupervisorTaskRequest;
 use App\Http\Requests\UpdateSupervisorTaskRequest;
@@ -56,14 +55,13 @@ class ServerSupervisorController extends Controller
 
         // Update supervisor status immediately for UI feedback
         $server->update([
-            'supervisor_status' => SupervisorStatus::Installing,
+            'supervisor_status' => TaskStatus::Installing,
         ]);
 
         // Dispatch supervisor installation job
         SupervisorInstallerJob::dispatch($server);
 
-        return redirect()
-            ->route('servers.supervisor', $server)
+        return back()
             ->with('success', 'Supervisor installation started');
     }
 
@@ -83,16 +81,15 @@ class ServerSupervisorController extends Controller
             'ip_address' => request()->ip(),
         ]);
 
-        // Update status to 'uninstalling' immediately for UI feedback
+        // Update status to 'removing' immediately for UI feedback
         $server->update([
-            'supervisor_status' => SupervisorStatus::Uninstalling,
+            'supervisor_status' => TaskStatus::Removing,
         ]);
 
         // Dispatch supervisor removal job
         SupervisorRemoverJob::dispatch($server);
 
-        return redirect()
-            ->route('servers.supervisor', $server)
+        return back()
             ->with('success', 'Supervisor uninstallation started');
     }
 
@@ -120,8 +117,7 @@ class ServerSupervisorController extends Controller
         // ✅ THEN dispatch job with task model
         SupervisorTaskInstallerJob::dispatch($server, $task);
 
-        return redirect()
-            ->route('servers.supervisor', $server)
+        return back()
             ->with('success', 'Supervisor task created and installation started');
     }
 
@@ -166,8 +162,7 @@ class ServerSupervisorController extends Controller
             $installer = new SupervisorTaskInstaller($server, $supervisorTask);
             $installer->execute();
 
-            return redirect()
-                ->route('servers.supervisor', $server)
+            return back()
                 ->with('success', 'Supervisor task updated successfully');
         } catch (\Exception $e) {
             Log::error('Failed to update supervisor task', [
@@ -175,8 +170,7 @@ class ServerSupervisorController extends Controller
                 'error' => $e->getMessage(),
             ]);
 
-            return redirect()
-                ->route('servers.supervisor', $server)
+            return back()
                 ->with('error', 'Failed to update supervisor task: '.$e->getMessage());
         }
     }
@@ -200,13 +194,12 @@ class ServerSupervisorController extends Controller
         ]);
 
         // ✅ UPDATE status to 'pending' (broadcasts automatically via model event)
-        $supervisorTask->update(['status' => SupervisorTaskStatus::Pending]);
+        $supervisorTask->update(['status' => TaskStatus::Pending]);
 
         // ✅ THEN dispatch job with task model
         SupervisorTaskRemoverJob::dispatch($server, $supervisorTask);
 
-        return redirect()
-            ->route('servers.supervisor', $server)
+        return back()
             ->with('success', 'Supervisor task removal started');
     }
 
@@ -235,8 +228,7 @@ class ServerSupervisorController extends Controller
             $supervisorTask->update(['status' => 'active']);
         }
 
-        return redirect()
-            ->route('servers.supervisor', $server)
+        return back()
             ->with('success', "Task {$newStatus}");
     }
 
@@ -263,8 +255,7 @@ class ServerSupervisorController extends Controller
         // Execute supervisorctl restart command
         $this->executeSupervisorctl($server, "restart {$sanitizedName}");
 
-        return redirect()
-            ->route('servers.supervisor', $server)
+        return back()
             ->with('success', 'Task restarted');
     }
 
@@ -277,9 +268,8 @@ class ServerSupervisorController extends Controller
         Gate::authorize('updateTask', [ServerSupervisor::class, $server]);
 
         // Only allow retry for failed tasks
-        if ($supervisorTask->status !== SupervisorTaskStatus::Failed) {
-            return redirect()
-                ->route('servers.supervisor', $server)
+        if ($supervisorTask->status !== TaskStatus::Failed) {
+            return back()
                 ->with('error', 'Only failed tasks can be retried');
         }
 
@@ -293,13 +283,12 @@ class ServerSupervisorController extends Controller
         ]);
 
         // ✅ Reset status to 'pending' to trigger reinstallation
-        $supervisorTask->update(['status' => SupervisorTaskStatus::Pending]);
+        $supervisorTask->update(['status' => TaskStatus::Pending]);
 
         // ✅ Dispatch job with task model
         SupervisorTaskInstallerJob::dispatch($server, $supervisorTask);
 
-        return redirect()
-            ->route('servers.supervisor', $server)
+        return back()
             ->with('success', 'Task retry started');
     }
 
