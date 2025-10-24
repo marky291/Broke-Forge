@@ -86,10 +86,14 @@ class ProvisionedSiteInstallerJobTest extends TestCase
     public function test_failed_method_handles_missing_records_gracefully(): void
     {
         $server = Server::factory()->create();
-        $nonExistentId = 99999;
-        $job = new ProvisionedSiteInstallerJob($server, $nonExistentId);
+        $site = ServerSite::factory()->create(['server_id' => $server->id]);
+
+        $job = new ProvisionedSiteInstallerJob($server, $site->id);
+        $siteId = $site->id;
+        $site->delete(); // Now fresh() will return null
+
         $exception = new Exception('Test error');
         $job->failed($exception);
-        $this->assertDatabaseMissing('server_sites', ['id' => $nonExistentId]);
+        $this->assertDatabaseMissing('server_sites', ['id' => $siteId]);
     }
 }

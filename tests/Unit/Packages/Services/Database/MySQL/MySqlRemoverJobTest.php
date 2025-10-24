@@ -24,7 +24,7 @@ class MySqlRemoverJobTest extends TestCase
         $database = ServerDatabase::factory()->create(['server_id' => $server->id]);
 
         // Act
-        $job = new MySqlRemoverJob($server, $database->id);
+        $job = new MySqlRemoverJob($server, $database);
 
         // Assert
         $this->assertEquals(600, $job->timeout);
@@ -40,7 +40,7 @@ class MySqlRemoverJobTest extends TestCase
         $database = ServerDatabase::factory()->create(['server_id' => $server->id]);
 
         // Act
-        $job = new MySqlRemoverJob($server, $database->id);
+        $job = new MySqlRemoverJob($server, $database);
 
         // Assert
         $this->assertEquals(0, $job->tries);
@@ -56,7 +56,7 @@ class MySqlRemoverJobTest extends TestCase
         $database = ServerDatabase::factory()->create(['server_id' => $server->id]);
 
         // Act
-        $job = new MySqlRemoverJob($server, $database->id);
+        $job = new MySqlRemoverJob($server, $database);
 
         // Assert
         $this->assertEquals(3, $job->maxExceptions);
@@ -72,7 +72,7 @@ class MySqlRemoverJobTest extends TestCase
         $database = ServerDatabase::factory()->create(['server_id' => $server->id]);
 
         // Act
-        $job = new MySqlRemoverJob($server, $database->id);
+        $job = new MySqlRemoverJob($server, $database);
         $middleware = $job->middleware();
 
         // Assert
@@ -81,21 +81,21 @@ class MySqlRemoverJobTest extends TestCase
     }
 
     /**
-     * Test job constructor accepts server and database ID.
+     * Test job constructor accepts server and database.
      */
-    public function test_constructor_accepts_server_and_database_id(): void
+    public function test_constructor_accepts_server_and_database(): void
     {
         // Arrange
         $server = Server::factory()->create();
-        $databaseId = 123;
+        $database = ServerDatabase::factory()->create(['server_id' => $server->id]);
 
         // Act
-        $job = new MySqlRemoverJob($server, $databaseId);
+        $job = new MySqlRemoverJob($server, $database);
 
         // Assert
         $this->assertInstanceOf(MySqlRemoverJob::class, $job);
         $this->assertEquals($server->id, $job->server->id);
-        $this->assertEquals($databaseId, $job->databaseId);
+        $this->assertEquals($database->id, $job->serverDatabase->id);
     }
 
     /**
@@ -110,7 +110,7 @@ class MySqlRemoverJobTest extends TestCase
             'status' => DatabaseStatus::Active,
         ]);
 
-        $job = new MySqlRemoverJob($server, $database->id);
+        $job = new MySqlRemoverJob($server, $database);
         $exception = new Exception('Removal failed');
 
         // Act
@@ -134,7 +134,7 @@ class MySqlRemoverJobTest extends TestCase
             'error_log' => null,
         ]);
 
-        $job = new MySqlRemoverJob($server, $database->id);
+        $job = new MySqlRemoverJob($server, $database);
         $errorMessage = 'MySQL removal timeout error';
         $exception = new Exception($errorMessage);
 
@@ -153,17 +153,20 @@ class MySqlRemoverJobTest extends TestCase
     {
         // Arrange
         $server = Server::factory()->create();
-        $nonExistentId = 99999;
+        $database = ServerDatabase::factory()->create(['server_id' => $server->id]);
 
-        $job = new MySqlRemoverJob($server, $nonExistentId);
+        $job = new MySqlRemoverJob($server, $database);
+        $databaseId = $database->id;
+        $database->delete(); // Now fresh() will return null
+
         $exception = new Exception('Test error');
 
         // Act - should not throw exception
         $job->failed($exception);
 
-        // Assert - verify no database record was created
+        // Assert - verify the database was deleted
         $this->assertDatabaseMissing('server_databases', [
-            'id' => $nonExistentId,
+            'id' => $databaseId,
         ]);
     }
 
@@ -182,7 +185,7 @@ class MySqlRemoverJobTest extends TestCase
             'port' => 3306,
         ]);
 
-        $job = new MySqlRemoverJob($server, $database->id);
+        $job = new MySqlRemoverJob($server, $database);
         $exception = new Exception('Removal error');
 
         // Act

@@ -20,7 +20,7 @@ class FirewallRuleUninstallerJobTest extends TestCase
         $server = Server::factory()->create();
         $firewall = ServerFirewall::factory()->create(['server_id' => $server->id]);
         $rule = ServerFirewallRule::factory()->create(['server_firewall_id' => $firewall->id]);
-        $job = new FirewallRuleUninstallerJob($server, $rule->id);
+        $job = new FirewallRuleUninstallerJob($server, $rule);
         $this->assertEquals(600, $job->timeout);
     }
 
@@ -29,7 +29,7 @@ class FirewallRuleUninstallerJobTest extends TestCase
         $server = Server::factory()->create();
         $firewall = ServerFirewall::factory()->create(['server_id' => $server->id]);
         $rule = ServerFirewallRule::factory()->create(['server_firewall_id' => $firewall->id]);
-        $job = new FirewallRuleUninstallerJob($server, $rule->id);
+        $job = new FirewallRuleUninstallerJob($server, $rule);
         $this->assertEquals(0, $job->tries);
     }
 
@@ -41,7 +41,7 @@ class FirewallRuleUninstallerJobTest extends TestCase
         $server = Server::factory()->create();
         $firewall = ServerFirewall::factory()->create(['server_id' => $server->id]);
         $rule = ServerFirewallRule::factory()->create(['server_firewall_id' => $firewall->id]);
-        $job = new FirewallRuleUninstallerJob($server, $rule->id);
+        $job = new FirewallRuleUninstallerJob($server, $rule);
         $this->assertEquals(3, $job->maxExceptions);
     }
 
@@ -50,20 +50,21 @@ class FirewallRuleUninstallerJobTest extends TestCase
         $server = Server::factory()->create();
         $firewall = ServerFirewall::factory()->create(['server_id' => $server->id]);
         $rule = ServerFirewallRule::factory()->create(['server_firewall_id' => $firewall->id]);
-        $job = new FirewallRuleUninstallerJob($server, $rule->id);
+        $job = new FirewallRuleUninstallerJob($server, $rule);
         $middleware = $job->middleware();
         $this->assertCount(1, $middleware);
         $this->assertInstanceOf(\Illuminate\Queue\Middleware\WithoutOverlapping::class, $middleware[0]);
     }
 
-    public function test_constructor_accepts_server_and_id(): void
+    public function test_constructor_accepts_server_and_rule(): void
     {
         $server = Server::factory()->create();
-        $ruleId = 123;
-        $job = new FirewallRuleUninstallerJob($server, $ruleId);
+        $firewall = ServerFirewall::factory()->create(['server_id' => $server->id]);
+        $rule = ServerFirewallRule::factory()->create(['server_firewall_id' => $firewall->id]);
+        $job = new FirewallRuleUninstallerJob($server, $rule);
         $this->assertInstanceOf(FirewallRuleUninstallerJob::class, $job);
         $this->assertEquals($server->id, $job->server->id);
-        $this->assertEquals($ruleId, $job->ruleId);
+        $this->assertEquals($rule->id, $job->serverFirewallRule->id);
     }
 
     public function test_failed_method_updates_status_to_failed(): void
@@ -71,7 +72,7 @@ class FirewallRuleUninstallerJobTest extends TestCase
         $server = Server::factory()->create();
         $firewall = ServerFirewall::factory()->create(['server_id' => $server->id]);
         $rule = ServerFirewallRule::factory()->create(['server_firewall_id' => $firewall->id]);
-        $job = new FirewallRuleUninstallerJob($server, $rule->id);
+        $job = new FirewallRuleUninstallerJob($server, $rule);
         $exception = new Exception('Operation failed');
         $job->failed($exception);
         $rule->refresh();
@@ -83,7 +84,7 @@ class FirewallRuleUninstallerJobTest extends TestCase
         $server = Server::factory()->create();
         $firewall = ServerFirewall::factory()->create(['server_id' => $server->id]);
         $rule = ServerFirewallRule::factory()->create(['server_firewall_id' => $firewall->id, 'error_log' => null]);
-        $job = new FirewallRuleUninstallerJob($server, $rule->id);
+        $job = new FirewallRuleUninstallerJob($server, $rule);
         $errorMessage = 'Test error message';
         $exception = new Exception($errorMessage);
         $job->failed($exception);
@@ -94,10 +95,15 @@ class FirewallRuleUninstallerJobTest extends TestCase
     public function test_failed_method_handles_missing_records_gracefully(): void
     {
         $server = Server::factory()->create();
-        $nonExistentId = 99999;
-        $job = new FirewallRuleUninstallerJob($server, $nonExistentId);
+        $firewall = ServerFirewall::factory()->create(['server_id' => $server->id]);
+        $rule = ServerFirewallRule::factory()->create(['server_firewall_id' => $firewall->id]);
+
+        $job = new FirewallRuleUninstallerJob($server, $rule);
+        $ruleId = $rule->id;
+        $rule->delete(); // Now fresh() will return null
+
         $exception = new Exception('Test error');
         $job->failed($exception);
-        $this->assertDatabaseMissing('server_firewall_rules', ['id' => $nonExistentId]);
+        $this->assertDatabaseMissing('server_firewall_rules', ['id' => $ruleId]);
     }
 }

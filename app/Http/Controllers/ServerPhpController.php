@@ -83,7 +83,7 @@ class ServerPhpController extends Controller
         }
 
         // Dispatch job to actually install PHP on the server
-        PhpInstallerJob::dispatch($server, $php->id);
+        PhpInstallerJob::dispatch($server, $php);
 
         return redirect()
             ->route('servers.php', $server)
@@ -124,8 +124,8 @@ class ServerPhpController extends Controller
             'is_site_default' => $isFirstPhp, // First PHP version becomes Site default
         ]);
 
-        // ✅ THEN dispatch job with record ID
-        PhpInstallerJob::dispatch($server, $php->id);
+        // ✅ THEN dispatch job with record
+        PhpInstallerJob::dispatch($server, $php);
 
         return redirect()
             ->route('servers.php', $server)
@@ -198,11 +198,11 @@ class ServerPhpController extends Controller
             abort(404);
         }
 
-        // Update PHP record to removing status
-        $php->update(['status' => \App\Enums\PhpStatus::Removing]);
+        // Update PHP record to pending status
+        $php->update(['status' => \App\Enums\PhpStatus::Pending]);
 
-        // Dispatch removal job with PHP record ID
-        \App\Packages\Services\PHP\PhpRemoverJob::dispatch($server, $php->id);
+        // Dispatch removal job with PHP record
+        \App\Packages\Services\PHP\PhpRemoverJob::dispatch($server, $php);
 
         return redirect()
             ->route('servers.php', $server)
@@ -243,7 +243,7 @@ class ServerPhpController extends Controller
         ]);
 
         // Re-dispatch installer job
-        PhpInstallerJob::dispatch($server, $php->id);
+        PhpInstallerJob::dispatch($server, $php);
 
         // No redirect needed - frontend will update via Reverb
         return back();

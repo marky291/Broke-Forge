@@ -52,7 +52,7 @@ class NginxInstaller extends PackageInstaller implements \App\Packages\Base\Serv
                 'status' => 'pending',
             ]);
 
-            FirewallRuleInstallerJob::dispatchSync($this->server, $rule->id);
+            FirewallRuleInstallerJob::dispatchSync($this->server, $rule);
         }
 
         $this->server->provision->put(5, ProvisionStatus::Completed->value);
@@ -69,8 +69,8 @@ class NginxInstaller extends PackageInstaller implements \App\Packages\Base\Serv
             'is_site_default' => $isFirstPhp,
         ]);
 
-        // Pass the record ID to the job (not the enum)
-        PhpInstallerJob::dispatchSync($this->server, $php->id);
+        // Pass the record to the job (not the ID)
+        PhpInstallerJob::dispatchSync($this->server, $php);
 
         $this->server->provision->put(6, ProvisionStatus::Completed->value);
         $this->server->provision->put(7, ProvisionStatus::Installing->value);
@@ -93,8 +93,8 @@ class NginxInstaller extends PackageInstaller implements \App\Packages\Base\Serv
             'status' => \App\Enums\TaskStatus::Pending,
         ]);
 
-        // Pass the record ID to the job (not the array)
-        ServerScheduleTaskInstallerJob::dispatchSync($this->server, $task->id);
+        // Pass the record to the job (not the ID)
+        ServerScheduleTaskInstallerJob::dispatchSync($this->server, $task);
 
         // Install the supervisor as it has low overhead and provides benefit to user.
         SupervisorInstallerJob::dispatchSync($this->server);

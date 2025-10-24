@@ -84,8 +84,8 @@ class GitHubWebhookController extends Controller
             'branch' => $commitInfo['branch'],
         ]);
 
-        // ✅ THEN dispatch job with deployment record ID
-        SiteGitDeploymentJob::dispatch($site->server, $deployment->id);
+        // ✅ THEN dispatch job with deployment record
+        SiteGitDeploymentJob::dispatch($site->server, $deployment);
 
         Log::info('Auto-deployment triggered via webhook', [
             'site_id' => $site->id,

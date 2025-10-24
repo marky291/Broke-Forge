@@ -5,130 +5,68 @@ namespace App\Packages\Services\Database\Redis;
 use App\Enums\DatabaseStatus;
 use App\Models\Server;
 use App\Models\ServerDatabase;
-use Exception;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Foundation\Queue\Queueable;
-use Illuminate\Queue\Middleware\WithoutOverlapping;
-use Illuminate\Support\Facades\Log;
+use App\Packages\Taskable;
+use Illuminate\Database\Eloquent\Model;
 
 /**
- * Redis Removal Job
+ * Redis Database Removal Job
  *
- * Handles queued Redis removal from remote servers with lifecycle management
+ * Handles queued Redis database removal from remote servers with lifecycle management.
  */
-class RedisRemoverJob implements ShouldQueue
+class RedisRemoverJob extends Taskable
 {
-    use Queueable;
-
-    /**
-     * The number of seconds the job can run before timing out.
-     *
-     * @var int
-     */
-    public $timeout = 600;
-
-    /**
-     * The number of times the job may be attempted.
-     *
-     * @var int
-     */
-    public $tries = 0;
-
-    /**
-     * The number of exceptions to allow before failing.
-     *
-     * @var int
-     */
-    public $maxExceptions = 3;
-
     public function __construct(
         public Server $server,
-        public int $databaseId  // ← Receives database record ID only
+        public ServerDatabase $serverDatabase
     ) {}
 
-    public function handle(): void
+    protected function getModel(): Model
     {
-        // Set no time limit for long-running removal process
-        set_time_limit(0);
-
-        // Load the database record from database
-        $database = ServerDatabase::findOrFail($this->databaseId);
-
-        Log::info('Starting Redis removal', [
-            'database_id' => $database->id,
-            'server_id' => $this->server->id,
-            'version' => $database->version,
-        ]);
-
-        try {
-            // ✅ UPDATE: active → removing
-            // Model event broadcasts automatically via Reverb
-            $database->update(['status' => 'uninstalling']);
-
-            // Create remover instance
-            $remover = new RedisRemover($this->server);
-
-            // Execute removal
-            $remover->execute();
-
-            // ✅ DELETE record from database on success
-            // Model's deleted() event broadcasts automatically via Reverb
-            $database->delete();
-
-            Log::info('Redis removal completed', [
-                'database_id' => $this->databaseId,
-                'server_id' => $this->server->id,
-            ]);
-
-        } catch (Exception $e) {
-            // ✅ UPDATE: any → failed
-            $database->update([
-                'status' => DatabaseStatus::Failed,
-                'error_log' => $e->getMessage(),
-            ]);
-            // Model event broadcasts automatically via Reverb
-
-            Log::error('Redis removal failed', [
-                'database_id' => $database->id,
-                'server_id' => $this->server->id,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-
-            throw $e;  // Re-throw for Laravel's retry mechanism
-        }
+        return $this->serverDatabase;
     }
 
-    /**
-     * Get the middleware the job should pass through.
-     *
-     * @return array<int, object>
-     */
-    public function middleware(): array
+    protected function getInProgressStatus(): mixed
+    {
+        return DatabaseStatus::Uninstalling;
+    }
+
+    protected function getSuccessStatus(): mixed
+    {
+        return DatabaseStatus::Active; // Not used since we delete
+    }
+
+    protected function getFailedStatus(): mixed
+    {
+        return DatabaseStatus::Failed;
+    }
+
+    protected function shouldDeleteOnSuccess(): bool
+    {
+        return true;
+    }
+
+    protected function executeOperation(Model $model): void
+    {
+        $remover = new RedisRemover($this->server);
+        $remover->execute();
+    }
+
+    protected function getLogContext(Model $model): array
     {
         return [
-            (new WithoutOverlapping("package:action:{$this->server->id}"))->shared()
-                ->releaseAfter(15)
-                ->expireAfter(900),
+            'database_id' => $model->id,
+            'server_id' => $this->server->id,
+            'version' => $model->version,
         ];
     }
 
-    public function failed(\Throwable $exception): void
+    protected function getFailedLogContext(\Throwable $exception): array
     {
-        $database = ServerDatabase::find($this->databaseId);
-
-        if ($database) {
-            $database->update([
-                'status' => DatabaseStatus::Failed,
-                'error_log' => $exception->getMessage(),
-            ]);
-        }
-
-        Log::error('Redis removal job failed', [
-            'database_id' => $this->databaseId,
+        return [
+            'database_id' => $this->serverDatabase->id,
             'server_id' => $this->server->id,
             'error' => $exception->getMessage(),
             'trace' => $exception->getTraceAsString(),
-        ]);
+        ];
     }
 }

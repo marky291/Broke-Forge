@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\FirewallRuleStatus;
 use App\Http\Requests\Servers\FirewallRuleRequest;
 use App\Http\Resources\ServerResource;
 use App\Models\Server;
@@ -53,7 +54,7 @@ class ServerFirewallController extends Controller
             ]);
 
             // Dispatch job to configure the rule on the server
-            FirewallRuleInstallerJob::dispatch($server, $rule->id);
+            FirewallRuleInstallerJob::dispatch($server, $rule);
 
             return back()->with('success', 'Firewall rule is being applied.');
 
@@ -78,11 +79,11 @@ class ServerFirewallController extends Controller
                 return back()->with('error', 'Invalid firewall rule.');
             }
 
-            // Update status to 'removing' for UI feedback
-            $rule->update(['status' => 'removing']);
+            // Update status to 'pending' for UI feedback
+            $rule->update(['status' => FirewallRuleStatus::Pending]);
 
             // Dispatch job to remove the rule from the server
-            FirewallRuleUninstallerJob::dispatch($server, $rule->id);
+            FirewallRuleUninstallerJob::dispatch($server, $rule);
 
             return back()->with('success', 'Firewall rule is being removed.');
 
@@ -132,7 +133,7 @@ class ServerFirewallController extends Controller
         ]);
 
         // Re-dispatch installer job
-        FirewallRuleInstallerJob::dispatch($server, $firewallRule->id);
+        FirewallRuleInstallerJob::dispatch($server, $firewallRule);
 
         // No redirect needed - frontend will update via Reverb
         return back();

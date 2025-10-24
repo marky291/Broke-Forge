@@ -18,7 +18,7 @@ class SiteGitDeploymentJobTest extends TestCase
     {
         $server = Server::factory()->create();
         $deployment = ServerDeployment::factory()->create(['server_id' => $server->id]);
-        $job = new SiteGitDeploymentJob($server, $deployment->id);
+        $job = new SiteGitDeploymentJob($server, $deployment);
         $this->assertEquals(600, $job->timeout);
     }
 
@@ -26,7 +26,7 @@ class SiteGitDeploymentJobTest extends TestCase
     {
         $server = Server::factory()->create();
         $deployment = ServerDeployment::factory()->create(['server_id' => $server->id]);
-        $job = new SiteGitDeploymentJob($server, $deployment->id);
+        $job = new SiteGitDeploymentJob($server, $deployment);
         $this->assertEquals(0, $job->tries);
     }
 
@@ -37,7 +37,7 @@ class SiteGitDeploymentJobTest extends TestCase
     {
         $server = Server::factory()->create();
         $deployment = ServerDeployment::factory()->create(['server_id' => $server->id]);
-        $job = new SiteGitDeploymentJob($server, $deployment->id);
+        $job = new SiteGitDeploymentJob($server, $deployment);
         $this->assertEquals(3, $job->maxExceptions);
     }
 
@@ -45,27 +45,27 @@ class SiteGitDeploymentJobTest extends TestCase
     {
         $server = Server::factory()->create();
         $deployment = ServerDeployment::factory()->create(['server_id' => $server->id]);
-        $job = new SiteGitDeploymentJob($server, $deployment->id);
+        $job = new SiteGitDeploymentJob($server, $deployment);
         $middleware = $job->middleware();
         $this->assertCount(1, $middleware);
         $this->assertInstanceOf(\Illuminate\Queue\Middleware\WithoutOverlapping::class, $middleware[0]);
     }
 
-    public function test_constructor_accepts_server_and_deployment_id(): void
+    public function test_constructor_accepts_server_and_deployment(): void
     {
         $server = Server::factory()->create();
-        $deploymentId = 123;
-        $job = new SiteGitDeploymentJob($server, $deploymentId);
+        $deployment = ServerDeployment::factory()->create(['server_id' => $server->id]);
+        $job = new SiteGitDeploymentJob($server, $deployment);
         $this->assertInstanceOf(SiteGitDeploymentJob::class, $job);
         $this->assertEquals($server->id, $job->server->id);
-        $this->assertEquals($deploymentId, $job->deploymentId);
+        $this->assertEquals($deployment->id, $job->serverDeployment->id);
     }
 
     public function test_failed_method_updates_status_to_failed(): void
     {
         $server = Server::factory()->create();
         $deployment = ServerDeployment::factory()->create(['server_id' => $server->id]);
-        $job = new SiteGitDeploymentJob($server, $deployment->id);
+        $job = new SiteGitDeploymentJob($server, $deployment);
         $exception = new Exception('Operation failed');
         $job->failed($exception);
         $deployment->refresh();
@@ -76,7 +76,7 @@ class SiteGitDeploymentJobTest extends TestCase
     {
         $server = Server::factory()->create();
         $deployment = ServerDeployment::factory()->create(['server_id' => $server->id, 'error_output' => null]);
-        $job = new SiteGitDeploymentJob($server, $deployment->id);
+        $job = new SiteGitDeploymentJob($server, $deployment);
         $errorMessage = 'Test error message';
         $exception = new Exception($errorMessage);
         $job->failed($exception);
@@ -87,10 +87,14 @@ class SiteGitDeploymentJobTest extends TestCase
     public function test_failed_method_handles_missing_records_gracefully(): void
     {
         $server = Server::factory()->create();
-        $nonExistentId = 99999;
-        $job = new SiteGitDeploymentJob($server, $nonExistentId);
+        $deployment = ServerDeployment::factory()->create(['server_id' => $server->id]);
+
+        $job = new SiteGitDeploymentJob($server, $deployment);
+        $deploymentId = $deployment->id;
+        $deployment->delete(); // Now fresh() will return null
+
         $exception = new Exception('Test error');
         $job->failed($exception);
-        $this->assertDatabaseMissing('server_deployments', ['id' => $nonExistentId]);
+        $this->assertDatabaseMissing('server_deployments', ['id' => $deploymentId]);
     }
 }

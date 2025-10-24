@@ -24,7 +24,7 @@ class PhpRemoverJobTest extends TestCase
         $php = ServerPhp::factory()->create(['server_id' => $server->id]);
 
         // Act
-        $job = new PhpRemoverJob($server, $php->id);
+        $job = new PhpRemoverJob($server, $php);
 
         // Assert
         $this->assertEquals(600, $job->timeout);
@@ -40,7 +40,7 @@ class PhpRemoverJobTest extends TestCase
         $php = ServerPhp::factory()->create(['server_id' => $server->id]);
 
         // Act
-        $job = new PhpRemoverJob($server, $php->id);
+        $job = new PhpRemoverJob($server, $php);
 
         // Assert
         $this->assertEquals(0, $job->tries);
@@ -55,7 +55,7 @@ class PhpRemoverJobTest extends TestCase
         $php = ServerPhp::factory()->create(['server_id' => $server->id]);
 
         // Act
-        $job = new PhpRemoverJob($server, $php->id);
+        $job = new PhpRemoverJob($server, $php);
         $this->assertEquals(3, $job->maxExceptions);
     }
 
@@ -69,7 +69,7 @@ class PhpRemoverJobTest extends TestCase
         $php = ServerPhp::factory()->create(['server_id' => $server->id]);
 
         // Act
-        $job = new PhpRemoverJob($server, $php->id);
+        $job = new PhpRemoverJob($server, $php);
         $middleware = $job->middleware();
 
         // Assert
@@ -78,21 +78,21 @@ class PhpRemoverJobTest extends TestCase
     }
 
     /**
-     * Test job constructor accepts server and PHP ID.
+     * Test job constructor accepts server and PHP.
      */
-    public function test_constructor_accepts_server_and_php_id(): void
+    public function test_constructor_accepts_server_and_php(): void
     {
         // Arrange
         $server = Server::factory()->create();
-        $phpId = 123;
+        $php = ServerPhp::factory()->create(['server_id' => $server->id]);
 
         // Act
-        $job = new PhpRemoverJob($server, $phpId);
+        $job = new PhpRemoverJob($server, $php);
 
         // Assert
         $this->assertInstanceOf(PhpRemoverJob::class, $job);
         $this->assertEquals($server->id, $job->server->id);
-        $this->assertEquals($phpId, $job->phpId);
+        $this->assertEquals($php->id, $job->serverPhp->id);
     }
 
     /**
@@ -107,7 +107,7 @@ class PhpRemoverJobTest extends TestCase
             'status' => PhpStatus::Active,
         ]);
 
-        $job = new PhpRemoverJob($server, $php->id);
+        $job = new PhpRemoverJob($server, $php);
         $exception = new Exception('Removal failed');
 
         // Act
@@ -131,7 +131,7 @@ class PhpRemoverJobTest extends TestCase
             'error_log' => null,
         ]);
 
-        $job = new PhpRemoverJob($server, $php->id);
+        $job = new PhpRemoverJob($server, $php);
         $errorMessage = 'PHP removal timeout error';
         $exception = new Exception($errorMessage);
 
@@ -150,17 +150,20 @@ class PhpRemoverJobTest extends TestCase
     {
         // Arrange
         $server = Server::factory()->create();
-        $nonExistentId = 99999;
+        $php = ServerPhp::factory()->create(['server_id' => $server->id]);
 
-        $job = new PhpRemoverJob($server, $nonExistentId);
+        $job = new PhpRemoverJob($server, $php);
+        $phpId = $php->id;
+        $php->delete(); // Now fresh() will return null
+
         $exception = new Exception('Test error');
 
         // Act - should not throw exception
         $job->failed($exception);
 
-        // Assert - verify no PHP record was created
+        // Assert - verify the PHP was deleted
         $this->assertDatabaseMissing('server_phps', [
-            'id' => $nonExistentId,
+            'id' => $phpId,
         ]);
     }
 
@@ -177,7 +180,7 @@ class PhpRemoverJobTest extends TestCase
             'version' => '8.3',
         ]);
 
-        $job = new PhpRemoverJob($server, $php->id);
+        $job = new PhpRemoverJob($server, $php);
         $exception = new Exception('Removal error');
 
         // Act

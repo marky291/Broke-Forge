@@ -373,7 +373,7 @@ class ServerCacheQueueControllerTest extends TestCase
 
         $this->assertDatabaseHas('server_databases', [
             'id' => $redis->id,
-            'status' => DatabaseStatus::Uninstalling->value,
+            'status' => DatabaseStatus::Pending->value,
         ]);
 
         Queue::assertPushed(RedisRemoverJob::class);

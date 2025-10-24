@@ -490,10 +490,10 @@ class FirewallTest extends TestCase
         $response->assertStatus(302);
         $response->assertSessionHas('success', 'Firewall rule is being removed.');
 
-        // Verify status updated to 'removing'
+        // Verify status updated to 'pending'
         $this->assertDatabaseHas('server_firewall_rules', [
             'id' => $rule->id,
-            'status' => 'removing',
+            'status' => 'pending',
         ]);
     }
 

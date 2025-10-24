@@ -614,7 +614,7 @@ class ServerSchedulerControllerTest extends TestCase
 
         $this->assertDatabaseHas('server_scheduled_tasks', [
             'id' => $task->id,
-            'status' => TaskStatus::Removing->value,
+            'status' => TaskStatus::Pending->value,
         ]);
     }
 

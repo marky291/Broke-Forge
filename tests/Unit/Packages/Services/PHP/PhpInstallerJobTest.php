@@ -24,7 +24,7 @@ class PhpInstallerJobTest extends TestCase
         $php = ServerPhp::factory()->create(['server_id' => $server->id]);
 
         // Act
-        $job = new PhpInstallerJob($server, $php->id);
+        $job = new PhpInstallerJob($server, $php);
 
         // Assert
         $this->assertEquals(600, $job->timeout);
@@ -40,7 +40,7 @@ class PhpInstallerJobTest extends TestCase
         $php = ServerPhp::factory()->create(['server_id' => $server->id]);
 
         // Act
-        $job = new PhpInstallerJob($server, $php->id);
+        $job = new PhpInstallerJob($server, $php);
 
         // Assert
         $this->assertEquals(0, $job->tries);
@@ -55,7 +55,7 @@ class PhpInstallerJobTest extends TestCase
         $php = ServerPhp::factory()->create(['server_id' => $server->id]);
 
         // Act
-        $job = new PhpInstallerJob($server, $php->id);
+        $job = new PhpInstallerJob($server, $php);
         $this->assertEquals(3, $job->maxExceptions);
     }
 
@@ -69,7 +69,7 @@ class PhpInstallerJobTest extends TestCase
         $php = ServerPhp::factory()->create(['server_id' => $server->id]);
 
         // Act
-        $job = new PhpInstallerJob($server, $php->id);
+        $job = new PhpInstallerJob($server, $php);
         $middleware = $job->middleware();
 
         // Assert
@@ -78,21 +78,21 @@ class PhpInstallerJobTest extends TestCase
     }
 
     /**
-     * Test job constructor accepts server and PHP ID.
+     * Test job constructor accepts server and PHP.
      */
-    public function test_constructor_accepts_server_and_php_id(): void
+    public function test_constructor_accepts_server_and_php(): void
     {
         // Arrange
         $server = Server::factory()->create();
-        $phpId = 123;
+        $php = ServerPhp::factory()->create(['server_id' => $server->id]);
 
         // Act
-        $job = new PhpInstallerJob($server, $phpId);
+        $job = new PhpInstallerJob($server, $php);
 
         // Assert
         $this->assertInstanceOf(PhpInstallerJob::class, $job);
         $this->assertEquals($server->id, $job->server->id);
-        $this->assertEquals($phpId, $job->phpId);
+        $this->assertEquals($php->id, $job->serverPhp->id);
     }
 
     /**
@@ -107,7 +107,7 @@ class PhpInstallerJobTest extends TestCase
             'status' => PhpStatus::Installing,
         ]);
 
-        $job = new PhpInstallerJob($server, $php->id);
+        $job = new PhpInstallerJob($server, $php);
         $exception = new Exception('Installation failed');
 
         // Act
@@ -131,7 +131,7 @@ class PhpInstallerJobTest extends TestCase
             'error_log' => null,
         ]);
 
-        $job = new PhpInstallerJob($server, $php->id);
+        $job = new PhpInstallerJob($server, $php);
         $errorMessage = 'PHP installation timeout error';
         $exception = new Exception($errorMessage);
 
@@ -150,17 +150,20 @@ class PhpInstallerJobTest extends TestCase
     {
         // Arrange
         $server = Server::factory()->create();
-        $nonExistentId = 99999;
+        $php = ServerPhp::factory()->create(['server_id' => $server->id]);
 
-        $job = new PhpInstallerJob($server, $nonExistentId);
+        $job = new PhpInstallerJob($server, $php);
+        $phpId = $php->id;
+        $php->delete(); // Now fresh() will return null
+
         $exception = new Exception('Test error');
 
         // Act - should not throw exception
         $job->failed($exception);
 
-        // Assert - verify no PHP record was created
+        // Assert - verify the PHP was deleted
         $this->assertDatabaseMissing('server_phps', [
-            'id' => $nonExistentId,
+            'id' => $phpId,
         ]);
     }
 
@@ -177,7 +180,7 @@ class PhpInstallerJobTest extends TestCase
             'version' => '8.3',
         ]);
 
-        $job = new PhpInstallerJob($server, $php->id);
+        $job = new PhpInstallerJob($server, $php);
         $exception = new Exception('Installation error');
 
         // Act

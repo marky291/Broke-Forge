@@ -50,7 +50,7 @@ class ServerPhpControllerRetryTest extends TestCase
         // Verify job was dispatched
         Queue::assertPushed(PhpInstallerJob::class, function ($job) use ($server, $php) {
             return $job->server->id === $server->id
-                && $job->phpId === $php->id;
+                && $job->serverPhp->id === $php->id;
         });
     }
 
@@ -247,7 +247,7 @@ class ServerPhpControllerRetryTest extends TestCase
         // Assert
         Queue::assertPushed(PhpInstallerJob::class, function ($job) use ($server, $php) {
             return $job->server->id === $server->id
-                && $job->phpId === $php->id;
+                && $job->serverPhp->id === $php->id;
         });
     }
 }

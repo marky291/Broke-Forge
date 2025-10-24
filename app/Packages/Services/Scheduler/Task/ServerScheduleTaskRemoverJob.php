@@ -5,126 +5,68 @@ namespace App\Packages\Services\Scheduler\Task;
 use App\Enums\TaskStatus;
 use App\Models\Server;
 use App\Models\ServerScheduledTask;
-use Exception;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Foundation\Queue\Queueable;
-use Illuminate\Queue\Middleware\WithoutOverlapping;
-use Illuminate\Support\Facades\Log;
+use App\Packages\Taskable;
+use Illuminate\Database\Eloquent\Model;
 
 /**
  * Server Scheduled Task Removal Job
  *
- * Handles queued task removal from remote servers with real-time status updates
+ * Handles queued task removal from remote servers with real-time status updates.
  */
-class ServerScheduleTaskRemoverJob implements ShouldQueue
+class ServerScheduleTaskRemoverJob extends Taskable
 {
-    use Queueable;
-
-    /**
-     * The number of seconds the job can run before timing out.
-     *
-     * @var int
-     */
-    public $timeout = 600;
-
-    /**
-     * The number of times the job may be attempted.
-     *
-     * @var int
-     */
-    public $tries = 0;
-
-    /**
-     * The number of exceptions to allow before failing.
-     *
-     * @var int
-     */
-    public $maxExceptions = 3;
-
     public function __construct(
         public Server $server,
-        public int $taskId  // ← Receives task ID, NOT full model
+        public ServerScheduledTask $serverScheduledTask
     ) {}
 
-    public function handle(): void
+    protected function getModel(): Model
     {
-        set_time_limit(0);
-
-        // Load the task from database
-        $task = ServerScheduledTask::findOrFail($this->taskId);
-
-        Log::info('Starting scheduled task removal', [
-            'task_id' => $task->id,
-            'server_id' => $this->server->id,
-        ]);
-
-        try {
-            // ✅ UPDATE: active → removing
-            // Model event broadcasts automatically via Reverb
-            $task->update(['status' => 'removing']);
-
-            // Create remover instance
-            $remover = new ServerScheduleTaskRemover($this->server, $task);
-
-            // Execute removal on remote server
-            $remover->execute();
-
-            Log::info('Scheduled task removal completed successfully', [
-                'task_id' => $task->id,
-                'server_id' => $this->server->id,
-            ]);
-
-            // ✅ DELETE task from database (model's deleted event broadcasts automatically)
-            $task->delete();
-
-        } catch (Exception $e) {
-            // ✅ Mark as failed
-            $task->update([
-                'status' => TaskStatus::Failed,
-                'error_log' => $e->getMessage(),
-            ]);
-
-            Log::error('Scheduled task removal failed', [
-                'task_id' => $task->id,
-                'server_id' => $this->server->id,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-
-            throw $e;
-        }
+        return $this->serverScheduledTask;
     }
 
-    /**
-     * Get the middleware the job should pass through.
-     *
-     * @return array<int, object>
-     */
-    public function middleware(): array
+    protected function getInProgressStatus(): mixed
+    {
+        return TaskStatus::Removing;
+    }
+
+    protected function getSuccessStatus(): mixed
+    {
+        return TaskStatus::Active; // Not used since we delete
+    }
+
+    protected function getFailedStatus(): mixed
+    {
+        return TaskStatus::Failed;
+    }
+
+    protected function shouldDeleteOnSuccess(): bool
+    {
+        return true;
+    }
+
+    protected function executeOperation(Model $model): void
+    {
+        $remover = new ServerScheduleTaskRemover($this->server, $model);
+        $remover->execute();
+    }
+
+    protected function getLogContext(Model $model): array
     {
         return [
-            (new WithoutOverlapping("package:action:{$this->server->id}"))->shared()
-                ->releaseAfter(15)
-                ->expireAfter(900),
+            'task_id' => $model->id,
+            'server_id' => $this->server->id,
+            'task_name' => $model->name,
         ];
     }
 
-    public function failed(\Throwable $exception): void
+    protected function getFailedLogContext(\Throwable $exception): array
     {
-        $task = ServerScheduledTask::find($this->taskId);
-
-        if ($task) {
-            $task->update([
-                'status' => TaskStatus::Failed,
-                'error_log' => $exception->getMessage(),
-            ]);
-        }
-
-        Log::error('ServerScheduleTaskRemoverJob job failed', [
-            'task_id' => $this->taskId,
+        return [
+            'task_id' => $this->serverScheduledTask->id,
             'server_id' => $this->server->id,
             'error' => $exception->getMessage(),
             'trace' => $exception->getTraceAsString(),
-        ]);
+        ];
     }
 }

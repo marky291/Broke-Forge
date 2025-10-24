@@ -70,8 +70,8 @@ class ServerSiteDeploymentsController extends Controller
             'deployment_script' => $deploymentScript,
         ]);
 
-        // ✅ THEN dispatch job with deployment record ID
-        SiteGitDeploymentJob::dispatch($server, $deployment->id);
+        // ✅ THEN dispatch job with deployment record
+        SiteGitDeploymentJob::dispatch($server, $deployment);
 
         return redirect()
             ->route('servers.sites.deployments', [$server, $site])

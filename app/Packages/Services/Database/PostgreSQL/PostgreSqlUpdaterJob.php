@@ -5,129 +5,63 @@ namespace App\Packages\Services\Database\PostgreSQL;
 use App\Enums\DatabaseStatus;
 use App\Models\Server;
 use App\Models\ServerDatabase;
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Queue\Middleware\WithoutOverlapping;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Log;
+use App\Packages\Taskable;
+use Illuminate\Database\Eloquent\Model;
 
-class PostgreSqlUpdaterJob implements ShouldQueue
+/**
+ * PostgreSQL Database Update Job
+ *
+ * Handles queued PostgreSQL database updates on remote servers with real-time status updates.
+ */
+class PostgreSqlUpdaterJob extends Taskable
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
-
-    /**
-     * The number of seconds the job can run before timing out.
-     *
-     * @var int
-     */
-    public $timeout = 600;
-
-    /**
-     * The number of times the job may be attempted.
-     *
-     * @var int
-     */
-    public $tries = 0;
-
-    /**
-     * The number of exceptions to allow before failing.
-     *
-     * @var int
-     */
-    public $maxExceptions = 3;
-
     public function __construct(
         public Server $server,
-        public int $databaseId  // ← Receives database record ID
+        public ServerDatabase $serverDatabase
     ) {}
 
-    public function handle(): void
+    protected function getModel(): Model
     {
-        // Set no time limit for long-running update process
-        set_time_limit(0);
-
-        // Load the database record from database
-        $database = ServerDatabase::findOrFail($this->databaseId);
-        $targetVersion = $database->version;  // Get version from database record
-
-        Log::info('Starting PostgreSQL database update', [
-            'database_id' => $database->id,
-            'server_id' => $this->server->id,
-            'target_version' => $targetVersion,
-        ]);
-
-        try {
-            // Create updater instance
-            $updater = new PostgreSqlUpdater($this->server);
-
-            // Execute update
-            $updater->execute($targetVersion);
-
-            // ✅ UPDATE: updating → active
-            $database->update(['status' => DatabaseStatus::Active]);
-            // Model event broadcasts automatically via Reverb
-
-            Log::info('PostgreSQL database update completed', [
-                'database_id' => $database->id,
-                'server_id' => $this->server->id,
-            ]);
-
-        } catch (\Exception $e) {
-            // ✅ UPDATE: any → failed
-            $database->update([
-                'status' => DatabaseStatus::Failed,
-                'error_log' => $e->getMessage(),
-            ]);
-            // Model event broadcasts automatically via Reverb
-
-            Log::error('PostgreSQL database update failed', [
-                'database_id' => $database->id,
-                'server_id' => $this->server->id,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-
-            throw $e;  // Re-throw for Laravel's retry mechanism
-        }
+        return $this->serverDatabase;
     }
 
-    /**
-     * Get the middleware the job should pass through.
-     *
-     * @return array<int, object>
-     */
-    public function middleware(): array
+    protected function getInProgressStatus(): mixed
+    {
+        return DatabaseStatus::Updating;
+    }
+
+    protected function getSuccessStatus(): mixed
+    {
+        return DatabaseStatus::Active;
+    }
+
+    protected function getFailedStatus(): mixed
+    {
+        return DatabaseStatus::Failed;
+    }
+
+    protected function executeOperation(Model $model): void
+    {
+        $updater = new PostgreSqlUpdater($this->server);
+        $updater->execute($model->version);
+    }
+
+    protected function getLogContext(Model $model): array
     {
         return [
-            (new WithoutOverlapping("package:action:{$this->server->id}"))->shared()
-                ->releaseAfter(15)
-                ->expireAfter(900),
+            'database_id' => $model->id,
+            'server_id' => $this->server->id,
+            'target_version' => $model->version,
         ];
     }
 
-    /**
-     * Handle a job failure (timeout, fatal error, worker crash).
-     *
-     * This is Laravel's safety net for failures that occur outside normal execution flow.
-     */
-    public function failed(\Throwable $exception): void
+    protected function getFailedLogContext(\Throwable $exception): array
     {
-        $database = ServerDatabase::find($this->databaseId);
-
-        if ($database) {
-            $database->update([
-                'status' => DatabaseStatus::Failed,
-                'error_log' => $exception->getMessage(),
-            ]);
-        }
-
-        Log::error('PostgreSQL update job failed', [
-            'database_id' => $this->databaseId,
+        return [
+            'database_id' => $this->serverDatabase->id,
             'server_id' => $this->server->id,
             'error' => $exception->getMessage(),
             'trace' => $exception->getTraceAsString(),
-        ]);
+        ];
     }
 }

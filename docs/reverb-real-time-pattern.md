@@ -514,8 +514,11 @@ public function index(Server $server): Response
 
 public function store(FirewallRuleRequest $request, Server $server): RedirectResponse
 {
-    // Create rule - model events handle broadcasting automatically
-    FirewallRuleInstallerJob::dispatch($server, $request->validated());
+    // Create rule first
+    $rule = $server->firewallRules()->create($request->validated());
+
+    // Then dispatch job with model instance
+    FirewallRuleInstallerJob::dispatch($server, $rule);
 
     return back()->with('success', 'Firewall rule is being applied.');
 }
@@ -1462,8 +1465,8 @@ public function storeTask(StoreScheduledTaskRequest $request, Server $server): R
         'task_name' => $task->name,
     ]);
 
-    // ✅ THEN dispatch job with task ID (not task model or array)
-    ServerScheduleTaskInstallerJob::dispatch($server, $task->id);
+    // ✅ THEN dispatch job with task model instance
+    ServerScheduleTaskInstallerJob::dispatch($server, $task);
 
     return redirect()
         ->route('servers.scheduler', $server)
@@ -1740,8 +1743,8 @@ public function retryTask(Server $server, ServerScheduledTask $scheduledTask): R
     $scheduledTask->update(['status' => 'pending']);
     // Model event broadcasts automatically
 
-    // ✅ Dispatch job with task ID
-    ServerScheduleTaskInstallerJob::dispatch($server, $scheduledTask->id);
+    // ✅ Dispatch job with task model instance
+    ServerScheduleTaskInstallerJob::dispatch($server, $scheduledTask);
 
     return redirect()
         ->route('servers.scheduler', $server)

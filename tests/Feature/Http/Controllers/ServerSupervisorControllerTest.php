@@ -705,7 +705,7 @@ class ServerSupervisorControllerTest extends TestCase
 
         $this->assertDatabaseHas('server_supervisor_tasks', [
             'id' => $task->id,
-            'status' => 'removing',
+            'status' => 'pending',
         ]);
     }
 

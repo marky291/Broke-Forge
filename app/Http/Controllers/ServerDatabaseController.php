@@ -72,19 +72,19 @@ class ServerDatabaseController extends Controller
             'root_password' => $validated['root_password'],
         ]);
 
-        // ✅ THEN dispatch job with database record ID
+        // ✅ THEN dispatch job with database record
         switch ($databaseType) {
             case DatabaseType::MariaDB:
-                MariaDbInstallerJob::dispatch($server, $database->id);
+                MariaDbInstallerJob::dispatch($server, $database);
                 break;
             case DatabaseType::MySQL:
-                MySqlInstallerJob::dispatch($server, $database->id);
+                MySqlInstallerJob::dispatch($server, $database);
                 break;
             case DatabaseType::PostgreSQL:
-                PostgreSqlInstallerJob::dispatch($server, $database->id);
+                PostgreSqlInstallerJob::dispatch($server, $database);
                 break;
             case DatabaseType::Redis:
-                RedisInstallerJob::dispatch($server, $database->id);
+                RedisInstallerJob::dispatch($server, $database);
                 break;
             default:
                 $database->update(['status' => DatabaseStatus::Failed->value]);
@@ -131,19 +131,19 @@ class ServerDatabaseController extends Controller
             'status' => DatabaseStatus::Updating,
         ]);
 
-        // Dispatch updater job with database ID
+        // Dispatch updater job with database model
         switch ($databaseType) {
             case DatabaseType::MariaDB:
-                MariaDbUpdaterJob::dispatch($server, $database->id);
+                MariaDbUpdaterJob::dispatch($server, $database);
                 break;
             case DatabaseType::MySQL:
-                MySqlUpdaterJob::dispatch($server, $database->id);
+                MySqlUpdaterJob::dispatch($server, $database);
                 break;
             case DatabaseType::PostgreSQL:
-                PostgreSqlUpdaterJob::dispatch($server, $database->id);
+                PostgreSqlUpdaterJob::dispatch($server, $database);
                 break;
             case DatabaseType::Redis:
-                RedisUpdaterJob::dispatch($server, $database->id);
+                RedisUpdaterJob::dispatch($server, $database);
                 break;
             default:
                 $database->update(['status' => DatabaseStatus::Failed->value]);
@@ -168,26 +168,26 @@ class ServerDatabaseController extends Controller
             abort(404);
         }
 
-        // Update database record to uninstalling status
-        $database->update(['status' => DatabaseStatus::Uninstalling->value]);
+        // Update database record to pending status
+        $database->update(['status' => DatabaseStatus::Pending->value]);
 
         $databaseType = $database->type instanceof DatabaseType
             ? $database->type
             : DatabaseType::from($database->type);
 
-        // Dispatch removal job with database record ID
+        // Dispatch removal job with database model
         switch ($databaseType) {
             case DatabaseType::MariaDB:
-                MariaDbRemoverJob::dispatch($server, $database->id);
+                MariaDbRemoverJob::dispatch($server, $database);
                 break;
             case DatabaseType::MySQL:
-                MySqlRemoverJob::dispatch($server, $database->id);
+                MySqlRemoverJob::dispatch($server, $database);
                 break;
             case DatabaseType::PostgreSQL:
-                PostgreSqlRemoverJob::dispatch($server, $database->id);
+                PostgreSqlRemoverJob::dispatch($server, $database);
                 break;
             case DatabaseType::Redis:
-                RedisRemoverJob::dispatch($server, $database->id);
+                RedisRemoverJob::dispatch($server, $database);
                 break;
             default:
                 $database->update(['status' => DatabaseStatus::Failed->value]);
@@ -243,16 +243,16 @@ class ServerDatabaseController extends Controller
         // Re-dispatch installer job based on database type
         switch ($databaseType) {
             case DatabaseType::MariaDB:
-                MariaDbInstallerJob::dispatch($server, $database->id);
+                MariaDbInstallerJob::dispatch($server, $database);
                 break;
             case DatabaseType::MySQL:
-                MySqlInstallerJob::dispatch($server, $database->id);
+                MySqlInstallerJob::dispatch($server, $database);
                 break;
             case DatabaseType::PostgreSQL:
-                PostgreSqlInstallerJob::dispatch($server, $database->id);
+                PostgreSqlInstallerJob::dispatch($server, $database);
                 break;
             case DatabaseType::Redis:
-                RedisInstallerJob::dispatch($server, $database->id);
+                RedisInstallerJob::dispatch($server, $database);
                 break;
             default:
                 $database->update(['status' => DatabaseStatus::Failed->value]);

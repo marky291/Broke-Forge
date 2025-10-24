@@ -53,7 +53,7 @@ class ServerFirewallControllerRetryTest extends TestCase
         // Verify job was dispatched
         Queue::assertPushed(FirewallRuleInstallerJob::class, function ($job) use ($server, $rule) {
             return $job->server->id === $server->id
-                && $job->ruleId === $rule->id;
+                && $job->serverFirewallRule->id === $rule->id;
         });
     }
 
@@ -260,7 +260,7 @@ class ServerFirewallControllerRetryTest extends TestCase
         // Assert
         Queue::assertPushed(FirewallRuleInstallerJob::class, function ($job) use ($server, $rule) {
             return $job->server->id === $server->id
-                && $job->ruleId === $rule->id;
+                && $job->serverFirewallRule->id === $rule->id;
         });
     }
 }

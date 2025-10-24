@@ -22,7 +22,7 @@ class FirewallRuleInstallerJobTest extends TestCase
         $server = Server::factory()->create();
         $firewall = \App\Models\ServerFirewall::factory()->create(['server_id' => $server->id]);
         $rule = ServerFirewallRule::factory()->create(['server_firewall_id' => $firewall->id]);
-        $job = new FirewallRuleInstallerJob($server, $rule->id);
+        $job = new FirewallRuleInstallerJob($server, $rule);
         $this->assertEquals(600, $job->timeout);
     }
 
@@ -34,7 +34,7 @@ class FirewallRuleInstallerJobTest extends TestCase
         $server = Server::factory()->create();
         $firewall = \App\Models\ServerFirewall::factory()->create(['server_id' => $server->id]);
         $rule = ServerFirewallRule::factory()->create(['server_firewall_id' => $firewall->id]);
-        $job = new FirewallRuleInstallerJob($server, $rule->id);
+        $job = new FirewallRuleInstallerJob($server, $rule);
         $this->assertEquals(0, $job->tries);
     }
 
@@ -46,7 +46,7 @@ class FirewallRuleInstallerJobTest extends TestCase
         $server = Server::factory()->create();
         $firewall = \App\Models\ServerFirewall::factory()->create(['server_id' => $server->id]);
         $rule = ServerFirewallRule::factory()->create(['server_firewall_id' => $firewall->id]);
-        $job = new FirewallRuleInstallerJob($server, $rule->id);
+        $job = new FirewallRuleInstallerJob($server, $rule);
         $this->assertEquals(3, $job->maxExceptions);
     }
 
@@ -58,23 +58,24 @@ class FirewallRuleInstallerJobTest extends TestCase
         $server = Server::factory()->create();
         $firewall = \App\Models\ServerFirewall::factory()->create(['server_id' => $server->id]);
         $rule = ServerFirewallRule::factory()->create(['server_firewall_id' => $firewall->id]);
-        $job = new FirewallRuleInstallerJob($server, $rule->id);
+        $job = new FirewallRuleInstallerJob($server, $rule);
         $middleware = $job->middleware();
         $this->assertCount(1, $middleware);
         $this->assertInstanceOf(\Illuminate\Queue\Middleware\WithoutOverlapping::class, $middleware[0]);
     }
 
     /**
-     * Test job constructor accepts server and rule ID.
+     * Test job constructor accepts server and rule.
      */
-    public function test_constructor_accepts_server_and_id(): void
+    public function test_constructor_accepts_server_and_rule(): void
     {
         $server = Server::factory()->create();
-        $ruleId = 123;
-        $job = new FirewallRuleInstallerJob($server, $ruleId);
+        $firewall = \App\Models\ServerFirewall::factory()->create(['server_id' => $server->id]);
+        $rule = ServerFirewallRule::factory()->create(['server_firewall_id' => $firewall->id]);
+        $job = new FirewallRuleInstallerJob($server, $rule);
         $this->assertInstanceOf(FirewallRuleInstallerJob::class, $job);
         $this->assertEquals($server->id, $job->server->id);
-        $this->assertEquals($ruleId, $job->ruleId);
+        $this->assertEquals($rule->id, $job->serverFirewallRule->id);
     }
 
     /**
@@ -92,7 +93,7 @@ class FirewallRuleInstallerJobTest extends TestCase
             'status' => FirewallRuleStatus::Installing->value,
         ]);
 
-        $job = new FirewallRuleInstallerJob($server, $rule->id);
+        $job = new FirewallRuleInstallerJob($server, $rule);
         $exception = new Exception('Firewall configuration failed');
 
         // Act
@@ -119,7 +120,7 @@ class FirewallRuleInstallerJobTest extends TestCase
             'error_log' => null,
         ]);
 
-        $job = new FirewallRuleInstallerJob($server, $rule->id);
+        $job = new FirewallRuleInstallerJob($server, $rule);
         $errorMessage = 'UFW command execution failed';
         $exception = new Exception($errorMessage);
 
@@ -138,17 +139,21 @@ class FirewallRuleInstallerJobTest extends TestCase
     {
         // Arrange
         $server = Server::factory()->create();
-        $nonExistentId = 99999;
+        $firewall = \App\Models\ServerFirewall::factory()->create(['server_id' => $server->id]);
+        $rule = ServerFirewallRule::factory()->create(['server_firewall_id' => $firewall->id]);
 
-        $job = new FirewallRuleInstallerJob($server, $nonExistentId);
+        $job = new FirewallRuleInstallerJob($server, $rule);
+        $ruleId = $rule->id;
+        $rule->delete(); // Now fresh() will return null
+
         $exception = new Exception('Test error');
 
         // Act - should not throw exception
         $job->failed($exception);
 
-        // Assert - verify no firewall rule was created
+        // Assert - verify the rule was deleted
         $this->assertDatabaseMissing('server_firewall_rules', [
-            'id' => $nonExistentId,
+            'id' => $ruleId,
         ]);
     }
 
@@ -168,7 +173,7 @@ class FirewallRuleInstallerJobTest extends TestCase
             'port' => 8080,
         ]);
 
-        $job = new FirewallRuleInstallerJob($server, $rule->id);
+        $job = new FirewallRuleInstallerJob($server, $rule);
 
         // Act & Assert - handle() will throw exception because installer cannot run
         // We expect the catch block to set status to failed
@@ -199,7 +204,7 @@ class FirewallRuleInstallerJobTest extends TestCase
             'status' => FirewallRuleStatus::Pending->value,
         ]);
 
-        $job = new FirewallRuleInstallerJob($server, $rule->id);
+        $job = new FirewallRuleInstallerJob($server, $rule);
         $exception = new Exception('Network timeout error');
 
         // Act
@@ -230,7 +235,7 @@ class FirewallRuleInstallerJobTest extends TestCase
             'rule_type' => 'allow',
         ]);
 
-        $job = new FirewallRuleInstallerJob($server, $rule->id);
+        $job = new FirewallRuleInstallerJob($server, $rule);
         $exception = new Exception('Configuration error');
 
         // Act
@@ -260,7 +265,7 @@ class FirewallRuleInstallerJobTest extends TestCase
             'status' => FirewallRuleStatus::Installing->value,
         ]);
 
-        $job = new FirewallRuleInstallerJob($server, $rule->id);
+        $job = new FirewallRuleInstallerJob($server, $rule);
         $exception = new \RuntimeException('Runtime error occurred');
 
         // Act

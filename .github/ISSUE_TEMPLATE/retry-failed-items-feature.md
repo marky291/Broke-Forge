@@ -75,7 +75,7 @@ public function retryTask(Server $server, ServerScheduledTask $scheduledTask): R
     $scheduledTask->update(['status' => 'pending']);
 
     // 5. Re-dispatch the installer job
-    ServerScheduleTaskInstallerJob::dispatch($server, $scheduledTask->id);
+    ServerScheduleTaskInstallerJob::dispatch($server, $scheduledTask);
 
     // 6. Redirect with success message
     return redirect()
@@ -160,10 +160,10 @@ public function retry(Server $server, ServerDatabase $database): RedirectRespons
 
     // Re-dispatch appropriate installer job based on database type
     match($database->type) {
-        DatabaseType::MySQL => MySqlInstallerJob::dispatch($server, $database->id),
-        DatabaseType::MariaDB => MariaDbInstallerJob::dispatch($server, $database->id),
-        DatabaseType::PostgreSQL => PostgreSqlInstallerJob::dispatch($server, $database->id),
-        DatabaseType::Redis => RedisInstallerJob::dispatch($server, $database->id),
+        DatabaseType::MySQL => MySqlInstallerJob::dispatch($server, $database),
+        DatabaseType::MariaDB => MariaDbInstallerJob::dispatch($server, $database),
+        DatabaseType::PostgreSQL => PostgreSqlInstallerJob::dispatch($server, $database),
+        DatabaseType::Redis => RedisInstallerJob::dispatch($server, $database),
     };
 
     return back()->with('success', 'Database installation retry started');
@@ -241,7 +241,7 @@ public function retry(Server $server, ServerFirewallRule $firewallRule): Redirec
         'error_message' => null,
     ]);
 
-    FirewallRuleInstallerJob::dispatch($server, $firewallRule->id);
+    FirewallRuleInstallerJob::dispatch($server, $firewallRule);
 
     return back()->with('success', 'Firewall rule installation retry started');
 }

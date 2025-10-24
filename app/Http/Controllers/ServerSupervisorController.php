@@ -117,8 +117,8 @@ class ServerSupervisorController extends Controller
             'ip_address' => request()->ip(),
         ]);
 
-        // ✅ THEN dispatch job with task ID
-        SupervisorTaskInstallerJob::dispatch($server, $task->id);
+        // ✅ THEN dispatch job with task model
+        SupervisorTaskInstallerJob::dispatch($server, $task);
 
         return redirect()
             ->route('servers.supervisor', $server)
@@ -199,11 +199,11 @@ class ServerSupervisorController extends Controller
             'ip_address' => request()->ip(),
         ]);
 
-        // ✅ UPDATE status to 'removing' (broadcasts automatically via model event)
-        $supervisorTask->update(['status' => 'removing']);
+        // ✅ UPDATE status to 'pending' (broadcasts automatically via model event)
+        $supervisorTask->update(['status' => SupervisorTaskStatus::Pending]);
 
-        // ✅ THEN dispatch job with task ID
-        SupervisorTaskRemoverJob::dispatch($server, $supervisorTask->id);
+        // ✅ THEN dispatch job with task model
+        SupervisorTaskRemoverJob::dispatch($server, $supervisorTask);
 
         return redirect()
             ->route('servers.supervisor', $server)
@@ -295,8 +295,8 @@ class ServerSupervisorController extends Controller
         // ✅ Reset status to 'pending' to trigger reinstallation
         $supervisorTask->update(['status' => SupervisorTaskStatus::Pending]);
 
-        // ✅ Dispatch job with task ID
-        SupervisorTaskInstallerJob::dispatch($server, $supervisorTask->id);
+        // ✅ Dispatch job with task model
+        SupervisorTaskInstallerJob::dispatch($server, $supervisorTask);
 
         return redirect()
             ->route('servers.supervisor', $server)

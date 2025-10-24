@@ -110,8 +110,8 @@ These are DIFFERENT locks and won't prevent concurrent execution! Using a custom
 
 ### 2. Backend Implementation
 - [ ] Controller creates record with `status: 'pending'` BEFORE dispatching job
-- [ ] Controller dispatches job with record ID (NOT full model/array)
-- [ ] Job accepts record ID and loads from database
+- [ ] Controller dispatches job with record model (NOT ID or array)
+- [ ] Job accepts record model instance
 - [ ] Job has `public $timeout = 600;` property for execution time limit
 - [ ] Job has `public $tries = 0;` for unlimited lock wait retries
 - [ ] Job has `public $maxExceptions = 3;` to limit actual execution failures
@@ -229,8 +229,8 @@ public function store(StoreFirewallRuleRequest $request, Server $server): Redire
         'rule_id' => $rule->id,
     ]);
 
-    // ✅ THEN dispatch job with rule ID (not model or array)
-    FirewallRuleInstallerJob::dispatch($server, $rule->id);
+    // ✅ THEN dispatch job with rule model (not ID or array)
+    FirewallRuleInstallerJob::dispatch($server, $rule);
 
     return redirect()
         ->route('servers.firewall', $server)
@@ -241,92 +241,118 @@ public function store(StoreFirewallRuleRequest $request, Server $server): Redire
 **Critical:**
 - Create record FIRST (immediate UI visibility)
 - Record starts with `status: 'pending'`
-- Dispatch job with ID, NOT full model or array
+- Dispatch job with model instance, NOT ID or array
 
-### 5. Job Manages Status Lifecycle
+### 5. Job Manages Status Lifecycle (Using Taskable)
+
+**All standard lifecycle jobs extend `Taskable`** to eliminate boilerplate:
 
 ```php
 // app/Packages/Services/Firewall/FirewallRuleInstallerJob.php
-class FirewallRuleInstallerJob implements ShouldQueue
+use App\Packages\Taskable;
+use Illuminate\Database\Eloquent\Model;
+
+class FirewallRuleInstallerJob extends Taskable
 {
-    use Queueable;
-
-    public $timeout = 600;
-    public $tries = 0;
-    public $maxExceptions = 3;
-
     public function __construct(
         public Server $server,
-        public int $ruleId  // ← Receives ID, NOT full model
+        public ServerFirewallRule $rule  // ← Receives model instance, NOT ID
     ) {}
 
-    public function handle(): void
+    protected function getModelQuery()
     {
-        // Load record from database
-        $rule = ServerFirewallRule::findOrFail($this->ruleId);
-
-        Log::info('Starting firewall rule installation', [
-            'rule_id' => $rule->id,
-            'server_id' => $this->server->id,
-        ]);
-
-        try {
-            // ✅ UPDATE: pending → installing
-            $rule->update(['status' => 'installing']);
-            // Model event broadcasts automatically
-
-            // Execute installation
-            $installer = new FirewallRuleInstaller($this->server, $rule);
-            $installer->execute();
-
-            // ✅ UPDATE: installing → active
-            $rule->update(['status' => 'active']);
-            // Model event broadcasts automatically
-
-            Log::info('Firewall rule installation completed', ['rule_id' => $rule->id]);
-
-        } catch (\Exception $e) {
-            // ✅ UPDATE: any → failed
-            $rule->update([
-                'status' => 'failed',
-                'error_log' => $e->getMessage(),
-            ]);
-            // Model event broadcasts automatically
-
-            Log::error('Firewall rule installation failed', [
-                'rule_id' => $rule->id,
-                'error' => $e->getMessage(),
-            ]);
-
-            throw $e;  // Re-throw for retry mechanism
-        }
+        return ServerFirewallRule::query();
     }
 
-    public function failed(\Throwable $exception): void
+    protected function getResourceId(): int
     {
-        $rule = ServerFirewallRule::find($this->ruleId);
+        return $this->rule->id;
+    }
 
-        if ($rule) {
-            $rule->update([
-                'status' => 'failed',
-                'error_log' => $exception->getMessage(),
-            ]);
-        }
+    protected function getInProgressStatus(): mixed
+    {
+        return FirewallRuleStatus::Installing;
+    }
 
-        Log::error('Firewall rule job failed', [
-            'rule_id' => $this->ruleId,
+    protected function getSuccessStatus(): mixed
+    {
+        return FirewallRuleStatus::Active;
+    }
+
+    protected function getFailedStatus(): mixed
+    {
+        return FirewallRuleStatus::Failed;
+    }
+
+    protected function executeOperation(Model $model): void
+    {
+        $installer = new FirewallRuleInstaller($this->server);
+
+        $singleRule = [
+            'port' => $model->port,
+            'protocol' => 'tcp',
+            'action' => $model->rule_type ?? 'allow',
+            'source' => $model->from_ip_address ?? null,
+            'comment' => $model->name,
+        ];
+
+        $installer->execute([$singleRule]);
+    }
+
+    protected function getLogContext(Model $model): array
+    {
+        return [
+            'rule_id' => $model->id,
+            'server_id' => $this->server->id,
+            'rule_name' => $model->name,
+            'port' => $model->port,
+        ];
+    }
+
+    protected function getOperationName(): string
+    {
+        return 'firewall rule configuration';
+    }
+
+    protected function findModelForFailure(): ?Model
+    {
+        return ServerFirewallRule::find($this->rule->id);
+    }
+
+    protected function getFailedLogContext(\Throwable $exception): array
+    {
+        return [
+            'rule_id' => $this->rule->id,
+            'server_id' => $this->server->id,
             'error' => $exception->getMessage(),
-        ]);
+            'trace' => $exception->getTraceAsString(),
+        ];
     }
 }
 ```
 
+**What Taskable Provides:**
+- ✅ Automatic properties: `$timeout = 600`, `$tries = 0`, `$maxExceptions = 3`
+- ✅ Automatic `middleware()` with `WithoutOverlapping` configuration
+- ✅ Automatic lifecycle: `pending → installing → active/failed`
+- ✅ Automatic logging at start, success, and failure
+- ✅ Automatic error handling and status updates
+- ✅ Built-in `failed()` method implementation
+- ✅ **Reduces code from ~140 lines to ~80 lines** (40% reduction)
+
+**Optional Methods You Can Override:**
+- `shouldDeleteOnSuccess()` - Return `true` for remover jobs
+- `getAdditionalSuccessData()` - Add extra data on success (e.g., timestamps)
+- `getStatusField()` - Change status field name (default: `'status'`)
+- `getErrorField()` - Change error field name (default: `'error_log'`)
+- `loadModel()` - Custom loading logic (e.g., use `find()` instead of `findOrFail()`)
+
 **Critical:**
-- Job accepts ID, NOT full model
-- Load from database with `findOrFail()`
-- Manage lifecycle: `pending → installing → active/failed`
-- Each status update broadcasts automatically
-- Implement `failed()` method for error handling
+- Job accepts model instance, NOT ID or array
+- Extend `Taskable` for standard lifecycle jobs
+- Implement all required abstract methods
+- Each status update broadcasts automatically via model events
+- Base class handles all boilerplate (properties, middleware, logging, error handling)
 
 ### 6. Installer Accepts Only Existing Models
 
@@ -439,56 +465,94 @@ public function destroy(Server $server, ServerFirewallRule $rule): RedirectRespo
 }
 ```
 
-### Removal Job Deletes on Success, Restores on Failure
+### Removal Job Deletes on Success (Using Taskable)
 
 ```php
-class FirewallRuleRemoverJob implements ShouldQueue
+use App\Packages\Taskable;
+use Illuminate\Database\Eloquent\Model;
+
+class FirewallRuleRemoverJob extends Taskable
 {
-    use Queueable;
-
-    public $timeout = 600;
-    public $tries = 0;
-    public $maxExceptions = 3;
-
     public function __construct(
         public Server $server,
         public int $ruleId
     ) {}
 
-    public function handle(): void
+    protected function getModelQuery()
     {
-        $rule = ServerFirewallRule::findOrFail($this->ruleId);
-        $originalStatus = $rule->status;
+        return ServerFirewallRule::query();
+    }
 
-        Log::info('Starting firewall rule removal', [
-            'rule_id' => $rule->id,
+    protected function getResourceId(): int
+    {
+        return $this->ruleId;
+    }
+
+    protected function getInProgressStatus(): mixed
+    {
+        return FirewallRuleStatus::Removing;
+    }
+
+    protected function getSuccessStatus(): mixed
+    {
+        return FirewallRuleStatus::Active; // Not used since we delete
+    }
+
+    protected function getFailedStatus(): mixed
+    {
+        return FirewallRuleStatus::Failed;
+    }
+
+    protected function shouldDeleteOnSuccess(): bool
+    {
+        return true;  // ✅ Automatically deletes on success
+    }
+
+    protected function executeOperation(Model $model): void
+    {
+        $uninstaller = new FirewallRuleUninstaller($this->server);
+
+        $ruleConfig = [
+            'port' => $model->port,
+            'from_ip_address' => $model->from_ip_address,
+            'rule_type' => $model->rule_type,
+            'name' => $model->name,
+        ];
+
+        $uninstaller->execute($ruleConfig);
+    }
+
+    protected function getLogContext(Model $model): array
+    {
+        return [
+            'rule_id' => $this->ruleId,
             'server_id' => $this->server->id,
-        ]);
+        ];
+    }
 
-        try {
-            // Execute removal on remote server
-            $remover = new FirewallRuleRemover($this->server, $rule);
-            $remover->execute();
+    protected function getOperationName(): string
+    {
+        return "firewall rule removal for server #{$this->server->id}";
+    }
 
-            Log::info('Firewall rule removal completed', ['rule_id' => $rule->id]);
+    protected function findModelForFailure(): ?Model
+    {
+        return ServerFirewallRule::find($this->ruleId);
+    }
 
-            // ✅ DELETE on success (broadcasts automatically)
-            $rule->delete();
-
-        } catch (\Exception $e) {
-            // ✅ RESTORE original status on failure (broadcasts automatically)
-            $rule->update(['status' => $originalStatus]);
-
-            Log::error('Firewall rule removal failed', [
-                'rule_id' => $rule->id,
-                'error' => $e->getMessage(),
-            ]);
-
-            throw $e;
-        }
+    protected function getFailedLogContext(\Throwable $exception): array
+    {
+        return [
+            'rule_id' => $this->ruleId,
+            'server_id' => $this->server->id,
+            'error' => $exception->getMessage(),
+            'trace' => $exception->getTraceAsString(),
+        ];
     }
 }
 ```
+
+**Key Point:** Setting `shouldDeleteOnSuccess()` to `true` automatically deletes the model on successful completion. Base class handles all logging and error recovery.
 
 ## Package Organization Structure
 
@@ -571,7 +635,7 @@ Study these for complete examples:
 ## Critical Rules
 
 1. **Create record FIRST** with `status: 'pending'` before dispatching job
-2. **Job accepts ID** (not full model or array)
+2. **Job accepts model instance** (not ID or array)
 3. **Prevent concurrent operations** - use `WithoutOverlapping` middleware with `$tries = 0` and `$maxExceptions = 3`
 4. **Model events broadcast** automatically - never manually dispatch
 5. **Frontend uses useEcho + router.reload()** - no polling
@@ -587,7 +651,7 @@ Study these for complete examples:
 - ✅ Status enum with all lifecycle states
 - ✅ Migration with `status` column defaulting to `'pending'`
 - ✅ Model with automatic broadcasting events
-- ✅ Controller creates record first, dispatches job with ID
+- ✅ Controller creates record first, dispatches job with model instance
 - ✅ Job has `$timeout = 600`, `$tries = 0`, `$maxExceptions = 3`
 - ✅ Job has `middleware()` method with `WithoutOverlapping`
 - ✅ Job manages lifecycle: pending → installing → active/failed

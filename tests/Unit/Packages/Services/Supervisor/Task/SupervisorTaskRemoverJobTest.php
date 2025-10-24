@@ -18,7 +18,7 @@ class SupervisorTaskRemoverJobTest extends TestCase
     {
         $server = Server::factory()->create();
         $record = ServerSupervisorTask::factory()->create(['server_id' => $server->id]);
-        $job = new SupervisorTaskRemoverJob($server, $record->id);
+        $job = new SupervisorTaskRemoverJob($server, $record);
         $this->assertEquals(600, $job->timeout);
     }
 
@@ -26,7 +26,7 @@ class SupervisorTaskRemoverJobTest extends TestCase
     {
         $server = Server::factory()->create();
         $record = ServerSupervisorTask::factory()->create(['server_id' => $server->id]);
-        $job = new SupervisorTaskRemoverJob($server, $record->id);
+        $job = new SupervisorTaskRemoverJob($server, $record);
         $this->assertEquals(0, $job->tries);
     }
 
@@ -37,7 +37,7 @@ class SupervisorTaskRemoverJobTest extends TestCase
     {
         $server = Server::factory()->create();
         $record = ServerSupervisorTask::factory()->create(['server_id' => $server->id]);
-        $job = new SupervisorTaskRemoverJob($server, $record->id);
+        $job = new SupervisorTaskRemoverJob($server, $record);
         $this->assertEquals(3, $job->maxExceptions);
     }
 
@@ -45,27 +45,27 @@ class SupervisorTaskRemoverJobTest extends TestCase
     {
         $server = Server::factory()->create();
         $record = ServerSupervisorTask::factory()->create(['server_id' => $server->id]);
-        $job = new SupervisorTaskRemoverJob($server, $record->id);
+        $job = new SupervisorTaskRemoverJob($server, $record);
         $middleware = $job->middleware();
         $this->assertCount(1, $middleware);
         $this->assertInstanceOf(\Illuminate\Queue\Middleware\WithoutOverlapping::class, $middleware[0]);
     }
 
-    public function test_constructor_accepts_server_and_id(): void
+    public function test_constructor_accepts_server_and_task(): void
     {
         $server = Server::factory()->create();
-        $recordId = 123;
-        $job = new SupervisorTaskRemoverJob($server, $recordId);
+        $task = ServerSupervisorTask::factory()->create(['server_id' => $server->id]);
+        $job = new SupervisorTaskRemoverJob($server, $task);
         $this->assertInstanceOf(SupervisorTaskRemoverJob::class, $job);
         $this->assertEquals($server->id, $job->server->id);
-        $this->assertEquals($recordId, $job->taskId);
+        $this->assertEquals($task->id, $job->serverSupervisorTask->id);
     }
 
     public function test_failed_method_updates_status_to_failed(): void
     {
         $server = Server::factory()->create();
         $record = ServerSupervisorTask::factory()->create(['server_id' => $server->id]);
-        $job = new SupervisorTaskRemoverJob($server, $record->id);
+        $job = new SupervisorTaskRemoverJob($server, $record);
         $exception = new Exception('Operation failed');
         $job->failed($exception);
         $record->refresh();
@@ -76,7 +76,7 @@ class SupervisorTaskRemoverJobTest extends TestCase
     {
         $server = Server::factory()->create();
         $record = ServerSupervisorTask::factory()->create(['server_id' => $server->id, 'error_log' => null]);
-        $job = new SupervisorTaskRemoverJob($server, $record->id);
+        $job = new SupervisorTaskRemoverJob($server, $record);
         $errorMessage = 'Test error message';
         $exception = new Exception($errorMessage);
         $job->failed($exception);
@@ -87,10 +87,14 @@ class SupervisorTaskRemoverJobTest extends TestCase
     public function test_failed_method_handles_missing_records_gracefully(): void
     {
         $server = Server::factory()->create();
-        $nonExistentId = 99999;
-        $job = new SupervisorTaskRemoverJob($server, $nonExistentId);
+        $task = ServerSupervisorTask::factory()->create(['server_id' => $server->id]);
+
+        $job = new SupervisorTaskRemoverJob($server, $task);
+        $taskId = $task->id;
+        $task->delete(); // Now fresh() will return null
+
         $exception = new Exception('Test error');
         $job->failed($exception);
-        $this->assertDatabaseMissing('server_supervisor_tasks', ['id' => $nonExistentId]);
+        $this->assertDatabaseMissing('server_supervisor_tasks', ['id' => $taskId]);
     }
 }

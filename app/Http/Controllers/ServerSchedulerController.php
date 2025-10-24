@@ -111,7 +111,8 @@ class ServerSchedulerController extends Controller
 
         // Remove all tasks first
         foreach ($server->scheduledTasks as $task) {
-            ServerScheduleTaskRemoverJob::dispatch($server, $task->id);
+            $task->update(['status' => TaskStatus::Pending]);
+            ServerScheduleTaskRemoverJob::dispatch($server, $task);
         }
 
         // Dispatch scheduler framework removal job
@@ -143,8 +144,8 @@ class ServerSchedulerController extends Controller
             'ip_address' => request()->ip(),
         ]);
 
-        // Dispatch task installation job with task ID
-        ServerScheduleTaskInstallerJob::dispatch($server, $task->id);
+        // Dispatch task installation job with task model
+        ServerScheduleTaskInstallerJob::dispatch($server, $task);
 
         return redirect()
             ->route('servers.scheduler', $server)
@@ -175,9 +176,9 @@ class ServerSchedulerController extends Controller
             'ip_address' => request()->ip(),
         ]);
 
-        // Re-install the task with updated configuration (pass task ID)
-        ServerScheduleTaskRemoverJob::dispatch($server, $scheduledTask->id);
-        ServerScheduleTaskInstallerJob::dispatch($server, $scheduledTask->id);
+        // Re-install the task with updated configuration
+        ServerScheduleTaskRemoverJob::dispatch($server, $scheduledTask);
+        ServerScheduleTaskInstallerJob::dispatch($server, $scheduledTask);
 
         return redirect()
             ->route('servers.scheduler', $server)
@@ -201,11 +202,11 @@ class ServerSchedulerController extends Controller
             'ip_address' => request()->ip(),
         ]);
 
-        // ✅ UPDATE status to 'removing' (broadcasts automatically via model event)
-        $scheduledTask->update(['status' => 'removing']);
+        // ✅ UPDATE status to 'pending' (broadcasts automatically via model event)
+        $scheduledTask->update(['status' => TaskStatus::Pending]);
 
-        // ✅ THEN dispatch job with task ID
-        ServerScheduleTaskRemoverJob::dispatch($server, $scheduledTask->id);
+        // ✅ THEN dispatch job with task model
+        ServerScheduleTaskRemoverJob::dispatch($server, $scheduledTask);
 
         return redirect()
             ->route('servers.scheduler', $server)
@@ -226,10 +227,10 @@ class ServerSchedulerController extends Controller
 
         // Remove and reinstall to update cron state
         if ($newStatus === TaskStatus::Paused) {
-            ServerScheduleTaskRemoverJob::dispatch($server, $scheduledTask->id);
+            ServerScheduleTaskRemoverJob::dispatch($server, $scheduledTask);
         } else {
-            // Pass task ID instead of task model
-            ServerScheduleTaskInstallerJob::dispatch($server, $scheduledTask->id);
+            // Pass task model instead of task ID
+            ServerScheduleTaskInstallerJob::dispatch($server, $scheduledTask);
         }
 
         return redirect()
@@ -264,8 +265,8 @@ class ServerSchedulerController extends Controller
         // Reset status to 'pending' to trigger reinstallation
         $scheduledTask->update(['status' => 'pending']);
 
-        // Dispatch task installation job with task ID
-        ServerScheduleTaskInstallerJob::dispatch($server, $scheduledTask->id);
+        // Dispatch task installation job with task model
+        ServerScheduleTaskInstallerJob::dispatch($server, $scheduledTask);
 
         return redirect()
             ->route('servers.scheduler', $server)

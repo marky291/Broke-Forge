@@ -5,135 +5,68 @@ namespace App\Packages\Services\Database\PostgreSQL;
 use App\Enums\DatabaseStatus;
 use App\Models\Server;
 use App\Models\ServerDatabase;
-use Exception;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Foundation\Queue\Queueable;
-use Illuminate\Queue\Middleware\WithoutOverlapping;
-use Illuminate\Support\Facades\Log;
+use App\Packages\Taskable;
+use Illuminate\Database\Eloquent\Model;
 
 /**
- * PostgreSQL Removal Job
+ * PostgreSQL Database Removal Job
  *
- * Handles queued PostgreSQL removal from remote servers with lifecycle management
+ * Handles queued PostgreSQL database removal from remote servers with lifecycle management.
  */
-class PostgreSqlRemoverJob implements ShouldQueue
+class PostgreSqlRemoverJob extends Taskable
 {
-    use Queueable;
-
-    /**
-     * The number of seconds the job can run before timing out.
-     *
-     * @var int
-     */
-    public $timeout = 600;
-
-    /**
-     * The number of times the job may be attempted.
-     *
-     * @var int
-     */
-    public $tries = 0;
-
-    /**
-     * The number of exceptions to allow before failing.
-     *
-     * @var int
-     */
-    public $maxExceptions = 3;
-
     public function __construct(
         public Server $server,
-        public int $databaseId  // ← Receives database record ID only
+        public ServerDatabase $serverDatabase
     ) {}
 
-    public function handle(): void
+    protected function getModel(): Model
     {
-        // Set no time limit for long-running removal process
-        set_time_limit(0);
-
-        // Load the database record from database
-        $database = ServerDatabase::findOrFail($this->databaseId);
-
-        Log::info('Starting PostgreSQL removal', [
-            'database_id' => $database->id,
-            'server_id' => $this->server->id,
-            'version' => $database->version,
-        ]);
-
-        try {
-            // ✅ UPDATE: active → uninstalling
-            // Model event broadcasts automatically via Reverb
-            $database->update(['status' => 'uninstalling']);
-
-            // Create remover instance
-            $remover = new PostgreSqlRemover($this->server);
-
-            // Execute removal
-            $remover->execute();
-
-            // ✅ DELETE record from database on success
-            // Model's deleted() event broadcasts automatically via Reverb
-            $database->delete();
-
-            Log::info('PostgreSQL removal completed', [
-                'database_id' => $this->databaseId,
-                'server_id' => $this->server->id,
-            ]);
-
-        } catch (Exception $e) {
-            // ✅ UPDATE: any → failed
-            // Model event broadcasts automatically via Reverb
-            $database->update([
-                'status' => DatabaseStatus::Failed,
-                'error_log' => $e->getMessage(),
-            ]);
-
-            Log::error('PostgreSQL removal failed', [
-                'database_id' => $database->id,
-                'server_id' => $this->server->id,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-
-            throw $e;  // Re-throw for Laravel's retry mechanism
-        }
+        return $this->serverDatabase;
     }
 
-    /**
-     * Get the middleware the job should pass through.
-     *
-     * @return array<int, object>
-     */
-    public function middleware(): array
+    protected function getInProgressStatus(): mixed
+    {
+        return DatabaseStatus::Uninstalling;
+    }
+
+    protected function getSuccessStatus(): mixed
+    {
+        return DatabaseStatus::Active; // Not used since we delete
+    }
+
+    protected function getFailedStatus(): mixed
+    {
+        return DatabaseStatus::Failed;
+    }
+
+    protected function shouldDeleteOnSuccess(): bool
+    {
+        return true;
+    }
+
+    protected function executeOperation(Model $model): void
+    {
+        $remover = new PostgreSqlRemover($this->server);
+        $remover->execute();
+    }
+
+    protected function getLogContext(Model $model): array
     {
         return [
-            (new WithoutOverlapping("package:action:{$this->server->id}"))->shared()
-                ->releaseAfter(15)
-                ->expireAfter(900),
+            'database_id' => $model->id,
+            'server_id' => $this->server->id,
+            'version' => $model->version,
         ];
     }
 
-    /**
-     * Handle a job failure (timeout, fatal error, worker crash).
-     *
-     * This is Laravel's safety net for failures that occur outside normal execution flow.
-     */
-    public function failed(\Throwable $exception): void
+    protected function getFailedLogContext(\Throwable $exception): array
     {
-        $database = ServerDatabase::find($this->databaseId);
-
-        if ($database) {
-            $database->update([
-                'status' => DatabaseStatus::Failed,
-                'error_log' => $exception->getMessage(),
-            ]);
-        }
-
-        Log::error('PostgreSQL removal job failed', [
-            'database_id' => $this->databaseId,
+        return [
+            'database_id' => $this->serverDatabase->id,
             'server_id' => $this->server->id,
             'error' => $exception->getMessage(),
             'trace' => $exception->getTraceAsString(),
-        ]);
+        ];
     }
 }

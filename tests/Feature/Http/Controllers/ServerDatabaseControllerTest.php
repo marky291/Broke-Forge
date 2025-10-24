@@ -743,7 +743,7 @@ class ServerDatabaseControllerTest extends TestCase
         \Illuminate\Support\Facades\Queue::assertPushed(
             \App\Packages\Services\Database\MySQL\MySqlUpdaterJob::class,
             function ($job) use ($database) {
-                return $job->databaseId === $database->id;
+                return $job->serverDatabase->id === $database->id;
             }
         );
     }
@@ -950,7 +950,7 @@ class ServerDatabaseControllerTest extends TestCase
         $response->assertSessionHas('success', 'Database uninstallation started.');
 
         $database->refresh();
-        $this->assertEquals(DatabaseStatus::Uninstalling, $database->status);
+        $this->assertEquals(DatabaseStatus::Pending, $database->status);
 
         \Illuminate\Support\Facades\Queue::assertPushed(\App\Packages\Services\Database\PostgreSQL\PostgreSqlRemoverJob::class);
     }
@@ -1204,16 +1204,15 @@ class ServerDatabaseControllerTest extends TestCase
         $response->assertRedirect("/servers/{$server->id}/services");
         $response->assertSessionHas('success', 'Database uninstallation started.');
 
-        // Verify database status changed to Uninstalling
+        // Verify database status changed to Pending
         $database->refresh();
-        $this->assertEquals(DatabaseStatus::Uninstalling, $database->status);
+        $this->assertEquals(DatabaseStatus::Pending, $database->status);
 
         // Verify cache service still exists and is unchanged
         $cacheService->refresh();
         $this->assertEquals(DatabaseStatus::Active, $cacheService->status);
         $this->assertEquals(2, $server->databases()->count());
     }
-
 
     /**
      * Test database page only includes actual databases (not cache/queue services like Redis).

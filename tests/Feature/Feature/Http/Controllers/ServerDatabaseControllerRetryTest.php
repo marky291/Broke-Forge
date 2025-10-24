@@ -54,7 +54,7 @@ class ServerDatabaseControllerRetryTest extends TestCase
         // Verify job was dispatched
         Queue::assertPushed(MySqlInstallerJob::class, function ($job) use ($server, $database) {
             return $job->server->id === $server->id
-                && $job->databaseId === $database->id;
+                && $job->serverDatabase->id === $database->id;
         });
     }
 

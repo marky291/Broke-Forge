@@ -196,8 +196,8 @@ class ServerSitesController extends Controller
         // Attempt to remove deploy key from GitHub before uninstalling
         $this->removeDeployKeyFromGitHub($site);
 
-        // Set status to uninstalling
-        $site->update(['status' => 'uninstalling']);
+        // Set status to pending
+        $site->update(['status' => 'pending']);
 
         // Dispatch site removal job
         SiteRemoverJob::dispatch($server, $site);
@@ -219,8 +219,8 @@ class ServerSitesController extends Controller
             // Attempt to remove deploy key from GitHub before deleting
             $this->removeDeployKeyFromGitHub($site);
 
-            // Set status to removing to indicate cleanup is in progress
-            $site->update(['status' => 'removing']);
+            // Set status to pending to indicate cleanup is in progress
+            $site->update(['status' => 'pending']);
 
             // Dispatch site removal job to clean up any partial installation
             SiteRemoverJob::dispatch($server, $site);

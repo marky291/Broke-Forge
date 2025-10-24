@@ -485,7 +485,7 @@ class ServerPhpControllerTest extends TestCase
         $response->assertSessionHas('success', 'PHP 8.3 removal started');
 
         $php->refresh();
-        $this->assertEquals(PhpStatus::Removing, $php->status);
+        $this->assertEquals(PhpStatus::Pending, $php->status);
 
         \Illuminate\Support\Facades\Queue::assertPushed(\App\Packages\Services\PHP\PhpRemoverJob::class);
     }
