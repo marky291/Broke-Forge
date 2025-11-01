@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Enums\TaskStatus;
+use App\Packages\Services\Node\Services\NodeConfigurationService;
 use App\Packages\Services\PHP\Services\PhpConfigurationService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -57,6 +58,9 @@ class ServerResource extends JsonResource
             'availablePhpVersions' => $this->transformAvailablePhpVersions(),
             'phpExtensions' => PhpConfigurationService::getAvailableExtensions(),
             'defaultSettings' => PhpConfigurationService::getDefaultSettings(),
+            'nodes' => $this->transformNodes(),
+            'availableNodeVersions' => $this->transformAvailableNodeVersions(),
+            'composer' => $this->transformComposer(),
         ];
     }
 
@@ -352,5 +356,51 @@ class ServerResource extends JsonResource
             'created_at' => $db->created_at?->toISOString(),
             'updated_at' => $db->updated_at?->toISOString(),
         ])->toArray();
+    }
+
+    /**
+     * Transform Node.js installations collection.
+     */
+    protected function transformNodes(): array
+    {
+        return $this->nodes()->get()->map(fn ($node) => [
+            'id' => $node->id,
+            'version' => $node->version,
+            'status' => $node->status?->value,
+            'is_default' => $node->is_default,
+            'error_log' => $node->error_log,
+            'created_at' => $node->created_at->toISOString(),
+            'updated_at' => $node->updated_at->toISOString(),
+        ])->toArray();
+    }
+
+    /**
+     * Transform available Node.js versions into array of value/label objects.
+     */
+    protected function transformAvailableNodeVersions(): array
+    {
+        $versions = NodeConfigurationService::getAvailableVersions();
+
+        return collect($versions)->map(fn ($label, $value) => [
+            'value' => $value,
+            'label' => $label,
+        ])->values()->toArray();
+    }
+
+    /**
+     * Transform Composer information.
+     */
+    protected function transformComposer(): ?array
+    {
+        if (! $this->composer_version) {
+            return null;
+        }
+
+        return [
+            'version' => $this->composer_version,
+            'status' => $this->composer_status?->value,
+            'error_log' => $this->composer_error_log,
+            'updated_at' => $this->composer_updated_at?->toISOString(),
+        ];
     }
 }

@@ -13,7 +13,7 @@ import {
 import { type BreadcrumbItem, type NavItem, type ServerMetric } from '@/types';
 import { useEcho } from '@laravel/echo-react';
 import { router, usePage } from '@inertiajs/react';
-import { Activity, ArrowLeft, Check, Clock, CodeIcon, Cpu, DatabaseIcon, Eye, Globe, HardDrive, Layers, MemoryStick, Settings, Shield, XCircle } from 'lucide-react';
+import { Activity, ArrowLeft, Box, Check, Clock, CodeIcon, Cpu, DatabaseIcon, Eye, Globe, HardDrive, Layers, MemoryStick, Settings, Shield, XCircle } from 'lucide-react';
 import { PropsWithChildren } from 'react';
 
 interface ServerContentLayoutProps extends PropsWithChildren {
@@ -54,6 +54,8 @@ export default function ServerContentLayout({ children, server, breadcrumbs }: S
         currentSection = 'server';
     } else if (path.includes('/php')) {
         currentSection = 'php';
+    } else if (path.includes('/node')) {
+        currentSection = 'node';
     } else if (path.includes('/services')) {
         currentSection = 'services';
     } else if (path.includes('/firewall')) {
@@ -87,6 +89,12 @@ export default function ServerContentLayout({ children, server, breadcrumbs }: S
             href: `/servers/${server.id}/php`,
             icon: CodeIcon,
             isActive: currentSection === 'php',
+        },
+        {
+            title: 'Node',
+            href: `/servers/${server.id}/node`,
+            icon: Box,
+            isActive: currentSection === 'node',
         },
         {
             title: 'Services',

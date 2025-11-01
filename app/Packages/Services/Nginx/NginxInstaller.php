@@ -5,13 +5,16 @@ namespace App\Packages\Services\Nginx;
 use App\Enums\ReverseProxyType;
 use App\Enums\ScheduleFrequency;
 use App\Enums\TaskStatus;
+use App\Models\ServerNode;
 use App\Models\ServerPhp;
 use App\Models\ServerReverseProxy;
 use App\Packages\Core\Base\Package;
 use App\Packages\Core\Base\PackageInstaller;
+use App\Packages\Enums\NodeVersion;
 use App\Packages\Enums\PhpVersion;
 use App\Packages\Services\Firewall\FirewallInstallerJob;
 use App\Packages\Services\Firewall\FirewallRuleInstallerJob;
+use App\Packages\Services\Node\NodeInstallerJob;
 use App\Packages\Services\PHP\PhpInstallerJob;
 use App\Packages\Services\Scheduler\ServerSchedulerInstallerJob;
 use App\Packages\Services\Scheduler\Task\ServerScheduleTaskInstallerJob;
@@ -97,6 +100,18 @@ class NginxInstaller extends PackageInstaller implements \App\Packages\Core\Base
 
         // Install the supervisor as it has low overhead and provides benefit to user.
         SupervisorInstallerJob::dispatchSync($this->server);
+
+        // Install Node.js 22 by default (Composer will be installed automatically with first Node)
+        $isFirstNode = $this->server->nodes()->count() === 0;
+        $node = ServerNode::create([
+            'server_id' => $this->server->id,
+            'version' => NodeVersion::Node22->value,
+            'status' => TaskStatus::Pending,
+            'is_default' => $isFirstNode,
+        ]);
+
+        // Pass the record to the job (not the ID)
+        NodeInstallerJob::dispatchSync($this->server, $node);
 
         $this->server->provision->put(8, TaskStatus::Success->value);
         $this->server->save();

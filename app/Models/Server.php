@@ -63,6 +63,10 @@ class Server extends Model
         'source_provider_ssh_key_id',
         'source_provider_ssh_key_title',
         'add_ssh_key_to_github',
+        'composer_version',
+        'composer_status',
+        'composer_error_log',
+        'composer_updated_at',
     ];
 
     protected $attributes = [
@@ -93,6 +97,8 @@ class Server extends Model
             'supervisor_uninstalled_at' => 'datetime',
             'source_provider_ssh_key_added' => 'boolean',
             'add_ssh_key_to_github' => 'boolean',
+            'composer_status' => TaskStatus::class,
+            'composer_updated_at' => 'datetime',
         ];
     }
 
@@ -265,6 +271,16 @@ class Server extends Model
         return $this->hasOne(ServerPhp::class)->where('is_cli_default', true);
     }
 
+    public function nodes(): HasMany
+    {
+        return $this->hasMany(ServerNode::class);
+    }
+
+    public function defaultNode(): HasOne
+    {
+        return $this->hasOne(ServerNode::class)->where('is_default', true);
+    }
+
     public function reverseProxy(): HasOne
     {
         return $this->hasOne(ServerReverseProxy::class);
@@ -383,6 +399,9 @@ class Server extends Model
                 'os_name',
                 'os_version',
                 'os_codename',
+                'composer_version',
+                'composer_status',
+                'composer_updated_at',
             ];
 
             if ($server->wasChanged($broadcastFields)) {

@@ -129,7 +129,7 @@ class ServerMonitorControllerTest extends TestCase
         // Arrange
         $user = User::factory()->create();
         $server = Server::factory()->create(['user_id' => $user->id]);
-        $email = fake()->email();
+        $email = 'alert@gmail.com';
 
         // Act
         $response = $this->actingAs($user)
@@ -180,7 +180,7 @@ class ServerMonitorControllerTest extends TestCase
                 'operator' => '>=',
                 'threshold' => 85,
                 'duration_minutes' => 10,
-                'notification_emails' => [fake()->email()],
+                'notification_emails' => ['alert@gmail.com'],
             ]);
 
         // Assert
@@ -213,7 +213,7 @@ class ServerMonitorControllerTest extends TestCase
                 'operator' => '>',
                 'threshold' => 90,
                 'duration_minutes' => 15,
-                'notification_emails' => [fake()->email()],
+                'notification_emails' => ['alert@gmail.com'],
             ]);
 
         // Assert
@@ -262,7 +262,7 @@ class ServerMonitorControllerTest extends TestCase
                 'operator' => '>',
                 'threshold' => 90,
                 'duration_minutes' => 15,
-                'notification_emails' => [fake()->email()],
+                'notification_emails' => ['alert@gmail.com'],
             ]);
 
         // Assert
@@ -287,7 +287,7 @@ class ServerMonitorControllerTest extends TestCase
                 'operator' => '!=',
                 'threshold' => 90,
                 'duration_minutes' => 15,
-                'notification_emails' => [fake()->email()],
+                'notification_emails' => ['alert@gmail.com'],
             ]);
 
         // Assert
@@ -312,7 +312,7 @@ class ServerMonitorControllerTest extends TestCase
                 'operator' => '>',
                 'threshold' => 150,
                 'duration_minutes' => 15,
-                'notification_emails' => [fake()->email()],
+                'notification_emails' => ['alert@gmail.com'],
             ]);
 
         // Assert
@@ -327,7 +327,7 @@ class ServerMonitorControllerTest extends TestCase
                 'operator' => '>',
                 'threshold' => -10,
                 'duration_minutes' => 15,
-                'notification_emails' => [fake()->email()],
+                'notification_emails' => ['alert@gmail.com'],
             ]);
 
         // Assert
@@ -352,7 +352,7 @@ class ServerMonitorControllerTest extends TestCase
                 'operator' => '>',
                 'threshold' => 90,
                 'duration_minutes' => 2000,
-                'notification_emails' => [fake()->email()],
+                'notification_emails' => ['alert@gmail.com'],
             ]);
 
         // Assert
@@ -367,7 +367,7 @@ class ServerMonitorControllerTest extends TestCase
                 'operator' => '>',
                 'threshold' => 90,
                 'duration_minutes' => 0,
-                'notification_emails' => [fake()->email()],
+                'notification_emails' => ['alert@gmail.com'],
             ]);
 
         // Assert
@@ -417,7 +417,7 @@ class ServerMonitorControllerTest extends TestCase
         // Act - too many emails
         $emails = [];
         for ($i = 0; $i < 11; $i++) {
-            $emails[] = fake()->email();
+            $emails[] = "alert{$i}@gmail.com";
         }
 
         $response = $this->actingAs($user)

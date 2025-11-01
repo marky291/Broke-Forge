@@ -10,6 +10,7 @@ use App\Http\Controllers\ServerFileExplorerController;
 use App\Http\Controllers\ServerFirewallController;
 use App\Http\Controllers\ServerMonitorController;
 use App\Http\Controllers\ServerMonitoringController;
+use App\Http\Controllers\ServerNodeController;
 use App\Http\Controllers\ServerPhpController;
 use App\Http\Controllers\ServerProvisioningController;
 use App\Http\Controllers\ServerSchedulerController;
@@ -165,6 +166,22 @@ Route::middleware('auth')->group(function () {
             ->name('php.retry');
         Route::delete('php/{php}', [ServerPhpController::class, 'destroy'])
             ->name('php.destroy');
+
+        // Node.js management
+        Route::get('node', [ServerNodeController::class, 'index'])
+            ->name('node');
+        Route::post('node/install', [ServerNodeController::class, 'install'])
+            ->name('node.install');
+        Route::patch('node/{node}/set-default', [ServerNodeController::class, 'setDefault'])
+            ->name('node.set-default');
+        Route::post('node/{node}/retry', [ServerNodeController::class, 'retry'])
+            ->name('node.retry');
+        Route::delete('node/{node}', [ServerNodeController::class, 'destroy'])
+            ->name('node.destroy');
+        Route::post('composer/update', [ServerNodeController::class, 'updateComposer'])
+            ->name('composer.update');
+        Route::post('composer/retry', [ServerNodeController::class, 'retryComposer'])
+            ->name('composer.retry');
 
         // Server credentials
         Route::get('deploy-key', [ServerSitesController::class, 'deployKey'])

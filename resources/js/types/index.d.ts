@@ -118,8 +118,11 @@ export interface Server {
         created_at: string;
     }[];
     phps: ServerPhp[];
+    nodes: ServerNode[];
+    composer: ServerComposer | null;
     sites: ServerSite[];
     availablePhpVersions: Record<string, string>;
+    availableNodeVersions: Array<{ value: string; label: string }>;
     phpExtensions: Record<string, string>;
     defaultSettings: Record<string, string | number>;
     created_at: string;
@@ -141,6 +144,24 @@ export interface ServerPhp {
     is_site_default: boolean;
     modules?: ServerPhpModule[];
     created_at?: string;
+    updated_at?: string;
+}
+
+export interface ServerNode {
+    id: number;
+    server_id: number;
+    version: string;
+    status: string;
+    is_default: boolean;
+    error_log?: string;
+    created_at?: string;
+    updated_at?: string;
+}
+
+export interface ServerComposer {
+    version: string;
+    status: string;
+    error_log?: string;
     updated_at?: string;
 }
 
