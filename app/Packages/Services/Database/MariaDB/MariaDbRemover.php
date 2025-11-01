@@ -3,14 +3,14 @@
 namespace App\Packages\Services\Database\MariaDB;
 
 use App\Enums\TaskStatus;
-use App\Packages\Base\PackageRemover;
+use App\Packages\Core\Base\PackageRemover;
 
 /**
  * MariaDB Database Server Removal Class
  *
  * Handles safe removal of MariaDB server with progress tracking
  */
-class MariaDbRemover extends PackageRemover implements \App\Packages\Base\ServerPackage
+class MariaDbRemover extends PackageRemover implements \App\Packages\Core\Base\ServerPackage
 {
     /**
      * Mark MariaDB removal as failed in database

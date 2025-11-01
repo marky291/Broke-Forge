@@ -3,9 +3,9 @@
 namespace App\Packages\Services\Database\MySQL;
 
 use App\Enums\TaskStatus;
-use App\Packages\Base\PackageInstaller;
+use App\Packages\Core\Base\PackageInstaller;
 
-class MySqlUpdater extends PackageInstaller implements \App\Packages\Base\ServerPackage
+class MySqlUpdater extends PackageInstaller implements \App\Packages\Core\Base\ServerPackage
 {
     public function execute(string $targetVersion): void
     {

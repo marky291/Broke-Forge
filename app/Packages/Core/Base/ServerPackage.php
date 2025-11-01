@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Packages\Base;
+namespace App\Packages\Core\Base;
 
 interface ServerPackage extends Package
 {

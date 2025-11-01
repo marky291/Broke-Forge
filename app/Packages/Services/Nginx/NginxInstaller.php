@@ -7,8 +7,8 @@ use App\Enums\ScheduleFrequency;
 use App\Enums\TaskStatus;
 use App\Models\ServerPhp;
 use App\Models\ServerReverseProxy;
-use App\Packages\Base\Package;
-use App\Packages\Base\PackageInstaller;
+use App\Packages\Core\Base\Package;
+use App\Packages\Core\Base\PackageInstaller;
 use App\Packages\Enums\PhpVersion;
 use App\Packages\Services\Firewall\FirewallInstallerJob;
 use App\Packages\Services\Firewall\FirewallRuleInstallerJob;
@@ -22,7 +22,7 @@ use App\Packages\Services\Supervisor\SupervisorInstallerJob;
  *
  * Handles installation of NGINX web server with PHP dependency
  */
-class NginxInstaller extends PackageInstaller implements \App\Packages\Base\ServerPackage
+class NginxInstaller extends PackageInstaller implements \App\Packages\Core\Base\ServerPackage
 {
     /**
      * Execute the Nginx web server installation

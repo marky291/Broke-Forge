@@ -3,8 +3,8 @@
 namespace App\Packages\Services\Scheduler;
 
 use App\Enums\TaskStatus;
-use App\Packages\Base\PackageInstaller;
-use App\Packages\Base\ServerPackage;
+use App\Packages\Core\Base\PackageInstaller;
+use App\Packages\Core\Base\ServerPackage;
 
 /**
  * Server Scheduler Framework Installation Class

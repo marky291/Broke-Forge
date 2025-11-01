@@ -3,8 +3,8 @@
 namespace App\Packages\Services\Monitoring;
 
 use App\Models\ServerMetric;
-use App\Packages\Base\PackageRemover;
-use App\Packages\Base\ServerPackage;
+use App\Packages\Core\Base\PackageRemover;
+use App\Packages\Core\Base\ServerPackage;
 
 /**
  * Server Monitoring Removal Class

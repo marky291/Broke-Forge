@@ -3,8 +3,8 @@
 namespace Tests\Unit\Packages\Base;
 
 use App\Models\Server;
-use App\Packages\Base\PackageInstaller;
-use App\Packages\Base\ServerPackage;
+use App\Packages\Core\Base\PackageInstaller;
+use App\Packages\Core\Base\ServerPackage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Mockery;
 use Spatie\Ssh\Ssh;

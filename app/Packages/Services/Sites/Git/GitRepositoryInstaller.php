@@ -3,7 +3,7 @@
 namespace App\Packages\Services\Sites\Git;
 
 use App\Models\ServerSite;
-use App\Packages\Base\PackageInstaller;
+use App\Packages\Core\Base\PackageInstaller;
 use Illuminate\Support\Arr;
 use InvalidArgumentException;
 use LogicException;
@@ -13,7 +13,7 @@ use LogicException;
  *
  * Handle cloning or updating a site's Git repository over SSH
  */
-class GitRepositoryInstaller extends PackageInstaller implements \App\Packages\Base\SitePackage
+class GitRepositoryInstaller extends PackageInstaller implements \App\Packages\Core\Base\SitePackage
 {
     /**
      * Execute the Git repository installation

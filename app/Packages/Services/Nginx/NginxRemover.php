@@ -2,7 +2,7 @@
 
 namespace App\Packages\Services\Nginx;
 
-use App\Packages\Base\PackageRemover;
+use App\Packages\Core\Base\PackageRemover;
 
 /**
  * Web Server Removal Class

@@ -3,7 +3,7 @@
 namespace App\Packages\Services\Sites;
 
 use App\Models\ServerSite;
-use App\Packages\Base\PackageInstaller;
+use App\Packages\Core\Base\PackageInstaller;
 
 /**
  * Site Installation Class
@@ -11,7 +11,7 @@ use App\Packages\Base\PackageInstaller;
  * Provisions a site using SSH terminal commands to a remote
  * server that has NGINX installed
  */
-class ProvisionedSiteInstaller extends PackageInstaller implements \App\Packages\Base\ServerPackage
+class ProvisionedSiteInstaller extends PackageInstaller implements \App\Packages\Core\Base\ServerPackage
 {
     /**
      * Execute the site installation

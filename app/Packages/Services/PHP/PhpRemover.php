@@ -4,8 +4,8 @@ namespace App\Packages\Services\PHP;
 
 use App\Enums\TaskStatus;
 use App\Models\ServerPhp;
-use App\Packages\Base\PackageRemover;
-use App\Packages\Base\ServerPackage;
+use App\Packages\Core\Base\PackageRemover;
+use App\Packages\Core\Base\ServerPackage;
 use App\Packages\Enums\PhpVersion;
 
 /**

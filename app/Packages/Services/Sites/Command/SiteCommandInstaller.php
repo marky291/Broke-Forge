@@ -5,7 +5,7 @@ namespace App\Packages\Services\Sites\Command;
 use App\Models\Server;
 use App\Models\ServerSite;
 use App\Models\ServerSiteCommandHistory;
-use App\Packages\Base\PackageInstaller;
+use App\Packages\Core\Base\PackageInstaller;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
 use Symfony\Component\Process\Exception\ProcessTimedOutException;
@@ -15,7 +15,7 @@ use Symfony\Component\Process\Exception\ProcessTimedOutException;
  *
  * Executes custom commands within site directories following package patterns
  */
-class SiteCommandInstaller extends PackageInstaller implements \App\Packages\Base\ServerPackage
+class SiteCommandInstaller extends PackageInstaller implements \App\Packages\Core\Base\ServerPackage
 {
     protected ?ServerSite $site;
 

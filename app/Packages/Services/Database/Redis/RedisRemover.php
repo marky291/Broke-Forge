@@ -3,14 +3,14 @@
 namespace App\Packages\Services\Database\Redis;
 
 use App\Enums\TaskStatus;
-use App\Packages\Base\PackageRemover;
+use App\Packages\Core\Base\PackageRemover;
 
 /**
  * Redis Server Removal Class
  *
  * Handles safe removal of Redis server with progress tracking
  */
-class RedisRemover extends PackageRemover implements \App\Packages\Base\ServerPackage
+class RedisRemover extends PackageRemover implements \App\Packages\Core\Base\ServerPackage
 {
     /**
      * Mark Redis removal as failed in database

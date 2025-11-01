@@ -3,9 +3,9 @@
 namespace App\Packages\Services\Database\PostgreSQL;
 
 use App\Enums\TaskStatus;
-use App\Packages\Base\PackageRemover;
+use App\Packages\Core\Base\PackageRemover;
 
-class PostgreSqlRemover extends PackageRemover implements \App\Packages\Base\ServerPackage
+class PostgreSqlRemover extends PackageRemover implements \App\Packages\Core\Base\ServerPackage
 {
     /**
      * Mark PostgreSQL removal as failed in database

@@ -2,7 +2,7 @@
 
 namespace App\Packages\Services\Database\Redis;
 
-use App\Packages\Base\PackageInstaller;
+use App\Packages\Core\Base\PackageInstaller;
 
 /**
  * Redis Server Installation Class
@@ -10,7 +10,7 @@ use App\Packages\Base\PackageInstaller;
  * Handles installation of Redis server with progress tracking
  * using ServerPackageEvent for real-time status updates
  */
-class RedisInstaller extends PackageInstaller implements \App\Packages\Base\ServerPackage
+class RedisInstaller extends PackageInstaller implements \App\Packages\Core\Base\ServerPackage
 {
     /**
      * Execute the Redis server installation

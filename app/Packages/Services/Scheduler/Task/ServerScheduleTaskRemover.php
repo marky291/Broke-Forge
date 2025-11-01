@@ -4,8 +4,8 @@ namespace App\Packages\Services\Scheduler\Task;
 
 use App\Models\Server;
 use App\Models\ServerScheduledTask;
-use App\Packages\Base\PackageRemover;
-use App\Packages\Base\ServerPackage;
+use App\Packages\Core\Base\PackageRemover;
+use App\Packages\Core\Base\ServerPackage;
 
 /**
  * Server Scheduled Task Removal Class

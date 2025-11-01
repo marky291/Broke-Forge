@@ -2,8 +2,8 @@
 
 namespace App\Packages\Services\Firewall;
 
-use App\Packages\Base\PackageRemover;
-use App\Packages\Base\ServerPackage;
+use App\Packages\Core\Base\PackageRemover;
+use App\Packages\Core\Base\ServerPackage;
 
 /**
  * Firewall Rule Uninstaller

@@ -4,8 +4,8 @@ namespace App\Packages\Services\Sites;
 
 use App\Models\Server;
 use App\Models\ServerSite;
-use App\Packages\Base\PackageInstaller;
-use App\Packages\Base\SitePackage;
+use App\Packages\Core\Base\PackageInstaller;
+use App\Packages\Core\Base\SitePackage;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
 

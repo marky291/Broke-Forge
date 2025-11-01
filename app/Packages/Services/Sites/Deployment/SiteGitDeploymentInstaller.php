@@ -4,7 +4,7 @@ namespace App\Packages\Services\Sites\Deployment;
 
 use App\Models\ServerDeployment;
 use App\Models\ServerSite;
-use App\Packages\Base\PackageInstaller;
+use App\Packages\Core\Base\PackageInstaller;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
@@ -13,7 +13,7 @@ use RuntimeException;
  *
  * Executes deployment scripts for Git-enabled sites and tracks deployment history
  */
-class SiteGitDeploymentInstaller extends PackageInstaller implements \App\Packages\Base\SitePackage
+class SiteGitDeploymentInstaller extends PackageInstaller implements \App\Packages\Core\Base\SitePackage
 {
     protected ?string $deploymentOutput = null;
 

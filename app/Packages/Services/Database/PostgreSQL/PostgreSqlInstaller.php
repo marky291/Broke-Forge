@@ -2,9 +2,9 @@
 
 namespace App\Packages\Services\Database\PostgreSQL;
 
-use App\Packages\Base\PackageInstaller;
+use App\Packages\Core\Base\PackageInstaller;
 
-class PostgreSqlInstaller extends PackageInstaller implements \App\Packages\Base\ServerPackage
+class PostgreSqlInstaller extends PackageInstaller implements \App\Packages\Core\Base\ServerPackage
 {
     public function execute(string $version, string $rootPassword): void
     {

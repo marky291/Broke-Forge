@@ -2,14 +2,14 @@
 
 namespace App\Packages\Services\Database\MariaDB;
 
-use App\Packages\Base\PackageInstaller;
+use App\Packages\Core\Base\PackageInstaller;
 
 /**
  * MariaDB Database Server Installation Class
  *
  * Handles installation of MariaDB server with progress tracking
  */
-class MariaDbInstaller extends PackageInstaller implements \App\Packages\Base\ServerPackage
+class MariaDbInstaller extends PackageInstaller implements \App\Packages\Core\Base\ServerPackage
 {
     /**
      * Execute the MariaDB server installation

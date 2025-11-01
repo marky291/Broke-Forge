@@ -2,7 +2,7 @@
 
 namespace App\Packages\Services\Database\MySQL;
 
-use App\Packages\Base\PackageInstaller;
+use App\Packages\Core\Base\PackageInstaller;
 
 /**
  * MySQL Database Server Installation Class
@@ -10,7 +10,7 @@ use App\Packages\Base\PackageInstaller;
  * Handles installation of MySQL server with progress tracking
  * using ServerPackageEvent for real-time status updates
  */
-class MySqlInstaller extends PackageInstaller implements \App\Packages\Base\ServerPackage
+class MySqlInstaller extends PackageInstaller implements \App\Packages\Core\Base\ServerPackage
 {
     /**
      * Execute the MySQL server installation

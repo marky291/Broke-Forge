@@ -2,8 +2,8 @@
 
 namespace App\Packages\Services\Firewall;
 
-use App\Packages\Base\PackageInstaller;
-use App\Packages\Base\ServerPackage;
+use App\Packages\Core\Base\PackageInstaller;
+use App\Packages\Core\Base\ServerPackage;
 use App\Packages\Services\Firewall\Concerns\ManagesFirewallRules;
 
 /**

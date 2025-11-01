@@ -3,14 +3,14 @@
 namespace App\Packages\Services\Database\MySQL;
 
 use App\Enums\TaskStatus;
-use App\Packages\Base\PackageRemover;
+use App\Packages\Core\Base\PackageRemover;
 
 /**
  * MySQL Database Server Removal Class
  *
  * Handles safe removal of MySQL server with progress tracking
  */
-class MySqlRemover extends PackageRemover implements \App\Packages\Base\ServerPackage
+class MySqlRemover extends PackageRemover implements \App\Packages\Core\Base\ServerPackage
 {
     /**
      * Mark MySQL removal as failed in database
