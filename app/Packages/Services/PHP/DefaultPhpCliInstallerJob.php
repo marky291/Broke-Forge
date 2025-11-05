@@ -10,11 +10,12 @@ use App\Packages\Taskable;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * PHP Installation Job
+ * Default PHP CLI Installer Job
  *
- * Handles queued PHP installation on remote servers with real-time status updates.
+ * Sets the system-wide PHP CLI default on a remote server using update-alternatives.
+ * Follows the Reverb Package Lifecycle Pattern with status transitions.
  */
-class PhpInstallerJob extends Taskable
+class DefaultPhpCliInstallerJob extends Taskable
 {
     public function __construct(
         public Server $server,
@@ -28,7 +29,7 @@ class PhpInstallerJob extends Taskable
 
     protected function getInProgressStatus(): mixed
     {
-        return TaskStatus::Installing;
+        return TaskStatus::Updating;
     }
 
     protected function getSuccessStatus(): mixed
@@ -45,28 +46,23 @@ class PhpInstallerJob extends Taskable
     {
         $phpVersion = PhpVersion::from($model->version);
 
-        // Install the php version
-        $installer = new PhpInstaller($this->server);
+        $installer = new DefaultPhpCliInstaller($this->server);
         $installer->execute($phpVersion);
+    }
 
-        // Re-apply existing CLI default (if one exists)
-        $cliDefault = $this->server->phps()
-            ->where('is_cli_default', true)
-            ->first();
-
-        if ($cliDefault) {
-            DefaultPhpCliInstallerJob::dispatchSync($this->server, $cliDefault);
-        }
+    protected function getAdditionalSuccessData(Model $model): array
+    {
+        return [
+            'is_cli_default' => true,
+        ];
     }
 
     protected function getLogContext(Model $model): array
     {
-        $phpVersion = PhpVersion::from($model->version);
-
         return [
             'php_id' => $model->id,
             'server_id' => $this->server->id,
-            'version' => $phpVersion->value,
+            'version' => $model->version,
         ];
     }
 
@@ -75,6 +71,7 @@ class PhpInstallerJob extends Taskable
         return [
             'php_id' => $this->serverPhp->id,
             'server_id' => $this->server->id,
+            'version' => $this->serverPhp->version,
             'error' => $exception->getMessage(),
             'trace' => $exception->getTraceAsString(),
         ];

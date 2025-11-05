@@ -76,9 +76,6 @@ class PhpInstaller extends PackageInstaller implements ServerPackage
             // Install PHP packages for the specified version
             "DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends {$phpPackages}",
 
-            // Set this PHP version as the system default
-            "update-alternatives --set php /usr/bin/php{$phpVersion->value}",
-
             // Configure PHP-FPM settings
             "sed -i 's/^;*upload_max_filesize.*/upload_max_filesize = 100M/' /etc/php/{$phpVersion->value}/fpm/php.ini 2>/dev/null || true",
             "sed -i 's/^;*post_max_size.*/post_max_size = 100M/' /etc/php/{$phpVersion->value}/fpm/php.ini 2>/dev/null || true",

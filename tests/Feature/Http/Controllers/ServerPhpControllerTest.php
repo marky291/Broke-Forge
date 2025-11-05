@@ -7,7 +7,9 @@ use App\Models\Server;
 use App\Models\ServerPhp;
 use App\Models\ServerPhpModule;
 use App\Models\User;
+use App\Packages\Services\PHP\DefaultPhpCliInstallerJob;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 class ServerPhpControllerTest extends TestCase
@@ -342,6 +344,53 @@ class ServerPhpControllerTest extends TestCase
     public function test_user_can_set_cli_default_php_version(): void
     {
         // Arrange
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        $php81 = ServerPhp::factory()->create([
+            'server_id' => $server->id,
+            'version' => '8.1',
+            'is_cli_default' => true,
+            'status' => TaskStatus::Active,
+        ]);
+
+        $php83 = ServerPhp::factory()->create([
+            'server_id' => $server->id,
+            'version' => '8.3',
+            'is_cli_default' => false,
+            'status' => TaskStatus::Active,
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->patch("/servers/{$server->id}/php/{$php83->id}/set-cli-default");
+
+        // Assert
+        $response->assertStatus(302);
+        $response->assertRedirect("/servers/{$server->id}/php");
+        $response->assertSessionHas('success', 'PHP 8.3 CLI default update started');
+
+        $php81->refresh();
+        $php83->refresh();
+
+        // Previous default unset
+        $this->assertFalse($php81->is_cli_default);
+
+        // New PHP status set to 'updating', is_cli_default still false (job will set it)
+        $this->assertEquals(TaskStatus::Updating, $php83->status);
+        $this->assertFalse($php83->is_cli_default);
+    }
+
+    /**
+     * Test setting CLI default dispatches DefaultPhpCliInstallerJob.
+     */
+    public function test_setting_cli_default_dispatches_job(): void
+    {
+        // Arrange
+        Queue::fake();
+
         $user = User::factory()->create();
         $server = Server::factory()->create(['user_id' => $user->id]);
 
@@ -363,14 +412,11 @@ class ServerPhpControllerTest extends TestCase
 
         // Assert
         $response->assertStatus(302);
-        $response->assertRedirect("/servers/{$server->id}/php");
-        $response->assertSessionHas('success', 'PHP 8.3 set as CLI default');
 
-        $php81->refresh();
-        $php83->refresh();
-
-        $this->assertFalse($php81->is_cli_default);
-        $this->assertTrue($php83->is_cli_default);
+        Queue::assertPushed(DefaultPhpCliInstallerJob::class, function ($job) use ($server, $php83) {
+            return $job->server->id === $server->id
+                && $job->serverPhp->id === $php83->id;
+        });
     }
 
     /**

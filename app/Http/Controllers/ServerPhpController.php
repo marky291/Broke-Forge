@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\TaskStatus;
 use App\Http\Controllers\Concerns\PreparesSiteData;
 use App\Http\Resources\ServerResource;
 use App\Models\Server;
 use App\Models\ServerPhp;
+use App\Packages\Services\PHP\DefaultPhpCliInstallerJob;
 use App\Packages\Services\PHP\PhpInstallerJob;
 use App\Packages\Services\PHP\Services\PhpConfigurationService;
 use Illuminate\Http\RedirectResponse;
@@ -145,12 +147,15 @@ class ServerPhpController extends Controller
         // Unset current CLI default
         $server->phps()->update(['is_cli_default' => false]);
 
-        // Set new CLI default
-        $php->update(['is_cli_default' => true]);
+        // Set status to 'updating' (job will set is_cli_default on success)
+        $php->update(['status' => TaskStatus::Updating]);
+
+        // Apply the change on the remote server
+        DefaultPhpCliInstallerJob::dispatch($server, $php);
 
         return redirect()
             ->route('servers.php', $server)
-            ->with('success', 'PHP '.$php->version.' set as CLI default');
+            ->with('success', 'PHP '.$php->version.' CLI default update started');
     }
 
     public function setSiteDefault(Server $server, ServerPhp $php): RedirectResponse

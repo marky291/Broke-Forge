@@ -75,10 +75,18 @@ abstract class Taskable implements ShouldQueue
     /**
      * Get the middleware the job should pass through.
      *
+     * Automatically skips middleware when dispatched synchronously (dispatchSync)
+     * since the parent job already holds the lock.
+     *
      * @return array<int, object>
      */
     public function middleware(): array
     {
+        // Skip middleware for synchronous dispatch (already inside a locked job)
+        if ($this->connection === 'sync') {
+            return [];
+        }
+
         return [
             (new WithoutOverlapping("package:action:{$this->server->id}"))->shared()
                 ->releaseAfter(15)
