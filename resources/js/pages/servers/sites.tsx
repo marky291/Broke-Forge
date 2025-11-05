@@ -1,8 +1,8 @@
 import { CardList, type CardListAction } from '@/components/card-list';
 import { SiteAvatar } from '@/components/site-avatar';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { CardBadge } from '@/components/ui/card-badge';
 import { CardFormModal } from '@/components/ui/card-form-modal';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -17,7 +17,7 @@ import { show as showSite } from '@/routes/servers/sites';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router, useForm, usePage } from '@inertiajs/react';
 import { useEcho } from '@laravel/echo-react';
-import { AlertCircle, CheckCircle, CheckCircle2, Clock, Eye, GitBranch, Globe, Loader2, Lock, RefreshCw, Trash2, XCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Eye, Globe, Loader2, RefreshCw, Trash2, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 type ServerSite = {
@@ -216,78 +216,6 @@ export default function Sites({ server }: SitesProps) {
         });
     };
 
-    const getStatusBadge = (site: ServerSite) => {
-        const status = site.status;
-
-        switch (status) {
-            case 'active':
-                return null;
-            case 'pending':
-                return (
-                    <Badge variant="outline" className="inline-flex items-center gap-1.5 border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700">
-                        <Clock className="h-3 w-3" />
-                        Pending
-                    </Badge>
-                );
-            case 'provisioning':
-                return (
-                    <Badge variant="outline" className="inline-flex items-center gap-1.5 border-blue-200 bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700">
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                        Provisioning
-                    </Badge>
-                );
-            case 'failed':
-                return (
-                    <div className="inline-flex items-center gap-2">
-                        <Badge variant="outline" className="inline-flex items-center gap-1.5 border-red-200 bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-700">
-                            <XCircle className="h-3 w-3" />
-                            Failed
-                        </Badge>
-                        <div className="inline-flex items-center gap-1.5">
-                            {site.error_log && (
-                                <button
-                                    onClick={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        handleViewError(site);
-                                    }}
-                                    className="inline-flex items-center gap-1 text-xs text-red-600 hover:text-red-700 hover:underline"
-                                    title="View error details"
-                                >
-                                    <Eye className="h-3.5 w-3.5" />
-                                    View Error
-                                </button>
-                            )}
-                            <button
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    handleDeleteClick(site);
-                                }}
-                                className="inline-flex items-center gap-1 text-xs text-red-600 hover:text-red-700 hover:underline"
-                                title="Delete site"
-                            >
-                                <Trash2 className="h-3.5 w-3.5" />
-                                Delete
-                            </button>
-                        </div>
-                    </div>
-                );
-            case 'disabled':
-                return (
-                    <Badge variant="outline" className="border-gray-200 bg-gray-50 px-2.5 py-0.5 text-xs font-medium text-gray-700">
-                        Disabled
-                    </Badge>
-                );
-            default:
-                return (
-                    <Badge variant="outline" className="px-2.5 py-0.5 text-xs font-medium">
-                        {status}
-                    </Badge>
-                );
-        }
-    };
-
 
     return (
         <ServerLayout server={server} breadcrumbs={breadcrumbs}>
@@ -332,37 +260,63 @@ export default function Sites({ server }: SitesProps) {
                             router.visit(showSite({ server: server.id, site: site.id }).url);
                         }
                     }}
-                    renderItem={(site) => (
-                        <div className="flex items-center justify-between gap-3">
-                            {/* Left: Site Avatar + Info */}
-                            <div className="flex min-w-0 flex-1 items-center gap-3">
-                                <SiteAvatar domain={site.domain} />
-                                <div className="min-w-0 flex-1">
-                                    <div className="text-sm font-medium text-foreground">{site.domain}</div>
-                                    <p className="truncate text-xs text-muted-foreground">
-                                        {site.configuration?.git_repository?.repository ? (
-                                            <>
-                                                {site.configuration.git_repository.repository}
-                                                {site.configuration.git_repository.branch && <> · {site.configuration.git_repository.branch}</>}
-                                            </>
-                                        ) : (
-                                            'No repository configured'
-                                        )}
-                                        {site.ssl_enabled && <> · SSL</>}
-                                        {site.php_version && <> · PHP {site.php_version}</>}
-                                    </p>
-                                </div>
-                            </div>
+                    renderItem={(site) => {
+                        // Show deployment timestamp for operational sites (active/success), badge for transitional states
+                        const showStatusBadge = !['active', 'success'].includes(site.status);
 
-                            {/* Right: Deployment info + Status Badge */}
-                            <div className="flex flex-shrink-0 items-center gap-3">
-                                <div className="text-xs text-muted-foreground">
-                                    {site.last_deployed_at_human ? `Deployed ${site.last_deployed_at_human}` : 'Not deployed'}
+                        // Map site status to CardBadge variants
+                        const getBadgeVariant = (status: string): string => {
+                            const statusMap: Record<string, string> = {
+                                provisioning: 'installing',
+                                paused: 'inactive',
+                            };
+                            return statusMap[status] || status;
+                        };
+
+                        return (
+                            <div className="flex items-center justify-between gap-3">
+                                {/* Left: Site Avatar + Info */}
+                                <div className="flex min-w-0 flex-1 items-center gap-3">
+                                    <SiteAvatar domain={site.domain} />
+                                    <div className="min-w-0 flex-1">
+                                        <div className="truncate text-sm font-medium">{site.domain}</div>
+                                        <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
+                                            {site.configuration?.git_repository?.repository ? (
+                                                <>
+                                                    <span>{site.configuration.git_repository.repository}</span>
+                                                    {site.configuration.git_repository.branch && (
+                                                        <>
+                                                            <span>•</span>
+                                                            <span>{site.configuration.git_repository.branch}</span>
+                                                        </>
+                                                    )}
+                                                </>
+                                            ) : (
+                                                <span>No repository configured</span>
+                                            )}
+                                            <span>•</span>
+                                            <span>PHP {site.php_version}</span>
+                                            {site.ssl_enabled && (
+                                                <>
+                                                    <span>•</span>
+                                                    <span>SSL</span>
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
-                                {getStatusBadge(site)}
+
+                                {/* Right: Status Badge or Deployment Timestamp */}
+                                {showStatusBadge ? (
+                                    <CardBadge variant={getBadgeVariant(site.status) as any} />
+                                ) : (
+                                    <div className="flex-shrink-0 text-xs text-muted-foreground">
+                                        {site.last_deployed_at_human ? `Deployed ${site.last_deployed_at_human}` : 'Not deployed'}
+                                    </div>
+                                )}
                             </div>
-                        </div>
-                    )}
+                        );
+                    }}
                     actions={(site) => {
                         const actions: CardListAction[] = [];
 
