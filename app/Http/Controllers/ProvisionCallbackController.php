@@ -35,7 +35,7 @@ class ProvisionCallbackController extends Controller
         }
 
         // Save the step to db
-        $server->provision->put($step, $status);
+        $server->provision_state->put($step, $status);
         $server->save();
 
         Log::info("Provision step {$step} updated to {$status} for server #{$server->id}");
@@ -59,8 +59,8 @@ class ProvisionCallbackController extends Controller
             $server->reverseProxy()->delete(); // delete all proxy (nginx) for this server
             $server->firewall?->rules()->delete();
             $server->firewall()->delete(); // delete all firewall for this server
-            $server->provision = collect(); // clear out the steps.
-            $server->provision->put(1, TaskStatus::Success->value); // complete the connection step.
+            $server->provision_state = collect(); // clear out the steps.
+            $server->provision_state->put(1, TaskStatus::Success->value); // complete the connection step.
             $server->connection_status = TaskStatus::Success;
             $server->provision_status = TaskStatus::Installing;
             $server->save();
@@ -68,7 +68,7 @@ class ProvisionCallbackController extends Controller
 
         if ($step == 3 && $status == TaskStatus::Success->value) {
 
-            $server->provision->put(4, TaskStatus::Installing->value);
+            $server->provision_state->put(4, TaskStatus::Installing->value);
             $server->save();
 
             // Initialize success flags
@@ -139,13 +139,14 @@ class ProvisionCallbackController extends Controller
                     }
                 }
 
-                $server->provision->put(4, TaskStatus::Success->value);
-                $server->provision->put(5, TaskStatus::Installing->value);
+                $server->provision_state->put(4, TaskStatus::Success->value);
+                $server->provision_state->put(5, TaskStatus::Installing->value);
                 $server->provision_status = TaskStatus::Installing;
                 $server->save();
 
                 // Update status and dispatch web service provisioning job
-                NginxInstallerJob::dispatch($server, PhpVersion::PHP83, isProvisioningServer: true);
+                $phpVersion = PhpVersion::from($server->provision_config->get('php_version'));
+                NginxInstallerJob::dispatch($server, $phpVersion, isProvisioningServer: true);
 
                 Log::info("Dispatched web service provisioning job for server #{$server->id}");
             }

@@ -71,10 +71,13 @@ class PhpInstaller extends PackageInstaller implements ServerPackage
             'DEBIAN_FRONTEND=noninteractive apt-get install -y ca-certificates curl gnupg lsb-release software-properties-common',
 
             // Add PHP repository (Ondrej PPA for Ubuntu, standard repos for Debian)
-            'if command -v lsb_release >/dev/null 2>&1 && [ "$(lsb_release -is)" = "Ubuntu" ]; then add-apt-repository -y ppa:ondrej/php || true; DEBIAN_FRONTEND=noninteractive apt-get update -y; fi || true',
+            'if command -v lsb_release >/dev/null 2>&1 && [ "$(lsb_release -is)" = "Ubuntu" ]; then add-apt-repository -y ppa:ondrej/php || true; DEBIAN_FRONTEND=noninteractive apt-get update -y; fi',
 
-            // Install PHP packages (attempt versioned packages first, then fall back to default php if needed)
-            "DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends {$phpPackages} || DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends php-fpm php-cli php-common php-curl php-mbstring php-xml php-zip php-intl php-mysql php-gd php-bcmath php-soap php-opcache php-readline",
+            // Install PHP packages for the specified version
+            "DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends {$phpPackages}",
+
+            // Set this PHP version as the system default
+            "update-alternatives --set php /usr/bin/php{$phpVersion->value}",
 
             // Configure PHP-FPM settings
             "sed -i 's/^;*upload_max_filesize.*/upload_max_filesize = 100M/' /etc/php/{$phpVersion->value}/fpm/php.ini 2>/dev/null || true",
@@ -86,15 +89,16 @@ class PhpInstaller extends PackageInstaller implements ServerPackage
             "sed -i 's/^;*memory_limit.*/memory_limit = -1/' /etc/php/{$phpVersion->value}/cli/php.ini 2>/dev/null || true",
 
             // Enable and start PHP-FPM service
-            "systemctl enable php{$phpVersion->value}-fpm || systemctl enable php-fpm",
-            "systemctl restart php{$phpVersion->value}-fpm || systemctl restart php-fpm",
+            "systemctl enable php{$phpVersion->value}-fpm",
+            "systemctl restart php{$phpVersion->value}-fpm",
 
             // Note: Status updates are managed by PhpInstallerJob (Reverb Package Lifecycle)
             // Job updates: pending → installing → active/failed
 
-            // Verify PHP installation
-            "php{$phpVersion->value} -v || php -v",
-            "systemctl status php{$phpVersion->value}-fpm --no-pager || systemctl status php-fpm --no-pager",
+            // Verify PHP installation (use both explicit binary and system default)
+            "php{$phpVersion->value} -v",
+            'php -v',
+            "systemctl status php{$phpVersion->value}-fpm --no-pager",
 
         ];
     }

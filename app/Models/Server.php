@@ -25,7 +25,7 @@ use Illuminate\Support\Facades\Log;
  * @property string $connection
  * @property string $vanity_name
  * @property TaskStatus $provision_status
- * @property \Illuminate\Support\Collection|null $provision
+ * @property \Illuminate\Support\Collection|null $provision_state
  * @property int $id
  * @property TaskStatus|mixed $connection_status
  */
@@ -42,7 +42,8 @@ class Server extends Model
         'ssh_port',
         'connection_status',
         'provision_status',
-        'provision',
+        'provision_state',
+        'provision_config',
         'ssh_root_password',
         'os_name',
         'os_version',
@@ -71,7 +72,7 @@ class Server extends Model
 
     protected $attributes = [
         'ssh_port' => 22,
-        'provision' => '{"1":"installing"}',
+        'provision_state' => '{"1":"installing"}',
     ];
 
     protected function casts(): array
@@ -81,7 +82,8 @@ class Server extends Model
             'connection_status' => TaskStatus::class, // Only uses: Pending (initial), Success (connected), Failed (connection error)
             'provider' => ServerProvider::class,
             'provision_status' => TaskStatus::class,
-            'provision' => AsCollection::class,
+            'provision_state' => AsCollection::class,
+            'provision_config' => AsCollection::class,
             'ssh_root_password' => 'encrypted',
             'monitoring_token' => 'encrypted',
             'monitoring_status' => TaskStatus::class,

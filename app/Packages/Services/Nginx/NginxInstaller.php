@@ -5,7 +5,6 @@ namespace App\Packages\Services\Nginx;
 use App\Enums\ReverseProxyType;
 use App\Enums\ScheduleFrequency;
 use App\Enums\TaskStatus;
-use App\Models\ServerNode;
 use App\Models\ServerPhp;
 use App\Models\ServerReverseProxy;
 use App\Packages\Core\Base\Package;
@@ -57,31 +56,36 @@ class NginxInstaller extends PackageInstaller implements \App\Packages\Core\Base
             FirewallRuleInstallerJob::dispatchSync($this->server, $rule);
         }
 
-        $this->server->provision->put(5, TaskStatus::Success->value);
-        $this->server->provision->put(6, TaskStatus::Installing->value);
+        $this->server->provision_state->put(5, TaskStatus::Success->value);
+        $this->server->provision_state->put(6, TaskStatus::Installing->value);
         $this->server->save();
 
         // Create ServerPhp record FIRST with 'pending' status (Reverb Package Lifecycle)
+        // Use firstOrCreate for idempotency (safe for job retries)
         $isFirstPhp = $this->server->phps()->count() === 0;
-        $php = ServerPhp::create([
-            'server_id' => $this->server->id,
-            'version' => $phpVersion->value,
-            'status' => \App\Enums\TaskStatus::Pending,
-            'is_cli_default' => $isFirstPhp,
-            'is_site_default' => $isFirstPhp,
-        ]);
+        $php = $this->server->phps()->firstOrCreate(
+            [
+                'server_id' => $this->server->id,
+                'version' => $phpVersion->value,
+            ],
+            [
+                'status' => \App\Enums\TaskStatus::Pending,
+                'is_cli_default' => $isFirstPhp,
+                'is_site_default' => $isFirstPhp,
+            ]
+        );
 
         // Pass the record to the job (not the ID)
         PhpInstallerJob::dispatchSync($this->server, $php);
 
-        $this->server->provision->put(6, TaskStatus::Success->value);
-        $this->server->provision->put(7, TaskStatus::Installing->value);
+        $this->server->provision_state->put(6, TaskStatus::Success->value);
+        $this->server->provision_state->put(7, TaskStatus::Installing->value);
         $this->server->save();
 
         $this->install($this->commands($phpVersion));
 
-        $this->server->provision->put(7, TaskStatus::Success->value);
-        $this->server->provision->put(8, TaskStatus::Installing->value);
+        $this->server->provision_state->put(7, TaskStatus::Success->value);
+        $this->server->provision_state->put(8, TaskStatus::Installing->value);
         $this->server->save();
 
         // Install Task scheduler and default task schedule job.
@@ -102,18 +106,23 @@ class NginxInstaller extends PackageInstaller implements \App\Packages\Core\Base
         SupervisorInstallerJob::dispatchSync($this->server);
 
         // Install Node.js 22 by default (Composer will be installed automatically with first Node)
+        // Use firstOrCreate for idempotency (safe for job retries)
         $isFirstNode = $this->server->nodes()->count() === 0;
-        $node = ServerNode::create([
-            'server_id' => $this->server->id,
-            'version' => NodeVersion::Node22->value,
-            'status' => TaskStatus::Pending,
-            'is_default' => $isFirstNode,
-        ]);
+        $node = $this->server->nodes()->firstOrCreate(
+            [
+                'server_id' => $this->server->id,
+                'version' => NodeVersion::Node22->value,
+            ],
+            [
+                'status' => TaskStatus::Pending,
+                'is_default' => $isFirstNode,
+            ]
+        );
 
         // Pass the record to the job (not the ID)
         NodeInstallerJob::dispatchSync($this->server, $node);
 
-        $this->server->provision->put(8, TaskStatus::Success->value);
+        $this->server->provision_state->put(8, TaskStatus::Success->value);
         $this->server->save();
     }
 

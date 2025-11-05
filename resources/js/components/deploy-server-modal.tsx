@@ -149,8 +149,6 @@ export default function DeployServerModal({ trigger }: DeployServerModalProps) {
                                         <SelectItem value="8.3">PHP 8.3 (Stable)</SelectItem>
                                         <SelectItem value="8.2">PHP 8.2</SelectItem>
                                         <SelectItem value="8.1">PHP 8.1</SelectItem>
-                                        <SelectItem value="8.0">PHP 8.0</SelectItem>
-                                        <SelectItem value="7.4">PHP 7.4 (Legacy)</SelectItem>
                                     </SelectContent>
                                 </Select>
                                 <input type="hidden" name="php_version" value={phpVersion} />

@@ -913,15 +913,15 @@ class ServerTest extends TestCase
     }
 
     /**
-     * Test provision collection cast.
+     * Test provision_state collection cast.
      */
-    public function test_provision_collection_cast(): void
+    public function test_provision_state_collection_cast(): void
     {
         // Act
-        $server = Server::factory()->create(['provision' => ['1' => 'installing', '2' => 'success']]);
+        $server = Server::factory()->create(['provision_state' => ['1' => 'installing', '2' => 'success']]);
 
         // Assert
-        $this->assertInstanceOf(\Illuminate\Support\Collection::class, $server->provision);
-        $this->assertEquals('installing', $server->provision->get('1'));
+        $this->assertInstanceOf(\Illuminate\Support\Collection::class, $server->provision_state);
+        $this->assertEquals('installing', $server->provision_state->get('1'));
     }
 }

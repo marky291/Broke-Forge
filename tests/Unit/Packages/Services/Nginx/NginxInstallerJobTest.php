@@ -97,4 +97,102 @@ class NginxInstallerJobTest extends TestCase
         $job2 = new NginxInstallerJob($server, $phpVersion, false);
         $this->assertFalse($job2->isProvisioningServer);
     }
+
+    public function test_failed_method_updates_provision_state_with_failed_status(): void
+    {
+        // Arrange
+        $server = Server::factory()->create([
+            'provision_status' => \App\Enums\TaskStatus::Installing,
+            'provision_state' => collect([
+                1 => 'success',
+                2 => 'success',
+                3 => 'success',
+                4 => 'success',
+                5 => 'success',
+                6 => 'installing', // Current step
+                7 => 'pending',
+                8 => 'pending',
+            ]),
+        ]);
+
+        $job = new NginxInstallerJob($server, PhpVersion::PHP83, true);
+        $exception = new \Exception('Test exception');
+
+        // Act
+        $job->failed($exception);
+
+        // Assert
+        $server->refresh();
+        $this->assertEquals(\App\Enums\TaskStatus::Failed, $server->provision_status);
+        $this->assertEquals('failed', $server->provision_state->get(6));
+    }
+
+    public function test_failed_method_marks_first_installing_step_as_failed(): void
+    {
+        // Arrange - Multiple installing steps (edge case)
+        $server = Server::factory()->create([
+            'provision_status' => \App\Enums\TaskStatus::Installing,
+            'provision_state' => collect([
+                1 => 'success',
+                2 => 'installing', // This should be marked as failed
+                3 => 'pending',
+            ]),
+        ]);
+
+        $job = new NginxInstallerJob($server, PhpVersion::PHP83, true);
+        $exception = new \Exception('Test exception');
+
+        // Act
+        $job->failed($exception);
+
+        // Assert
+        $server->refresh();
+        $this->assertEquals('failed', $server->provision_state->get(2));
+    }
+
+    public function test_failed_method_handles_no_installing_step_gracefully(): void
+    {
+        // Arrange - No installing step found
+        $server = Server::factory()->create([
+            'provision_status' => \App\Enums\TaskStatus::Pending,
+            'provision_state' => collect([
+                1 => 'success',
+                2 => 'success',
+                3 => 'pending',
+            ]),
+        ]);
+
+        $job = new NginxInstallerJob($server, PhpVersion::PHP83, true);
+        $exception = new \Exception('Test exception');
+
+        // Act
+        $job->failed($exception);
+
+        // Assert - Should not crash, just update provision_status
+        $server->refresh();
+        $this->assertEquals(\App\Enums\TaskStatus::Failed, $server->provision_status);
+    }
+
+    public function test_failed_method_does_not_update_provision_state_when_not_provisioning(): void
+    {
+        // Arrange
+        $server = Server::factory()->create([
+            'provision_status' => \App\Enums\TaskStatus::Success,
+            'provision_state' => collect([
+                1 => 'success',
+                2 => 'success',
+            ]),
+        ]);
+
+        $job = new NginxInstallerJob($server, PhpVersion::PHP83, false); // Not provisioning
+        $exception = new \Exception('Test exception');
+
+        // Act
+        $job->failed($exception);
+
+        // Assert - Should not update anything
+        $server->refresh();
+        $this->assertEquals(\App\Enums\TaskStatus::Success, $server->provision_status);
+        $this->assertEquals('success', $server->provision_state->get(1));
+    }
 }

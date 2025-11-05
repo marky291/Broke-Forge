@@ -17,7 +17,7 @@ class ServerProvisioningResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        $provision = $this->provision ?? collect();
+        $provision = $this->provision_state ?? collect();
 
         return [
             'id' => $this->id,

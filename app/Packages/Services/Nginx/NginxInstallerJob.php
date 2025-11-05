@@ -50,7 +50,19 @@ class NginxInstallerJob extends Orchestratable
 
         } catch (Exception $e) {
             if ($this->isProvisioningServer) {
-                $this->server->update(['provision_status' => TaskStatus::Failed]);
+                // Mark the current installing step as failed in provision_state
+                $this->server->refresh();
+                $currentStep = $this->server->provision_state
+                    ->search(fn ($status) => $status === TaskStatus::Installing->value);
+
+                if ($currentStep !== false) {
+                    $this->server->provision_state->put($currentStep, TaskStatus::Failed->value);
+                }
+
+                $this->server->update([
+                    'provision_status' => TaskStatus::Failed,
+                    'provision_state' => $this->server->provision_state,
+                ]);
             }
             Log::error("Nginx installation failed for server #{$this->server->id}", [
                 'error' => $e->getMessage(),
@@ -65,8 +77,17 @@ class NginxInstallerJob extends Orchestratable
         $this->server->refresh();
 
         if ($this->server && $this->isProvisioningServer) {
+            // Mark the current installing step as failed in provision_state
+            $currentStep = $this->server->provision_state
+                ->search(fn ($status) => $status === TaskStatus::Installing->value);
+
+            if ($currentStep !== false) {
+                $this->server->provision_state->put($currentStep, TaskStatus::Failed->value);
+            }
+
             $this->server->update([
                 'provision_status' => TaskStatus::Failed,
+                'provision_state' => $this->server->provision_state,
             ]);
         }
 

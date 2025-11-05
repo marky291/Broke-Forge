@@ -47,7 +47,7 @@ class ProvisionCallbackControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'provision' => collect(),
+            'provision_state' => collect(),
         ]);
 
         $signedUrl = URL::signedRoute('servers.provision.step', [
@@ -64,7 +64,7 @@ class ProvisionCallbackControllerTest extends TestCase
         $response->assertJson(['ok' => true]);
 
         $server->refresh();
-        $this->assertEquals('pending', $server->provision->get(1));
+        $this->assertEquals('pending', $server->provision_state->get(1));
     }
 
     /**
@@ -76,7 +76,7 @@ class ProvisionCallbackControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'provision' => collect([1 => 'success']),
+            'provision_state' => collect([1 => 'success']),
         ]);
 
         $signedUrl = URL::signedRoute('servers.provision.step', [
@@ -91,7 +91,7 @@ class ProvisionCallbackControllerTest extends TestCase
         // Assert
         $response->assertStatus(200);
         $server->refresh();
-        $this->assertEquals('installing', $server->provision->get(2));
+        $this->assertEquals('installing', $server->provision_state->get(2));
     }
 
     /**
@@ -103,7 +103,7 @@ class ProvisionCallbackControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'provision' => collect([1 => 'success', 2 => 'success']),
+            'provision_state' => collect([1 => 'success', 2 => 'success']),
         ]);
 
         $signedUrl = URL::signedRoute('servers.provision.step', [
@@ -118,7 +118,7 @@ class ProvisionCallbackControllerTest extends TestCase
         // Assert
         $response->assertStatus(200);
         $server->refresh();
-        $this->assertEquals('installing', $server->provision->get(3));
+        $this->assertEquals('installing', $server->provision_state->get(3));
     }
 
     /**
@@ -234,7 +234,7 @@ class ProvisionCallbackControllerTest extends TestCase
         $response->assertStatus(200);
         $server->refresh();
         $this->assertEquals(TaskStatus::Failed, $server->provision_status);
-        $this->assertEquals('failed', $server->provision->get(2));
+        $this->assertEquals('failed', $server->provision_state->get(2));
     }
 
     /**
@@ -276,7 +276,7 @@ class ProvisionCallbackControllerTest extends TestCase
         // Verify server status updated
         $this->assertEquals(TaskStatus::Success, $server->connection_status);
         $this->assertEquals(TaskStatus::Installing, $server->provision_status);
-        $this->assertEquals('success', $server->provision->get(1));
+        $this->assertEquals('success', $server->provision_state->get(1));
     }
 
     /**
@@ -288,7 +288,7 @@ class ProvisionCallbackControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'provision' => collect([
+            'provision_state' => collect([
                 1 => 'failed',
                 2 => 'pending',
                 3 => 'pending',
@@ -309,8 +309,8 @@ class ProvisionCallbackControllerTest extends TestCase
         $server->refresh();
 
         // Provision should only have step 1 completed
-        $this->assertEquals(1, $server->provision->count());
-        $this->assertEquals('success', $server->provision->get(1));
+        $this->assertEquals(1, $server->provision_state->count());
+        $this->assertEquals('success', $server->provision_state->get(1));
     }
 
     /**
@@ -394,7 +394,7 @@ class ProvisionCallbackControllerTest extends TestCase
             // Assert
             $response->assertStatus(200);
             $server->refresh();
-            $this->assertEquals($status, $server->provision->get(2));
+            $this->assertEquals($status, $server->provision_state->get(2));
         }
     }
 
@@ -419,7 +419,7 @@ class ProvisionCallbackControllerTest extends TestCase
         // Assert
         $response->assertStatus(200);
         $server->refresh();
-        $this->assertEquals('pending', $server->provision->get(1));
+        $this->assertEquals('pending', $server->provision_state->get(1));
     }
 
     /**
@@ -444,7 +444,7 @@ class ProvisionCallbackControllerTest extends TestCase
         // Assert
         $response->assertStatus(200);
         $server->refresh();
-        $this->assertEquals('pending', $server->provision->get(1));
+        $this->assertEquals('pending', $server->provision_state->get(1));
     }
 
     /**
@@ -482,7 +482,7 @@ class ProvisionCallbackControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'provision' => collect([
+            'provision_state' => collect([
                 1 => 'success',
                 2 => 'success',
                 3 => 'installing',
@@ -546,8 +546,8 @@ class ProvisionCallbackControllerTest extends TestCase
         $response->assertStatus(200);
 
         $server->refresh();
-        $this->assertEquals('success', $server->provision->get(4));
-        $this->assertEquals('installing', $server->provision->get(5));
+        $this->assertEquals('success', $server->provision_state->get(4));
+        $this->assertEquals('installing', $server->provision_state->get(5));
         $this->assertEquals(TaskStatus::Installing, $server->provision_status);
     }
 
@@ -562,7 +562,7 @@ class ProvisionCallbackControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'provision' => collect([1 => 'success', 2 => 'success']),
+            'provision_state' => collect([1 => 'success', 2 => 'success']),
             'provision_status' => TaskStatus::Pending,
         ]);
 
@@ -633,7 +633,7 @@ class ProvisionCallbackControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'provision' => collect([1 => 'success', 2 => 'success']),
+            'provision_state' => collect([1 => 'success', 2 => 'success']),
         ]);
 
         // Create credentials
@@ -731,7 +731,7 @@ class ProvisionCallbackControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create([
             'user_id' => $user->id,
-            'provision' => collect([1 => 'success', 2 => 'success']),
+            'provision_state' => collect([1 => 'success', 2 => 'success']),
         ]);
 
         // Create credentials
@@ -789,7 +789,144 @@ class ProvisionCallbackControllerTest extends TestCase
         $server->refresh();
 
         // Step 4 should be set to 'success' and step 5 to 'installing' after step 3 completes
-        $this->assertEquals('success', $server->provision->get(4));
-        $this->assertEquals('installing', $server->provision->get(5));
+        $this->assertEquals('success', $server->provision_state->get(4));
+        $this->assertEquals('installing', $server->provision_state->get(5));
+    }
+
+    /**
+     * Test provision_state tracks step progress correctly.
+     */
+    public function test_provision_state_tracks_step_progress(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create([
+            'user_id' => $user->id,
+            'provision_state' => collect(),
+        ]);
+
+        // Act & Assert - Step 1
+        $signedUrl = URL::signedRoute('servers.provision.step', [
+            'server' => $server->id,
+            'step' => 1,
+            'status' => 'installing',
+        ]);
+        $this->postJson($signedUrl)->assertStatus(200);
+        $server->refresh();
+        $this->assertEquals('installing', $server->provision_state->get(1));
+
+        // Act & Assert - Step 1 success
+        $signedUrl = URL::signedRoute('servers.provision.step', [
+            'server' => $server->id,
+            'step' => 1,
+            'status' => 'success',
+        ]);
+        $this->postJson($signedUrl)->assertStatus(200);
+        $server->refresh();
+        $this->assertEquals('success', $server->provision_state->get(1));
+
+        // Act & Assert - Step 2
+        $signedUrl = URL::signedRoute('servers.provision.step', [
+            'server' => $server->id,
+            'step' => 2,
+            'status' => 'installing',
+        ]);
+        $this->postJson($signedUrl)->assertStatus(200);
+        $server->refresh();
+        $this->assertEquals('installing', $server->provision_state->get(2));
+        $this->assertEquals('success', $server->provision_state->get(1)); // Step 1 still success
+    }
+
+    /**
+     * Test provision_state is cast as Collection.
+     */
+    public function test_provision_state_is_collection(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create([
+            'user_id' => $user->id,
+            'provision_state' => ['1' => 'installing', '2' => 'success'],
+        ]);
+
+        // Assert
+        $this->assertInstanceOf(\Illuminate\Support\Collection::class, $server->provision_state);
+        $this->assertTrue($server->provision_state->has('1'));
+        $this->assertEquals('installing', $server->provision_state->get('1'));
+        $this->assertEquals('success', $server->provision_state->get('2'));
+    }
+
+    /**
+     * Test provision_config with selected PHP version is passed to NginxInstallerJob.
+     */
+    public function test_provision_config_php_version_is_passed_to_job(): void
+    {
+        // Arrange
+        \Illuminate\Support\Facades\Bus::fake();
+
+        $user = User::factory()->create();
+        $server = Server::factory()->create([
+            'user_id' => $user->id,
+            'provision_state' => collect([1 => 'success', 2 => 'success']),
+            'provision_config' => collect(['php_version' => '8.4']),
+        ]);
+
+        // Create credentials
+        \App\Models\ServerCredential::factory()->create([
+            'server_id' => $server->id,
+            'user' => 'root',
+        ]);
+        \App\Models\ServerCredential::factory()->create([
+            'server_id' => $server->id,
+            'user' => 'brokeforge',
+        ]);
+
+        // Mock successful SSH
+        $mockServer = Mockery::mock($server)->makePartial()->shouldAllowMockingProtectedMethods();
+        $mockServer->id = $server->id;
+
+        $mockSshRoot = Mockery::mock(\Spatie\Ssh\Ssh::class);
+        $mockProcessRoot = Mockery::mock(\Symfony\Component\Process\Process::class);
+        $mockProcessRoot->shouldReceive('getOutput')->andReturn('root');
+        $mockProcessRoot->shouldReceive('getErrorOutput')->andReturn('');
+        $mockProcessRoot->shouldReceive('getExitCode')->andReturn(0);
+        $mockSshRoot->shouldReceive('execute')->with('whoami')->andReturn($mockProcessRoot);
+
+        $mockSshBrokeforge = Mockery::mock(\Spatie\Ssh\Ssh::class);
+        $mockProcessBrokeforge = Mockery::mock(\Symfony\Component\Process\Process::class);
+        $mockProcessBrokeforge->shouldReceive('getOutput')->andReturn('brokeforge');
+        $mockProcessBrokeforge->shouldReceive('getErrorOutput')->andReturn('');
+        $mockProcessBrokeforge->shouldReceive('getExitCode')->andReturn(0);
+        $mockSshBrokeforge->shouldReceive('execute')->with('whoami')->andReturn($mockProcessBrokeforge);
+
+        $mockServer->shouldReceive('ssh')->with('root')->andReturn($mockSshRoot);
+        $mockServer->shouldReceive('ssh')->with('brokeforge')->andReturn($mockSshBrokeforge);
+        $mockServer->shouldReceive('detectOsInfo')->once()->andReturn(true);
+
+        // Override route model binding
+        \Illuminate\Support\Facades\Route::bind('server', function ($value) use ($mockServer, $server) {
+            if ($value == $server->id) {
+                return $mockServer;
+            }
+
+            return Server::findOrFail($value);
+        });
+
+        $signedUrl = URL::signedRoute('servers.provision.step', [
+            'server' => $server->id,
+            'step' => 3,
+            'status' => 'success',
+        ]);
+
+        // Act
+        $response = $this->postJson($signedUrl);
+
+        // Assert
+        $response->assertStatus(200);
+
+        // Verify NginxInstallerJob was dispatched with PHP 8.4
+        \Illuminate\Support\Facades\Bus::assertDispatched(\App\Packages\Services\Nginx\NginxInstallerJob::class, function ($job) {
+            return $job->phpVersion->value === '8.4';
+        });
     }
 }

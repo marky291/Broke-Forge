@@ -39,7 +39,7 @@ class ServerController extends Controller
         }
 
         $data = $request->validated();
-        $phpVersion = $data['php_version'];
+        $data['provision_config'] = collect(['php_version' => $data['php_version']]);
         unset($data['php_version']);
 
         $data['user_id'] = $request->user()->getKey();

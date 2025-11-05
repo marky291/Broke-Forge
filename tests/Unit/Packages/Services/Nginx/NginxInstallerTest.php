@@ -5,7 +5,9 @@ namespace Tests\Unit\Packages\Services\Nginx;
 use App\Enums\TaskStatus;
 use App\Models\Server;
 use App\Models\ServerNode;
+use App\Models\ServerPhp;
 use App\Packages\Enums\NodeVersion;
+use App\Packages\Enums\PhpVersion;
 use App\Packages\Services\Node\NodeInstallerJob;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -172,6 +174,161 @@ class NginxInstallerTest extends TestCase
         $this->assertDatabaseHas('server_nodes', [
             'id' => $node->id,
             'status' => TaskStatus::Pending->value,
+        ]);
+    }
+
+    /**
+     * Test that ServerPhp creation is idempotent (safe for retries).
+     * Uses firstOrCreate to prevent duplicate key errors on job retries.
+     */
+    public function test_server_php_creation_is_idempotent(): void
+    {
+        // Arrange
+        $server = Server::factory()->create();
+
+        // Act - Create PHP record first time
+        $isFirstPhp = $server->phps()->count() === 0;
+        $php1 = $server->phps()->firstOrCreate(
+            [
+                'server_id' => $server->id,
+                'version' => PhpVersion::PHP83->value,
+            ],
+            [
+                'status' => TaskStatus::Pending,
+                'is_cli_default' => $isFirstPhp,
+                'is_site_default' => $isFirstPhp,
+            ]
+        );
+
+        // Act - Simulate retry (should return existing record, not create duplicate)
+        $php2 = $server->phps()->firstOrCreate(
+            [
+                'server_id' => $server->id,
+                'version' => PhpVersion::PHP83->value,
+            ],
+            [
+                'status' => TaskStatus::Pending,
+                'is_cli_default' => $isFirstPhp,
+                'is_site_default' => $isFirstPhp,
+            ]
+        );
+
+        // Assert - Same record returned, no duplicate created
+        $this->assertEquals($php1->id, $php2->id);
+        $this->assertEquals(1, $server->phps()->count());
+        $this->assertDatabaseCount('server_phps', 1);
+    }
+
+    /**
+     * Test that ServerNode creation is idempotent (safe for retries).
+     * Uses firstOrCreate to prevent duplicate key errors on job retries.
+     */
+    public function test_server_node_creation_is_idempotent(): void
+    {
+        // Arrange
+        $server = Server::factory()->create();
+
+        // Act - Create Node record first time
+        $isFirstNode = $server->nodes()->count() === 0;
+        $node1 = $server->nodes()->firstOrCreate(
+            [
+                'server_id' => $server->id,
+                'version' => NodeVersion::Node22->value,
+            ],
+            [
+                'status' => TaskStatus::Pending,
+                'is_default' => $isFirstNode,
+            ]
+        );
+
+        // Act - Simulate retry (should return existing record, not create duplicate)
+        $node2 = $server->nodes()->firstOrCreate(
+            [
+                'server_id' => $server->id,
+                'version' => NodeVersion::Node22->value,
+            ],
+            [
+                'status' => TaskStatus::Pending,
+                'is_default' => $isFirstNode,
+            ]
+        );
+
+        // Assert - Same record returned, no duplicate created
+        $this->assertEquals($node1->id, $node2->id);
+        $this->assertEquals(1, $server->nodes()->count());
+        $this->assertDatabaseCount('server_nodes', 1);
+    }
+
+    /**
+     * Test that firstOrCreate returns existing active record on retry.
+     * Verifies that retry doesn't reset status back to pending.
+     */
+    public function test_first_or_create_preserves_existing_php_record_status(): void
+    {
+        // Arrange - Create PHP record that's already active
+        $server = Server::factory()->create();
+        $existingPhp = ServerPhp::create([
+            'server_id' => $server->id,
+            'version' => PhpVersion::PHP83->value,
+            'status' => TaskStatus::Active, // Already installed
+            'is_cli_default' => true,
+            'is_site_default' => true,
+        ]);
+
+        // Act - Simulate retry with firstOrCreate
+        $php = $server->phps()->firstOrCreate(
+            [
+                'server_id' => $server->id,
+                'version' => PhpVersion::PHP83->value,
+            ],
+            [
+                'status' => TaskStatus::Pending, // Would set pending if creating new
+                'is_cli_default' => true,
+                'is_site_default' => true,
+            ]
+        );
+
+        // Assert - Returns existing record, status stays "active"
+        $this->assertEquals($existingPhp->id, $php->id);
+        $this->assertEquals(TaskStatus::Active, $php->status);
+        $this->assertDatabaseHas('server_phps', [
+            'id' => $php->id,
+            'status' => TaskStatus::Active->value,
+        ]);
+    }
+
+    /**
+     * Test that firstOrCreate returns existing active Node record on retry.
+     */
+    public function test_first_or_create_preserves_existing_node_record_status(): void
+    {
+        // Arrange - Create Node record that's already active
+        $server = Server::factory()->create();
+        $existingNode = ServerNode::create([
+            'server_id' => $server->id,
+            'version' => NodeVersion::Node22->value,
+            'status' => TaskStatus::Active, // Already installed
+            'is_default' => true,
+        ]);
+
+        // Act - Simulate retry with firstOrCreate
+        $node = $server->nodes()->firstOrCreate(
+            [
+                'server_id' => $server->id,
+                'version' => NodeVersion::Node22->value,
+            ],
+            [
+                'status' => TaskStatus::Pending, // Would set pending if creating new
+                'is_default' => true,
+            ]
+        );
+
+        // Assert - Returns existing record, status stays "active"
+        $this->assertEquals($existingNode->id, $node->id);
+        $this->assertEquals(TaskStatus::Active, $node->status);
+        $this->assertDatabaseHas('server_nodes', [
+            'id' => $node->id,
+            'status' => TaskStatus::Active->value,
         ]);
     }
 }

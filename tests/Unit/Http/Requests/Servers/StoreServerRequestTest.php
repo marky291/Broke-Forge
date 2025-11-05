@@ -390,7 +390,7 @@ class StoreServerRequestTest extends TestCase
     {
         // Arrange
         $request = new StoreServerRequest;
-        $validVersions = ['7.4', '8.0', '8.1', '8.2', '8.3', '8.4'];
+        $validVersions = ['8.1', '8.2', '8.3', '8.4'];
         $counter = 10;
 
         foreach ($validVersions as $version) {

@@ -113,7 +113,6 @@ class ServerProvisioningControllerTest extends TestCase
         $response->assertInertia(fn ($page) => $page
             ->component('servers/provisioning')
             ->has('server')
-            ->has('provision')
         );
     }
 
@@ -287,7 +286,7 @@ class ServerProvisioningControllerTest extends TestCase
         $server = Server::factory()->create([
             'user_id' => $user->id,
             'provision_status' => TaskStatus::Installing,
-            'provision' => [
+            'provision_state' => [
                 1 => 'success',
                 2 => 'success',
                 3 => 'installing',
@@ -345,7 +344,6 @@ class ServerProvisioningControllerTest extends TestCase
             ->has('server.vanity_name')
             ->has('server.provision_status')
             ->has('server.steps')
-            ->has('provision')
             ->has('provision.command')
             ->has('provision.root_password')
         );
@@ -361,7 +359,7 @@ class ServerProvisioningControllerTest extends TestCase
         $server = Server::factory()->create([
             'user_id' => $user->id,
             'provision_status' => TaskStatus::Pending,
-            'provision' => null,
+            'provision_state' => null,
         ]);
 
         // Act
@@ -511,7 +509,7 @@ class ServerProvisioningControllerTest extends TestCase
             'user_id' => $user->id,
             'provision_status' => TaskStatus::Failed,
             'connection_status' => TaskStatus::Success,
-            'provision' => collect([
+            'provision_state' => collect([
                 1 => 'success',
                 2 => 'failed',
             ]),
@@ -571,7 +569,7 @@ class ServerProvisioningControllerTest extends TestCase
         $server = Server::factory()->create([
             'user_id' => $user->id,
             'provision_status' => TaskStatus::Failed,
-            'provision' => collect([
+            'provision_state' => collect([
                 1 => 'success',
                 2 => 'success',
                 3 => 'failed',
@@ -588,7 +586,7 @@ class ServerProvisioningControllerTest extends TestCase
         $server->refresh();
 
         // Provision data is kept for history (will be cleared on step 1 completion)
-        $this->assertNotEmpty($server->provision);
-        $this->assertEquals('failed', $server->provision->get(3));
+        $this->assertNotEmpty($server->provision_state);
+        $this->assertEquals('failed', $server->provision_state->get(3));
     }
 }
