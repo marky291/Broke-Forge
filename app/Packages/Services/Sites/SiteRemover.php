@@ -4,14 +4,14 @@ namespace App\Packages\Services\Sites;
 
 use App\Models\ServerSite;
 use App\Packages\Core\Base\PackageRemover;
-use App\Packages\Core\Base\SitePackage;
+use App\Packages\Core\Base\ServerPackage;
 
 /**
  * Site Removal Class
  *
  * Handles site removal and cleanup with progress tracking
  */
-class SiteRemover extends PackageRemover implements SitePackage
+class SiteRemover extends PackageRemover implements ServerPackage
 {
     /**
      * Execute the site removal
