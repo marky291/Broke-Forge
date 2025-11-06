@@ -2,6 +2,7 @@
 
 namespace App\Packages\Services\Sites;
 
+use App\Enums\TaskStatus;
 use App\Models\ServerSite;
 use App\Packages\Core\Base\PackageInstaller;
 
@@ -90,7 +91,7 @@ class ProvisionedSiteInstaller extends PackageInstaller implements \App\Packages
 
                 // Update git_status if repository was cloned
                 if (isset($config['git_repository'])) {
-                    $updates['git_status'] = \App\Packages\Enums\TaskStatus::Success;
+                    $updates['git_status'] = TaskStatus::Success;
                     $updates['git_installed_at'] = now();
                 }
 
