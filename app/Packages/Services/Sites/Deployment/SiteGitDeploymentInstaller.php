@@ -95,16 +95,18 @@ class SiteGitDeploymentInstaller extends PackageInstaller implements \App\Packag
     protected function commands(string $documentRoot, string $deploymentScript, ServerSite $site, ServerDeployment $deployment): array
     {
         $documentRoot = rtrim($documentRoot, '/');
+        // Git repository is cloned to the site directory (parent of document root)
+        $siteDirectory = dirname($documentRoot);
 
         return [
 
             // Execute deployment script and capture output
-            function () use ($documentRoot, $deploymentScript) {
+            function () use ($siteDirectory, $deploymentScript) {
                 // Add safe.directory config to allow brokeforge user to access the repository
                 $remoteCommand = sprintf(
                     'git config --global --add safe.directory %s && cd %s && %s',
-                    escapeshellarg($documentRoot),
-                    escapeshellarg($documentRoot),
+                    escapeshellarg($siteDirectory),
+                    escapeshellarg($siteDirectory),
                     $deploymentScript
                 );
 
@@ -128,11 +130,11 @@ class SiteGitDeploymentInstaller extends PackageInstaller implements \App\Packag
             },
 
             // Capture current Git commit SHA
-            function () use ($documentRoot) {
+            function () use ($siteDirectory) {
                 $remoteCommand = sprintf(
                     'git config --global --add safe.directory %s && cd %s && git rev-parse HEAD 2>/dev/null || echo ""',
-                    escapeshellarg($documentRoot),
-                    escapeshellarg($documentRoot)
+                    escapeshellarg($siteDirectory),
+                    escapeshellarg($siteDirectory)
                 );
 
                 $process = $this->server->ssh('brokeforge')

@@ -114,6 +114,10 @@ class StoreSiteRequestTest extends TestCase
             'my-site.com',
             'site123.com',
             'example.co.uk',
+            'myproject',
+            'my-project',
+            'test-app',
+            'app123',
         ];
 
         foreach ($validDomains as $domain) {
@@ -155,12 +159,14 @@ class StoreSiteRequestTest extends TestCase
         });
 
         $invalidDomains = [
-            'example',
             'example..com',
             '-example.com',
             'example-.com',
             'example.com-',
             'example .com',
+            '-myproject',
+            'myproject-',
+            'my project',
         ];
 
         foreach ($invalidDomains as $domain) {

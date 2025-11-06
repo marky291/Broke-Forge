@@ -126,6 +126,13 @@ export default function Sites({ server }: SitesProps) {
         }
     }, [showAddSiteDialog, server.id, repositories]);
 
+    // Auto-disable SSL for non-domain sites
+    useEffect(() => {
+        if (form.data.domain && !form.data.domain.includes('.') && form.data.ssl) {
+            form.setData('ssl', false);
+        }
+    }, [form.data.domain]);
+
     // Fetch branches when repository is selected
     const fetchBranches = (repository: string) => {
         if (!repository) {
@@ -369,10 +376,10 @@ export default function Sites({ server }: SitesProps) {
                 <div className="flex w-full min-w-0 flex-col gap-4">
                     {/* Basic Configuration Section */}
                     <div className="w-full min-w-0 space-y-2">
-                        <Label htmlFor="domain">Domain Name</Label>
+                        <Label htmlFor="domain">Name or Domain</Label>
                         <Input
                             id="domain"
-                            placeholder="example.com"
+                            placeholder="example.com or my-project"
                             value={form.data.domain}
                             onChange={(e) => form.setData('domain', e.target.value)}
                             disabled={form.processing}
@@ -409,13 +416,16 @@ export default function Sites({ server }: SitesProps) {
                                         id="ssl"
                                         checked={form.data.ssl}
                                         onCheckedChange={(checked) => form.setData('ssl', checked)}
-                                        disabled={form.processing}
+                                        disabled={form.processing || !form.data.domain.includes('.')}
                                     />
                                     <Label htmlFor="ssl" className="cursor-pointer text-sm font-normal">
                                         Enable HTTPS
                                     </Label>
                                 </div>
                             </div>
+                            {form.data.domain && !form.data.domain.includes('.') && (
+                                <p className="text-xs text-muted-foreground">SSL requires a domain name (e.g., example.com)</p>
+                            )}
                         </div>
                     </div>
 

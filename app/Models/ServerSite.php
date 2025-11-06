@@ -170,6 +170,17 @@ class ServerSite extends Model
         return $this->git_status === TaskStatus::Success;
     }
 
+    /**
+     * Check if the site name is a real domain (contains a dot).
+     *
+     * This is used to determine if features like SSL certificates
+     * should be available, as they require actual domain names.
+     */
+    public function isDomain(): bool
+    {
+        return str_contains($this->domain, '.');
+    }
+
     protected static function booted(): void
     {
         static::created(function (self $site): void {

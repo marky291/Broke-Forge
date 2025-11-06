@@ -690,4 +690,44 @@ class ServerSiteTest extends TestCase
         // Assert
         $this->assertEquals(TaskStatus::Failed, $site->git_status);
     }
+
+    /**
+     * Test that isDomain returns true for domain names.
+     */
+    public function test_is_domain_returns_true_for_domain_names(): void
+    {
+        // Arrange
+        $domains = [
+            'example.com',
+            'sub.example.com',
+            'api.example.co.uk',
+        ];
+
+        foreach ($domains as $domain) {
+            $site = ServerSite::factory()->create(['domain' => $domain]);
+
+            // Act & Assert
+            $this->assertTrue($site->isDomain(), "Domain {$domain} should return true");
+        }
+    }
+
+    /**
+     * Test that isDomain returns false for project names.
+     */
+    public function test_is_domain_returns_false_for_project_names(): void
+    {
+        // Arrange
+        $projectNames = [
+            'myproject',
+            'my-project',
+            'test-app',
+        ];
+
+        foreach ($projectNames as $name) {
+            $site = ServerSite::factory()->create(['domain' => $name]);
+
+            // Act & Assert
+            $this->assertFalse($site->isDomain(), "Project name {$name} should return false");
+        }
+    }
 }

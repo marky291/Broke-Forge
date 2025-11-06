@@ -29,7 +29,7 @@ class StoreSiteRequest extends FormRequest
                 'required',
                 'string',
                 'max:255',
-                'regex:/^([a-z0-9]+(-[a-z0-9]+)*\.)+[a-z]{2,}$/i',
+                'regex:/^[a-z0-9]+([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]+([a-z0-9-]*[a-z0-9])?)*$/i',
                 Rule::unique('server_sites')->where('server_id', $serverId),
             ],
             'php_version' => [
@@ -64,9 +64,9 @@ class StoreSiteRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'domain.required' => 'The domain name is required.',
-            'domain.regex' => 'Please enter a valid domain name (e.g., example.com).',
-            'domain.unique' => 'This domain is already configured on this server.',
+            'domain.required' => 'The site name is required.',
+            'domain.regex' => 'Please enter a valid name (e.g., example.com or my-project). Use only letters, numbers, hyphens, and dots.',
+            'domain.unique' => 'This site name is already configured on this server.',
             'php_version.required' => 'Please select a PHP version.',
             'php_version.in' => 'Please select a valid PHP version.',
             'ssl.required' => 'Please specify whether to enable SSL.',
