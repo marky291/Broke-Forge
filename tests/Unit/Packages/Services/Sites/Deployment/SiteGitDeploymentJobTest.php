@@ -69,7 +69,7 @@ class SiteGitDeploymentJobTest extends TestCase
         $exception = new Exception('Operation failed');
         $job->failed($exception);
         $deployment->refresh();
-        $this->assertEquals(TaskStatus::Failed->value, $deployment->status);
+        $this->assertEquals(TaskStatus::Failed, $deployment->status);
     }
 
     public function test_failed_method_stores_error_output(): void

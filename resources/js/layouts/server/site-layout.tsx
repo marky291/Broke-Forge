@@ -87,7 +87,7 @@ export default function SiteLayout({ children, server, site, breadcrumbs }: Site
     ];
 
     // Conditionally add Deployments if Git is installed
-    if (site.git_status === 'installed') {
+    if (site.git_status === 'success') {
         siteNavItems.push({
             title: 'Deployments',
             href: `/servers/${server.id}/sites/${site.id}/deployments`,

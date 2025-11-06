@@ -16,7 +16,7 @@ import { useState } from 'react';
 
 type Deployment = {
     id: number;
-    status: 'pending' | 'running' | 'success' | 'failed';
+    status: 'pending' | 'updating' | 'success' | 'failed';
     deployment_script: string;
     output: string | null;
     error_output: string | null;
@@ -48,7 +48,7 @@ export default function SiteDeployments({ site }: { site: ServerSite }) {
 
     const [deploying, setDeploying] = useState(false);
     const [liveDeployment, setLiveDeployment] = useState<Deployment | null>(
-        latestDeployment?.status === 'pending' || latestDeployment?.status === 'running' ? latestDeployment : null,
+        latestDeployment?.status === 'pending' || latestDeployment?.status === 'updating' ? latestDeployment : null,
     );
 
     // Output dialog state
@@ -141,11 +141,11 @@ export default function SiteDeployments({ site }: { site: ServerSite }) {
                         Failed
                     </Badge>
                 );
-            case 'running':
+            case 'updating':
                 return (
                     <Badge variant="outline" className="flex items-center gap-1 border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-400">
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        Running
+                        Deploying
                     </Badge>
                 );
             default:
@@ -170,10 +170,10 @@ export default function SiteDeployments({ site }: { site: ServerSite }) {
                 action={
                     <Button
                         onClick={handleDeploy}
-                        disabled={deploying || liveDeployment?.status === 'pending' || liveDeployment?.status === 'running'}
+                        disabled={deploying || liveDeployment?.status === 'pending' || liveDeployment?.status === 'updating'}
                         size="sm"
                     >
-                        {deploying || liveDeployment?.status === 'pending' || liveDeployment?.status === 'running' ? (
+                        {deploying || liveDeployment?.status === 'pending' || liveDeployment?.status === 'updating' ? (
                             <>
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                 Deploying...
@@ -199,7 +199,7 @@ export default function SiteDeployments({ site }: { site: ServerSite }) {
                         }
                     >
                         <div className="-mx-6 -my-6">
-                            {liveDeployment.status === 'pending' || liveDeployment.status === 'running' ? (
+                            {liveDeployment.status === 'pending' || liveDeployment.status === 'updating' ? (
                                 <div className="relative">
                                     <pre className="max-h-[400px] min-h-[200px] overflow-auto bg-slate-950 px-4 py-4 font-mono text-xs leading-relaxed whitespace-pre-wrap text-slate-50">
                                         {liveDeployment.output || 'Waiting for output...'}

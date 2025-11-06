@@ -372,4 +372,98 @@ class ServerDeploymentTest extends TestCase
         // Assert
         $this->assertEquals(3600.0, $seconds);
     }
+
+    /**
+     * Test that status is cast to TaskStatus enum.
+     */
+    public function test_status_is_cast_to_task_status_enum(): void
+    {
+        // Arrange
+        Event::fake();
+        $deployment = ServerDeployment::factory()->create(['status' => 'success']);
+
+        // Act
+        $status = $deployment->status;
+
+        // Assert
+        $this->assertInstanceOf(\App\Enums\TaskStatus::class, $status);
+        $this->assertEquals(\App\Enums\TaskStatus::Success, $status);
+    }
+
+    /**
+     * Test that deployment can be created with TaskStatus enum.
+     */
+    public function test_deployment_can_be_created_with_task_status_enum(): void
+    {
+        // Arrange
+        Event::fake();
+
+        // Act - create deployment using TaskStatus enum directly
+        $deployment = ServerDeployment::factory()->create([
+            'status' => \App\Enums\TaskStatus::Updating,
+        ]);
+
+        // Assert - should save correctly and read back as enum
+        $this->assertInstanceOf(\App\Enums\TaskStatus::class, $deployment->status);
+        $this->assertEquals(\App\Enums\TaskStatus::Updating, $deployment->status);
+        $this->assertTrue($deployment->isRunning());
+
+        // Verify it's stored correctly in database
+        $this->assertDatabaseHas('server_deployments', [
+            'id' => $deployment->id,
+            'status' => 'updating',
+        ]);
+    }
+
+    /**
+     * Test that deployment status can be updated using TaskStatus enum.
+     */
+    public function test_deployment_status_can_be_updated_with_task_status_enum(): void
+    {
+        // Arrange
+        Event::fake([ServerSiteUpdated::class]);
+        $deployment = ServerDeployment::factory()->pending()->create();
+
+        // Act - update status using TaskStatus enum
+        $deployment->update(['status' => \App\Enums\TaskStatus::Updating]);
+
+        // Assert - should update correctly
+        $deployment->refresh();
+        $this->assertEquals(\App\Enums\TaskStatus::Updating, $deployment->status);
+        $this->assertTrue($deployment->isRunning());
+
+        // Verify it's stored correctly in database
+        $this->assertDatabaseHas('server_deployments', [
+            'id' => $deployment->id,
+            'status' => 'updating',
+        ]);
+    }
+
+    /**
+     * Test deployment status lifecycle using TaskStatus enum.
+     */
+    public function test_deployment_status_lifecycle_with_task_status_enum(): void
+    {
+        // Arrange
+        Event::fake([ServerSiteUpdated::class]);
+
+        // Act & Assert - pending
+        $deployment = ServerDeployment::factory()->create([
+            'status' => \App\Enums\TaskStatus::Pending,
+        ]);
+        $this->assertEquals(\App\Enums\TaskStatus::Pending, $deployment->status);
+        $this->assertTrue($deployment->isPending());
+
+        // Act & Assert - updating
+        $deployment->update(['status' => \App\Enums\TaskStatus::Updating]);
+        $deployment->refresh();
+        $this->assertEquals(\App\Enums\TaskStatus::Updating, $deployment->status);
+        $this->assertTrue($deployment->isRunning());
+
+        // Act & Assert - success
+        $deployment->update(['status' => \App\Enums\TaskStatus::Success]);
+        $deployment->refresh();
+        $this->assertEquals(\App\Enums\TaskStatus::Success, $deployment->status);
+        $this->assertTrue($deployment->isSuccess());
+    }
 }

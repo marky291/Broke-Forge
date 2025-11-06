@@ -34,6 +34,7 @@ class ServerDeployment extends Model
     protected function casts(): array
     {
         return [
+            'status' => \App\Enums\TaskStatus::class,
             'exit_code' => 'integer',
             'duration_ms' => 'integer',
             'started_at' => 'datetime',
@@ -78,7 +79,7 @@ class ServerDeployment extends Model
      */
     public function isPending(): bool
     {
-        return $this->status === 'pending';
+        return $this->status === \App\Enums\TaskStatus::Pending;
     }
 
     /**
@@ -86,7 +87,7 @@ class ServerDeployment extends Model
      */
     public function isRunning(): bool
     {
-        return $this->status === 'updating';
+        return $this->status === \App\Enums\TaskStatus::Updating;
     }
 
     /**
@@ -94,7 +95,7 @@ class ServerDeployment extends Model
      */
     public function isSuccess(): bool
     {
-        return $this->status === 'success';
+        return $this->status === \App\Enums\TaskStatus::Success;
     }
 
     /**
@@ -102,7 +103,7 @@ class ServerDeployment extends Model
      */
     public function isFailed(): bool
     {
-        return $this->status === 'failed';
+        return $this->status === \App\Enums\TaskStatus::Failed;
     }
 
     /**

@@ -2,6 +2,7 @@
 
 namespace App\Packages\Services\Sites\Deployment;
 
+use App\Enums\TaskStatus;
 use App\Models\ServerDeployment;
 use App\Models\ServerSite;
 use App\Packages\Core\Base\PackageInstaller;
@@ -28,7 +29,7 @@ class SiteGitDeploymentInstaller extends PackageInstaller implements \App\Packag
     {
         // Mark deployment as running
         $deployment->update([
-            'status' => 'running',
+            'status' => TaskStatus::Updating,
             'started_at' => now(),
         ]);
 

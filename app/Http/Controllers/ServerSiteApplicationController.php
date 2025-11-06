@@ -15,6 +15,9 @@ class ServerSiteApplicationController extends Controller
      */
     public function show(Server $server, ServerSite $site): Response
     {
+        // Authorize user can view this server
+        $this->authorize('view', $server);
+
         return Inertia::render('servers/site-application', [
             'site' => new ServerSiteResource($site),
         ]);
