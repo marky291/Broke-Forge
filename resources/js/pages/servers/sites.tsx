@@ -17,7 +17,7 @@ import { show as showSite } from '@/routes/servers/sites';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router, useForm, usePage } from '@inertiajs/react';
 import { useEcho } from '@laravel/echo-react';
-import { AlertCircle, CheckCircle2, Eye, Globe, Loader2, RefreshCw, Trash2, XCircle } from 'lucide-react';
+import { AlertCircle, ArrowUpDown, CheckCircle2, Eye, Globe, Loader2, RefreshCw, Trash2, X, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 type ServerSite = {
@@ -26,6 +26,8 @@ type ServerSite = {
     document_root: string;
     php_version: string;
     ssl_enabled: boolean;
+    is_default: boolean;
+    default_site_status?: string | null;
     status: string;
     provisioned_at: string | null;
     provisioned_at_human?: string | null;
@@ -223,6 +225,20 @@ export default function Sites({ server }: SitesProps) {
         });
     };
 
+    const handleSetDefault = (site: ServerSite) => {
+        if (site.is_default) return;
+        router.patch(`/servers/${server.id}/sites/${site.id}/set-default`, {}, {
+            preserveScroll: true,
+        });
+    };
+
+    const handleUnsetDefault = (site: ServerSite) => {
+        if (!site.is_default) return;
+        router.patch(`/servers/${server.id}/sites/${site.id}/unset-default`, {}, {
+            preserveScroll: true,
+        });
+    };
+
     return (
         <ServerLayout server={server} breadcrumbs={breadcrumbs}>
             <Head title={`Sites — ${server.vanity_name}`} />
@@ -285,7 +301,39 @@ export default function Sites({ server }: SitesProps) {
                                 <div className="flex min-w-0 flex-1 items-center gap-3">
                                     <SiteAvatar domain={site.domain} />
                                     <div className="min-w-0 flex-1">
-                                        <div className="truncate text-sm font-medium">{site.domain}</div>
+                                        <div className="flex items-center gap-2">
+                                            <div className="truncate text-sm font-medium">{site.domain}</div>
+                                            {site.is_default && !site.default_site_status && (
+                                                <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                                                    Default
+                                                </span>
+                                            )}
+                                            {site.default_site_status && site.default_site_status !== 'active' && (
+                                                <span
+                                                    className={
+                                                        site.default_site_status === 'installing'
+                                                            ? 'inline-flex items-center gap-1 rounded-full bg-blue-500/10 px-2 py-0.5 text-xs font-medium text-blue-600'
+                                                            : site.default_site_status === 'removing'
+                                                              ? 'inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-600'
+                                                              : site.default_site_status === 'failed'
+                                                                ? 'inline-flex items-center gap-1 rounded-full bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-600'
+                                                                : 'inline-flex items-center gap-1 rounded-full bg-gray-500/10 px-2 py-0.5 text-xs font-medium text-gray-600'
+                                                    }
+                                                >
+                                                    {site.default_site_status === 'installing' && <Loader2 className="h-3 w-3 animate-spin" />}
+                                                    {site.default_site_status === 'removing' && <Loader2 className="h-3 w-3 animate-spin" />}
+                                                    {site.default_site_status === 'failed' && <AlertCircle className="h-3 w-3" />}
+                                                    {site.default_site_status === 'installing' && 'Setting Default...'}
+                                                    {site.default_site_status === 'removing' && 'Removing Default...'}
+                                                    {site.default_site_status === 'failed' && 'Default Operation Failed'}
+                                                </span>
+                                            )}
+                                            {site.is_default && site.default_site_status === 'active' && (
+                                                <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                                                    Default
+                                                </span>
+                                            )}
+                                        </div>
                                         <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
                                             {site.configuration?.git_repository?.repository ? (
                                                 <>
@@ -325,9 +373,27 @@ export default function Sites({ server }: SitesProps) {
                     }}
                     actions={(site) => {
                         const actions: CardListAction[] = [];
+                        const isInTransition = ['provisioning', 'installing', 'updating', 'removing'].includes(site.status);
+                        const isDefaultTransitioning =
+                            site.default_site_status && ['installing', 'removing'].includes(site.default_site_status);
 
-                        // Active sites get "Delete Site" only (clicking item navigates to details)
+                        // Active sites get "Set as Default" or "Unset as Default" and "Delete Site"
                         if (site.status === 'active') {
+                            if (!site.is_default) {
+                                actions.push({
+                                    label: 'Set as Default',
+                                    onClick: () => handleSetDefault(site),
+                                    disabled: isInTransition || !!isDefaultTransitioning,
+                                    icon: <ArrowUpDown className="h-4 w-4" />,
+                                });
+                            } else {
+                                actions.push({
+                                    label: 'Unset as Default',
+                                    onClick: () => handleUnsetDefault(site),
+                                    disabled: isInTransition || !!isDefaultTransitioning,
+                                    icon: <X className="h-4 w-4" />,
+                                });
+                            }
                             actions.push({
                                 label: 'Delete Site',
                                 onClick: () => handleDeleteClick(site),

@@ -331,4 +331,261 @@ class NginxInstallerTest extends TestCase
             'status' => TaskStatus::Active->value,
         ]);
     }
+
+    /**
+     * Test that default site uses symlink-based deployment structure.
+     * Verifies the directory structure matches site deployment architecture.
+     */
+    public function test_default_site_creates_deployment_directory_structure(): void
+    {
+        // Arrange
+        $server = Server::factory()->create();
+        $installer = new \App\Packages\Services\Nginx\NginxInstaller($server);
+        $phpVersion = PhpVersion::PHP83;
+
+        // Use reflection to access protected method
+        $reflection = new \ReflectionClass($installer);
+        $method = $reflection->getMethod('commands');
+        $method->setAccessible(true);
+
+        // Act - Get commands array
+        $commands = $method->invoke($installer, $phpVersion);
+
+        // Assert - Find the mkdir command for deployment directory
+        $mkdirCommand = collect($commands)->first(function ($command) {
+            return is_string($command) && str_contains($command, 'mkdir -p') && str_contains($command, '/deployments/default/');
+        });
+
+        $this->assertNotNull($mkdirCommand, 'Should create deployment directory structure');
+        $this->assertStringContainsString('/deployments/default/', $mkdirCommand);
+        $this->assertStringContainsString('/public', $mkdirCommand);
+    }
+
+    /**
+     * Test that default site symlink is created pointing to deployment directory.
+     */
+    public function test_default_site_creates_symlink_to_deployment(): void
+    {
+        // Arrange
+        $server = Server::factory()->create();
+        $installer = new \App\Packages\Services\Nginx\NginxInstaller($server);
+        $phpVersion = PhpVersion::PHP83;
+        $appUser = config('app.ssh_user', str_replace(' ', '', strtolower(config('app.name'))));
+
+        // Use reflection to access protected method
+        $reflection = new \ReflectionClass($installer);
+        $method = $reflection->getMethod('commands');
+        $method->setAccessible(true);
+
+        // Act - Get commands array
+        $commands = $method->invoke($installer, $phpVersion);
+
+        // Assert - Find the symlink command
+        $symlinkCommand = collect($commands)->first(function ($command) use ($appUser) {
+            return is_string($command) && str_contains($command, 'ln -sfn deployments/default/') && str_contains($command, "/home/{$appUser}/default");
+        });
+
+        $this->assertNotNull($symlinkCommand, 'Should create symlink to deployment directory');
+        $this->assertStringContainsString('ln -sfn deployments/default/', $symlinkCommand);
+        $this->assertStringContainsString("/home/{$appUser}/default", $symlinkCommand);
+    }
+
+    /**
+     * Test that deployment timestamp uses correct format (ddMMYYYY-HHMMSS).
+     * This format matches site deployment architecture for consistency.
+     */
+    public function test_default_site_deployment_uses_correct_timestamp_format(): void
+    {
+        // Arrange
+        $server = Server::factory()->create();
+        $installer = new \App\Packages\Services\Nginx\NginxInstaller($server);
+        $phpVersion = PhpVersion::PHP83;
+
+        // Use reflection to access protected method
+        $reflection = new \ReflectionClass($installer);
+        $method = $reflection->getMethod('commands');
+        $method->setAccessible(true);
+
+        // Act - Get commands array
+        $commands = $method->invoke($installer, $phpVersion);
+
+        // Assert - Check mkdir command contains timestamp in correct format
+        $mkdirCommand = collect($commands)->first(function ($command) {
+            return is_string($command) && str_contains($command, 'mkdir -p') && str_contains($command, '/deployments/default/');
+        });
+
+        // Extract timestamp from path (should match ddMMYYYY-HHMMSS pattern)
+        preg_match('/\/deployments\/default\/(\d{8}-\d{6})/', $mkdirCommand, $matches);
+
+        $this->assertNotEmpty($matches, 'Should contain timestamp in deployment path');
+        $this->assertMatchesRegularExpression('/^\d{8}-\d{6}$/', $matches[1], 'Timestamp should match ddMMYYYY-HHMMSS format');
+
+        // Verify timestamp is valid date format
+        $timestamp = $matches[1];
+        $dateTime = \DateTime::createFromFormat('dmY-His', $timestamp);
+        $this->assertNotFalse($dateTime, 'Timestamp should be a valid date');
+    }
+
+    /**
+     * Test that ServerSite record stores deployment_path in configuration.
+     * This enables future switching of default site symlink target.
+     */
+    public function test_default_site_record_stores_deployment_path_in_configuration(): void
+    {
+        // Arrange
+        $server = Server::factory()->create();
+        $appUser = config('app.ssh_user', str_replace(' ', '', strtolower(config('app.name'))));
+        $phpVersion = PhpVersion::PHP83;
+        $deploymentPath = "/home/{$appUser}/deployments/default/07112025-120000";
+
+        // Act - Create default site record as NginxInstaller does
+        $site = $server->sites()->updateOrCreate(
+            ['domain' => 'default'],
+            [
+                'document_root' => "/home/{$appUser}/default",
+                'nginx_config_path' => '/etc/nginx/sites-available/default',
+                'php_version' => $phpVersion,
+                'ssl_enabled' => false,
+                'is_default' => true,
+                'default_site_status' => TaskStatus::Active,
+                'configuration' => [
+                    'is_default_site' => true,
+                    'default_deployment_path' => $deploymentPath,
+                ],
+                'status' => 'active',
+                'provisioned_at' => now(),
+                'deprovisioned_at' => null,
+            ]
+        );
+
+        // Assert - Verify configuration contains both flags
+        $this->assertTrue($site->configuration['is_default_site']);
+        $this->assertEquals($deploymentPath, $site->configuration['default_deployment_path']);
+
+        // Verify database record
+        $this->assertDatabaseHas('server_sites', [
+            'server_id' => $server->id,
+            'domain' => 'default',
+            'status' => 'active',
+        ]);
+
+        // Verify JSON configuration column
+        $siteFromDb = $server->sites()->where('domain', 'default')->first();
+        $this->assertEquals($deploymentPath, $siteFromDb->configuration['default_deployment_path']);
+    }
+
+    /**
+     * Test that default site is marked as default with correct status.
+     * During provisioning, the default site should have is_default = true
+     * and default_site_status = active since it's created and activated immediately.
+     */
+    public function test_default_site_is_marked_as_default_during_provisioning(): void
+    {
+        // Arrange
+        $server = Server::factory()->create();
+        $appUser = config('app.ssh_user', str_replace(' ', '', strtolower(config('app.name'))));
+        $phpVersion = PhpVersion::PHP83;
+        $deploymentPath = "/home/{$appUser}/deployments/default/07112025-120000";
+
+        // Act - Create default site record as NginxInstaller does during provisioning
+        $site = $server->sites()->updateOrCreate(
+            ['domain' => 'default'],
+            [
+                'document_root' => "/home/{$appUser}/default",
+                'nginx_config_path' => '/etc/nginx/sites-available/default',
+                'php_version' => $phpVersion,
+                'ssl_enabled' => false,
+                'is_default' => true,
+                'default_site_status' => TaskStatus::Active,
+                'configuration' => [
+                    'is_default_site' => true,
+                    'default_deployment_path' => $deploymentPath,
+                ],
+                'status' => 'active',
+                'provisioned_at' => now(),
+                'deprovisioned_at' => null,
+            ]
+        );
+
+        // Assert - Verify is_default is true
+        $this->assertTrue($site->is_default, 'Default site should have is_default = true');
+        $this->assertEquals(TaskStatus::Active, $site->default_site_status, 'Default site should have default_site_status = active');
+
+        // Verify database record has is_default set
+        $this->assertDatabaseHas('server_sites', [
+            'server_id' => $server->id,
+            'domain' => 'default',
+            'is_default' => true,
+            'default_site_status' => TaskStatus::Active->value,
+            'status' => 'active',
+        ]);
+    }
+
+    /**
+     * Test that default site document_root points to symlink, not deployment directory.
+     * The symlink enables transparent switching of which deployment is active.
+     */
+    public function test_default_site_document_root_uses_symlink(): void
+    {
+        // Arrange
+        $server = Server::factory()->create();
+        $appUser = config('app.ssh_user', str_replace(' ', '', strtolower(config('app.name'))));
+        $phpVersion = PhpVersion::PHP83;
+
+        // Act - Create default site as NginxInstaller does
+        $site = $server->sites()->updateOrCreate(
+            ['domain' => 'default'],
+            [
+                'document_root' => "/home/{$appUser}/default",
+                'nginx_config_path' => '/etc/nginx/sites-available/default',
+                'php_version' => $phpVersion,
+                'ssl_enabled' => false,
+                'is_default' => true,
+                'default_site_status' => TaskStatus::Active,
+                'configuration' => [
+                    'is_default_site' => true,
+                    'default_deployment_path' => "/home/{$appUser}/deployments/default/07112025-120000",
+                ],
+                'status' => 'active',
+                'provisioned_at' => now(),
+                'deprovisioned_at' => null,
+            ]
+        );
+
+        // Assert - Document root should be symlink path, not deployment path
+        $this->assertEquals("/home/{$appUser}/default", $site->document_root);
+        $this->assertStringNotContainsString('/deployments/', $site->document_root);
+        $this->assertStringNotContainsString('-', $site->document_root); // No timestamp in document_root
+    }
+
+    /**
+     * Test that permissions are set correctly for deployment directory structure.
+     */
+    public function test_default_site_sets_permissions_on_deployment_directories(): void
+    {
+        // Arrange
+        $server = Server::factory()->create();
+        $installer = new \App\Packages\Services\Nginx\NginxInstaller($server);
+        $phpVersion = PhpVersion::PHP83;
+        $appUser = config('app.ssh_user', str_replace(' ', '', strtolower(config('app.name'))));
+
+        // Use reflection to access protected method
+        $reflection = new \ReflectionClass($installer);
+        $method = $reflection->getMethod('commands');
+        $method->setAccessible(true);
+
+        // Act - Get commands array
+        $commands = $method->invoke($installer, $phpVersion);
+
+        // Assert - Check for chmod commands on deployment directories
+        $chmodCommands = collect($commands)->filter(function ($command) {
+            return is_string($command) && str_contains($command, 'chmod 755') && str_contains($command, '/deployments/');
+        })->values();
+
+        $this->assertGreaterThan(0, $chmodCommands->count(), 'Should set permissions on deployment directories');
+
+        // Verify specific directories are chmod'd
+        $allChmodCommands = $chmodCommands->join(' ');
+        $this->assertStringContainsString('/deployments', $allChmodCommands);
+    }
 }

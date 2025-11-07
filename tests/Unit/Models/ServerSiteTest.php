@@ -256,7 +256,7 @@ class ServerSiteTest extends TestCase
         $script = $site->getDeploymentScript();
 
         // Assert
-        $this->assertEquals('git fetch && git pull', $script);
+        $this->assertEquals("git pull\ncomposer install --no-dev --no-interaction --prefer-dist --optimize-autoloader", $script);
     }
 
     /**
@@ -608,6 +608,27 @@ class ServerSiteTest extends TestCase
 
         // Assert
         Event::assertNotDispatched(ServerSiteUpdated::class);
+    }
+
+    /**
+     * Test that ServerSiteUpdated event is dispatched when default_site_status changes.
+     */
+    public function test_server_site_updated_event_dispatched_when_default_site_status_changes(): void
+    {
+        // Arrange
+        $site = ServerSite::factory()->create([
+            'is_default' => true,
+            'default_site_status' => TaskStatus::Installing,
+        ]);
+        Event::fake([ServerSiteUpdated::class]);
+
+        // Act - update default_site_status to active
+        $site->update(['default_site_status' => TaskStatus::Active]);
+
+        // Assert
+        Event::assertDispatched(ServerSiteUpdated::class, function ($event) use ($site) {
+            return $event->siteId === $site->id;
+        });
     }
 
     /**

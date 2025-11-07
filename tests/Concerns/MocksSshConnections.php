@@ -23,6 +23,9 @@ trait MocksSshConnections
         $mockSsh->shouldReceive('disableStrictHostKeyChecking')
             ->andReturnSelf();
 
+        $mockSsh->shouldReceive('setTimeout')
+            ->andReturnSelf();
+
         // Setup command mocks
         foreach ($commands as $commandPattern => $response) {
             $mockProcess = Mockery::mock(Process::class);
@@ -32,6 +35,9 @@ trait MocksSshConnections
 
             $mockProcess->shouldReceive('getOutput')
                 ->andReturn($response['output'] ?? '');
+
+            $mockProcess->shouldReceive('getCommandLine')
+                ->andReturn($commandPattern);
 
             $mockSsh->shouldReceive('execute')
                 ->with($commandPattern)

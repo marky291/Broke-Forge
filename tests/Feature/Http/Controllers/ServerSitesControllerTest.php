@@ -7,6 +7,7 @@ use App\Models\Server;
 use App\Models\ServerSite;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 class ServerSitesControllerTest extends TestCase
@@ -518,5 +519,544 @@ class ServerSitesControllerTest extends TestCase
             ->where('server.sites.0.configuration.git_repository.repository', 'laravel/laravel')
             ->where('server.sites.0.configuration.git_repository.branch', 'main')
         );
+    }
+
+    /**
+     * Test guest cannot set default site.
+     */
+    public function test_guest_cannot_set_default_site(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+        $site = ServerSite::factory()->active()->create([
+            'server_id' => $server->id,
+            'is_default' => false,
+        ]);
+
+        // Act
+        $response = $this->patch("/servers/{$server->id}/sites/{$site->id}/set-default");
+
+        // Assert
+        $response->assertStatus(302);
+        $response->assertRedirect('/login');
+    }
+
+    /**
+     * Test user can set active site as default.
+     */
+    public function test_user_can_set_active_site_as_default(): void
+    {
+        // Arrange
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+        $site = ServerSite::factory()->active()->create([
+            'server_id' => $server->id,
+            'is_default' => false,
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->patch("/servers/{$server->id}/sites/{$site->id}/set-default");
+
+        // Assert
+        $response->assertStatus(302);
+        $response->assertRedirect("/servers/{$server->id}/sites");
+        $response->assertSessionHas('success');
+
+        // Verify database
+        $this->assertDatabaseHas('server_sites', [
+            'id' => $site->id,
+            'is_default' => 1,
+        ]);
+    }
+
+    /**
+     * Test user cannot set default site for other users server.
+     */
+    public function test_user_cannot_set_default_site_for_other_users_server(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $otherUser = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $otherUser->id]);
+        $site = ServerSite::factory()->active()->create([
+            'server_id' => $server->id,
+            'is_default' => false,
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->patch("/servers/{$server->id}/sites/{$site->id}/set-default");
+
+        // Assert
+        $response->assertStatus(403);
+    }
+
+    /**
+     * Test cannot set non-active site as default.
+     */
+    public function test_cannot_set_non_active_site_as_default(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+        $site = ServerSite::factory()->create([
+            'server_id' => $server->id,
+            'status' => 'provisioning',
+            'is_default' => false,
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->patch("/servers/{$server->id}/sites/{$site->id}/set-default");
+
+        // Assert
+        $response->assertStatus(302);
+        $response->assertSessionHas('error', 'Only active sites can be set as default.');
+
+        // Verify database unchanged
+        $this->assertDatabaseHas('server_sites', [
+            'id' => $site->id,
+            'is_default' => false,
+        ]);
+    }
+
+    /**
+     * Test setting new default unsets previous default site.
+     */
+    public function test_setting_new_default_unsets_previous_default(): void
+    {
+        // Arrange
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        $oldDefaultSite = ServerSite::factory()->active()->create([
+            'server_id' => $server->id,
+            'is_default' => true,
+        ]);
+
+        $newDefaultSite = ServerSite::factory()->active()->create([
+            'server_id' => $server->id,
+            'is_default' => false,
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->patch("/servers/{$server->id}/sites/{$newDefaultSite->id}/set-default");
+
+        // Assert
+        $response->assertStatus(302);
+        $response->assertRedirect("/servers/{$server->id}/sites");
+
+        // Verify new site is default
+        $this->assertDatabaseHas('server_sites', [
+            'id' => $newDefaultSite->id,
+            'is_default' => 1,
+        ]);
+
+        // Verify old site is no longer default
+        $this->assertDatabaseHas('server_sites', [
+            'id' => $oldDefaultSite->id,
+            'is_default' => 0,
+        ]);
+    }
+
+    /**
+     * Test setting default site returns success message.
+     */
+    public function test_setting_default_site_returns_success_message(): void
+    {
+        // Arrange
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+        $site = ServerSite::factory()->active()->create([
+            'server_id' => $server->id,
+            'domain' => 'example.com',
+            'is_default' => false,
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->patch("/servers/{$server->id}/sites/{$site->id}/set-default");
+
+        // Assert
+        $response->assertSessionHas('success');
+        $successMessage = session('success');
+        $this->assertStringContainsString('example.com', $successMessage);
+        $this->assertStringContainsString('default', $successMessage);
+    }
+
+    /**
+     * Test guest cannot unset default site.
+     */
+    public function test_guest_cannot_unset_default_site(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+        $site = ServerSite::factory()->active()->create([
+            'server_id' => $server->id,
+            'is_default' => true,
+        ]);
+
+        // Act
+        $response = $this->patch("/servers/{$server->id}/sites/{$site->id}/unset-default");
+
+        // Assert
+        $response->assertStatus(302);
+        $response->assertRedirect('/login');
+    }
+
+    /**
+     * Test user can unset default site.
+     */
+    public function test_user_can_unset_default_site(): void
+    {
+        // Arrange
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+        $site = ServerSite::factory()->active()->create([
+            'server_id' => $server->id,
+            'is_default' => true,
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->patch("/servers/{$server->id}/sites/{$site->id}/unset-default");
+
+        // Assert
+        $response->assertStatus(302);
+        $response->assertRedirect("/servers/{$server->id}/sites");
+        $response->assertSessionHas('success');
+
+        // Verify database - is_default remains true until job completes
+        $this->assertDatabaseHas('server_sites', [
+            'id' => $site->id,
+            'is_default' => 1,
+            'default_site_status' => TaskStatus::Removing->value,
+        ]);
+    }
+
+    /**
+     * Test user cannot unset default site for other users server.
+     */
+    public function test_user_cannot_unset_default_site_for_other_users_server(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $otherUser = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $otherUser->id]);
+        $site = ServerSite::factory()->active()->create([
+            'server_id' => $server->id,
+            'is_default' => true,
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->patch("/servers/{$server->id}/sites/{$site->id}/unset-default");
+
+        // Assert
+        $response->assertStatus(403);
+    }
+
+    /**
+     * Test cannot unset site that is not default.
+     */
+    public function test_cannot_unset_site_that_is_not_default(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+        $site = ServerSite::factory()->active()->create([
+            'server_id' => $server->id,
+            'is_default' => false,
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->patch("/servers/{$server->id}/sites/{$site->id}/unset-default");
+
+        // Assert
+        $response->assertStatus(302);
+        $response->assertSessionHas('error', 'This site is not currently set as default.');
+
+        // Verify database unchanged
+        $this->assertDatabaseHas('server_sites', [
+            'id' => $site->id,
+            'is_default' => false,
+        ]);
+    }
+
+    /**
+     * Test unsetting default site returns success message.
+     */
+    public function test_unsetting_default_site_returns_success_message(): void
+    {
+        // Arrange
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+        $site = ServerSite::factory()->active()->create([
+            'server_id' => $server->id,
+            'is_default' => true,
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->patch("/servers/{$server->id}/sites/{$site->id}/unset-default");
+
+        // Assert
+        $response->assertSessionHas('success');
+        $successMessage = session('success');
+        $this->assertStringContainsString('default', $successMessage);
+    }
+
+    /**
+     * Test sites page includes is_default field.
+     */
+    public function test_sites_page_includes_is_default_field(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        $defaultSite = ServerSite::factory()->active()->create([
+            'server_id' => $server->id,
+            'domain' => 'default.com',
+            'is_default' => true,
+            'created_at' => now()->subDay(),
+        ]);
+
+        $normalSite = ServerSite::factory()->active()->create([
+            'server_id' => $server->id,
+            'domain' => 'normal.com',
+            'is_default' => false,
+            'created_at' => now(),
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/sites");
+
+        // Assert
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('servers/sites')
+            ->has('server.sites', 2)
+            ->where('server.sites.0.is_default', false) // normalSite (newest first)
+            ->where('server.sites.1.is_default', true) // defaultSite
+        );
+    }
+
+    /**
+     * Test only one site can be default at a time.
+     */
+    public function test_only_one_site_can_be_default_at_a_time(): void
+    {
+        // Arrange
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        $site1 = ServerSite::factory()->active()->create([
+            'server_id' => $server->id,
+            'is_default' => true,
+        ]);
+
+        $site2 = ServerSite::factory()->active()->create([
+            'server_id' => $server->id,
+            'is_default' => false,
+        ]);
+
+        $site3 = ServerSite::factory()->active()->create([
+            'server_id' => $server->id,
+            'is_default' => false,
+        ]);
+
+        // Act - set site2 as default
+        $this->actingAs($user)
+            ->patch("/servers/{$server->id}/sites/{$site2->id}/set-default");
+
+        // Assert - only site2 should be default
+        $this->assertDatabaseHas('server_sites', [
+            'id' => $site1->id,
+            'is_default' => 0,
+        ]);
+
+        $this->assertDatabaseHas('server_sites', [
+            'id' => $site2->id,
+            'is_default' => 1,
+        ]);
+
+        $this->assertDatabaseHas('server_sites', [
+            'id' => $site3->id,
+            'is_default' => 0,
+        ]);
+
+        // Verify only one default site exists
+        $defaultSitesCount = ServerSite::where('server_id', $server->id)
+            ->where('is_default', 1)
+            ->count();
+
+        $this->assertEquals(1, $defaultSitesCount);
+    }
+
+    /**
+     * Test setting default site sets default_site_status to installing.
+     */
+    public function test_setting_default_site_sets_default_site_status_to_installing(): void
+    {
+        // Arrange
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+        $site = ServerSite::factory()->active()->create([
+            'server_id' => $server->id,
+            'is_default' => false,
+            'default_site_status' => null,
+        ]);
+
+        // Act
+        $this->actingAs($user)
+            ->patch("/servers/{$server->id}/sites/{$site->id}/set-default");
+
+        // Assert - default_site_status should be 'installing'
+        $this->assertDatabaseHas('server_sites', [
+            'id' => $site->id,
+            'is_default' => 1,
+            'default_site_status' => TaskStatus::Installing->value,
+        ]);
+    }
+
+    /**
+     * Test unsetting default site sets default_site_status to removing.
+     */
+    public function test_unsetting_default_site_sets_default_site_status_to_removing(): void
+    {
+        // Arrange
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+        $site = ServerSite::factory()->active()->create([
+            'server_id' => $server->id,
+            'is_default' => true,
+            'default_site_status' => null,
+        ]);
+
+        // Act
+        $this->actingAs($user)
+            ->patch("/servers/{$server->id}/sites/{$site->id}/unset-default");
+
+        // Assert - default_site_status should be 'removing'
+        $this->assertDatabaseHas('server_sites', [
+            'id' => $site->id,
+            'is_default' => 1, // Still true until job completes
+            'default_site_status' => TaskStatus::Removing->value,
+        ]);
+    }
+
+    /**
+     * Test setting default site dispatches SiteSetDefaultJob.
+     */
+    public function test_setting_default_site_dispatches_job(): void
+    {
+        // Arrange
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+        $site = ServerSite::factory()->active()->create([
+            'server_id' => $server->id,
+            'is_default' => false,
+        ]);
+
+        // Act
+        $this->actingAs($user)
+            ->patch("/servers/{$server->id}/sites/{$site->id}/set-default");
+
+        // Assert - job should be dispatched
+        Queue::assertPushed(\App\Packages\Services\Sites\SiteSetDefaultJob::class, function ($job) use ($site) {
+            return $job->site->id === $site->id;
+        });
+    }
+
+    /**
+     * Test unsetting default site dispatches SiteUnsetDefaultJob.
+     */
+    public function test_unsetting_default_site_dispatches_job(): void
+    {
+        // Arrange
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+        $site = ServerSite::factory()->active()->create([
+            'server_id' => $server->id,
+            'is_default' => true,
+        ]);
+
+        // Act
+        $this->actingAs($user)
+            ->patch("/servers/{$server->id}/sites/{$site->id}/unset-default");
+
+        // Assert - job should be dispatched
+        Queue::assertPushed(\App\Packages\Services\Sites\SiteUnsetDefaultJob::class, function ($job) use ($site) {
+            return $job->site->id === $site->id;
+        });
+    }
+
+    /**
+     * Test setting default site clears previous default site's default_site_status.
+     */
+    public function test_setting_default_site_clears_previous_default_site_status(): void
+    {
+        // Arrange
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        $previousDefault = ServerSite::factory()->active()->create([
+            'server_id' => $server->id,
+            'is_default' => true,
+            'default_site_status' => TaskStatus::Active->value,
+        ]);
+
+        $newSite = ServerSite::factory()->active()->create([
+            'server_id' => $server->id,
+            'is_default' => false,
+            'default_site_status' => null,
+        ]);
+
+        // Act
+        $this->actingAs($user)
+            ->patch("/servers/{$server->id}/sites/{$newSite->id}/set-default");
+
+        // Assert - previous default should have is_default=false and default_site_status=null
+        $this->assertDatabaseHas('server_sites', [
+            'id' => $previousDefault->id,
+            'is_default' => 0,
+            'default_site_status' => null,
+        ]);
+
+        // New site should have is_default=true and default_site_status=installing
+        $this->assertDatabaseHas('server_sites', [
+            'id' => $newSite->id,
+            'is_default' => 1,
+            'default_site_status' => TaskStatus::Installing->value,
+        ]);
     }
 }

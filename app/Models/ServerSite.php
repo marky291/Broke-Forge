@@ -30,6 +30,8 @@ class ServerSite extends Model
         'ssl_key_path',
         'nginx_config_path',
         'status',
+        'is_default',
+        'default_site_status',
         'health',
         'git_status',
         'configuration',
@@ -57,11 +59,13 @@ class ServerSite extends Model
     {
         return [
             'ssl_enabled' => 'boolean',
+            'is_default' => 'boolean',
             'auto_deploy_enabled' => 'boolean',
             'has_dedicated_deploy_key' => 'boolean',
             'webhook_secret' => 'encrypted',
             'configuration' => 'array',
             'git_status' => TaskStatus::class,
+            'default_site_status' => TaskStatus::class,
             'provisioned_at' => 'datetime',
             'git_installed_at' => 'datetime',
             'last_deployed_at' => 'datetime',
@@ -158,7 +162,7 @@ class ServerSite extends Model
      */
     public function getDeploymentScript(): string
     {
-        return $this->configuration['deployment']['script'] ?? 'git fetch && git pull';
+        return $this->configuration['deployment']['script'] ?? "git pull\ncomposer install --no-dev --no-interaction --prefer-dist --optimize-autoloader";
     }
 
     /**
@@ -240,6 +244,8 @@ class ServerSite extends Model
             $broadcastFields = [
                 'domain',
                 'status',
+                'is_default',
+                'default_site_status',
                 'health',
                 'git_status',
                 'ssl_enabled',

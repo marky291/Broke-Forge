@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Inertia\Servers;
 
+use App\Enums\TaskStatus;
 use App\Models\Server;
 use App\Models\ServerSite;
 use App\Models\User;
@@ -410,6 +411,165 @@ class SitesTest extends TestCase
             ->component('servers/sites')
             ->has('server.sites', 1)
             ->where('server.sites.0.domain', 'no-repo.example.com')
+        );
+    }
+
+    /**
+     * Test sites page includes default_site_status field.
+     */
+    public function test_sites_page_includes_default_site_status_field(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        ServerSite::factory()->active()->create([
+            'server_id' => $server->id,
+            'domain' => 'site1.example.com',
+            'is_default' => true,
+            'default_site_status' => TaskStatus::Installing,
+        ]);
+
+        ServerSite::factory()->active()->create([
+            'server_id' => $server->id,
+            'domain' => 'site2.example.com',
+            'is_default' => false,
+            'default_site_status' => null,
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/sites");
+
+        // Assert - both sites should have default_site_status field
+        // Sites are sorted by latest('id'), so site2 is index 0, site1 is index 1
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('servers/sites')
+            ->has('server.sites', 2)
+            ->where('server.sites.0.default_site_status', null)
+            ->where('server.sites.1.default_site_status', 'installing')
+        );
+    }
+
+    /**
+     * Test sites page displays site with installing default status.
+     */
+    public function test_sites_page_displays_site_with_installing_default_status(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        ServerSite::factory()->active()->create([
+            'server_id' => $server->id,
+            'domain' => 'installing-default.example.com',
+            'is_default' => true,
+            'default_site_status' => TaskStatus::Installing,
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/sites");
+
+        // Assert - frontend receives installing status
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('servers/sites')
+            ->has('server.sites', 1)
+            ->where('server.sites.0.is_default', true)
+            ->where('server.sites.0.default_site_status', 'installing')
+        );
+    }
+
+    /**
+     * Test sites page displays site with removing default status.
+     */
+    public function test_sites_page_displays_site_with_removing_default_status(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        ServerSite::factory()->active()->create([
+            'server_id' => $server->id,
+            'domain' => 'removing-default.example.com',
+            'is_default' => true,
+            'default_site_status' => TaskStatus::Removing,
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/sites");
+
+        // Assert - frontend receives removing status
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('servers/sites')
+            ->has('server.sites', 1)
+            ->where('server.sites.0.is_default', true)
+            ->where('server.sites.0.default_site_status', 'removing')
+        );
+    }
+
+    /**
+     * Test sites page displays site with failed default status.
+     */
+    public function test_sites_page_displays_site_with_failed_default_status(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        ServerSite::factory()->active()->create([
+            'server_id' => $server->id,
+            'domain' => 'failed-default.example.com',
+            'is_default' => false,
+            'default_site_status' => TaskStatus::Failed,
+            'error_log' => 'Permission denied',
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/sites");
+
+        // Assert - frontend receives failed status
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('servers/sites')
+            ->has('server.sites', 1)
+            ->where('server.sites.0.is_default', false)
+            ->where('server.sites.0.default_site_status', 'failed')
+        );
+    }
+
+    /**
+     * Test sites page displays site with active default status.
+     */
+    public function test_sites_page_displays_site_with_active_default_status(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        ServerSite::factory()->active()->create([
+            'server_id' => $server->id,
+            'domain' => 'active-default.example.com',
+            'is_default' => true,
+            'default_site_status' => TaskStatus::Active,
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/sites");
+
+        // Assert - frontend receives active status
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('servers/sites')
+            ->has('server.sites', 1)
+            ->where('server.sites.0.is_default', true)
+            ->where('server.sites.0.default_site_status', 'active')
         );
     }
 }

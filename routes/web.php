@@ -229,6 +229,10 @@ Route::middleware('auth')->group(function () {
                 ->name('sites.application.git.store');
             Route::post('{site}/git/cancel', [ServerSiteGitController::class, 'cancel'])
                 ->name('sites.git.cancel');
+            Route::patch('{site}/set-default', [ServerSitesController::class, 'setDefault'])
+                ->name('sites.set-default');
+            Route::patch('{site}/unset-default', [ServerSitesController::class, 'unsetDefault'])
+                ->name('sites.unset-default');
             Route::post('{site}/uninstall', [ServerSitesController::class, 'uninstall'])
                 ->name('sites.uninstall')
                 ->middleware('throttle:5,1');

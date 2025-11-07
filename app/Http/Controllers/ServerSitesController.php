@@ -11,6 +11,8 @@ use App\Models\ServerSite;
 use App\Packages\Services\Sites\ProvisionedSiteInstallerJob;
 use App\Packages\Services\Sites\SiteDeployKeyGenerator;
 use App\Packages\Services\Sites\SiteRemoverJob;
+use App\Packages\Services\Sites\SiteSetDefaultJob;
+use App\Packages\Services\Sites\SiteUnsetDefaultJob;
 use App\Packages\Services\SourceProvider\Github\GitHubApiClient;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -216,6 +218,21 @@ class ServerSitesController extends Controller
         $this->authorize('delete', $server);
 
         try {
+            // If this is the default site, unset it first (remove symlink)
+            if ($site->is_default) {
+                Log::info('Unsetting default site before deletion', [
+                    'server_id' => $server->id,
+                    'site_id' => $site->id,
+                    'domain' => $site->domain,
+                ]);
+
+                // Unset default flag
+                $site->update(['is_default' => false]);
+
+                // Dispatch job to remove symlink synchronously (wait for completion)
+                SiteUnsetDefaultJob::dispatchSync($server, $site);
+            }
+
             // Attempt to remove deploy key from GitHub before deleting
             $this->removeDeployKeyFromGitHub($site);
 
@@ -231,6 +248,94 @@ class ServerSitesController extends Controller
         } catch (\Throwable $e) {
             return back()->with('error', 'Failed to delete site: '.$e->getMessage());
         }
+    }
+
+    /**
+     * Set a site as the default site (responds to server IP address).
+     * Swaps the /home/brokeforge/default symlink to point to the specified site.
+     */
+    public function setDefault(Server $server, ServerSite $site): RedirectResponse
+    {
+        // Authorize user can update this server
+        $this->authorize('update', $server);
+
+        // Verify site belongs to this server
+        if ($site->server_id !== $server->id) {
+            abort(404);
+        }
+
+        // Verify site is in active status
+        if ($site->status !== 'active') {
+            return back()->with('error', 'Only active sites can be set as default.');
+        }
+
+        // Get current default site ID before updating
+        $previousDefaultSite = $server->sites()->where('is_default', true)->first();
+        $previousDefaultSiteId = $previousDefaultSite?->id ?? 0;
+
+        // Unset current default (clear both flags)
+        if ($previousDefaultSite) {
+            $previousDefaultSite->update([
+                'is_default' => false,
+                'default_site_status' => null,
+            ]);
+        }
+
+        // Set new default with pending status FIRST (Reverb Package Lifecycle pattern)
+        $site->update([
+            'is_default' => true,
+            'default_site_status' => TaskStatus::Installing,
+        ]);
+
+        // THEN dispatch job to perform symlink swap
+        SiteSetDefaultJob::dispatch($server, $site, $previousDefaultSiteId);
+
+        Log::info('Default site switch initiated', [
+            'server_id' => $server->id,
+            'site_id' => $site->id,
+            'domain' => $site->domain,
+            'previous_default_id' => $previousDefaultSiteId,
+        ]);
+
+        return redirect()
+            ->route('servers.sites', $server)
+            ->with('success', "Setting '{$site->domain}' as default site...");
+    }
+
+    /**
+     * Unset the default site (removes IP-based access).
+     * Removes the /home/brokeforge/default symlink entirely.
+     */
+    public function unsetDefault(Server $server, ServerSite $site): RedirectResponse
+    {
+        // Authorize user can update this server
+        $this->authorize('update', $server);
+
+        // Verify site belongs to this server
+        if ($site->server_id !== $server->id) {
+            abort(404);
+        }
+
+        // Verify site is currently the default
+        if (! $site->is_default) {
+            return back()->with('error', 'This site is not currently set as default.');
+        }
+
+        // Set removing status FIRST (Reverb Package Lifecycle pattern)
+        $site->update(['default_site_status' => TaskStatus::Removing]);
+
+        // THEN dispatch job to remove symlink
+        SiteUnsetDefaultJob::dispatch($server, $site);
+
+        Log::info('Default site unset initiated', [
+            'server_id' => $server->id,
+            'site_id' => $site->id,
+            'domain' => $site->domain,
+        ]);
+
+        return redirect()
+            ->route('servers.sites', $server)
+            ->with('success', 'Removing default site configuration...');
     }
 
     /**

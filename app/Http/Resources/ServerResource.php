@@ -190,6 +190,8 @@ class ServerResource extends JsonResource
             'document_root' => $site->document_root,
             'php_version' => $site->php_version,
             'ssl_enabled' => $site->ssl_enabled,
+            'is_default' => $site->is_default,
+            'default_site_status' => $site->default_site_status?->value,
             'status' => $site->status,
             'provisioned_at' => $site->provisioned_at?->toISOString(),
             'provisioned_at_human' => $site->provisioned_at?->diffForHumans(),

@@ -131,6 +131,10 @@ class NginxInstaller extends PackageInstaller implements \App\Packages\Core\Base
         // Get the app user that will own site directories
         $appUser = config('app.ssh_user', str_replace(' ', '', strtolower(config('app.name'))));
 
+        // Generate deployment timestamp (ddMMYYYY-HHMMSS format - same as site deployments)
+        $timestamp = now()->format('dmY-His');
+        $deploymentPath = "/home/{$appUser}/deployments/default/{$timestamp}";
+
         return [
 
             // Update package lists and install prerequisites
@@ -155,21 +159,26 @@ class NginxInstaller extends PackageInstaller implements \App\Packages\Core\Base
             // Enable and start Nginx service (PHP-FPM is already running from PhpInstaller)
             'systemctl enable --now nginx',
 
-            // Create default site structure in app user's home directory
-            "mkdir -p /home/{$appUser}/default/public",
+            // Create default site deployment directory structure (symlink-based architecture)
+            "mkdir -p {$deploymentPath}/public",
 
             // Create default index.php file from the blade template
-            function () use ($appUser) {
+            function () use ($deploymentPath) {
                 $content = view('provision.default-site')->render();
 
-                return "echo '{$content}' > /home/{$appUser}/default/public/index.php";
+                return "echo '{$content}' > {$deploymentPath}/public/index.php";
             },
+
+            // Create symlink from default to the deployment directory (enables future default site switching)
+            "ln -sfn deployments/default/{$timestamp} /home/{$appUser}/default",
 
             // Set proper ownership and permissions for app user's site directories
             "chown -R {$appUser}:{$appUser} /home/{$appUser}/",
             "chmod 755 /home/{$appUser}/",
-            "chmod 755 /home/{$appUser}/default",
-            "chmod 755 /home/{$appUser}/default/public",
+            "chmod 755 /home/{$appUser}/deployments",
+            "chmod 755 /home/{$appUser}/deployments/default",
+            "chmod 755 /home/{$appUser}/deployments/default/{$timestamp}",
+            "chmod 755 /home/{$appUser}/deployments/default/{$timestamp}/public",
 
             // Add app user to www-data group for PHP-FPM compatibility
             "usermod -a -G www-data {$appUser}",
@@ -185,7 +194,7 @@ class NginxInstaller extends PackageInstaller implements \App\Packages\Core\Base
             },
 
             // Persist the default Nginx site now that provisioning succeeded
-            function () use ($appUser, $phpVersion) {
+            function () use ($appUser, $phpVersion, $deploymentPath) {
                 $this->server->sites()->updateOrCreate(
                     ['domain' => 'default'],
                     [
@@ -193,7 +202,12 @@ class NginxInstaller extends PackageInstaller implements \App\Packages\Core\Base
                         'nginx_config_path' => '/etc/nginx/sites-available/default',
                         'php_version' => $phpVersion,
                         'ssl_enabled' => false,
-                        'configuration' => ['is_default_site' => true],
+                        'is_default' => true,
+                        'default_site_status' => TaskStatus::Active,
+                        'configuration' => [
+                            'is_default_site' => true,
+                            'default_deployment_path' => $deploymentPath,
+                        ],
                         'status' => 'active',
                         'provisioned_at' => now(),
                         'deprovisioned_at' => null,
