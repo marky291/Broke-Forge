@@ -3,6 +3,7 @@
 namespace Tests\Unit\Http\Requests\Servers;
 
 use App\Http\Requests\Servers\StoreSiteRequest;
+use App\Models\AvailableFramework;
 use App\Models\Server;
 use App\Models\ServerSite;
 use App\Models\User;
@@ -13,6 +14,14 @@ use Tests\TestCase;
 class StoreSiteRequestTest extends TestCase
 {
     use RefreshDatabase;
+
+    /**
+     * Get a valid framework ID for tests.
+     */
+    private function getValidFrameworkId(): int
+    {
+        return AvailableFramework::factory()->create()->id;
+    }
 
     /**
      * Test validation passes with all valid data.
@@ -37,6 +46,7 @@ class StoreSiteRequestTest extends TestCase
 
         $data = [
             'domain' => 'example.com',
+            'available_framework_id' => $this->getValidFrameworkId(),
             'php_version' => '8.3',
             'ssl' => true,
             'git_repository' => 'owner/repository',
@@ -72,6 +82,7 @@ class StoreSiteRequestTest extends TestCase
         });
 
         $data = [
+            'available_framework_id' => $this->getValidFrameworkId(),
             'php_version' => '8.3',
             'ssl' => true,
             'git_repository' => 'owner/repo',
@@ -123,6 +134,7 @@ class StoreSiteRequestTest extends TestCase
         foreach ($validDomains as $domain) {
             $data = [
                 'domain' => $domain,
+                'available_framework_id' => $this->getValidFrameworkId(),
                 'php_version' => '8.3',
                 'ssl' => true,
                 'git_repository' => 'owner/repo',
@@ -172,6 +184,7 @@ class StoreSiteRequestTest extends TestCase
         foreach ($invalidDomains as $domain) {
             $data = [
                 'domain' => $domain,
+                'available_framework_id' => $this->getValidFrameworkId(),
                 'php_version' => '8.3',
                 'ssl' => true,
                 'git_repository' => 'owner/repo',
@@ -214,6 +227,7 @@ class StoreSiteRequestTest extends TestCase
 
         $data = [
             'domain' => 'example.com',
+            'available_framework_id' => $this->getValidFrameworkId(),
             'php_version' => '8.3',
             'ssl' => true,
             'git_repository' => 'owner/repo',
@@ -257,6 +271,7 @@ class StoreSiteRequestTest extends TestCase
 
         $data = [
             'domain' => 'example.com',
+            'available_framework_id' => $this->getValidFrameworkId(),
             'php_version' => '8.3',
             'ssl' => true,
             'git_repository' => 'owner/repo',
@@ -271,13 +286,23 @@ class StoreSiteRequestTest extends TestCase
     }
 
     /**
-     * Test validation fails when php_version is missing.
+     * Test validation fails when php_version is missing for PHP-based framework.
      */
     public function test_validation_fails_when_php_version_is_missing(): void
     {
         // Arrange
         $user = User::factory()->create();
         $server = Server::factory()->create(['user_id' => $user->id]);
+
+        // Get or create a PHP-based framework (not static-html) to ensure php_version is required
+        $framework = AvailableFramework::firstOrCreate(
+            ['slug' => 'laravel'],
+            [
+                'name' => 'Laravel',
+                'env' => ['file_path' => '.env', 'supports' => true],
+                'requirements' => ['database' => true, 'redis' => true, 'nodejs' => true, 'composer' => true],
+            ]
+        );
 
         $request = new StoreSiteRequest;
         $request->setContainer(app());
@@ -291,8 +316,14 @@ class StoreSiteRequestTest extends TestCase
             }
         });
 
+        // Merge request data so the request can access it for validation
+        $request->merge([
+            'available_framework_id' => $framework->id,
+        ]);
+
         $data = [
             'domain' => 'example.com',
+            'available_framework_id' => $framework->id,
             'ssl' => true,
             'git_repository' => 'owner/repo',
             'git_branch' => 'main',
@@ -333,6 +364,7 @@ class StoreSiteRequestTest extends TestCase
         foreach ($validVersions as $version) {
             $data = [
                 'domain' => "example{$counter}.com",
+                'available_framework_id' => $this->getValidFrameworkId(),
                 'php_version' => $version,
                 'ssl' => true,
                 'git_repository' => 'owner/repo',
@@ -372,6 +404,7 @@ class StoreSiteRequestTest extends TestCase
 
         $data = [
             'domain' => 'example.com',
+            'available_framework_id' => $this->getValidFrameworkId(),
             'php_version' => '8.4',
             'ssl' => true,
             'git_repository' => 'owner/repo',
@@ -409,6 +442,7 @@ class StoreSiteRequestTest extends TestCase
 
         $data = [
             'domain' => 'example.com',
+            'available_framework_id' => $this->getValidFrameworkId(),
             'php_version' => '8.3',
             'git_repository' => 'owner/repo',
             'git_branch' => 'main',
@@ -446,6 +480,7 @@ class StoreSiteRequestTest extends TestCase
         foreach ([true, false] as $sslValue) {
             $data = [
                 'domain' => $sslValue ? 'ssl-enabled.com' : 'ssl-disabled.com',
+                'available_framework_id' => $this->getValidFrameworkId(),
                 'php_version' => '8.3',
                 'ssl' => $sslValue,
                 'git_repository' => 'owner/repo',
@@ -483,6 +518,7 @@ class StoreSiteRequestTest extends TestCase
 
         $data = [
             'domain' => 'example.com',
+            'available_framework_id' => $this->getValidFrameworkId(),
             'php_version' => '8.3',
             'ssl' => true,
             'git_branch' => 'main',
@@ -529,6 +565,7 @@ class StoreSiteRequestTest extends TestCase
         foreach ($validRepos as $repo) {
             $data = [
                 'domain' => "example{$counter}.com",
+                'available_framework_id' => $this->getValidFrameworkId(),
                 'php_version' => '8.3',
                 'ssl' => true,
                 'git_repository' => $repo,
@@ -579,6 +616,7 @@ class StoreSiteRequestTest extends TestCase
         foreach ($invalidRepos as $repo) {
             $data = [
                 'domain' => "example{$counter}.com",
+                'available_framework_id' => $this->getValidFrameworkId(),
                 'php_version' => '8.3',
                 'ssl' => true,
                 'git_repository' => $repo,
@@ -619,6 +657,7 @@ class StoreSiteRequestTest extends TestCase
 
         $data = [
             'domain' => 'example.com',
+            'available_framework_id' => $this->getValidFrameworkId(),
             'php_version' => '8.3',
             'ssl' => true,
             'git_repository' => 'owner/repo',
@@ -668,6 +707,7 @@ class StoreSiteRequestTest extends TestCase
         foreach ($validBranches as $branch) {
             $data = [
                 'domain' => "example{$counter}.com",
+                'available_framework_id' => $this->getValidFrameworkId(),
                 'php_version' => '8.3',
                 'ssl' => true,
                 'git_repository' => 'owner/repo',
@@ -715,6 +755,7 @@ class StoreSiteRequestTest extends TestCase
         foreach ($invalidBranches as $branch) {
             $data = [
                 'domain' => "example{$counter}.com",
+                'available_framework_id' => $this->getValidFrameworkId(),
                 'php_version' => '8.3',
                 'ssl' => true,
                 'git_repository' => 'owner/repo',

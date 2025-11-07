@@ -79,6 +79,11 @@ trait PreparesSiteData
                 'git_provider' => $gitConfig['provider'],
                 'git_repository' => $gitConfig['repository'],
                 'git_branch' => $gitConfig['branch'],
+                'site_framework' => [
+                    'name' => $site->siteFramework->name,
+                    'env' => $site->siteFramework->env,
+                    'requirements' => $site->siteFramework->requirements,
+                ],
             ]
         );
     }

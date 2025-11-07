@@ -20,8 +20,16 @@ class ServerSite extends Model
 {
     use HasFactory;
 
+    /**
+     * The relationships that should always be loaded.
+     */
+    protected $with = ['siteFramework'];
+
     protected $fillable = [
         'server_id',
+        'available_framework_id',
+        'database_id',
+        'node_id',
         'domain',
         'document_root',
         'php_version',
@@ -92,6 +100,14 @@ class ServerSite extends Model
     public function server(): BelongsTo
     {
         return $this->belongsTo(Server::class);
+    }
+
+    /**
+     * Get the framework for this site.
+     */
+    public function siteFramework(): BelongsTo
+    {
+        return $this->belongsTo(AvailableFramework::class, 'available_framework_id');
     }
 
     /**

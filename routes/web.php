@@ -18,6 +18,7 @@ use App\Http\Controllers\ServerSettingsController;
 use App\Http\Controllers\ServerSiteApplicationController;
 use App\Http\Controllers\ServerSiteCommandsController;
 use App\Http\Controllers\ServerSiteDeploymentsController;
+use App\Http\Controllers\ServerSiteEnvironmentController;
 use App\Http\Controllers\ServerSiteGitController;
 use App\Http\Controllers\ServerSiteGitRepositoryController;
 use App\Http\Controllers\ServerSitesController;
@@ -251,6 +252,10 @@ Route::middleware('auth')->group(function () {
                 Route::delete('delete', [ServerFileExplorerController::class, 'destroy'])
                     ->name('delete');
             });
+            Route::get('{site}/environment', [ServerSiteEnvironmentController::class, 'edit'])
+                ->name('sites.environment.edit');
+            Route::put('{site}/environment', [ServerSiteEnvironmentController::class, 'update'])
+                ->name('sites.environment.update');
             Route::get('{site}', [ServerSitesController::class, 'show'])
                 ->name('sites.show');
             Route::post('/', [ServerSitesController::class, 'store'])

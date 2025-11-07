@@ -163,13 +163,16 @@ class ServerSitesController extends Controller
             $site = ServerSite::create([
                 'server_id' => $server->id,
                 'domain' => $validated['domain'],
-                'php_version' => $validated['php_version'],
+                'available_framework_id' => $validated['available_framework_id'],
+                'php_version' => $validated['php_version'] ?? null,
                 'ssl_enabled' => $validated['ssl'],
                 'status' => 'provisioning',
                 'document_root' => "/home/brokeforge/{$validated['domain']}/public",
                 'nginx_config_path' => "/etc/nginx/sites-available/{$validated['domain']}",
                 'configuration' => $configuration,
                 'git_status' => TaskStatus::Installing,
+                'database_id' => $validated['database_id'] ?? null,
+                'node_id' => $validated['node_id'] ?? null,
             ]);
 
             // Dispatch site installation job with site ID

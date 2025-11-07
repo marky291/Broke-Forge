@@ -49,6 +49,17 @@ class ServerSiteResource extends JsonResource
             'gitConfig' => $this->transformGitConfig(),
             'deployments' => $this->transformDeployments($request),
             'latestDeployment' => $this->transformLatestDeployment(),
+            'site_framework' => $this->transformSiteFramework(),
+        ];
+    }
+
+    /**
+     * Transform site framework data for navigation.
+     */
+    protected function transformSiteFramework(): array
+    {
+        return [
+            'env' => $this->siteFramework->env,
         ];
     }
 

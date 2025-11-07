@@ -3,6 +3,7 @@
 namespace Tests\Feature\Inertia\Servers;
 
 use App\Enums\TaskStatus;
+use App\Models\AvailableFramework;
 use App\Models\Server;
 use App\Models\ServerSite;
 use App\Models\User;
@@ -570,6 +571,310 @@ class SitesTest extends TestCase
             ->has('server.sites', 1)
             ->where('server.sites.0.is_default', true)
             ->where('server.sites.0.default_site_status', 'active')
+        );
+    }
+
+    /**
+     * Test all sites must have a framework (framework is mandatory).
+     *
+     * This test ensures that the database enforces framework requirement
+     * and that all sites always have an associated framework.
+     */
+    public function test_all_sites_must_have_a_framework(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        // Act - Try to create a site without a framework
+        $this->expectException(\Illuminate\Database\QueryException::class);
+
+        ServerSite::create([
+            'server_id' => $server->id,
+            'domain' => 'test.example.com',
+            'document_root' => '/var/www/html/public',
+            'php_version' => '8.3',
+            'nginx_config_path' => '/etc/nginx/sites-available/test',
+            'status' => 'active',
+            'available_framework_id' => null, // This should fail
+        ]);
+
+        // Assert - Exception should be thrown
+    }
+
+    /**
+     * Test sites page includes framework data when present.
+     */
+    public function test_sites_page_includes_framework_data_when_present(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        $framework = AvailableFramework::firstOrCreate(
+            ['slug' => 'laravel'],
+            [
+                'name' => 'Laravel',
+                'env' => [
+                    'file_path' => '.env',
+                    'supports' => true,
+                ],
+                'requirements' => [
+                    'database' => true,
+                    'redis' => true,
+                    'nodejs' => true,
+                    'composer' => true,
+                ],
+                'description' => 'Laravel PHP framework with full-stack capabilities',
+            ]
+        );
+
+        ServerSite::factory()->create([
+            'server_id' => $server->id,
+            'domain' => 'laravel-site.example.com',
+            'available_framework_id' => $framework->id,
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/sites");
+
+        // Assert - framework data should be included
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('servers/sites')
+            ->has('server.sites', 1)
+            ->where('server.sites.0.domain', 'laravel-site.example.com')
+            ->has('server.sites.0.site_framework', fn ($framework) => $framework
+                ->has('id')
+                ->where('name', 'Laravel')
+                ->where('slug', 'laravel')
+                ->has('env')
+                ->has('requirements')
+                ->etc()
+            )
+        );
+    }
+
+    /**
+     * Test complete site structure includes site_framework field.
+     *
+     * This test ensures the site_framework field is always present in the response,
+     * even when null, preventing frontend errors.
+     */
+    public function test_complete_site_structure_includes_site_framework_field(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        ServerSite::factory()->create([
+            'server_id' => $server->id,
+            'domain' => 'test.example.com',
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/sites");
+
+        // Assert - site_framework field should always be present
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('servers/sites')
+            ->has('server.sites.0', fn ($site) => $site
+                ->has('id')
+                ->has('domain')
+                ->has('document_root')
+                ->has('php_version')
+                ->has('ssl_enabled')
+                ->has('status')
+                ->has('site_framework') // This field must be present
+                ->etc()
+            )
+        );
+    }
+
+    /**
+     * Test sites page displays multiple sites with different frameworks.
+     */
+    public function test_sites_page_displays_sites_with_different_frameworks(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        $wordpress = AvailableFramework::firstOrCreate(
+            ['slug' => 'wordpress'],
+            [
+                'name' => 'WordPress',
+                'env' => [
+                    'file_path' => 'wp-config.php',
+                    'supports' => true,
+                ],
+                'requirements' => [
+                    'database' => true,
+                    'redis' => false,
+                    'nodejs' => false,
+                    'composer' => false,
+                ],
+                'description' => 'WordPress CMS with PHP and MySQL',
+            ]
+        );
+
+        $laravel = AvailableFramework::firstOrCreate(
+            ['slug' => 'laravel'],
+            [
+                'name' => 'Laravel',
+                'env' => [
+                    'file_path' => '.env',
+                    'supports' => true,
+                ],
+                'requirements' => [
+                    'database' => true,
+                    'redis' => true,
+                    'nodejs' => true,
+                    'composer' => true,
+                ],
+                'description' => 'Laravel PHP framework with full-stack capabilities',
+            ]
+        );
+
+        // Site with WordPress
+        ServerSite::factory()->create([
+            'server_id' => $server->id,
+            'domain' => 'wordpress-site.example.com',
+            'available_framework_id' => $wordpress->id,
+        ]);
+
+        // Site with Laravel
+        ServerSite::factory()->create([
+            'server_id' => $server->id,
+            'domain' => 'laravel-site.example.com',
+            'available_framework_id' => $laravel->id,
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/sites");
+
+        // Assert - both sites should have frameworks
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('servers/sites')
+            ->has('server.sites', 2)
+            // Sites are ordered by latest ID, so laravel is index 0
+            ->where('server.sites.0.site_framework.name', 'Laravel')
+            ->where('server.sites.1.site_framework.name', 'WordPress')
+        );
+    }
+
+    /**
+     * Test sites page includes available frameworks for form selection.
+     */
+    public function test_sites_page_includes_available_frameworks_for_form(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/sites");
+
+        // Assert - availableFrameworks should be present for form
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('servers/sites')
+            ->has('server.availableFrameworks')
+            ->has('server.availableFrameworks.0', fn ($framework) => $framework
+                ->has('id')
+                ->has('name')
+                ->has('slug')
+                ->has('requirements')
+                ->etc()
+            )
+        );
+    }
+
+    /**
+     * Test available frameworks include all requirement flags.
+     */
+    public function test_available_frameworks_include_requirement_flags(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        // Ensure Laravel framework exists with requirements
+        AvailableFramework::firstOrCreate(
+            ['slug' => 'laravel'],
+            [
+                'name' => 'Laravel',
+                'env' => ['file_path' => '.env', 'supports' => true],
+                'requirements' => [
+                    'database' => true,
+                    'redis' => true,
+                    'nodejs' => true,
+                    'composer' => true,
+                ],
+            ]
+        );
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/sites");
+
+        // Assert - framework requirements should be boolean flags
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('servers/sites')
+            ->has('server.availableFrameworks')
+            ->where('server.availableFrameworks.0.requirements.database', true)
+            ->where('server.availableFrameworks.0.requirements.redis', true)
+            ->where('server.availableFrameworks.0.requirements.nodejs', true)
+            ->where('server.availableFrameworks.0.requirements.composer', true)
+        );
+    }
+
+    /**
+     * Test sites page includes databases for framework requirements.
+     */
+    public function test_sites_page_includes_databases_for_requirements(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/sites");
+
+        // Assert - databases should be included for framework requirements
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('servers/sites')
+            ->has('server.databases')
+        );
+    }
+
+    /**
+     * Test sites page includes node versions for framework requirements.
+     */
+    public function test_sites_page_includes_node_versions_for_requirements(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/sites");
+
+        // Assert - node versions should be included for framework requirements
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('servers/sites')
+            ->has('server.nodes')
         );
     }
 }

@@ -60,6 +60,7 @@ class ServerResource extends JsonResource
             'defaultSettings' => PhpConfigurationService::getDefaultSettings(),
             'nodes' => $this->transformNodes(),
             'availableNodeVersions' => $this->transformAvailableNodeVersions(),
+            'availableFrameworks' => $this->transformAvailableFrameworks(),
             'composer' => $this->transformComposer(),
         ];
     }
@@ -184,7 +185,7 @@ class ServerResource extends JsonResource
      */
     protected function transformSites(): array
     {
-        return $this->sites()->latest('id')->get()->map(fn ($site) => [
+        return $this->sites()->with('siteFramework')->latest('id')->get()->map(fn ($site) => [
             'id' => $site->id,
             'domain' => $site->domain,
             'document_root' => $site->document_root,
@@ -200,6 +201,13 @@ class ServerResource extends JsonResource
             'configuration' => $site->configuration,
             'git_status' => $site->git_status?->value,
             'error_log' => $site->error_log,
+            'site_framework' => $site->siteFramework ? [
+                'id' => $site->siteFramework->id,
+                'name' => $site->siteFramework->name,
+                'slug' => $site->siteFramework->slug,
+                'env' => $site->siteFramework->env,
+                'requirements' => $site->siteFramework->requirements,
+            ] : null,
         ])->toArray();
     }
 
@@ -387,6 +395,19 @@ class ServerResource extends JsonResource
             'value' => $value,
             'label' => $label,
         ])->values()->toArray();
+    }
+
+    /**
+     * Transform available frameworks into array of value/label objects.
+     */
+    protected function transformAvailableFrameworks(): array
+    {
+        return \App\Models\AvailableFramework::all()->map(fn ($framework) => [
+            'id' => $framework->id,
+            'name' => $framework->name,
+            'slug' => $framework->slug,
+            'requirements' => $framework->requirements,
+        ])->toArray();
     }
 
     /**

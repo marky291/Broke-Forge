@@ -3,7 +3,7 @@ import { NavigationCard, NavigationSidebar } from '@/components/navigation-card'
 import { SiteDetail } from '@/components/site-detail';
 import { type BreadcrumbItem, type NavItem } from '@/types';
 import { usePage } from '@inertiajs/react';
-import { AppWindow, ArrowLeft, Folder, Rocket, Terminal, X } from 'lucide-react';
+import { AppWindow, ArrowLeft, FileCode2, Folder, Rocket, Terminal, X } from 'lucide-react';
 import { PropsWithChildren, useState } from 'react';
 
 interface SiteLayoutProps extends PropsWithChildren {
@@ -25,6 +25,12 @@ interface SiteLayoutProps extends PropsWithChildren {
         git_repository?: string | null;
         git_branch?: string | null;
         last_deployed_at?: string | null;
+        site_framework: {
+            env: {
+                supports: boolean;
+                file_path: string | null;
+            };
+        };
     };
     breadcrumbs?: BreadcrumbItem[];
 }
@@ -46,6 +52,8 @@ export default function SiteLayout({ children, server, site, breadcrumbs }: Site
         currentSection = 'site-deployments';
     } else if (path.includes('/explorer')) {
         currentSection = 'explorer';
+    } else if (path.includes('/environment')) {
+        currentSection = 'site-environment';
     }
 
     // Back to server navigation
@@ -77,6 +85,16 @@ export default function SiteLayout({ children, server, site, breadcrumbs }: Site
             isActive: currentSection === 'explorer',
         },
     ];
+
+    // Conditionally add Environment if framework supports it
+    if (site.site_framework.env.supports) {
+        siteNavItems.push({
+            title: 'Environment',
+            href: `/servers/${server.id}/sites/${site.id}/environment`,
+            icon: FileCode2,
+            isActive: currentSection === 'site-environment',
+        });
+    }
 
     // Conditionally add Deployments if Git is installed
     if (site.git_status === 'success') {

@@ -1059,4 +1059,58 @@ class ServerSitesControllerTest extends TestCase
             'default_site_status' => TaskStatus::Installing->value,
         ]);
     }
+
+    /**
+     * Test sites page includes available frameworks in server data.
+     */
+    public function test_sites_page_includes_available_frameworks(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/sites");
+
+        // Assert - availableFrameworks should be in server data
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('servers/sites')
+            ->has('server.availableFrameworks')
+        );
+    }
+
+    /**
+     * Test available frameworks include requirements structure.
+     */
+    public function test_available_frameworks_include_requirements(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/sites");
+
+        // Assert - frameworks should include requirements
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('servers/sites')
+            ->has('server.availableFrameworks.0', fn ($framework) => $framework
+                ->has('id')
+                ->has('name')
+                ->has('slug')
+                ->has('requirements', fn ($req) => $req
+                    ->has('database')
+                    ->has('redis')
+                    ->has('nodejs')
+                    ->has('composer')
+                    ->etc()
+                )
+                ->etc()
+            )
+        );
+    }
 }

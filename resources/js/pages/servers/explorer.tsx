@@ -10,12 +10,11 @@ import { Head } from '@inertiajs/react';
 type ServerProps = {
     id: number;
     vanity_name: string;
-    public_ip: string;
-    private_ip?: string | null;
-    ssh_port: number;
+    provider?: string;
     connection: string;
-    created_at: string;
-    updated_at: string;
+    public_ip?: string;
+    private_ip?: string;
+    ssh_port: number;
 };
 
 type SiteProps = {
@@ -24,6 +23,24 @@ type SiteProps = {
     document_root: string;
     status: string;
     git_status?: string | null;
+    git_provider?: string | null;
+    git_repository?: string | null;
+    git_branch?: string | null;
+    last_deployed_at?: string | null;
+    health?: string;
+    site_framework: {
+        name: string;
+        env: {
+            supports: boolean;
+            file_path: string | null;
+        };
+        requirements: {
+            database: boolean;
+            redis: boolean;
+            nodejs: boolean;
+            composer: boolean;
+        };
+    };
 };
 
 type ExplorerPageProps = {

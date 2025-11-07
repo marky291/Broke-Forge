@@ -1,4 +1,5 @@
 import { CardList, type CardListAction } from '@/components/card-list';
+import { FrameworkIcon } from '@/components/framework-icon';
 import { SiteAvatar } from '@/components/site-avatar';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -17,7 +18,7 @@ import { show as showSite } from '@/routes/servers/sites';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router, useForm, usePage } from '@inertiajs/react';
 import { useEcho } from '@laravel/echo-react';
-import { AlertCircle, ArrowUpDown, CheckCircle2, Eye, Globe, Loader2, RefreshCw, Trash2, X, XCircle } from 'lucide-react';
+import { AlertCircle, ArrowUpDown, CheckCircle2, Eye, FileEdit, Globe, Loader2, RefreshCw, Trash2, X, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 type ServerSite = {
@@ -43,6 +44,49 @@ type ServerSite = {
     };
     git_status?: string;
     error_log?: string | null;
+    site_framework: {
+        id: number;
+        name: string;
+        slug: string;
+        env: {
+            file_path: string | null;
+            supports: boolean;
+        };
+        requirements: {
+            database: boolean;
+            redis: boolean;
+            nodejs: boolean;
+            composer: boolean;
+        };
+    };
+};
+
+type AvailableFramework = {
+    id: number;
+    name: string;
+    slug: string;
+    requirements: {
+        database: boolean;
+        redis: boolean;
+        nodejs: boolean;
+        composer: boolean;
+    };
+};
+
+type Database = {
+    id: number;
+    name: string;
+    type: string;
+    version: string;
+    port: number;
+    status: string;
+};
+
+type NodeVersion = {
+    id: number;
+    version: string;
+    status: string;
+    is_default: boolean;
 };
 
 type ServerType = {
@@ -55,6 +99,9 @@ type ServerType = {
     created_at: string;
     updated_at: string;
     sites: ServerSite[];
+    databases: Database[];
+    nodes: NodeVersion[];
+    availableFrameworks: AvailableFramework[];
     latestMetrics?: {
         cpu_usage: number;
         memory_total_mb: number;
@@ -83,20 +130,64 @@ export default function Sites({ server }: SitesProps) {
     const [loadingBranches, setLoadingBranches] = useState(false);
     const [githubConnected, setGithubConnected] = useState(false);
     const [clearingCache, setClearingCache] = useState(false);
+    const [selectedFramework, setSelectedFramework] = useState<AvailableFramework | null>(null);
     const { flash } = usePage<{ flash: { success?: string; error?: string; open_add_site_modal?: boolean } }>().props;
+
+    // Set default framework to Laravel if available
+    useEffect(() => {
+        if (server.availableFrameworks.length > 0 && !selectedFramework) {
+            const laravel = server.availableFrameworks.find(f => f.slug === 'laravel') || server.availableFrameworks[0];
+            setSelectedFramework(laravel);
+        }
+    }, [server.availableFrameworks]);
+
     const form = useForm({
         domain: '',
+        available_framework_id: selectedFramework?.id || '',
         php_version: '8.3',
         ssl: false,
         git_repository: '',
         git_branch: 'main',
-    } as { domain: string; php_version: string; ssl: boolean; git_repository: string; git_branch: string });
+        database_id: '',
+        node_id: '',
+    } as {
+        domain: string;
+        available_framework_id: number | string;
+        php_version: string;
+        ssl: boolean;
+        git_repository: string;
+        git_branch: string;
+        database_id: number | string;
+        node_id: number | string;
+    });
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard.url() },
         { title: `Server #${server.id}`, href: showServer(server.id).url },
         { title: 'Sites', href: '#' },
     ];
+
+    // Sync framework ID with form when selectedFramework changes
+    useEffect(() => {
+        if (selectedFramework) {
+            form.setData('available_framework_id', selectedFramework.id);
+        }
+    }, [selectedFramework]);
+
+    // Handle framework change
+    const handleFrameworkChange = (frameworkId: string) => {
+        const framework = server.availableFrameworks.find(f => f.id === parseInt(frameworkId));
+        if (framework) {
+            setSelectedFramework(framework);
+            // Clear requirement fields when switching frameworks
+            form.setData({
+                ...form.data,
+                available_framework_id: framework.id,
+                database_id: '',
+                node_id: '',
+            });
+        }
+    };
 
     // Listen for real-time site updates via Reverb WebSocket
     useEcho('sites', 'ServerSiteUpdated', () => {
@@ -379,6 +470,18 @@ export default function Sites({ server }: SitesProps) {
 
                         // Active sites get "Set as Default" or "Unset as Default" and "Delete Site"
                         if (site.status === 'active') {
+                            // Add Edit Environment action if framework supports it
+                            if (site.site_framework.env.supports) {
+                                actions.push({
+                                    label: 'Edit Environment',
+                                    onClick: () => {
+                                        router.visit(route('servers.sites.environment.edit', { server: server.id, site: site.id }));
+                                    },
+                                    disabled: isInTransition,
+                                    icon: <FileEdit className="h-4 w-4" />,
+                                });
+                            }
+
                             if (!site.is_default) {
                                 actions.push({
                                     label: 'Set as Default',
@@ -452,26 +555,54 @@ export default function Sites({ server }: SitesProps) {
                         {form.errors.domain && <p className="text-sm text-red-500">{form.errors.domain}</p>}
                     </div>
 
+                    {/* Framework Selection */}
+                    <div className="w-full min-w-0 space-y-2">
+                        <Label htmlFor="framework">Framework</Label>
+                        <Select
+                            value={selectedFramework?.id.toString() || ''}
+                            onValueChange={handleFrameworkChange}
+                            disabled={form.processing}
+                        >
+                            <SelectTrigger id="framework">
+                                <SelectValue placeholder="Select framework" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {server.availableFrameworks.map((framework) => (
+                                    <SelectItem key={framework.id} value={framework.id.toString()}>
+                                        <div className="flex items-center gap-2">
+                                            <FrameworkIcon framework={framework.slug as any} size="sm" />
+                                            <span>{framework.name}</span>
+                                        </div>
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        {form.errors.available_framework_id && <p className="text-sm text-red-500">{form.errors.available_framework_id}</p>}
+                    </div>
+
                     <div className="grid w-full min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
-                        <div className="min-w-0 space-y-2">
-                            <Label htmlFor="php_version">PHP Version</Label>
-                            <Select
-                                value={form.data.php_version}
-                                onValueChange={(value) => form.setData('php_version', value)}
-                                disabled={form.processing}
-                            >
-                                <SelectTrigger id="php_version">
-                                    <SelectValue placeholder="Select version" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="8.3">PHP 8.3</SelectItem>
-                                    <SelectItem value="8.2">PHP 8.2</SelectItem>
-                                    <SelectItem value="8.1">PHP 8.1</SelectItem>
-                                    <SelectItem value="8.0">PHP 8.0</SelectItem>
-                                    <SelectItem value="7.4">PHP 7.4</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
+                        {/* Show PHP Version only if framework is PHP-based (not Static HTML) */}
+                        {selectedFramework && selectedFramework.slug !== 'static-html' && (
+                            <div className="min-w-0 space-y-2">
+                                <Label htmlFor="php_version">PHP Version</Label>
+                                <Select
+                                    value={form.data.php_version}
+                                    onValueChange={(value) => form.setData('php_version', value)}
+                                    disabled={form.processing}
+                                >
+                                    <SelectTrigger id="php_version">
+                                        <SelectValue placeholder="Select version" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="8.3">PHP 8.3</SelectItem>
+                                        <SelectItem value="8.2">PHP 8.2</SelectItem>
+                                        <SelectItem value="8.1">PHP 8.1</SelectItem>
+                                        <SelectItem value="8.0">PHP 8.0</SelectItem>
+                                        <SelectItem value="7.4">PHP 7.4</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
 
                         <div className="min-w-0 space-y-2">
                             <Label htmlFor="ssl">SSL Certificate</Label>
@@ -493,6 +624,69 @@ export default function Sites({ server }: SitesProps) {
                             )}
                         </div>
                     </div>
+
+                    {/* Framework Requirements Section */}
+                    {selectedFramework && (selectedFramework.requirements.database || selectedFramework.requirements.nodejs) && (
+                        <div className="grid w-full min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
+                            {/* Database Selection */}
+                            {selectedFramework.requirements.database && (
+                                <div className="min-w-0 space-y-2">
+                                    <Label htmlFor="database_id">
+                                        Database <span className="text-red-500">*</span>
+                                    </Label>
+                                    <Select
+                                        value={form.data.database_id.toString()}
+                                        onValueChange={(value) => form.setData('database_id', parseInt(value))}
+                                        disabled={form.processing}
+                                    >
+                                        <SelectTrigger id="database_id">
+                                            <SelectValue placeholder="Select database" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {server.databases.filter(db => db.status === 'active').map((database) => (
+                                                <SelectItem key={database.id} value={database.id.toString()}>
+                                                    {database.name} ({database.type} {database.version})
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    {form.errors.database_id && <p className="text-sm text-red-500">{form.errors.database_id}</p>}
+                                    {server.databases.filter(db => db.status === 'active').length === 0 && (
+                                        <p className="text-xs text-amber-600">No active databases found. Create one first.</p>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Node.js Selection */}
+                            {selectedFramework.requirements.nodejs && (
+                                <div className="min-w-0 space-y-2">
+                                    <Label htmlFor="node_id">
+                                        Node.js Version <span className="text-red-500">*</span>
+                                    </Label>
+                                    <Select
+                                        value={form.data.node_id.toString()}
+                                        onValueChange={(value) => form.setData('node_id', parseInt(value))}
+                                        disabled={form.processing}
+                                    >
+                                        <SelectTrigger id="node_id">
+                                            <SelectValue placeholder="Select Node.js version" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {server.nodes.filter(node => node.status === 'active').map((node) => (
+                                                <SelectItem key={node.id} value={node.id.toString()}>
+                                                    Node.js {node.version} {node.is_default ? '(Default)' : ''}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    {form.errors.node_id && <p className="text-sm text-red-500">{form.errors.node_id}</p>}
+                                    {server.nodes.filter(node => node.status === 'active').length === 0 && (
+                                        <p className="text-xs text-amber-600">No active Node.js versions found. Install one first.</p>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
 
                     {/* GitHub Connection Alert */}
                     {!githubConnected && !loadingRepositories && (
