@@ -16,10 +16,6 @@ use RuntimeException;
  */
 class SiteGitDeploymentInstaller extends PackageInstaller implements \App\Packages\Core\Base\SitePackage
 {
-    protected ?string $deploymentOutput = null;
-
-    protected ?string $deploymentError = null;
-
     protected ?string $commitSha = null;
 
     /**
@@ -48,8 +44,6 @@ class SiteGitDeploymentInstaller extends PackageInstaller implements \App\Packag
             // Update deployment with success
             $deployment->update([
                 'status' => 'success',
-                'output' => $this->deploymentOutput ?? '',
-                'error_output' => null, // Don't show stderr for successful deployments
                 'exit_code' => 0,
                 'commit_sha' => $this->commitSha,
                 'branch' => $site->getGitConfiguration()['branch'] ?? null,
@@ -74,8 +68,6 @@ class SiteGitDeploymentInstaller extends PackageInstaller implements \App\Packag
             // Update deployment with failure
             $deployment->update([
                 'status' => 'failed',
-                'output' => $this->deploymentOutput ?? '',
-                'error_output' => $this->deploymentError ?: $e->getMessage(),
                 'exit_code' => 1,
                 'duration_ms' => $duration,
                 'completed_at' => now(),
@@ -98,52 +90,124 @@ class SiteGitDeploymentInstaller extends PackageInstaller implements \App\Packag
         // Git repository is cloned to the site directory (parent of document root)
         $siteDirectory = dirname($documentRoot);
 
-        return [
+        // Create log file path
+        $logDirectory = config('deployment.log_directory');
+        $logFileName = sprintf('%s_%s.log', $deployment->id, time());
+        $logFilePath = rtrim($logDirectory, '/').'/'.$logFileName;
 
-            // Execute deployment script and capture output
-            function () use ($siteDirectory, $deploymentScript) {
-                // Add safe.directory config to allow brokeforge user to access the repository
+        // Split deployment script into individual lines
+        $scriptLines = array_filter(
+            array_map('trim', explode("\n", $deploymentScript)),
+            fn ($line) => ! empty($line) && ! str_starts_with($line, '#')
+        );
+
+        $commands = [
+            // Create log directory if it doesn't exist and initialize log file with proper ownership
+            function () use ($logDirectory, $logFilePath) {
                 $remoteCommand = sprintf(
-                    'git config --global --add safe.directory %s && cd %s && %s',
-                    escapeshellarg($siteDirectory),
-                    escapeshellarg($siteDirectory),
-                    $deploymentScript
+                    'mkdir -p %s && touch %s && chown brokeforge:brokeforge %s && chmod 644 %s && echo "=== Deployment Started at $(date) ===" > %s',
+                    escapeshellarg($logDirectory),
+                    escapeshellarg($logFilePath),
+                    escapeshellarg($logFilePath),
+                    escapeshellarg($logFilePath),
+                    escapeshellarg($logFilePath)
                 );
 
-                $process = $this->server->ssh('brokeforge')
-                    ->setTimeout(300) // 5 minute timeout for deployments
-                    ->execute($remoteCommand);
-
-                // Store output for deployment record
-                $this->deploymentOutput = rtrim($process->getOutput());
-                $this->deploymentError = rtrim($process->getErrorOutput());
+                $process = $this->server->ssh('brokeforge')->execute($remoteCommand);
 
                 if (! $process->isSuccessful()) {
-                    Log::warning('Deployment script exited with non-zero code.', [
+                    Log::error('Failed to create deployment log file', [
                         'server_id' => $this->server->id,
+                        'log_file_path' => $logFilePath,
                         'exit_code' => $process->getExitCode(),
-                        'stderr' => $this->deploymentError,
+                        'output' => $process->getOutput(),
                     ]);
 
-                    throw new RuntimeException("Deployment failed with exit code {$process->getExitCode()}");
+                    throw new RuntimeException('Failed to create deployment log file on remote server');
                 }
             },
+        ];
 
-            // Capture current Git commit SHA
-            function () use ($siteDirectory) {
+        // Store log file path in deployment record for frontend polling
+        $commands[] = function () use ($logFilePath, $deployment) {
+            $deployment->update([
+                'log_file_path' => $logFilePath,
+            ]);
+        };
+
+        // Execute each line of the deployment script
+        foreach ($scriptLines as $index => $line) {
+            $commands[] = function () use ($siteDirectory, $line, $logFilePath, $deployment, $index) {
+                // Log the command being executed
+                $logCommandCommand = sprintf(
+                    'echo "\n=== Running: %s ===" >> %s',
+                    addcslashes($line, '"\\$`'),
+                    escapeshellarg($logFilePath)
+                );
+                $this->server->ssh('brokeforge')->execute($logCommandCommand);
+
+                // Add safe.directory config and execute the command with output redirection
                 $remoteCommand = sprintf(
-                    'git config --global --add safe.directory %s && cd %s && git rev-parse HEAD 2>/dev/null || echo ""',
+                    'git config --global --add safe.directory %s && cd %s && %s >> %s 2>&1',
                     escapeshellarg($siteDirectory),
-                    escapeshellarg($siteDirectory)
+                    escapeshellarg($siteDirectory),
+                    $line,
+                    escapeshellarg($logFilePath)
                 );
 
                 $process = $this->server->ssh('brokeforge')
+                    ->setTimeout(300) // 5 minute timeout per command
                     ->execute($remoteCommand);
 
-                $this->commitSha = trim($process->getOutput()) ?: null;
-            },
+                if (! $process->isSuccessful()) {
+                    // Log failure to remote log file
+                    $failureLogCommand = sprintf(
+                        'echo "\n!!! Command failed with exit code %d !!!" >> %s',
+                        $process->getExitCode(),
+                        escapeshellarg($logFilePath)
+                    );
+                    $this->server->ssh('brokeforge')->execute($failureLogCommand);
 
-        ];
+                    Log::warning('Deployment script line failed.', [
+                        'server_id' => $this->server->id,
+                        'line' => $line,
+                        'exit_code' => $process->getExitCode(),
+                    ]);
+
+                    throw new RuntimeException("Deployment failed at line: {$line}");
+                }
+
+                Log::info("Deployment line #{$index} completed", [
+                    'deployment_id' => $deployment->id,
+                    'line' => $line,
+                ]);
+            };
+        }
+
+        // Capture current Git commit SHA
+        $commands[] = function () use ($siteDirectory) {
+            $remoteCommand = sprintf(
+                'git config --global --add safe.directory %s && cd %s && git rev-parse HEAD 2>/dev/null || echo ""',
+                escapeshellarg($siteDirectory),
+                escapeshellarg($siteDirectory)
+            );
+
+            $process = $this->server->ssh('brokeforge')
+                ->execute($remoteCommand);
+
+            $this->commitSha = trim($process->getOutput()) ?: null;
+        };
+
+        // Write completion message to log file
+        $commands[] = function () use ($logFilePath) {
+            $completionCommand = sprintf(
+                'echo "\n=== Deployment Completed Successfully at $(date) ===" >> %s',
+                escapeshellarg($logFilePath)
+            );
+            $this->server->ssh('brokeforge')->execute($completionCommand);
+        };
+
+        return $commands;
     }
 
     public function milestones(): Milestones

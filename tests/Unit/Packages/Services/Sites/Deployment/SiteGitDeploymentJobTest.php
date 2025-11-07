@@ -72,18 +72,6 @@ class SiteGitDeploymentJobTest extends TestCase
         $this->assertEquals(TaskStatus::Failed, $deployment->status);
     }
 
-    public function test_failed_method_stores_error_output(): void
-    {
-        $server = Server::factory()->create();
-        $deployment = ServerDeployment::factory()->create(['server_id' => $server->id, 'error_output' => null]);
-        $job = new SiteGitDeploymentJob($server, $deployment);
-        $errorMessage = 'Test error message';
-        $exception = new Exception($errorMessage);
-        $job->failed($exception);
-        $deployment->refresh();
-        $this->assertEquals($errorMessage, $deployment->error_output);
-    }
-
     public function test_failed_method_handles_missing_records_gracefully(): void
     {
         $server = Server::factory()->create();

@@ -4,6 +4,7 @@ import { CardBadge } from '@/components/ui/card-badge';
 import { CardContainer } from '@/components/ui/card-container';
 import { CardFormModal } from '@/components/ui/card-form-modal';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PageHeader } from '@/components/ui/page-header';
@@ -14,12 +15,46 @@ import { show as showServer } from '@/routes/servers';
 import { type BreadcrumbItem, type Server, type ServerScheduledTask, type ServerSupervisorTask } from '@/types';
 import { Head, router, useForm } from '@inertiajs/react';
 import { useEcho } from '@laravel/echo-react';
-import { Clock, Eye, Loader2, Pause, Pencil, Play, RefreshCw, RotateCw, Trash2 } from 'lucide-react';
+import { Activity, Clock, Eye, FileText, Loader2, Pause, Pencil, Play, RefreshCw, RotateCw, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
 type InstallDialogType = 'scheduled' | 'worker' | null;
 
-export default function Tasks({ server }: { server: Server }) {
+interface TaskLogs {
+    task_id: number;
+    task_name: string;
+    logs: Array<{ source: string; content: string }>;
+    error: string | null;
+}
+
+interface TaskStatus {
+    task_id: number;
+    task_name: string;
+    status: {
+        raw_output: string;
+        parsed: {
+            name: string;
+            state: string;
+            pid: string | null;
+            uptime: string | null;
+        } | null;
+    } | null;
+    error: string | null;
+}
+
+export default function Tasks({
+    server,
+    viewingSupervisorLogs,
+    supervisorTaskLogs,
+    viewingSupervisorStatus,
+    supervisorTaskStatus,
+}: {
+    server: Server;
+    viewingSupervisorLogs?: boolean;
+    supervisorTaskLogs?: TaskLogs;
+    viewingSupervisorStatus?: boolean;
+    supervisorTaskStatus?: TaskStatus;
+}) {
     const scheduledTasks = server.scheduledTasks || [];
     const supervisorTasks = server.supervisorTasks || [];
 
@@ -306,6 +341,26 @@ export default function Tasks({ server }: { server: Server }) {
         });
     };
 
+    const handleViewSupervisorLogs = (task: ServerSupervisorTask) => {
+        router.visit(`/servers/${server.id}/supervisor/tasks/${task.id}/logs`);
+    };
+
+    const handleViewSupervisorStatus = (task: ServerSupervisorTask) => {
+        router.visit(`/servers/${server.id}/supervisor/tasks/${task.id}/status`);
+    };
+
+    const handleCloseSupervisorLogsModal = () => {
+        router.visit(`/servers/${server.id}/tasks`, {
+            preserveScroll: true,
+        });
+    };
+
+    const handleCloseSupervisorStatusModal = () => {
+        router.visit(`/servers/${server.id}/tasks`, {
+            preserveScroll: true,
+        });
+    };
+
     return (
         <ServerLayout server={server} breadcrumbs={breadcrumbs}>
             <Head title={`${server.vanity_name} - Tasks`} />
@@ -488,6 +543,20 @@ export default function Tasks({ server }: { server: Server }) {
                                         disabled: processing,
                                     });
                                 }
+
+                                actions.push({
+                                    label: 'View Logs',
+                                    onClick: () => handleViewSupervisorLogs(task),
+                                    icon: <FileText className="h-4 w-4" />,
+                                    disabled: processing,
+                                });
+
+                                actions.push({
+                                    label: 'View Status',
+                                    onClick: () => handleViewSupervisorStatus(task),
+                                    icon: <Activity className="h-4 w-4" />,
+                                    disabled: processing,
+                                });
 
                                 actions.push({
                                     label: 'Edit Task',
@@ -823,6 +892,147 @@ export default function Tasks({ server }: { server: Server }) {
                         </div>
                     </div>
                 </CardFormModal>
+
+                {/* Supervisor Task Logs Modal */}
+                <Dialog open={viewingSupervisorLogs === true} onOpenChange={handleCloseSupervisorLogsModal}>
+                    <DialogContent className="max-h-[80vh] max-w-4xl border-0 bg-transparent p-0 shadow-none [&>button]:hidden">
+                        <div className="rounded-2xl border border-neutral-200/50 bg-white/50 p-3 dark:border-neutral-700/50 dark:bg-black/50">
+                            <div className="relative flex max-h-[75vh] flex-col rounded-xl border border-neutral-200 bg-white shadow-lg dark:border-neutral-800 dark:bg-neutral-950">
+                                {/* Close button */}
+                                <button
+                                    onClick={handleCloseSupervisorLogsModal}
+                                    className="ring-offset-background focus:ring-ring absolute right-4 top-4 z-10 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden"
+                                    type="button"
+                                >
+                                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <path d="M18 6L6 18M6 6l12 12" />
+                                    </svg>
+                                    <span className="sr-only">Close</span>
+                                </button>
+
+                                {/* Header */}
+                                <div className="border-b border-neutral-200 p-6 dark:border-neutral-800">
+                                    <DialogHeader>
+                                        <DialogTitle>Task Logs - {supervisorTaskLogs?.task_name}</DialogTitle>
+                                        <DialogDescription>Last 500 lines of stdout and stderr output</DialogDescription>
+                                    </DialogHeader>
+                                </div>
+
+                                {/* Logs content */}
+                                <div className="min-h-0 flex-1 overflow-y-auto p-6">
+                                    {supervisorTaskLogs?.error ? (
+                                        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200">
+                                            {supervisorTaskLogs.error}
+                                        </div>
+                                    ) : supervisorTaskLogs?.logs && supervisorTaskLogs.logs.length > 0 ? (
+                                        <div className="space-y-1 font-mono text-xs">
+                                            {supervisorTaskLogs.logs.map((log, index) => (
+                                                <div
+                                                    key={index}
+                                                    className={`rounded px-2 py-1 ${
+                                                        log.source === 'stderr'
+                                                            ? 'bg-red-50 text-red-900 dark:bg-red-950/30 dark:text-red-300'
+                                                            : 'bg-neutral-50 text-neutral-900 dark:bg-neutral-900 dark:text-neutral-100'
+                                                    }`}
+                                                >
+                                                    <span
+                                                        className={`mr-2 text-[10px] font-semibold ${
+                                                            log.source === 'stderr' ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'
+                                                        }`}
+                                                    >
+                                                        [{log.source}]
+                                                    </span>
+                                                    <span className="whitespace-pre-wrap break-all">{log.content}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="text-center text-sm text-muted-foreground">No logs available</div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </DialogContent>
+                </Dialog>
+
+                {/* Supervisor Task Status Modal */}
+                <Dialog open={viewingSupervisorStatus === true} onOpenChange={handleCloseSupervisorStatusModal}>
+                    <DialogContent className="border-0 bg-transparent p-0 shadow-none [&>button]:hidden">
+                        <div className="rounded-2xl border border-neutral-200/50 bg-white/50 p-3 dark:border-neutral-700/50 dark:bg-black/50">
+                            <div className="relative rounded-xl border border-neutral-200 bg-white shadow-lg dark:border-neutral-800 dark:bg-neutral-950">
+                                {/* Close button */}
+                                <button
+                                    onClick={handleCloseSupervisorStatusModal}
+                                    className="ring-offset-background focus:ring-ring absolute right-4 top-4 z-10 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden"
+                                    type="button"
+                                >
+                                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <path d="M18 6L6 18M6 6l12 12" />
+                                    </svg>
+                                    <span className="sr-only">Close</span>
+                                </button>
+
+                                {/* Content */}
+                                <div className="p-6">
+                                    <DialogHeader>
+                                        <DialogTitle>Remote Status - {supervisorTaskStatus?.task_name}</DialogTitle>
+                                        <DialogDescription>Current supervisor daemon status</DialogDescription>
+                                    </DialogHeader>
+
+                                    <div className="mt-6">
+                                        {supervisorTaskStatus?.error ? (
+                                            <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200">
+                                                {supervisorTaskStatus.error}
+                                            </div>
+                                        ) : supervisorTaskStatus?.status ? (
+                                            <div className="space-y-4">
+                                                {/* Parsed Status */}
+                                                {supervisorTaskStatus.status.parsed ? (
+                                                    <div className="space-y-3">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-sm font-medium text-muted-foreground">State:</span>
+                                                            <CardBadge
+                                                                variant={
+                                                                    supervisorTaskStatus.status.parsed.state === 'RUNNING'
+                                                                        ? 'active'
+                                                                        : supervisorTaskStatus.status.parsed.state === 'STOPPED'
+                                                                          ? 'paused'
+                                                                          : 'failed'
+                                                                }
+                                                            />
+                                                        </div>
+                                                        {supervisorTaskStatus.status.parsed.pid && (
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-sm font-medium text-muted-foreground">PID:</span>
+                                                                <span className="font-mono text-sm">{supervisorTaskStatus.status.parsed.pid}</span>
+                                                            </div>
+                                                        )}
+                                                        {supervisorTaskStatus.status.parsed.uptime && (
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-sm font-medium text-muted-foreground">Uptime:</span>
+                                                                <span className="font-mono text-sm">{supervisorTaskStatus.status.parsed.uptime}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ) : null}
+
+                                                {/* Raw Output */}
+                                                <div className="space-y-2">
+                                                    <span className="text-sm font-medium text-muted-foreground">Raw Output:</span>
+                                                    <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-4 font-mono text-xs dark:border-neutral-800 dark:bg-neutral-900">
+                                                        <pre className="whitespace-pre-wrap break-all">{supervisorTaskStatus.status.raw_output}</pre>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="text-center text-sm text-muted-foreground">No status available</div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </DialogContent>
+                </Dialog>
             </div>
         </ServerLayout>
     );

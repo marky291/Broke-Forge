@@ -29,7 +29,7 @@ export default function SchedulerTaskActivity({ server, task, runs }: Props) {
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard.url() },
         { title: server.vanity_name, href: showServer({ server: server.id }).url },
-        { title: 'Scheduler', href: `/servers/${server.id}/scheduler` },
+        { title: 'Tasks', href: `/servers/${server.id}/tasks` },
         { title: task.name, href: '#' },
     ];
 
@@ -72,7 +72,7 @@ export default function SchedulerTaskActivity({ server, task, runs }: Props) {
                                 variant="ghost"
                                 size="sm"
                                 className="h-8 w-8 p-0"
-                                onClick={() => router.visit(`/servers/${server.id}/scheduler`)}
+                                onClick={() => router.visit(`/servers/${server.id}/tasks`)}
                             >
                                 <ArrowLeft className="h-4 w-4" />
                             </Button>

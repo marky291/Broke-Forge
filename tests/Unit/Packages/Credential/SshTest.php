@@ -28,7 +28,7 @@ class SshTest extends TestCase
             ->create(['server_id' => $server->id]);
 
         // Act
-        $ssh = Ssh::connect($server, 'root');
+        $ssh = app(Ssh::class)->connect($server, 'root');
 
         // Assert
         $this->assertInstanceOf(\Spatie\Ssh\Ssh::class, $ssh);
@@ -50,7 +50,7 @@ class SshTest extends TestCase
             ->create(['server_id' => $server->id]);
 
         // Act
-        $ssh = Ssh::connect($server, 'brokeforge');
+        $ssh = app(Ssh::class)->connect($server, 'brokeforge');
 
         // Assert
         $this->assertInstanceOf(\Spatie\Ssh\Ssh::class, $ssh);
@@ -73,7 +73,7 @@ class SshTest extends TestCase
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('No root credential found for server');
 
-        Ssh::connect($server, 'root');
+        app(Ssh::class)->connect($server, 'root');
     }
 
     /**
@@ -93,7 +93,7 @@ class SshTest extends TestCase
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('No brokeforge credential found for server');
 
-        Ssh::connect($server, 'brokeforge');
+        app(Ssh::class)->connect($server, 'brokeforge');
     }
 
     /**
@@ -108,7 +108,7 @@ class SshTest extends TestCase
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('No root credential found for server');
 
-        Ssh::connect($server, 'root');
+        app(Ssh::class)->connect($server, 'root');
     }
 
     /**
@@ -128,7 +128,7 @@ class SshTest extends TestCase
             ]);
 
         // Act
-        $ssh = Ssh::connect($server, 'root');
+        $ssh = app(Ssh::class)->connect($server, 'root');
 
         // Assert - verify SSH instance was created (temp file creation is internal)
         $this->assertInstanceOf(\Spatie\Ssh\Ssh::class, $ssh);
@@ -152,8 +152,8 @@ class SshTest extends TestCase
             ->create(['server_id' => $server2->id]);
 
         // Act - create multiple SSH connections
-        Ssh::connect($server1, 'root');
-        Ssh::connect($server2, 'brokeforge');
+        app(Ssh::class)->connect($server1, 'root');
+        app(Ssh::class)->connect($server2, 'brokeforge');
 
         // Cleanup temp files
         Ssh::cleanup();
@@ -174,7 +174,7 @@ class SshTest extends TestCase
             ->root()
             ->create(['server_id' => $server->id]);
 
-        Ssh::connect($server, 'root');
+        app(Ssh::class)->connect($server, 'root');
 
         // Act - call cleanup multiple times
         Ssh::cleanup();
@@ -217,8 +217,8 @@ class SshTest extends TestCase
             ->create(['server_id' => $server->id]);
 
         // Act
-        $rootSsh = Ssh::connect($server, 'root');
-        $brokeforgeSsh = Ssh::connect($server, 'brokeforge');
+        $rootSsh = app(Ssh::class)->connect($server, 'root');
+        $brokeforgeSsh = app(Ssh::class)->connect($server, 'brokeforge');
 
         // Assert
         $this->assertInstanceOf(\Spatie\Ssh\Ssh::class, $rootSsh);
@@ -241,7 +241,7 @@ class SshTest extends TestCase
             ->create(['server_id' => $server->id]);
 
         // Act
-        $ssh = Ssh::connect($server, 'root');
+        $ssh = app(Ssh::class)->connect($server, 'root');
 
         // Assert - verify the SSH instance was created successfully
         // The quiet mode and strict host key checking are internal options
@@ -259,7 +259,7 @@ class SshTest extends TestCase
 
         // Act & Assert
         try {
-            Ssh::connect($server, 'root');
+            app(Ssh::class)->connect($server, 'root');
             $this->fail('Expected RuntimeException was not thrown');
         } catch (\RuntimeException $e) {
             $this->assertStringContainsString("server #{$server->id}", $e->getMessage());
@@ -283,7 +283,7 @@ class SshTest extends TestCase
             ->create(['server_id' => $server->id]);
 
         // Act
-        $ssh = Ssh::connect($server, 'root');
+        $ssh = app(Ssh::class)->connect($server, 'root');
 
         // Assert
         $this->assertInstanceOf(\Spatie\Ssh\Ssh::class, $ssh);

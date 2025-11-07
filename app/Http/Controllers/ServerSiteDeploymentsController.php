@@ -21,6 +21,8 @@ class ServerSiteDeploymentsController extends Controller
      */
     public function show(Server $server, ServerSite $site): RedirectResponse|Response
     {
+        $this->authorize('view', $server);
+
         // Check if site has Git repository installed
         if (! $site->hasGitRepository()) {
             return redirect()->route('servers.sites.application.git.setup', [$server, $site])
@@ -37,6 +39,8 @@ class ServerSiteDeploymentsController extends Controller
      */
     public function update(Request $request, Server $server, ServerSite $site): RedirectResponse
     {
+        $this->authorize('update', $server);
+
         $validated = $request->validate([
             'deployment_script' => ['required', 'string', 'max:5000'],
         ]);
@@ -53,6 +57,8 @@ class ServerSiteDeploymentsController extends Controller
      */
     public function deploy(Request $request, Server $server, ServerSite $site): RedirectResponse
     {
+        $this->authorize('update', $server);
+
         // Check if site has Git repository installed
         if (! $site->hasGitRepository()) {
             return redirect()->route('servers.sites.application.git.setup', [$server, $site])
@@ -83,11 +89,11 @@ class ServerSiteDeploymentsController extends Controller
      */
     public function status(Server $server, ServerSite $site, ServerDeployment $deployment): JsonResponse
     {
+        $this->authorize('view', $server);
+
         return response()->json([
             'id' => $deployment->id,
             'status' => $deployment->status,
-            'output' => $deployment->output,
-            'error_output' => $deployment->error_output,
             'exit_code' => $deployment->exit_code,
             'commit_sha' => $deployment->commit_sha,
             'branch' => $deployment->branch,
@@ -102,10 +108,111 @@ class ServerSiteDeploymentsController extends Controller
     }
 
     /**
+     * Stream log output from remote server for active deployments.
+     */
+    public function streamLog(Server $server, ServerSite $site, ServerDeployment $deployment): JsonResponse
+    {
+        $this->authorize('view', $server);
+
+        // If no log file path, return empty response
+        if (! $deployment->log_file_path) {
+            \Illuminate\Support\Facades\Log::warning('Deployment log file path not set', [
+                'deployment_id' => $deployment->id,
+                'server_id' => $server->id,
+            ]);
+
+            return response()->json([
+                'output' => null,
+                'file_size' => 0,
+                'status' => $deployment->status->value,
+                'is_running' => $deployment->isPending() || $deployment->isRunning(),
+                'error' => 'Log file path not configured for this deployment',
+            ]);
+        }
+
+        // Check if file exists and is readable on remote server
+        $checkCommand = sprintf(
+            'if [ -f %s ]; then if [ -r %s ]; then echo "readable"; else echo "not_readable"; fi; else echo "not_found"; fi',
+            escapeshellarg($deployment->log_file_path),
+            escapeshellarg($deployment->log_file_path)
+        );
+
+        $checkProcess = $server->ssh('brokeforge')->execute($checkCommand);
+        $fileStatus = trim($checkProcess->getOutput());
+
+        \Illuminate\Support\Facades\Log::info('Checking deployment log file', [
+            'deployment_id' => $deployment->id,
+            'log_file_path' => $deployment->log_file_path,
+            'file_status' => $fileStatus,
+            'exit_code' => $checkProcess->getExitCode(),
+        ]);
+
+        if ($fileStatus === 'not_found') {
+            return response()->json([
+                'output' => null,
+                'file_size' => 0,
+                'status' => $deployment->status->value,
+                'is_running' => $deployment->isPending() || $deployment->isRunning(),
+                'is_success' => $deployment->isSuccess(),
+                'is_failed' => $deployment->isFailed(),
+                'error' => 'Log file not found on remote server. It may have been deleted or the deployment did not complete.',
+            ]);
+        }
+
+        if ($fileStatus === 'not_readable') {
+            return response()->json([
+                'output' => null,
+                'file_size' => 0,
+                'status' => $deployment->status->value,
+                'is_running' => $deployment->isPending() || $deployment->isRunning(),
+                'is_success' => $deployment->isSuccess(),
+                'is_failed' => $deployment->isFailed(),
+                'error' => 'Log file exists but is not readable. Check file permissions on the remote server.',
+            ]);
+        }
+
+        // Read log file from remote server
+        $process = $server->ssh('brokeforge')
+            ->execute(sprintf('cat %s 2>&1', escapeshellarg($deployment->log_file_path)));
+
+        if (! $process->isSuccessful()) {
+            \Illuminate\Support\Facades\Log::error('Failed to read deployment log file', [
+                'deployment_id' => $deployment->id,
+                'log_file_path' => $deployment->log_file_path,
+                'exit_code' => $process->getExitCode(),
+                'output' => $process->getOutput(),
+            ]);
+
+            return response()->json([
+                'output' => null,
+                'file_size' => 0,
+                'status' => $deployment->status->value,
+                'is_running' => $deployment->isPending() || $deployment->isRunning(),
+                'is_success' => $deployment->isSuccess(),
+                'is_failed' => $deployment->isFailed(),
+                'error' => 'Failed to read log file from remote server. Please try again.',
+            ]);
+        }
+
+        $output = $process->getOutput();
+
+        return response()->json([
+            'output' => $output,
+            'file_size' => strlen($output),
+            'status' => $deployment->status->value,
+            'is_running' => $deployment->isPending() || $deployment->isRunning(),
+            'is_success' => $deployment->isSuccess(),
+            'is_failed' => $deployment->isFailed(),
+        ]);
+    }
+
+    /**
      * Toggle auto-deploy for a site.
      */
     public function toggleAutoDeploy(Request $request, Server $server, ServerSite $site): RedirectResponse
     {
+        $this->authorize('update', $server);
+
         $validated = $request->validate([
             'enabled' => ['required', 'boolean'],
         ]);

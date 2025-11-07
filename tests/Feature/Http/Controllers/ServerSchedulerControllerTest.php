@@ -984,4 +984,381 @@ class ServerSchedulerControllerTest extends TestCase
             )
         );
     }
+
+    /**
+     * Test guest cannot access task activity page.
+     */
+    public function test_guest_cannot_access_task_activity_page(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+        $task = ServerScheduledTask::factory()->create(['server_id' => $server->id]);
+
+        // Act
+        $response = $this->get("/servers/{$server->id}/scheduler/tasks/{$task->id}/activity");
+
+        // Assert
+        $response->assertStatus(302);
+        $response->assertRedirect('/login');
+    }
+
+    /**
+     * Test user can access their task activity page.
+     */
+    public function test_user_can_access_their_task_activity_page(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+        $task = ServerScheduledTask::factory()->create(['server_id' => $server->id]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/scheduler/tasks/{$task->id}/activity");
+
+        // Assert
+        $response->assertStatus(200);
+    }
+
+    /**
+     * Test user cannot access other users task activity page.
+     */
+    public function test_user_cannot_access_other_users_task_activity_page(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $otherUser = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $otherUser->id]);
+        $task = ServerScheduledTask::factory()->create(['server_id' => $server->id]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/scheduler/tasks/{$task->id}/activity");
+
+        // Assert
+        $response->assertStatus(403);
+    }
+
+    /**
+     * Test activity page renders correct Inertia component.
+     */
+    public function test_activity_page_renders_correct_inertia_component(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+        $task = ServerScheduledTask::factory()->create(['server_id' => $server->id]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/scheduler/tasks/{$task->id}/activity");
+
+        // Assert
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('servers/scheduler-task-activity')
+            ->has('server')
+            ->has('task')
+            ->has('runs')
+        );
+    }
+
+    /**
+     * Test activity page includes server data.
+     */
+    public function test_activity_page_includes_server_data(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create([
+            'user_id' => $user->id,
+            'vanity_name' => 'Production Server',
+        ]);
+        $task = ServerScheduledTask::factory()->create(['server_id' => $server->id]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/scheduler/tasks/{$task->id}/activity");
+
+        // Assert
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('servers/scheduler-task-activity')
+            ->where('server.id', $server->id)
+            ->where('server.vanity_name', 'Production Server')
+        );
+    }
+
+    /**
+     * Test activity page includes task data.
+     */
+    public function test_activity_page_includes_task_data(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+        $task = ServerScheduledTask::factory()->create([
+            'server_id' => $server->id,
+            'name' => 'Backup Database',
+            'command' => 'php artisan backup:run',
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/scheduler/tasks/{$task->id}/activity");
+
+        // Assert
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('servers/scheduler-task-activity')
+            ->where('task.id', $task->id)
+            ->where('task.name', 'Backup Database')
+            ->where('task.command', 'php artisan backup:run')
+        );
+    }
+
+    /**
+     * Test activity page includes paginated task runs.
+     */
+    public function test_activity_page_includes_paginated_task_runs(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+        $task = ServerScheduledTask::factory()->create(['server_id' => $server->id]);
+
+        // Create 5 task runs
+        ServerScheduledTaskRun::factory()->count(5)->create([
+            'server_id' => $server->id,
+            'server_scheduled_task_id' => $task->id,
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/scheduler/tasks/{$task->id}/activity");
+
+        // Assert
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('servers/scheduler-task-activity')
+            ->has('runs.data', 5)
+            ->has('runs.links')
+            ->has('runs.meta')
+        );
+    }
+
+    /**
+     * Test activity page orders task runs by started_at desc.
+     */
+    public function test_activity_page_orders_task_runs_by_started_at_desc(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+        $task = ServerScheduledTask::factory()->create(['server_id' => $server->id]);
+
+        // Create runs with specific timestamps
+        $oldRun = ServerScheduledTaskRun::factory()->create([
+            'server_id' => $server->id,
+            'server_scheduled_task_id' => $task->id,
+            'started_at' => now()->subHours(2),
+        ]);
+
+        $newRun = ServerScheduledTaskRun::factory()->create([
+            'server_id' => $server->id,
+            'server_scheduled_task_id' => $task->id,
+            'started_at' => now()->subHour(),
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/scheduler/tasks/{$task->id}/activity");
+
+        // Assert - newest run should be first
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('servers/scheduler-task-activity')
+            ->has('runs.data', 2)
+            ->where('runs.data.0.id', $newRun->id)
+            ->where('runs.data.1.id', $oldRun->id)
+        );
+    }
+
+    /**
+     * Test activity page shows empty state when no task runs.
+     */
+    public function test_activity_page_shows_empty_state_when_no_task_runs(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+        $task = ServerScheduledTask::factory()->create(['server_id' => $server->id]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/scheduler/tasks/{$task->id}/activity");
+
+        // Assert
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('servers/scheduler-task-activity')
+            ->has('runs.data', 0)
+        );
+    }
+
+    /**
+     * Test activity page pagination works correctly.
+     */
+    public function test_activity_page_pagination_works_correctly(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+        $task = ServerScheduledTask::factory()->create(['server_id' => $server->id]);
+
+        // Create 25 task runs (should span 2 pages with 20 per page)
+        ServerScheduledTaskRun::factory()->count(25)->create([
+            'server_id' => $server->id,
+            'server_scheduled_task_id' => $task->id,
+        ]);
+
+        // Act - Get first page
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/scheduler/tasks/{$task->id}/activity");
+
+        // Assert
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('servers/scheduler-task-activity')
+            ->has('runs.data', 20)
+            ->where('runs.meta.total', 25)
+            ->where('runs.meta.current_page', 1)
+            ->where('runs.meta.last_page', 2)
+        );
+    }
+
+    /**
+     * Test activity page includes successful and failed runs.
+     */
+    public function test_activity_page_includes_successful_and_failed_runs(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+        $task = ServerScheduledTask::factory()->create(['server_id' => $server->id]);
+
+        $successfulRun = ServerScheduledTaskRun::factory()->successful()->create([
+            'server_id' => $server->id,
+            'server_scheduled_task_id' => $task->id,
+        ]);
+
+        $failedRun = ServerScheduledTaskRun::factory()->failed()->create([
+            'server_id' => $server->id,
+            'server_scheduled_task_id' => $task->id,
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/scheduler/tasks/{$task->id}/activity");
+
+        // Assert
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('servers/scheduler-task-activity')
+            ->has('runs.data', 2)
+            ->where('runs.data.0.was_successful', fn ($value) => in_array($value, [true, false]))
+            ->where('runs.data.1.was_successful', fn ($value) => in_array($value, [true, false]))
+        );
+    }
+
+    /**
+     * Test activity page includes run output data.
+     */
+    public function test_activity_page_includes_run_output_data(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+        $task = ServerScheduledTask::factory()->create(['server_id' => $server->id]);
+
+        ServerScheduledTaskRun::factory()->create([
+            'server_id' => $server->id,
+            'server_scheduled_task_id' => $task->id,
+            'output' => 'Command output here',
+            'error_output' => 'Error output here',
+            'exit_code' => 0,
+            'duration_ms' => 1500,
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/scheduler/tasks/{$task->id}/activity");
+
+        // Assert
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('servers/scheduler-task-activity')
+            ->has('runs.data', 1)
+            ->has('runs.data.0.output')
+            ->has('runs.data.0.error_output')
+            ->where('runs.data.0.exit_code', 0)
+            ->where('runs.data.0.duration_ms', 1500)
+        );
+    }
+
+    /**
+     * Test task must belong to server for activity endpoint.
+     */
+    public function test_task_must_belong_to_server_for_activity_endpoint(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+        $otherServer = Server::factory()->create(['user_id' => $user->id]);
+        $task = ServerScheduledTask::factory()->create(['server_id' => $otherServer->id]);
+
+        // Act - Try to access task from wrong server
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/scheduler/tasks/{$task->id}/activity");
+
+        // Assert - Should fail due to route model binding scoping
+        $response->assertStatus(404);
+    }
+
+    /**
+     * Test activity page only shows runs for the specific task.
+     */
+    public function test_activity_page_only_shows_runs_for_specific_task(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        $task1 = ServerScheduledTask::factory()->create(['server_id' => $server->id]);
+        $task2 = ServerScheduledTask::factory()->create(['server_id' => $server->id]);
+
+        // Create runs for both tasks
+        ServerScheduledTaskRun::factory()->count(3)->create([
+            'server_id' => $server->id,
+            'server_scheduled_task_id' => $task1->id,
+        ]);
+
+        ServerScheduledTaskRun::factory()->count(2)->create([
+            'server_id' => $server->id,
+            'server_scheduled_task_id' => $task2->id,
+        ]);
+
+        // Act - Get activity for task1
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/scheduler/tasks/{$task1->id}/activity");
+
+        // Assert - Should only show task1's runs
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('servers/scheduler-task-activity')
+            ->has('runs.data', 3)
+            ->where('task.id', $task1->id)
+        );
+    }
 }

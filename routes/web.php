@@ -217,6 +217,8 @@ Route::middleware('auth')->group(function () {
                 ->name('sites.deployments.auto-deploy');
             Route::get('{site}/deployments/{deployment}/status', [ServerSiteDeploymentsController::class, 'status'])
                 ->name('sites.deployments.status');
+            Route::get('{site}/deployments/{deployment}/stream', [ServerSiteDeploymentsController::class, 'streamLog'])
+                ->name('sites.deployments.stream');
             Route::get('{site}/application', [ServerSiteApplicationController::class, 'show'])
                 ->name('sites.application');
             Route::get('{site}/application/git/setup', [ServerSiteGitRepositoryController::class, 'show'])
@@ -346,10 +348,6 @@ Route::middleware('auth')->group(function () {
 
         // Supervisor management
         Route::prefix('supervisor')->middleware('throttle:60,1')->group(function () {
-            Route::get('/', [ServerSupervisorController::class, 'index'])
-                ->name('supervisor')
-                ->withoutMiddleware('throttle:60,1');
-
             Route::post('install', [ServerSupervisorController::class, 'install'])
                 ->name('supervisor.install')
                 ->middleware('throttle:5,1');
@@ -380,6 +378,12 @@ Route::middleware('auth')->group(function () {
                 Route::post('{supervisorTask}/retry', [ServerSupervisorController::class, 'retryTask'])
                     ->name('supervisor.tasks.retry')
                     ->middleware('throttle:10,1'); // Max 10 retries per minute
+
+                Route::get('{supervisorTask}/logs', [ServerSupervisorController::class, 'showLogs'])
+                    ->name('supervisor.tasks.logs');
+
+                Route::get('{supervisorTask}/status', [ServerSupervisorController::class, 'showStatus'])
+                    ->name('supervisor.tasks.status');
             });
         });
 

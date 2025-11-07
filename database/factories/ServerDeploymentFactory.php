@@ -25,9 +25,8 @@ class ServerDeploymentFactory extends Factory
             'server_site_id' => ServerSite::factory(),
             'status' => 'success',
             'deployment_script' => "git pull origin main\ncomposer install --no-interaction\nphp artisan migrate --force",
+            'log_file_path' => '/home/brokeforge/logs/deployment/'.$this->faker->numberBetween(1, 999999).'_'.time().'.log',
             'triggered_by' => 'manual',
-            'output' => "Pulling from remote...\nInstalling dependencies...\nMigrating database...\nDeployment completed successfully.",
-            'error_output' => null,
             'exit_code' => 0,
             'commit_sha' => $this->faker->sha1(),
             'branch' => 'main',
@@ -44,8 +43,7 @@ class ServerDeploymentFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'status' => 'pending',
-            'output' => null,
-            'error_output' => null,
+            'log_file_path' => null,
             'exit_code' => null,
             'commit_sha' => null,
             'duration_ms' => null,
@@ -61,8 +59,6 @@ class ServerDeploymentFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'status' => 'updating',
-            'output' => "Starting deployment...\nPulling from remote...",
-            'error_output' => null,
             'exit_code' => null,
             'duration_ms' => null,
             'started_at' => now(),
@@ -77,8 +73,6 @@ class ServerDeploymentFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'status' => 'failed',
-            'output' => "Pulling from remote...\nInstalling dependencies...",
-            'error_output' => "Error: Connection timeout\nFailed to complete deployment",
             'exit_code' => 1,
             'duration_ms' => $this->faker->numberBetween(1000, 30000),
             'completed_at' => now(),

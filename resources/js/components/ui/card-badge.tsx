@@ -1,7 +1,7 @@
 import { Loader2, Pause, X } from 'lucide-react';
 import { type ReactNode } from 'react';
 
-type BadgeVariant = 'pending' | 'installing' | 'active' | 'inactive' | 'failed' | 'removing' | 'updating' | 'stopped' | 'uninstalling';
+type BadgeVariant = 'pending' | 'installing' | 'active' | 'inactive' | 'paused' | 'failed' | 'removing' | 'updating' | 'stopped' | 'uninstalling';
 
 interface CardBadgeProps {
     variant: BadgeVariant;
@@ -44,6 +44,11 @@ const variantConfig: Record<
     },
     inactive: {
         label: 'Inactive',
+        icon: <Pause className="h-3 w-3" />,
+        className: 'bg-amber-500/10 border-amber-200 text-amber-600 dark:border-amber-800 dark:text-amber-400',
+    },
+    paused: {
+        label: 'Paused',
         icon: <Pause className="h-3 w-3" />,
         className: 'bg-amber-500/10 border-amber-200 text-amber-600 dark:border-amber-800 dark:text-amber-400',
     },

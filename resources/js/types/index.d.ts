@@ -286,7 +286,7 @@ export interface ServerSupervisorTask {
     user: string;
     auto_restart: boolean;
     autorestart_unexpected: boolean;
-    status: 'active' | 'inactive' | 'failed';
+    status: 'pending' | 'installing' | 'active' | 'paused' | 'failed' | 'removing';
     stdout_logfile: string | null;
     stderr_logfile: string | null;
     installed_at: string | null;

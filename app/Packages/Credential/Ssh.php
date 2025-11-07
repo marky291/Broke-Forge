@@ -33,7 +33,7 @@ class Ssh
      *
      * @throws \RuntimeException If credential not found
      */
-    public static function connect(Server $server, string $user): SpatieProcess
+    public function connect(Server $server, string $user): SpatieProcess
     {
         // 1. Fetch credential from database
         $credential = $server->credentials()
@@ -48,7 +48,7 @@ class Ssh
         }
 
         // 2. Create temporary key file for SSH to use
-        $keyFilePath = self::createTempKeyFile(
+        $keyFilePath = $this->createTempKeyFile(
             $credential->private_key,
             $server->id,
             $user
@@ -84,7 +84,7 @@ class Ssh
      *
      * @throws \RuntimeException If file cannot be created
      */
-    private static function createTempKeyFile(string $privateKey, int $serverId, string $user): string
+    private function createTempKeyFile(string $privateKey, int $serverId, string $user): string
     {
         $tempDir = sys_get_temp_dir();
         $path = sprintf(

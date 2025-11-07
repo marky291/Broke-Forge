@@ -12,14 +12,15 @@ import { type BreadcrumbItem, type ServerSite } from '@/types';
 import { Head, router, useForm } from '@inertiajs/react';
 import { useEcho } from '@laravel/echo-react';
 import { CheckCircle2, Clock, Eye, GitCommitHorizontal, Loader2, Rocket, XCircle } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 type Deployment = {
     id: number;
     status: 'pending' | 'updating' | 'success' | 'failed';
     deployment_script: string;
-    output: string | null;
-    error_output: string | null;
+    log_file_path: string | null;
+    output?: string | null; // Fetched on-demand from remote log file
+    error?: string | null; // Error message from backend when log cannot be fetched
     exit_code: number | null;
     commit_sha: string | null;
     branch: string | null;
@@ -54,6 +55,10 @@ export default function SiteDeployments({ site }: { site: ServerSite }) {
     // Output dialog state
     const [outputDialogOpen, setOutputDialogOpen] = useState(false);
     const [selectedDeployment, setSelectedDeployment] = useState<Deployment | null>(null);
+    const [fetchingLog, setFetchingLog] = useState(false);
+
+    // Auto-scroll ref for deployment output
+    const outputRef = useRef<HTMLPreElement>(null);
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard.url() },
@@ -100,10 +105,77 @@ export default function SiteDeployments({ site }: { site: ServerSite }) {
         );
     };
 
-    const handleViewOutput = (deployment: Deployment) => {
+    const handleViewOutput = async (deployment: Deployment) => {
         setSelectedDeployment(deployment);
         setOutputDialogOpen(true);
+
+        // Fetch log from remote server
+        if (deployment.log_file_path) {
+            setFetchingLog(true);
+            try {
+                const response = await fetch(`/servers/${server.id}/sites/${site.id}/deployments/${deployment.id}/stream`);
+                const data = await response.json();
+
+                setSelectedDeployment({
+                    ...deployment,
+                    output: data.output,
+                    error: data.error,
+                });
+            } catch (error) {
+                console.error('Failed to fetch deployment log from remote:', error);
+                setSelectedDeployment({
+                    ...deployment,
+                    error: 'Network error: Failed to fetch log from server. Please check your connection and try again.',
+                });
+            } finally {
+                setFetchingLog(false);
+            }
+        } else {
+            // No log file path configured
+            setSelectedDeployment({
+                ...deployment,
+                error: 'Log file path not configured for this deployment.',
+            });
+        }
     };
+
+    // Poll log output every 500ms for active deployments
+    useEffect(() => {
+        if (!liveDeployment || (liveDeployment.status !== 'pending' && liveDeployment.status !== 'updating')) {
+            return; // Stop polling when deployment completes or doesn't exist
+        }
+
+        const pollLogOutput = async () => {
+            try {
+                const response = await fetch(`/servers/${server.id}/sites/${site.id}/deployments/${liveDeployment.id}/stream`);
+                const data = await response.json();
+
+                // Update live deployment with fresh output and status
+                setLiveDeployment((prev) => ({
+                    ...prev!,
+                    output: data.output,
+                    status: data.status,
+                }));
+            } catch (error) {
+                console.error('Failed to fetch deployment log:', error);
+            }
+        };
+
+        // Initial fetch
+        pollLogOutput();
+
+        // Poll every 500ms
+        const interval = setInterval(pollLogOutput, 500);
+
+        return () => clearInterval(interval);
+    }, [liveDeployment?.id, liveDeployment?.status, server.id, site.id]);
+
+    // Auto-scroll to bottom when output updates
+    useEffect(() => {
+        if (outputRef.current) {
+            outputRef.current.scrollTop = outputRef.current.scrollHeight;
+        }
+    }, [liveDeployment?.output]);
 
     // Listen for real-time deployment updates via Reverb WebSocket
     useEcho(`sites.${site.id}`, 'ServerSiteUpdated', () => {
@@ -201,7 +273,7 @@ export default function SiteDeployments({ site }: { site: ServerSite }) {
                         <div className="-mx-6 -my-6">
                             {liveDeployment.status === 'pending' || liveDeployment.status === 'updating' ? (
                                 <div className="relative">
-                                    <pre className="max-h-[400px] min-h-[200px] overflow-auto bg-slate-950 px-4 py-4 font-mono text-xs leading-relaxed whitespace-pre-wrap text-slate-50">
+                                    <pre ref={outputRef} className="max-h-[400px] min-h-[200px] overflow-auto bg-slate-950 px-4 py-4 font-mono text-xs leading-relaxed whitespace-pre-wrap text-slate-50">
                                         {liveDeployment.output || 'Waiting for output...'}
                                     </pre>
                                 </div>
@@ -320,7 +392,7 @@ export default function SiteDeployments({ site }: { site: ServerSite }) {
                                                 )}
                                                 <span className={`text-sm ${deployment.status === 'failed' ? 'text-red-600 dark:text-red-400' : 'text-muted-foreground'}`}>
                                                     {deployment.status === 'failed'
-                                                        ? (deployment.error_output?.split('\n')[0] || 'Deployment failed')
+                                                        ? 'Deployment failed - Click to view log'
                                                         : (deployment.branch ? `Deployed from ${deployment.branch}` : 'Deployment successful')}
                                                 </span>
                                             </div>
@@ -384,10 +456,15 @@ export default function SiteDeployments({ site }: { site: ServerSite }) {
                         </DialogHeader>
 
                         <div className="flex-1 space-y-4 overflow-y-auto">
-                            {selectedDeployment && (
+                            {fetchingLog ? (
+                                <div className="flex flex-col items-center justify-center py-12">
+                                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                                    <p className="mt-3 text-sm text-muted-foreground">Loading log from server...</p>
+                                </div>
+                            ) : selectedDeployment ? (
                                 <>
                                     {/* Standard Output */}
-                                    {selectedDeployment.output && (
+                                    {selectedDeployment.output ? (
                                         <div>
                                             <div className="mb-2 border-b bg-muted/50 px-4 py-2">
                                                 <span className="text-xs font-medium text-muted-foreground">Standard Output</span>
@@ -396,17 +473,17 @@ export default function SiteDeployments({ site }: { site: ServerSite }) {
                                                 {selectedDeployment.output}
                                             </pre>
                                         </div>
-                                    )}
-
-                                    {/* Error Output */}
-                                    {selectedDeployment.error_output && (
-                                        <div>
-                                            <div className="border-b border-destructive/20 bg-destructive/10 px-4 py-2">
-                                                <span className="text-xs font-medium text-destructive">Error Output</span>
+                                    ) : selectedDeployment.error ? (
+                                        <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-8">
+                                            <XCircle className="h-10 w-10 text-destructive" />
+                                            <div className="text-center">
+                                                <p className="mb-1 font-medium text-sm text-foreground">Unable to Load Deployment Log</p>
+                                                <p className="text-sm text-muted-foreground">{selectedDeployment.error}</p>
                                             </div>
-                                            <pre className="max-h-[300px] overflow-auto border-l-2 border-destructive bg-destructive/5 px-4 py-4 font-mono text-xs leading-relaxed whitespace-pre-wrap text-destructive">
-                                                {selectedDeployment.error_output}
-                                            </pre>
+                                        </div>
+                                    ) : (
+                                        <div className="flex flex-col items-center justify-center py-12">
+                                            <p className="text-sm text-muted-foreground">Log file not available on remote server</p>
                                         </div>
                                     )}
 
@@ -445,7 +522,7 @@ export default function SiteDeployments({ site }: { site: ServerSite }) {
                                         </div>
                                     </div>
                                 </>
-                            )}
+                            ) : null}
                         </div>
 
                         <DialogFooter>

@@ -45,9 +45,30 @@ class SiteGitDeploymentJob extends Taskable
         return ['completed_at' => now()];
     }
 
-    protected function getErrorField(): string
+    protected function handleFailure(Model $model, \Exception $e): void
     {
-        return 'error_output';
+        // Don't store error output in database - it's in the remote log file
+        $this->updateStatus($model, $this->getFailedStatus());
+
+        \Illuminate\Support\Facades\Log::error("{$this->getOperationName()} failed", array_merge(
+            $this->getLogContext($model),
+            [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]
+        ));
+    }
+
+    public function failed(\Throwable $exception): void
+    {
+        $model = $this->findModelForFailure();
+
+        if ($model) {
+            // Don't store error output in database - it's in the remote log file
+            $this->updateStatus($model, $this->getFailedStatus());
+        }
+
+        \Illuminate\Support\Facades\Log::error("{$this->getOperationName()} job failed", $this->getFailedLogContext($exception));
     }
 
     protected function updateStatus(Model $model, mixed $status, array $additionalData = []): void

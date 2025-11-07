@@ -26,19 +26,6 @@ class ServerSupervisorController extends Controller
     use PreparesSiteData;
 
     /**
-     * Display supervisor page with installation status and tasks
-     */
-    public function index(Server $server): Response
-    {
-        // Authorization
-        Gate::authorize('view', [ServerSupervisor::class, $server]);
-
-        return Inertia::render('servers/supervisor', [
-            'server' => new ServerResource($server),
-        ]);
-    }
-
-    /**
      * Install supervisor on the server
      */
     public function install(Server $server): RedirectResponse
@@ -212,24 +199,24 @@ class ServerSupervisorController extends Controller
         Gate::authorize('toggleTask', [ServerSupervisor::class, $server]);
 
         // Toggle status
-        $newStatus = $supervisorTask->status === 'active' ? 'inactive' : 'active';
+        $newStatus = $supervisorTask->status === TaskStatus::Active ? TaskStatus::Paused : TaskStatus::Active;
 
         // Get sanitized task name for supervisor commands
         $sanitizedName = $this->sanitizeTaskName($supervisorTask->name);
 
         // Execute supervisorctl command to stop/start
-        if ($newStatus === 'inactive') {
+        if ($newStatus === TaskStatus::Paused) {
             // Stop the task
             $this->executeSupervisorctl($server, "stop {$sanitizedName}");
-            $supervisorTask->update(['status' => 'inactive']);
+            $supervisorTask->update(['status' => TaskStatus::Paused]);
         } else {
             // Start the task
             $this->executeSupervisorctl($server, "start {$sanitizedName}");
-            $supervisorTask->update(['status' => 'active']);
+            $supervisorTask->update(['status' => TaskStatus::Active]);
         }
 
         return back()
-            ->with('success', "Task {$newStatus}");
+            ->with('success', "Task {$newStatus->value}");
     }
 
     /**
@@ -290,6 +277,184 @@ class ServerSupervisorController extends Controller
 
         return back()
             ->with('success', 'Task retry started');
+    }
+
+    /**
+     * Show logs for a supervisor task
+     */
+    public function showLogs(Server $server, ServerSupervisorTask $supervisorTask): Response
+    {
+        // Authorization
+        Gate::authorize('view', [ServerSupervisor::class, $server]);
+
+        // Audit log
+        Log::info('Supervisor task logs viewed', [
+            'user_id' => auth()->id(),
+            'server_id' => $server->id,
+            'task_id' => $supervisorTask->id,
+            'task_name' => $supervisorTask->name,
+            'ip_address' => request()->ip(),
+        ]);
+
+        $logs = [];
+        $error = null;
+
+        try {
+            $ssh = $server->ssh('root');
+            $sanitizedName = $this->sanitizeTaskName($supervisorTask->name);
+
+            // Determine log paths (use fallback if not set in database)
+            $stdoutLogfile = $supervisorTask->stdout_logfile ?? "/var/log/supervisor/{$sanitizedName}-stdout.log";
+            $stderrLogfile = $supervisorTask->stderr_logfile ?? "/var/log/supervisor/{$sanitizedName}-stderr.log";
+
+            // Fetch stdout logs (last 500 lines)
+            $stdoutResult = $ssh->disableStrictHostKeyChecking()->execute(
+                "tail -n 500 {$stdoutLogfile} 2>&1 || echo 'Log file not found'"
+            );
+
+            if ($stdoutResult->isSuccessful()) {
+                $stdoutOutput = $stdoutResult->getOutput();
+                if (! empty($stdoutOutput)) {
+                    $stdoutLines = explode("\n", trim($stdoutOutput));
+                    foreach ($stdoutLines as $line) {
+                        if (! empty($line) && $line !== 'Log file not found') {
+                            $logs[] = [
+                                'source' => 'stdout',
+                                'content' => $line,
+                            ];
+                        }
+                    }
+                }
+            }
+
+            // Fetch stderr logs (last 500 lines)
+            $stderrResult = $ssh->disableStrictHostKeyChecking()->execute(
+                "tail -n 500 {$stderrLogfile} 2>&1 || echo 'Log file not found'"
+            );
+
+            if ($stderrResult->isSuccessful()) {
+                $stderrOutput = $stderrResult->getOutput();
+                if (! empty($stderrOutput)) {
+                    $stderrLines = explode("\n", trim($stderrOutput));
+                    foreach ($stderrLines as $line) {
+                        if (! empty($line) && $line !== 'Log file not found') {
+                            $logs[] = [
+                                'source' => 'stderr',
+                                'content' => $line,
+                            ];
+                        }
+                    }
+                }
+            }
+
+            if (empty($logs)) {
+                $error = 'No logs available yet. The task may not have produced any output.';
+            }
+        } catch (\Exception $e) {
+            Log::error('Failed to fetch supervisor task logs', [
+                'task_id' => $supervisorTask->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            $error = 'Failed to fetch logs: '.$e->getMessage();
+        }
+
+        return Inertia::render('servers/tasks', [
+            'server' => new ServerResource($server),
+            'viewingSupervisorLogs' => true,
+            'supervisorTaskLogs' => [
+                'task_id' => $supervisorTask->id,
+                'task_name' => $supervisorTask->name,
+                'logs' => $logs,
+                'error' => $error,
+            ],
+        ]);
+    }
+
+    /**
+     * Show remote status for a supervisor task
+     */
+    public function showStatus(Server $server, ServerSupervisorTask $supervisorTask): Response
+    {
+        // Authorization
+        Gate::authorize('view', [ServerSupervisor::class, $server]);
+
+        // Audit log
+        Log::info('Supervisor task status viewed', [
+            'user_id' => auth()->id(),
+            'server_id' => $server->id,
+            'task_id' => $supervisorTask->id,
+            'task_name' => $supervisorTask->name,
+            'ip_address' => request()->ip(),
+        ]);
+
+        $status = null;
+        $error = null;
+
+        try {
+            $sanitizedName = $this->sanitizeTaskName($supervisorTask->name);
+            $ssh = $server->ssh('root');
+
+            // Execute supervisorctl status command
+            $statusResult = $ssh->disableStrictHostKeyChecking()->execute(
+                "supervisorctl status {$sanitizedName} 2>&1"
+            );
+
+            if ($statusResult->isSuccessful()) {
+                $statusOutput = $statusResult->getOutput();
+                if (! empty($statusOutput)) {
+                    // Parse supervisor status output
+                    // Example: "queue-worker:queue-worker_00   RUNNING   pid 1234, uptime 2 days, 5:32:10"
+                    $parsed = $this->parseSupervisorStatus($statusOutput);
+                    $status = [
+                        'raw_output' => $statusOutput,
+                        'parsed' => $parsed,
+                    ];
+                } else {
+                    $error = 'No status information available.';
+                }
+            } else {
+                $error = 'No status information available.';
+            }
+        } catch (\Exception $e) {
+            Log::error('Failed to fetch supervisor task status', [
+                'task_id' => $supervisorTask->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            $error = 'Failed to fetch status: '.$e->getMessage();
+        }
+
+        return Inertia::render('servers/tasks', [
+            'server' => new ServerResource($server),
+            'viewingSupervisorStatus' => true,
+            'supervisorTaskStatus' => [
+                'task_id' => $supervisorTask->id,
+                'task_name' => $supervisorTask->name,
+                'status' => $status,
+                'error' => $error,
+            ],
+        ]);
+    }
+
+    /**
+     * Parse supervisorctl status output
+     */
+    private function parseSupervisorStatus(string $output): ?array
+    {
+        // Example output: "queue-worker:queue-worker_00   RUNNING   pid 1234, uptime 2 days, 5:32:10"
+        $pattern = '/^(\S+)\s+(RUNNING|STOPPED|STARTING|STOPPING|BACKOFF|FATAL|EXITED|UNKNOWN)(?:\s+pid\s+(\d+))?,?\s*(?:uptime\s+(.+))?$/im';
+
+        if (preg_match($pattern, $output, $matches)) {
+            return [
+                'name' => $matches[1] ?? null,
+                'state' => $matches[2] ?? null,
+                'pid' => $matches[3] ?? null,
+                'uptime' => $matches[4] ?? null,
+            ];
+        }
+
+        return null;
     }
 
     /**

@@ -39,7 +39,7 @@ You are writing tests for BrokeForge, a Laravel 12 application using PHPUnit. Th
 - Run tests before completing work - **tests must pass before work is 100% complete**
 
 ### Mocking Policy
-- **ALWAYS mock SSH connection when SSH is involved**
+- **ALWAYS mock SSH connections using the `MocksSshConnections` trait**
 - **Never mock database operations** - Use real database with factories
 - Use real objects and factories for everything else
 
@@ -612,21 +612,65 @@ $response->assertSessionHasErrors(['field']);
 
 ## SSH Connection Mocking
 
+**Use the `MocksSshConnections` trait for all SSH testing:**
+
 ```php
-use Mockery;
+use Tests\Concerns\MocksSshConnections;
 
-// Mock the ssh() method on Server
-$server = Mockery::mock(Server::class)->makePartial();
-$mockSsh = Mockery::mock(\Spatie\Ssh\Ssh::class);
+class MyControllerTest extends TestCase
+{
+    use RefreshDatabase, MocksSshConnections;
 
-$server->shouldReceive('ssh')
-    ->with('root')  // or 'brokeforge'
-    ->andReturn($mockSsh);
+    public function test_executes_ssh_command(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
 
-$mockSsh->shouldReceive('execute')
-    ->with('some command')
-    ->andReturn('command output');
+        // Mock SSH commands - trait handles all mocking via container
+        $this->mockSshConnection($server, [
+            'supervisorctl status my-task 2>&1' => [
+                'success' => true,
+                'output' => 'my-task RUNNING pid 1234',
+            ],
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/supervisor/status");
+
+        // Assert
+        $response->assertStatus(200);
+    }
+}
 ```
+
+**Helper methods available in the trait:**
+
+```php
+// Mock SSH logs retrieval
+$this->mockServerSshLogs(
+    server: $server,
+    stdoutLogPath: '/var/log/app.log',
+    stderrLogPath: '/var/log/app-error.log',
+    stdoutLines: ['Log line 1', 'Log line 2'],
+    stderrLines: ['Error line 1']
+);
+
+// Mock supervisorctl status
+$this->mockServerSshStatus(
+    server: $server,
+    taskName: 'queue-worker',
+    state: 'RUNNING',
+    pid: '12345',
+    uptime: '1 day, 3:45:22'
+);
+```
+
+**How it works:**
+- The `MocksSshConnections` trait mocks `App\Packages\Credential\Ssh` in Laravel's container
+- Each test gets a fresh mock instance that's automatically cleaned up
+- Works with route model binding because `Server->ssh()` uses `app(Ssh::class)`
 
 ## Authentication in Tests
 
@@ -680,33 +724,30 @@ namespace Tests\Unit\Packages\Services;
 use App\Models\Server;
 use App\Packages\Services\Firewall\FirewallService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Mockery;
+use Tests\Concerns\MocksSshConnections;
 use Tests\TestCase;
 
 class FirewallServiceTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, MocksSshConnections;
 
     public function test_creates_firewall_rule_successfully(): void
     {
         // Arrange - inline setup
         $server = Server::factory()->create();
 
-        // Mock SSH
-        $mockServer = Mockery::mock(Server::class)->makePartial();
-        $mockSsh = Mockery::mock(\Spatie\Ssh\Ssh::class);
-
-        $mockServer->shouldReceive('ssh')
-            ->with('root')
-            ->andReturn($mockSsh);
-
-        $mockSsh->shouldReceive('execute')
-            ->andReturn('Rule added');
+        // Mock SSH using trait
+        $this->mockSshConnection($server, [
+            'ufw allow 80/tcp' => [
+                'success' => true,
+                'output' => 'Rule added',
+            ],
+        ]);
 
         $service = new FirewallService();
 
         // Act
-        $result = $service->addRule($mockServer, '80', 'tcp');
+        $result = $service->addRule($server, '80', 'tcp');
 
         // Assert
         $this->assertTrue($result);
@@ -854,7 +895,7 @@ class FirewallManagementTest extends TestCase
 - **Tests must pass** before work is 100% complete
 - **Speed limit** - tests must complete in < 1s
 - **Real database always** - use factories, never mock DB
-- **Mock SSH connections** - use `$server->ssh()` partial mocks
+- **Mock SSH connections** - use `MocksSshConnections` trait for all SSH testing
 - **Cover all paths** - happy, failure, edge, authorization, frontend display
 - **Run tests immediately** after writing
 - **Format with Pint** before completion

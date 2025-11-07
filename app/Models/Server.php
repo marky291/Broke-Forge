@@ -181,7 +181,7 @@ class Server extends Model
      */
     public function ssh(string $user = 'root'): \Spatie\Ssh\Ssh
     {
-        return Ssh::connect($this, $user);
+        return app(Ssh::class)->connect($this, $user);
     }
 
     /**
