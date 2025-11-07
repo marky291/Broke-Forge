@@ -1,19 +1,11 @@
 import { MainHeader } from '@/components/main-header';
 import { NavigationCard, NavigationSidebar } from '@/components/navigation-card';
 import { ServerDetail } from '@/components/server-detail';
-import { ServerProviderIcon, type ServerProvider } from '@/components/server-provider-icon';
-import {
-    Breadcrumb,
-    BreadcrumbItem as BreadcrumbComponent,
-    BreadcrumbLink,
-    BreadcrumbList,
-    BreadcrumbPage,
-    BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb';
+import { type ServerProvider } from '@/components/server-provider-icon';
 import { type BreadcrumbItem, type NavItem, type ServerMetric } from '@/types';
-import { useEcho } from '@laravel/echo-react';
 import { router, usePage } from '@inertiajs/react';
-import { Activity, ArrowLeft, Box, Check, Clock, CodeIcon, Cpu, DatabaseIcon, Eye, Globe, HardDrive, Layers, MemoryStick, Settings, Shield, XCircle } from 'lucide-react';
+import { useEcho } from '@laravel/echo-react';
+import { Activity, ArrowLeft, Box, Clock, CodeIcon, Globe, HardDrive, Settings, Shield } from 'lucide-react';
 import { PropsWithChildren } from 'react';
 
 interface ServerContentLayoutProps extends PropsWithChildren {
@@ -148,8 +140,8 @@ export default function ServerContentLayout({ children, server, breadcrumbs }: S
         switch (status) {
             case 'connected':
                 return (
-                    <span className="inline-flex items-center space-x-2 rounded-md border border-success-weak bg-success-weaker py-0.5 pl-1.5 pr-2 text-xssm font-medium text-success">
-                        <span className="size-3.5 text-icon-success">
+                    <span className="border-success-weak bg-success-weaker text-xssm text-success inline-flex items-center space-x-2 rounded-md border py-0.5 pr-2 pl-1.5 font-medium">
+                        <span className="text-icon-success size-3.5">
                             <svg className="overflow-visible" viewBox="0 0 14 14" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
                                 <path
                                     fillRule="evenodd"
@@ -164,8 +156,8 @@ export default function ServerContentLayout({ children, server, breadcrumbs }: S
                 );
             case 'failed':
                 return (
-                    <span className="inline-flex items-center space-x-2 rounded-md border border-danger-weak bg-danger-weaker py-0.5 pl-1.5 pr-2 text-xssm font-medium text-danger">
-                        <span className="size-3.5 text-icon-danger">
+                    <span className="border-danger-weak bg-danger-weaker text-xssm text-danger inline-flex items-center space-x-2 rounded-md border py-0.5 pr-2 pl-1.5 font-medium">
+                        <span className="text-icon-danger size-3.5">
                             <svg className="overflow-visible" viewBox="0 0 14 14" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
                                 <path
                                     fillRule="evenodd"
@@ -180,8 +172,8 @@ export default function ServerContentLayout({ children, server, breadcrumbs }: S
                 );
             case 'disconnected':
                 return (
-                    <span className="inline-flex items-center space-x-2 rounded-md border border-neutral-weak bg-neutral-weaker py-0.5 pl-1.5 pr-2 text-xssm font-medium text-neutral">
-                        <span className="size-3.5 text-icon-neutral">
+                    <span className="border-neutral-weak bg-neutral-weaker text-xssm text-neutral inline-flex items-center space-x-2 rounded-md border py-0.5 pr-2 pl-1.5 font-medium">
+                        <span className="text-icon-neutral size-3.5">
                             <svg className="overflow-visible" viewBox="0 0 14 14" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
                                 <path
                                     fillRule="evenodd"
@@ -196,8 +188,8 @@ export default function ServerContentLayout({ children, server, breadcrumbs }: S
                 );
             default:
                 return (
-                    <span className="inline-flex items-center space-x-2 rounded-md border border-warning-weak bg-warning-weaker py-0.5 pl-1.5 pr-2 text-xssm font-medium text-warning">
-                        <span className="size-3.5 text-icon-warning">
+                    <span className="border-warning-weak bg-warning-weaker text-xssm text-warning inline-flex items-center space-x-2 rounded-md border py-0.5 pr-2 pl-1.5 font-medium">
+                        <span className="text-icon-warning size-3.5">
                             <svg className="overflow-visible" viewBox="0 0 14 14" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
                                 <path
                                     fillRule="evenodd"

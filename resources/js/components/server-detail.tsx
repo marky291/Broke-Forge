@@ -28,19 +28,19 @@ export function ServerDetail({ server, metrics }: ServerDetailProps) {
                         {/* Server Info - Hide some items on mobile */}
                         <div className="flex flex-wrap items-center gap-4 text-sm lg:gap-8 lg:border-l lg:pl-8">
                             <div>
-                                <div className="mb-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">Public IP</div>
+                                <div className="mb-0.5 text-[10px] tracking-wide text-muted-foreground uppercase">Public IP</div>
                                 <div className="font-medium">{server.public_ip || 'N/A'}</div>
                             </div>
                             <div className="hidden md:block">
-                                <div className="mb-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">Private IP</div>
+                                <div className="mb-0.5 text-[10px] tracking-wide text-muted-foreground uppercase">Private IP</div>
                                 <div className="font-medium">{server.private_ip || 'N/A'}</div>
                             </div>
                             <div className="hidden md:block">
-                                <div className="mb-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">Region</div>
+                                <div className="mb-0.5 text-[10px] tracking-wide text-muted-foreground uppercase">Region</div>
                                 <div className="font-medium">Frankfurt</div>
                             </div>
                             <div className="hidden lg:block">
-                                <div className="mb-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">OS</div>
+                                <div className="mb-0.5 text-[10px] tracking-wide text-muted-foreground uppercase">OS</div>
                                 <div className="font-medium">Ubuntu 24.04</div>
                             </div>
                         </div>
@@ -52,21 +52,21 @@ export function ServerDetail({ server, metrics }: ServerDetailProps) {
                             <div className="flex items-center gap-2">
                                 <Cpu className="h-3.5 w-3.5 text-blue-600" />
                                 <div>
-                                    <div className="mb-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">CPU</div>
+                                    <div className="mb-0.5 text-[10px] tracking-wide text-muted-foreground uppercase">CPU</div>
                                     <div className="font-medium">{Number(metrics.cpu_usage).toFixed(1)}%</div>
                                 </div>
                             </div>
                             <div className="flex items-center gap-2">
                                 <MemoryStick className="h-3.5 w-3.5 text-purple-600" />
                                 <div>
-                                    <div className="mb-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">Memory</div>
+                                    <div className="mb-0.5 text-[10px] tracking-wide text-muted-foreground uppercase">Memory</div>
                                     <div className="font-medium">{Number(metrics.memory_usage_percentage).toFixed(1)}%</div>
                                 </div>
                             </div>
                             <div className="flex items-center gap-2">
                                 <HardDrive className="h-3.5 w-3.5 text-orange-600" />
                                 <div>
-                                    <div className="mb-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">Storage</div>
+                                    <div className="mb-0.5 text-[10px] tracking-wide text-muted-foreground uppercase">Storage</div>
                                     <div className="font-medium">{Number(metrics.storage_usage_percentage).toFixed(1)}%</div>
                                 </div>
                             </div>

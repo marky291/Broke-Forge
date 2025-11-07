@@ -68,12 +68,7 @@ export default function SchedulerTaskActivity({ server, task, runs }: Props) {
                 <PageHeader
                     title={
                         <div className="flex items-center gap-3">
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 w-8 p-0"
-                                onClick={() => router.visit(`/servers/${server.id}/tasks`)}
-                            >
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => router.visit(`/servers/${server.id}/tasks`)}>
                                 <ArrowLeft className="h-4 w-4" />
                             </Button>
                             <span>{task.name} - Activity</span>
@@ -127,12 +122,7 @@ export default function SchedulerTaskActivity({ server, task, runs }: Props) {
                                                     )}
                                                 </td>
                                                 <td className="py-3 text-right">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => handleViewOutput(run)}
-                                                        className="h-8 gap-2"
-                                                    >
+                                                    <Button variant="ghost" size="sm" onClick={() => handleViewOutput(run)} className="h-8 gap-2">
                                                         <Eye className="h-3 w-3" />
                                                         View Output
                                                     </Button>
@@ -160,9 +150,7 @@ export default function SchedulerTaskActivity({ server, task, runs }: Props) {
                 <DialogContent className="max-w-3xl">
                     <DialogHeader>
                         <DialogTitle>Task Run Output</DialogTitle>
-                        <DialogDescription>
-                            Run started at {selectedRun && formatDateTime(selectedRun.started_at)}
-                        </DialogDescription>
+                        <DialogDescription>Run started at {selectedRun && formatDateTime(selectedRun.started_at)}</DialogDescription>
                     </DialogHeader>
 
                     {selectedRun && (

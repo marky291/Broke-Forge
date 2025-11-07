@@ -3,19 +3,6 @@
 return [
     /*
     |--------------------------------------------------------------------------
-    | Deployment Log Directory
-    |--------------------------------------------------------------------------
-    |
-    | This value determines the directory on the remote server where deployment
-    | logs will be stored. The directory should be writable by the brokeforge
-    | user. Logs are stored with a unique filename for each deployment.
-    |
-    */
-
-    'log_directory' => env('DEPLOYMENT_LOG_DIRECTORY', '/home/brokeforge/logs/deployment'),
-
-    /*
-    |--------------------------------------------------------------------------
     | Stream Interval
     |--------------------------------------------------------------------------
     |

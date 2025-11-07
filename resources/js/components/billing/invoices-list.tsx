@@ -46,7 +46,10 @@ export default function InvoicesList({ invoices }: InvoicesListProps) {
         <CardContainer title="Invoices" icon={<Receipt />}>
             <div className="space-y-3">
                 {invoices.map((invoice) => (
-                    <div key={invoice.id} className="flex flex-col gap-3 rounded-lg border border-border p-4 transition-colors hover:border-primary/50 sm:flex-row sm:items-center sm:justify-between">
+                    <div
+                        key={invoice.id}
+                        className="flex flex-col gap-3 rounded-lg border border-border p-4 transition-colors hover:border-primary/50 sm:flex-row sm:items-center sm:justify-between"
+                    >
                         <div className="flex items-center gap-3">
                             <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted">
                                 <Receipt className="size-5 text-muted-foreground" />
@@ -60,7 +63,12 @@ export default function InvoicesList({ invoices }: InvoicesListProps) {
                                     })}
                                 </p>
                                 <div className="mt-1 flex items-center gap-2">
-                                    <p className={cn('text-sm font-medium', invoice.is_credit ? 'text-blue-600 dark:text-blue-400' : 'text-foreground')}>
+                                    <p
+                                        className={cn(
+                                            'text-sm font-medium',
+                                            invoice.is_credit ? 'text-blue-600 dark:text-blue-400' : 'text-foreground',
+                                        )}
+                                    >
                                         {invoice.total}
                                     </p>
                                 </div>

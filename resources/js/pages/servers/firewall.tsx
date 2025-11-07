@@ -120,11 +120,14 @@ export default function Firewall({ server }: FirewallProps) {
         if (!confirm(`Retry installing firewall rule "${rule.name}"?`)) {
             return;
         }
-        router.post(`/servers/${server.id}/firewall/${rule.id}/retry`, {}, {
-            preserveScroll: true,
-        });
+        router.post(
+            `/servers/${server.id}/firewall/${rule.id}/retry`,
+            {},
+            {
+                preserveScroll: true,
+            },
+        );
     };
-
 
     if (!server.firewall.isInstalled) {
         return (
@@ -178,7 +181,11 @@ export default function Firewall({ server }: FirewallProps) {
                             <div className="min-w-0 flex-1">
                                 <div className="truncate text-sm font-medium text-foreground">{rule.name}</div>
                                 <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
-                                    <span className={rule.rule_type === 'allow' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
+                                    <span
+                                        className={
+                                            rule.rule_type === 'allow' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                                        }
+                                    >
                                         {rule.rule_type === 'allow' ? 'Allow' : 'Deny'}
                                     </span>
                                     <span>•</span>

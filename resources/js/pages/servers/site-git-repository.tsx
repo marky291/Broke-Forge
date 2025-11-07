@@ -1,11 +1,10 @@
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { CardContainer } from '@/components/ui/card-container';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
 import {
     COPY_FEEDBACK_DURATION,
     DEFAULT_BRANCH,
@@ -23,7 +22,7 @@ import { type BreadcrumbItem } from '@/types';
 import type { GitFormData, SiteGitRepositoryProps } from '@/types/git';
 import { Head, router, useForm } from '@inertiajs/react';
 import copyToClipboard from 'copy-to-clipboard';
-import { AlertCircle, Check, CheckCircle, Copy, GitBranch, Loader2, XCircle } from 'lucide-react';
+import { AlertCircle, Check, CheckCircle, Copy, GitBranch, Loader2 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 /**

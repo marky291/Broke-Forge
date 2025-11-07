@@ -165,12 +165,13 @@ export default function DeployServerModal({ trigger }: DeployServerModalProps) {
                                     <div className="grid gap-1.5 leading-none">
                                         <Label
                                             htmlFor="add_ssh_key_to_github"
-                                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                            className="text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                                         >
                                             Add server's SSH key to my GitHub account
                                         </Label>
                                         <p className="text-xs text-muted-foreground">
-                                            When enabled, your server can clone any repository you have access to. Disable to use per-site deploy keys instead.
+                                            When enabled, your server can clone any repository you have access to. Disable to use per-site deploy keys
+                                            instead.
                                         </p>
                                     </div>
                                 </div>

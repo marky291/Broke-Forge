@@ -20,6 +20,7 @@ class ServerDeployment extends Model
         'server_site_id',
         'status',
         'deployment_script',
+        'deployment_path',
         'log_file_path',
         'triggered_by',
         'exit_code',
@@ -115,5 +116,13 @@ class ServerDeployment extends Model
         }
 
         return round($this->duration_ms / 1000, 2);
+    }
+
+    /**
+     * Check if deployment can be rolled back to.
+     */
+    public function canRollback(): bool
+    {
+        return $this->isSuccess() && $this->deployment_path !== null;
     }
 }

@@ -9,7 +9,7 @@ import { show as showServer } from '@/routes/servers';
 import { type BreadcrumbItem, type ServerSite } from '@/types';
 import { Head, router, useForm } from '@inertiajs/react';
 import { useEcho } from '@laravel/echo-react';
-import { CheckCircle, Clock, Copy, ExternalLink, GitBranch, Key, Loader2, Lock, Trash2, XCircle } from 'lucide-react';
+import { CheckCircle, Clock, Copy, ExternalLink, GitBranch, Key, Loader2, Lock, XCircle } from 'lucide-react';
 import { type ReactNode, useState } from 'react';
 
 const statusMeta: Record<string, { badgeClass: string; label: string; icon: ReactNode; description: string }> = {
@@ -320,12 +320,7 @@ export default function SiteApplication({ site }: { site: ServerSite }) {
                                                 <pre className="overflow-x-auto rounded-md border bg-muted p-4 font-mono text-xs">
                                                     {generatedDeployKey}
                                                 </pre>
-                                                <Button
-                                                    size="sm"
-                                                    variant="outline"
-                                                    className="absolute right-2 top-2"
-                                                    onClick={handleCopyDeployKey}
-                                                >
+                                                <Button size="sm" variant="outline" className="absolute top-2 right-2" onClick={handleCopyDeployKey}>
                                                     {copiedDeployKey ? (
                                                         <>
                                                             <CheckCircle className="mr-2 h-4 w-4" />
@@ -347,7 +342,9 @@ export default function SiteApplication({ site }: { site: ServerSite }) {
                                                 <li>Copy the SSH key above</li>
                                                 <li>Go to your repository's deploy keys settings</li>
                                                 <li>Add a new deploy key and paste the SSH key</li>
-                                                <li>Give it a title like "{site.dedicated_deploy_key_title || `BrokeForge Site - ${site.domain}`}"</li>
+                                                <li>
+                                                    Give it a title like "{site.dedicated_deploy_key_title || `BrokeForge Site - ${site.domain}`}"
+                                                </li>
                                                 <li>Make sure "Allow write access" is unchecked (read-only)</li>
                                                 <li>Save the deploy key</li>
                                             </ol>

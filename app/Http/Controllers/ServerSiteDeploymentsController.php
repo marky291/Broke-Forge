@@ -6,6 +6,7 @@ use App\Http\Resources\ServerSiteResource;
 use App\Models\Server;
 use App\Models\ServerDeployment;
 use App\Models\ServerSite;
+use App\Packages\Services\Sites\Deployment\SiteDeploymentRollbackJob;
 use App\Packages\Services\Sites\Deployment\SiteGitDeploymentJob;
 use App\Packages\Services\SourceProvider\Github\GitHubWebhookManager;
 use Illuminate\Http\JsonResponse;
@@ -82,6 +83,35 @@ class ServerSiteDeploymentsController extends Controller
         return redirect()
             ->route('servers.sites.deployments', [$server, $site])
             ->with('success', 'Deployment started. Refresh the page to see progress.');
+    }
+
+    /**
+     * Rollback to a previous deployment.
+     */
+    public function rollback(Request $request, Server $server, ServerSite $site, ServerDeployment $deployment): RedirectResponse
+    {
+        $this->authorize('update', $server);
+
+        // Validate deployment can be rolled back to
+        if (! $deployment->canRollback()) {
+            return redirect()
+                ->route('servers.sites.deployments', [$server, $site])
+                ->with('error', 'Cannot rollback to this deployment - it may have failed or the deployment directory no longer exists.');
+        }
+
+        // Prevent rolling back to current active deployment
+        if ($site->active_deployment_id === $deployment->id) {
+            return redirect()
+                ->route('servers.sites.deployments', [$server, $site])
+                ->with('error', 'This deployment is already active.');
+        }
+
+        // Dispatch rollback job (follows Reverb Package Lifecycle Pattern)
+        SiteDeploymentRollbackJob::dispatch($server, $site, $deployment);
+
+        return redirect()
+            ->route('servers.sites.deployments', [$server, $site])
+            ->with('success', 'Rollback initiated. Refresh the page to see progress.');
     }
 
     /**

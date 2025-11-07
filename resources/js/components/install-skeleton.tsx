@@ -1,6 +1,5 @@
 import { Button } from '@/components/ui/button';
 import { type LucideIcon } from 'lucide-react';
-import { type ReactNode } from 'react';
 
 interface InstallSkeletonProps {
     /** Icon component to display (e.g., Activity, Database, Server) */

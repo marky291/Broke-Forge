@@ -20,12 +20,15 @@ class ServerDeploymentFactory extends Factory
      */
     public function definition(): array
     {
+        $domain = $this->faker->domainName();
+        $timestamp = now()->format('dmY-His'); // ddMMYYYY-HHMMSS format
+
         return [
             'server_id' => Server::factory(),
             'server_site_id' => ServerSite::factory(),
             'status' => 'success',
             'deployment_script' => "git pull origin main\ncomposer install --no-interaction\nphp artisan migrate --force",
-            'log_file_path' => '/home/brokeforge/logs/deployment/'.$this->faker->numberBetween(1, 999999).'_'.time().'.log',
+            'log_file_path' => "/home/brokeforge/deployments/{$domain}/{$timestamp}/deployment.log",
             'triggered_by' => 'manual',
             'exit_code' => 0,
             'commit_sha' => $this->faker->sha1(),

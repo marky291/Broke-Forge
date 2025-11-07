@@ -1,5 +1,5 @@
-import { CardList, type CardListAction } from '@/components/card-list';
 import { CardContainerAddButton } from '@/components/card-container-add-button';
+import { CardList, type CardListAction } from '@/components/card-list';
 import { Button } from '@/components/ui/button';
 import { CardBadge } from '@/components/ui/card-badge';
 import { CardContainer } from '@/components/ui/card-container';
@@ -8,12 +8,12 @@ import { CardInput } from '@/components/ui/card-input';
 import { Label } from '@/components/ui/label';
 import { PageHeader } from '@/components/ui/page-header';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useEcho } from '@laravel/echo-react';
 import ServerLayout from '@/layouts/server/layout';
 import { dashboard } from '@/routes';
 import { show as showServer } from '@/routes/servers';
 import { type BreadcrumbItem, type Server, type ServerPhp } from '@/types';
 import { Head, router, useForm } from '@inertiajs/react';
+import { useEcho } from '@laravel/echo-react';
 import { RotateCw, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -87,9 +87,13 @@ export default function Php({ server }: { server: Server }) {
         if (!confirm(`Retry installing PHP ${php.version}?`)) {
             return;
         }
-        router.post(`/servers/${server.id}/php/${php.id}/retry`, {}, {
-            preserveScroll: true,
-        });
+        router.post(
+            `/servers/${server.id}/php/${php.id}/retry`,
+            {},
+            {
+                preserveScroll: true,
+            },
+        );
     };
 
     const handleSetCliDefault = (php: ServerPhp) => {
@@ -230,9 +234,7 @@ export default function Php({ server }: { server: Server }) {
                                 <div className="flex items-center gap-2">
                                     <span className="text-sm font-medium">PHP {php.version}</span>
                                     {php.is_cli_default && (
-                                        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                                            CLI Default
-                                        </span>
+                                        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">CLI Default</span>
                                     )}
                                     {php.is_site_default && (
                                         <span className="rounded-full bg-blue-500/10 px-2 py-0.5 text-xs font-medium text-blue-600 dark:text-blue-400">

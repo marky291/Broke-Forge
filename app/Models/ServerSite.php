@@ -37,6 +37,7 @@ class ServerSite extends Model
         'git_installed_at',
         'last_deployment_sha',
         'last_deployed_at',
+        'active_deployment_id',
         'auto_deploy_enabled',
         'webhook_id',
         'webhook_secret',
@@ -103,6 +104,14 @@ class ServerSite extends Model
     public function latestDeployment(): HasOne
     {
         return $this->hasOne(ServerDeployment::class, 'server_site_id')->latestOfMany();
+    }
+
+    /**
+     * Get the currently active deployment.
+     */
+    public function activeDeployment(): BelongsTo
+    {
+        return $this->belongsTo(ServerDeployment::class, 'active_deployment_id');
     }
 
     /**
@@ -179,6 +188,22 @@ class ServerSite extends Model
     public function isDomain(): bool
     {
         return str_contains($this->domain, '.');
+    }
+
+    /**
+     * Get the site root directory (where deployments are stored).
+     */
+    public function getSiteRoot(): string
+    {
+        return "/home/brokeforge/deployments/{$this->domain}";
+    }
+
+    /**
+     * Get the site symlink path (what nginx points to).
+     */
+    public function getSiteSymlink(): string
+    {
+        return "/home/brokeforge/{$this->domain}";
     }
 
     protected static function booted(): void

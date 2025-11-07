@@ -1,5 +1,5 @@
-import { CardList } from '@/components/card-list';
 import { CardContainerAddButton } from '@/components/card-container-add-button';
+import { CardList } from '@/components/card-list';
 import DeployServerModal from '@/components/deploy-server-modal';
 import { ServerProviderIcon, type ServerProvider } from '@/components/server-provider-icon';
 import { SiteAvatar } from '@/components/site-avatar';
@@ -92,7 +92,6 @@ export default function Dashboard({ dashboard }: { dashboard: DashboardData }) {
         return `${years} ${years === 1 ? 'year' : 'years'} ago`;
     };
 
-
     const getUserInitials = (name: string) => {
         return name
             .split(' ')
@@ -153,7 +152,16 @@ export default function Dashboard({ dashboard }: { dashboard: DashboardData }) {
                         title="Recent servers"
                         icon={
                             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <rect x="1.5" y="2.5" width="9" height="7" rx="1" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+                                <rect
+                                    x="1.5"
+                                    y="2.5"
+                                    width="9"
+                                    height="7"
+                                    rx="1"
+                                    stroke="currentColor"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                />
                                 <path d="M3 5h6M3 7h6" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
                             </svg>
                         }
@@ -191,7 +199,16 @@ export default function Dashboard({ dashboard }: { dashboard: DashboardData }) {
                         title="Recent servers"
                         icon={
                             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <rect x="1.5" y="2.5" width="9" height="7" rx="1" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+                                <rect
+                                    x="1.5"
+                                    y="2.5"
+                                    width="9"
+                                    height="7"
+                                    rx="1"
+                                    stroke="currentColor"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                />
                                 <path d="M3 5h6M3 7h6" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
                             </svg>
                         }

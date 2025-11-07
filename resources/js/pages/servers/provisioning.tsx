@@ -69,17 +69,13 @@ export default function ProvisioningPage({ server, provision }: ProvisioningPage
     };
 
     // Listen for real-time server updates via Reverb
-    useEcho(
-        `servers.${server.id}`,
-        'ServerUpdated',
-        () => {
-            router.reload({
-                only: ['server'],
-                preserveScroll: true,
-                preserveState: true,
-            });
-        }
-    );
+    useEcho(`servers.${server.id}`, 'ServerUpdated', () => {
+        router.reload({
+            only: ['server'],
+            preserveScroll: true,
+            preserveState: true,
+        });
+    });
 
     // Auto-redirect when provisioning completes
     useEffect(() => {
@@ -144,13 +140,13 @@ export default function ProvisioningPage({ server, provision }: ProvisioningPage
             <ServerDetail server={server} />
 
             <div className="mx-auto max-w-7xl space-y-8 p-6">
-                    {/* Header */}
-                    <div>
-                        <h1 className="text-3xl font-semibold">We're provisioning your server</h1>
-                        <p className="mt-2 text-muted-foreground">
-                            This process typically takes about 10 minutes, and completely configures your new server.
-                        </p>
-                    </div>
+                {/* Header */}
+                <div>
+                    <h1 className="text-3xl font-semibold">We're provisioning your server</h1>
+                    <p className="mt-2 text-muted-foreground">
+                        This process typically takes about 10 minutes, and completely configures your new server.
+                    </p>
+                </div>
 
                 {/* Main Content Grid */}
                 <div className="grid gap-8 lg:grid-cols-3">
@@ -181,31 +177,23 @@ export default function ProvisioningPage({ server, provision }: ProvisioningPage
                                     <div key={index} className="group">
                                         <div className="flex items-start gap-4">
                                             {/* Icon */}
-                                            <div className="flex-shrink-0 pt-0.5">
-                                                {getStepIcon()}
-                                            </div>
+                                            <div className="flex-shrink-0 pt-0.5">{getStepIcon()}</div>
 
                                             {/* Content */}
                                             <div className="flex-1 space-y-1 pb-4">
                                                 <h3
-                                                    className={`font-medium ${
-                                                        isActive || isCompleted ? 'text-foreground' : 'text-muted-foreground'
-                                                    }`}
+                                                    className={`font-medium ${isActive || isCompleted ? 'text-foreground' : 'text-muted-foreground'}`}
                                                 >
                                                     {step.name}
                                                 </h3>
 
                                                 {/* Show description for installing or failed steps */}
-                                                {(isInstalling || isFailed) && (
-                                                    <p className="text-sm text-muted-foreground">{step.description}</p>
-                                                )}
+                                                {(isInstalling || isFailed) && <p className="text-sm text-muted-foreground">{step.description}</p>}
                                             </div>
                                         </div>
 
                                         {/* Connector line */}
-                                        {index < server.steps.length - 1 && (
-                                            <div className="ml-2.5 h-8 w-px bg-border" />
-                                        )}
+                                        {index < server.steps.length - 1 && <div className="ml-2.5 h-8 w-px bg-border" />}
                                     </div>
                                 );
                             })}
@@ -293,10 +281,7 @@ export default function ProvisioningPage({ server, provision }: ProvisioningPage
 
                 {/* Action Buttons */}
                 <div className="flex gap-4">
-                    <Button
-                        variant="outline"
-                        onClick={() => setShowInstructions(!showInstructions)}
-                    >
+                    <Button variant="outline" onClick={() => setShowInstructions(!showInstructions)}>
                         {showInstructions ? 'Hide instructions' : 'Show instructions'}
                     </Button>
                     {server.provision_status === 'failed' && (
@@ -311,10 +296,7 @@ export default function ProvisioningPage({ server, provision }: ProvisioningPage
                             Retry Provisioning
                         </Button>
                     )}
-                    <Button
-                        variant="destructive"
-                        onClick={handleCancelProvisioning}
-                    >
+                    <Button variant="destructive" onClick={handleCancelProvisioning}>
                         Cancel provisioning
                     </Button>
                 </div>
@@ -326,18 +308,14 @@ export default function ProvisioningPage({ server, provision }: ProvisioningPage
 
                         <div className="space-y-4">
                             <div>
-                                <label className="mb-2 block text-sm font-medium text-muted-foreground">
-                                    Provisioning Command
-                                </label>
+                                <label className="mb-2 block text-sm font-medium text-muted-foreground">Provisioning Command</label>
                                 <pre className="overflow-auto rounded-md bg-background p-3 text-sm">
                                     <code>{provision.command}</code>
                                 </pre>
                             </div>
 
                             <div>
-                                <label className="mb-2 block text-sm font-medium text-muted-foreground">
-                                    Root Password
-                                </label>
+                                <label className="mb-2 block text-sm font-medium text-muted-foreground">Root Password</label>
                                 <pre className="overflow-auto rounded-md bg-background p-3 text-sm">
                                     <code>{provision.root_password}</code>
                                 </pre>

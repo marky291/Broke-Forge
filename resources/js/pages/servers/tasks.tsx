@@ -576,7 +576,12 @@ export default function Tasks({
                                     label: task.status === 'active' ? 'Stop Task' : 'Start Task',
                                     onClick: () => handleToggleWorkerTask(task),
                                     icon: task.status === 'active' ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />,
-                                    disabled: processing || task.status === 'pending' || task.status === 'installing' || task.status === 'failed' || task.status === 'removing',
+                                    disabled:
+                                        processing ||
+                                        task.status === 'pending' ||
+                                        task.status === 'installing' ||
+                                        task.status === 'failed' ||
+                                        task.status === 'removing',
                                 });
 
                                 actions.push({
@@ -636,7 +641,10 @@ export default function Tasks({
 
                         <div className="space-y-2">
                             <Label htmlFor="scheduled-frequency">Frequency</Label>
-                            <Select value={scheduledData.frequency} onValueChange={(value) => setScheduledData('frequency', value as typeof scheduledData.frequency)}>
+                            <Select
+                                value={scheduledData.frequency}
+                                onValueChange={(value) => setScheduledData('frequency', value as typeof scheduledData.frequency)}
+                            >
                                 <SelectTrigger id="scheduled-frequency">
                                     <SelectValue />
                                 </SelectTrigger>
@@ -760,7 +768,13 @@ export default function Tasks({
 
                         <div className="space-y-2">
                             <Label htmlFor="worker-user">Run as User</Label>
-                            <Input id="worker-user" value={workerData.user} onChange={(e) => setWorkerData('user', e.target.value)} placeholder="brokeforge" required />
+                            <Input
+                                id="worker-user"
+                                value={workerData.user}
+                                onChange={(e) => setWorkerData('user', e.target.value)}
+                                placeholder="brokeforge"
+                                required
+                            />
                             {workerErrors.user && <p className="text-sm text-red-600">{workerErrors.user}</p>}
                         </div>
 
@@ -901,7 +915,7 @@ export default function Tasks({
                                 {/* Close button */}
                                 <button
                                     onClick={handleCloseSupervisorLogsModal}
-                                    className="ring-offset-background focus:ring-ring absolute right-4 top-4 z-10 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden"
+                                    className="absolute top-4 right-4 z-10 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-hidden"
                                     type="button"
                                 >
                                     <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -937,12 +951,14 @@ export default function Tasks({
                                                 >
                                                     <span
                                                         className={`mr-2 text-[10px] font-semibold ${
-                                                            log.source === 'stderr' ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'
+                                                            log.source === 'stderr'
+                                                                ? 'text-red-600 dark:text-red-400'
+                                                                : 'text-blue-600 dark:text-blue-400'
                                                         }`}
                                                     >
                                                         [{log.source}]
                                                     </span>
-                                                    <span className="whitespace-pre-wrap break-all">{log.content}</span>
+                                                    <span className="break-all whitespace-pre-wrap">{log.content}</span>
                                                 </div>
                                             ))}
                                         </div>
@@ -963,7 +979,7 @@ export default function Tasks({
                                 {/* Close button */}
                                 <button
                                     onClick={handleCloseSupervisorStatusModal}
-                                    className="ring-offset-background focus:ring-ring absolute right-4 top-4 z-10 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden"
+                                    className="absolute top-4 right-4 z-10 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-hidden"
                                     type="button"
                                 >
                                     <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1020,7 +1036,7 @@ export default function Tasks({
                                                 <div className="space-y-2">
                                                     <span className="text-sm font-medium text-muted-foreground">Raw Output:</span>
                                                     <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-4 font-mono text-xs dark:border-neutral-800 dark:bg-neutral-900">
-                                                        <pre className="whitespace-pre-wrap break-all">{supervisorTaskStatus.status.raw_output}</pre>
+                                                        <pre className="break-all whitespace-pre-wrap">{supervisorTaskStatus.status.raw_output}</pre>
                                                     </div>
                                                 </div>
                                             </div>

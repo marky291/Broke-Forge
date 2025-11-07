@@ -213,6 +213,8 @@ Route::middleware('auth')->group(function () {
                 ->name('sites.deployments.update');
             Route::post('{site}/deployments', [ServerSiteDeploymentsController::class, 'deploy'])
                 ->name('sites.deployments.deploy');
+            Route::post('{site}/deployments/{deployment}/rollback', [ServerSiteDeploymentsController::class, 'rollback'])
+                ->name('sites.deployments.rollback');
             Route::post('{site}/deployments/auto-deploy', [ServerSiteDeploymentsController::class, 'toggleAutoDeploy'])
                 ->name('sites.deployments.auto-deploy');
             Route::get('{site}/deployments/{deployment}/status', [ServerSiteDeploymentsController::class, 'status'])

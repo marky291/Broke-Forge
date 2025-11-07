@@ -1,18 +1,10 @@
 import { MainHeader } from '@/components/main-header';
 import { NavigationCard, NavigationSidebar } from '@/components/navigation-card';
-import {
-    Breadcrumb,
-    BreadcrumbItem as BreadcrumbComponent,
-    BreadcrumbLink,
-    BreadcrumbList,
-    BreadcrumbPage,
-    BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb';
+import { SiteDetail } from '@/components/site-detail';
 import { type BreadcrumbItem, type NavItem } from '@/types';
 import { usePage } from '@inertiajs/react';
-import { AppWindow, ArrowLeft, Folder, Menu, Rocket, Terminal, X } from 'lucide-react';
+import { AppWindow, ArrowLeft, Folder, Rocket, Terminal, X } from 'lucide-react';
 import { PropsWithChildren, useState } from 'react';
-import { SiteDetail } from '@/components/site-detail';
 
 interface SiteLayoutProps extends PropsWithChildren {
     server: {
@@ -138,10 +130,7 @@ export default function SiteLayout({ children, server, site, breadcrumbs }: Site
                             {/* Header */}
                             <div className="flex items-center justify-between border-b p-4">
                                 <h2 className="text-lg font-semibold">Navigation</h2>
-                                <button
-                                    onClick={() => setMobileMenuOpen(false)}
-                                    className="rounded-md p-2 hover:bg-muted"
-                                >
+                                <button onClick={() => setMobileMenuOpen(false)} className="rounded-md p-2 hover:bg-muted">
                                     <X className="h-5 w-5" />
                                 </button>
                             </div>

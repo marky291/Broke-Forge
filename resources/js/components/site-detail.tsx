@@ -1,6 +1,5 @@
-import { formatRelativeTime } from '@/lib/utils';
-import { cn } from '@/lib/utils';
 import { SiteAvatar } from '@/components/site-avatar';
+import { cn, formatRelativeTime } from '@/lib/utils';
 import { GitBranch, Menu } from 'lucide-react';
 
 interface SiteDetailProps {
@@ -58,19 +57,19 @@ export function SiteDetail({ server, site, onMobileMenuClick }: SiteDetailProps)
                         {/* Server Info - Hide some items on mobile */}
                         <div className="flex flex-wrap items-center gap-4 text-sm lg:gap-8 lg:border-l lg:pl-8">
                             <div>
-                                <div className="mb-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">Public IP</div>
+                                <div className="mb-0.5 text-[10px] tracking-wide text-muted-foreground uppercase">Public IP</div>
                                 <div className="font-medium">{server.public_ip || 'N/A'}</div>
                             </div>
                             <div className="hidden md:block">
-                                <div className="mb-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">Private IP</div>
+                                <div className="mb-0.5 text-[10px] tracking-wide text-muted-foreground uppercase">Private IP</div>
                                 <div className="font-medium">{server.private_ip || 'N/A'}</div>
                             </div>
                             <div className="hidden md:block">
-                                <div className="mb-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">Region</div>
+                                <div className="mb-0.5 text-[10px] tracking-wide text-muted-foreground uppercase">Region</div>
                                 <div className="font-medium">Frankfurt</div>
                             </div>
                             <div className="hidden lg:block">
-                                <div className="mb-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">OS</div>
+                                <div className="mb-0.5 text-[10px] tracking-wide text-muted-foreground uppercase">OS</div>
                                 <div className="font-medium">Ubuntu 24.04</div>
                             </div>
                         </div>
@@ -79,12 +78,12 @@ export function SiteDetail({ server, site, onMobileMenuClick }: SiteDetailProps)
                         {site.git_status === 'installed' && site.git_repository && (
                             <div className="flex flex-wrap items-center gap-4 text-sm lg:gap-8 lg:border-l lg:pl-8">
                                 <div>
-                                    <div className="mb-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">Repository</div>
+                                    <div className="mb-0.5 text-[10px] tracking-wide text-muted-foreground uppercase">Repository</div>
                                     <div className="font-medium">{site.git_repository}</div>
                                 </div>
                                 {site.git_branch && (
                                     <div>
-                                        <div className="mb-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">Branch</div>
+                                        <div className="mb-0.5 text-[10px] tracking-wide text-muted-foreground uppercase">Branch</div>
                                         <div className="flex items-center gap-1.5 font-medium">
                                             <GitBranch className="h-3.5 w-3.5 text-muted-foreground" />
                                             {site.git_branch}
@@ -92,7 +91,7 @@ export function SiteDetail({ server, site, onMobileMenuClick }: SiteDetailProps)
                                     </div>
                                 )}
                                 <div className="hidden md:block">
-                                    <div className="mb-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">Last Deployment</div>
+                                    <div className="mb-0.5 text-[10px] tracking-wide text-muted-foreground uppercase">Last Deployment</div>
                                     <div className="font-medium">{site.last_deployed_at ? formatRelativeTime(site.last_deployed_at) : 'Never'}</div>
                                 </div>
                             </div>
@@ -101,7 +100,7 @@ export function SiteDetail({ server, site, onMobileMenuClick }: SiteDetailProps)
 
                     {/* Health Indicator */}
                     <div>
-                        <div className="mb-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">Health</div>
+                        <div className="mb-0.5 text-[10px] tracking-wide text-muted-foreground uppercase">Health</div>
                         <div className={cn('font-medium', healthConfig.color)}>{healthConfig.label}</div>
                     </div>
                 </div>

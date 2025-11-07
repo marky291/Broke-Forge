@@ -1,12 +1,4 @@
 import { MainHeader } from '@/components/main-header';
-import {
-    Breadcrumb,
-    BreadcrumbItem as BreadcrumbComponent,
-    BreadcrumbLink,
-    BreadcrumbList,
-    BreadcrumbPage,
-    BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb';
 import { type BreadcrumbItem } from '@/types';
 import { type ReactNode } from 'react';
 

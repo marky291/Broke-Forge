@@ -223,7 +223,6 @@ export default function Sites({ server }: SitesProps) {
         });
     };
 
-
     return (
         <ServerLayout server={server} breadcrumbs={breadcrumbs}>
             <Head title={`Sites — ${server.vanity_name}`} />
@@ -497,7 +496,9 @@ export default function Sites({ server }: SitesProps) {
                             ) : (
                                 <Input
                                     id="git_repository"
-                                    placeholder={loadingRepositories ? 'Loading repositories...' : githubConnected ? 'No repositories found' : 'owner/repo'}
+                                    placeholder={
+                                        loadingRepositories ? 'Loading repositories...' : githubConnected ? 'No repositories found' : 'owner/repo'
+                                    }
                                     value={form.data.git_repository}
                                     onChange={(e) => form.setData('git_repository', e.target.value)}
                                     disabled={form.processing || loadingRepositories || !githubConnected}
@@ -562,7 +563,7 @@ export default function Sites({ server }: SitesProps) {
                     <div className="mt-4">
                         {selectedSite?.error_log ? (
                             <div className="max-h-96 overflow-auto rounded-md border border-red-200 bg-red-50 p-4 dark:border-red-900/50 dark:bg-red-950/20">
-                                <pre className="whitespace-pre-wrap break-words font-mono text-xs text-red-900 dark:text-red-300">
+                                <pre className="font-mono text-xs break-words whitespace-pre-wrap text-red-900 dark:text-red-300">
                                     {selectedSite.error_log}
                                 </pre>
                             </div>
@@ -591,8 +592,8 @@ export default function Sites({ server }: SitesProps) {
                         <DialogDescription>
                             {selectedSite && (
                                 <span>
-                                    Are you sure you want to delete <span className="font-semibold">{selectedSite.domain}</span>? This will clean up any
-                                    partial installation files from the server.
+                                    Are you sure you want to delete <span className="font-semibold">{selectedSite.domain}</span>? This will clean up
+                                    any partial installation files from the server.
                                 </span>
                             )}
                         </DialogDescription>

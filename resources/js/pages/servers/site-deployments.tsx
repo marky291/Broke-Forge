@@ -11,13 +11,14 @@ import { show as showServer } from '@/routes/servers';
 import { type BreadcrumbItem, type ServerSite } from '@/types';
 import { Head, router, useForm } from '@inertiajs/react';
 import { useEcho } from '@laravel/echo-react';
-import { CheckCircle2, Clock, Eye, GitCommitHorizontal, Loader2, Rocket, XCircle } from 'lucide-react';
+import { CheckCircle2, Clock, Eye, GitCommitHorizontal, Loader2, Rocket, RotateCcw, XCircle } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 type Deployment = {
     id: number;
     status: 'pending' | 'updating' | 'success' | 'failed';
     deployment_script: string;
+    deployment_path: string | null;
     log_file_path: string | null;
     output?: string | null; // Fetched on-demand from remote log file
     error?: string | null; // Error message from backend when log cannot be fetched
@@ -30,6 +31,8 @@ type Deployment = {
     completed_at: string | null;
     created_at: string;
     created_at_human: string;
+    can_rollback: boolean;
+    is_active: boolean;
 };
 
 export default function SiteDeployments({ site }: { site: ServerSite }) {
@@ -77,6 +80,8 @@ export default function SiteDeployments({ site }: { site: ServerSite }) {
 
     const handleDeploy = () => {
         setDeploying(true);
+        // Clear previous deployment output when starting new deployment
+        setLiveDeployment(null);
         router.post(
             `/servers/${server.id}/sites/${site.id}/deployments`,
             {},
@@ -101,6 +106,27 @@ export default function SiteDeployments({ site }: { site: ServerSite }) {
             { enabled },
             {
                 preserveScroll: true,
+            },
+        );
+    };
+
+    const handleRollback = (deployment: Deployment) => {
+        if (
+            !confirm(
+                `Are you sure you want to rollback to this deployment?\n\nCommit: ${deployment.commit_sha?.substring(0, 7) || 'unknown'}\nDeployed: ${deployment.created_at_human}`,
+            )
+        ) {
+            return;
+        }
+
+        router.post(
+            `/servers/${server.id}/sites/${site.id}/deployments/${deployment.id}/rollback`,
+            {},
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    router.reload({ only: ['site'] });
+                },
             },
         );
     };
@@ -141,8 +167,15 @@ export default function SiteDeployments({ site }: { site: ServerSite }) {
 
     // Poll log output every 500ms for active deployments
     useEffect(() => {
-        if (!liveDeployment || (liveDeployment.status !== 'pending' && liveDeployment.status !== 'updating')) {
-            return; // Stop polling when deployment completes or doesn't exist
+        if (!liveDeployment) {
+            return;
+        }
+
+        // Check if deployment is completed
+        const isCompleted = liveDeployment.status !== 'pending' && liveDeployment.status !== 'updating';
+
+        if (isCompleted) {
+            return; // Stop polling when deployment completes
         }
 
         const pollLogOutput = async () => {
@@ -156,6 +189,23 @@ export default function SiteDeployments({ site }: { site: ServerSite }) {
                     output: data.output,
                     status: data.status,
                 }));
+
+                // If deployment just completed, do one final fetch to get completion message
+                if (data.status === 'success' || data.status === 'failed') {
+                    setTimeout(async () => {
+                        try {
+                            const finalResponse = await fetch(`/servers/${server.id}/sites/${site.id}/deployments/${liveDeployment.id}/stream`);
+                            const finalData = await finalResponse.json();
+                            setLiveDeployment((prev) => ({
+                                ...prev!,
+                                output: finalData.output,
+                                status: finalData.status,
+                            }));
+                        } catch (error) {
+                            console.error('Failed to fetch final deployment log:', error);
+                        }
+                    }, 500);
+                }
             } catch (error) {
                 console.error('Failed to fetch deployment log:', error);
             }
@@ -184,10 +234,11 @@ export default function SiteDeployments({ site }: { site: ServerSite }) {
             preserveScroll: true,
             preserveState: true,
             onSuccess: (page) => {
-                // Update live deployment if it's still active
+                // Update live deployment only if it's in progress
+                // Don't replace completed deployments to preserve their output
                 const updatedSite = (page.props as any).site as ServerSite;
                 const updatedLatest = updatedSite.latestDeployment;
-                if (updatedLatest) {
+                if (updatedLatest && (updatedLatest.status === 'pending' || updatedLatest.status === 'updating')) {
                     setLiveDeployment(updatedLatest as any);
                 }
             },
@@ -265,7 +316,9 @@ export default function SiteDeployments({ site }: { site: ServerSite }) {
                         title="Deployment Output"
                         action={
                             <div className="flex items-center gap-3">
-                                <div className="h-2 w-2 animate-pulse rounded-full bg-primary" />
+                                {(liveDeployment.status === 'pending' || liveDeployment.status === 'updating') && (
+                                    <div className="h-2 w-2 animate-pulse rounded-full bg-primary" />
+                                )}
                                 {getStatusBadge(liveDeployment.status)}
                             </div>
                         }
@@ -273,7 +326,10 @@ export default function SiteDeployments({ site }: { site: ServerSite }) {
                         <div className="-mx-6 -my-6">
                             {liveDeployment.status === 'pending' || liveDeployment.status === 'updating' ? (
                                 <div className="relative">
-                                    <pre ref={outputRef} className="max-h-[400px] min-h-[200px] overflow-auto bg-slate-950 px-4 py-4 font-mono text-xs leading-relaxed whitespace-pre-wrap text-slate-50">
+                                    <pre
+                                        ref={outputRef}
+                                        className="max-h-[400px] min-h-[200px] overflow-auto bg-slate-950 px-4 py-4 font-mono text-xs leading-relaxed whitespace-pre-wrap text-slate-50"
+                                    >
                                         {liveDeployment.output || 'Waiting for output...'}
                                     </pre>
                                 </div>
@@ -376,12 +432,16 @@ export default function SiteDeployments({ site }: { site: ServerSite }) {
                                     <div key={deployment.id} className="px-6 py-4">
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-3">
-                                                {deployment.status === 'success' && (
-                                                    <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-500" />
+                                                {deployment.is_active && (
+                                                    <Badge
+                                                        variant="outline"
+                                                        className="border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                                                    >
+                                                        Active
+                                                    </Badge>
                                                 )}
-                                                {deployment.status === 'failed' && (
-                                                    <XCircle className="h-5 w-5 shrink-0 text-red-500" />
-                                                )}
+                                                {deployment.status === 'success' && <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-500" />}
+                                                {deployment.status === 'failed' && <XCircle className="h-5 w-5 shrink-0 text-red-500" />}
                                                 {deployment.commit_sha && (
                                                     <div className="flex items-center gap-2">
                                                         <GitCommitHorizontal className="h-4 w-4 text-muted-foreground" />
@@ -390,23 +450,45 @@ export default function SiteDeployments({ site }: { site: ServerSite }) {
                                                         </code>
                                                     </div>
                                                 )}
-                                                <span className={`text-sm ${deployment.status === 'failed' ? 'text-red-600 dark:text-red-400' : 'text-muted-foreground'}`}>
+                                                <span
+                                                    className={`text-sm ${deployment.status === 'failed' ? 'text-red-600 dark:text-red-400' : 'text-muted-foreground'}`}
+                                                >
                                                     {deployment.status === 'failed'
                                                         ? 'Deployment failed - Click to view log'
-                                                        : (deployment.branch ? `Deployed from ${deployment.branch}` : 'Deployment successful')}
+                                                        : deployment.branch
+                                                          ? `Deployed from ${deployment.branch}`
+                                                          : 'Deployment successful'}
                                                 </span>
                                             </div>
                                             <div className="flex items-center gap-3">
                                                 <span className="text-sm text-muted-foreground">{deployment.created_at_human}</span>
-                                                <Button
-                                                    size="sm"
-                                                    variant="ghost"
-                                                    onClick={() => handleViewOutput(deployment)}
-                                                    className="h-8 w-8 p-0"
-                                                    title="View deployment output"
-                                                >
-                                                    <Eye className="h-4 w-4" />
-                                                </Button>
+
+                                                {/* Rollback Button */}
+                                                {deployment.can_rollback && !deployment.is_active && (
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() => handleRollback(deployment)}
+                                                        className="h-8 gap-2"
+                                                        title="Rollback to this deployment"
+                                                    >
+                                                        <RotateCcw className="h-3.5 w-3.5" />
+                                                        Rollback
+                                                    </Button>
+                                                )}
+
+                                                {/* View Output Button - Only show if log file exists */}
+                                                {deployment.log_file_path && (
+                                                    <Button
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        onClick={() => handleViewOutput(deployment)}
+                                                        className="h-8 w-8 p-0"
+                                                        title="View deployment output"
+                                                    >
+                                                        <Eye className="h-4 w-4" />
+                                                    </Button>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
@@ -448,7 +530,9 @@ export default function SiteDeployments({ site }: { site: ServerSite }) {
                                                     : 'text-red-600 dark:text-red-400'
                                             }
                                         >
-                                            {selectedDeployment.status === 'success' ? '✓ Success' : `✗ Failed (exit ${selectedDeployment.exit_code})`}
+                                            {selectedDeployment.status === 'success'
+                                                ? '✓ Success'
+                                                : `✗ Failed (exit ${selectedDeployment.exit_code})`}
                                         </span>
                                     </div>
                                 )}
@@ -477,7 +561,7 @@ export default function SiteDeployments({ site }: { site: ServerSite }) {
                                         <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-8">
                                             <XCircle className="h-10 w-10 text-destructive" />
                                             <div className="text-center">
-                                                <p className="mb-1 font-medium text-sm text-foreground">Unable to Load Deployment Log</p>
+                                                <p className="mb-1 text-sm font-medium text-foreground">Unable to Load Deployment Log</p>
                                                 <p className="text-sm text-muted-foreground">{selectedDeployment.error}</p>
                                             </div>
                                         </div>

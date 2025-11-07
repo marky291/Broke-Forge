@@ -51,10 +51,11 @@ class SiteGitDeploymentInstaller extends PackageInstaller implements \App\Packag
                 'completed_at' => now(),
             ]);
 
-            // Update site's last deployed info
+            // Update site's last deployed info and active deployment
             $site->update([
                 'last_deployment_sha' => $this->commitSha,
                 'last_deployed_at' => now(),
+                'active_deployment_id' => $deployment->id,
             ]);
 
             Log::info("Deployment completed successfully for site #{$site->id}", [
@@ -62,6 +63,9 @@ class SiteGitDeploymentInstaller extends PackageInstaller implements \App\Packag
                 'commit_sha' => $this->commitSha,
                 'duration_ms' => $duration,
             ]);
+
+            // Prune old deployments (keep last 2)
+            $this->pruneOldDeployments($site, 2);
         } catch (\Exception $e) {
             $duration = (int) (microtime(true) * 1000) - $start;
 
@@ -86,14 +90,20 @@ class SiteGitDeploymentInstaller extends PackageInstaller implements \App\Packag
      */
     protected function commands(string $documentRoot, string $deploymentScript, ServerSite $site, ServerDeployment $deployment): array
     {
-        $documentRoot = rtrim($documentRoot, '/');
-        // Git repository is cloned to the site directory (parent of document root)
-        $siteDirectory = dirname($documentRoot);
+        $siteRoot = $site->getSiteRoot();
+        $siteSymlink = $site->getSiteSymlink();
 
-        // Create log file path
-        $logDirectory = config('deployment.log_directory');
-        $logFileName = sprintf('%s_%s.log', $deployment->id, time());
-        $logFilePath = rtrim($logDirectory, '/').'/'.$logFileName;
+        // Generate timestamp for deployment directory: ddMMYYYY-HHMMSS
+        $timestamp = now()->format('dmY-His');
+        $deploymentPath = "{$siteRoot}/{$timestamp}";
+
+        // Get Git configuration
+        $gitConfig = $site->getGitConfiguration();
+        $repository = $gitConfig['repository'] ?? null;
+        $branch = $gitConfig['branch'] ?? 'main';
+
+        // Create log file path inside the deployment directory
+        $logFilePath = "{$deploymentPath}/deployment.log";
 
         // Split deployment script into individual lines
         $scriptLines = array_filter(
@@ -101,32 +111,77 @@ class SiteGitDeploymentInstaller extends PackageInstaller implements \App\Packag
             fn ($line) => ! empty($line) && ! str_starts_with($line, '#')
         );
 
-        $commands = [
-            // Create log directory if it doesn't exist and initialize log file with proper ownership
-            function () use ($logDirectory, $logFilePath) {
-                $remoteCommand = sprintf(
-                    'mkdir -p %s && touch %s && chown brokeforge:brokeforge %s && chmod 644 %s && echo "=== Deployment Started at $(date) ===" > %s',
-                    escapeshellarg($logDirectory),
-                    escapeshellarg($logFilePath),
-                    escapeshellarg($logFilePath),
-                    escapeshellarg($logFilePath),
-                    escapeshellarg($logFilePath)
-                );
+        $commands = [];
 
-                $process = $this->server->ssh('brokeforge')->execute($remoteCommand);
+        // Clone repository to new deployment directory
+        $commands[] = function () use ($deploymentPath, $repository, $branch, $site, $deployment) {
+            // Normalize repository to SSH URL
+            if (str_starts_with($repository, 'git@') || str_starts_with($repository, 'ssh://')) {
+                $repositorySshUrl = $repository;
+            } elseif (str_starts_with($repository, 'https://github.com/')) {
+                $repositorySshUrl = preg_replace('#^https://github\.com/(.+?)(?:\.git)?$#', 'git@github.com:$1.git', $repository);
+            } elseif (preg_match('/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/', $repository)) {
+                $repositorySshUrl = sprintf('git@github.com:%s.git', $repository);
+            } else {
+                throw new RuntimeException('Invalid repository format');
+            }
 
-                if (! $process->isSuccessful()) {
-                    Log::error('Failed to create deployment log file', [
-                        'server_id' => $this->server->id,
-                        'log_file_path' => $logFilePath,
-                        'exit_code' => $process->getExitCode(),
-                        'output' => $process->getOutput(),
-                    ]);
+            // Check if site has dedicated deploy key and transform URL if needed
+            if ($site->has_dedicated_deploy_key) {
+                $repositorySshUrl = str_replace('git@github.com:', "git@github.com-site-{$site->id}:", $repositorySshUrl);
+            }
 
-                    throw new RuntimeException('Failed to create deployment log file on remote server');
-                }
-            },
-        ];
+            // Configure Git SSH command
+            $sshKeyPath = '/home/brokeforge/.ssh/id_rsa';
+            $gitSshCommand = sprintf(
+                'GIT_SSH_COMMAND="ssh -i %s -o StrictHostKeyChecking=accept-new -o IdentitiesOnly=yes -o UserKnownHostsFile=/home/brokeforge/.ssh/known_hosts"',
+                $sshKeyPath
+            );
+
+            // Clone repository (log file will be created after this)
+            $cloneCommand = sprintf(
+                'rm -rf %s && %s git clone -b %s %s %s',
+                escapeshellarg($deploymentPath),
+                $gitSshCommand,
+                escapeshellarg($branch),
+                escapeshellarg($repositorySshUrl),
+                escapeshellarg($deploymentPath)
+            );
+
+            $process = $this->server->ssh('brokeforge')->setTimeout(300)->execute($cloneCommand);
+
+            if (! $process->isSuccessful()) {
+                throw new RuntimeException('Failed to clone repository');
+            }
+
+            Log::info('Repository cloned to deployment directory', [
+                'deployment_id' => $deployment->id,
+                'deployment_path' => $deploymentPath,
+            ]);
+        };
+
+        // Create log file inside the deployment directory (after clone creates the directory)
+        $commands[] = function () use ($logFilePath) {
+            $remoteCommand = sprintf(
+                'touch %s && chown brokeforge:brokeforge %s && chmod 644 %s && echo "=== Deployment Started at $(date) ===" > %s',
+                escapeshellarg($logFilePath),
+                escapeshellarg($logFilePath),
+                escapeshellarg($logFilePath),
+                escapeshellarg($logFilePath)
+            );
+
+            $process = $this->server->ssh('brokeforge')->execute($remoteCommand);
+
+            if (! $process->isSuccessful()) {
+                Log::error('Failed to create deployment log file', [
+                    'log_file_path' => $logFilePath,
+                    'exit_code' => $process->getExitCode(),
+                    'output' => $process->getOutput(),
+                ]);
+
+                throw new RuntimeException('Failed to create deployment log file on remote server');
+            }
+        };
 
         // Store log file path in deployment record for frontend polling
         $commands[] = function () use ($logFilePath, $deployment) {
@@ -135,9 +190,26 @@ class SiteGitDeploymentInstaller extends PackageInstaller implements \App\Packag
             ]);
         };
 
-        // Execute each line of the deployment script
+        // Create symlinks to shared directories
+        $commands[] = function () use ($deploymentPath) {
+            $symlinkCommands = sprintf(
+                'ln -sfn ../shared/storage %s/storage && ln -sfn ../shared/.env %s/.env && ln -sfn ../shared/vendor %s/vendor && ln -sfn ../shared/node_modules %s/node_modules',
+                escapeshellarg($deploymentPath),
+                escapeshellarg($deploymentPath),
+                escapeshellarg($deploymentPath),
+                escapeshellarg($deploymentPath)
+            );
+
+            $process = $this->server->ssh('brokeforge')->execute($symlinkCommands);
+
+            if (! $process->isSuccessful()) {
+                throw new RuntimeException('Failed to create shared directory symlinks');
+            }
+        };
+
+        // Execute each line of the deployment script in the new deployment directory
         foreach ($scriptLines as $index => $line) {
-            $commands[] = function () use ($siteDirectory, $line, $logFilePath, $deployment, $index) {
+            $commands[] = function () use ($deploymentPath, $line, $logFilePath, $deployment, $index) {
                 // Log the command being executed
                 $logCommandCommand = sprintf(
                     'echo "\n=== Running: %s ===" >> %s',
@@ -149,8 +221,8 @@ class SiteGitDeploymentInstaller extends PackageInstaller implements \App\Packag
                 // Add safe.directory config and execute the command with output redirection
                 $remoteCommand = sprintf(
                     'git config --global --add safe.directory %s && cd %s && %s >> %s 2>&1',
-                    escapeshellarg($siteDirectory),
-                    escapeshellarg($siteDirectory),
+                    escapeshellarg($deploymentPath),
+                    escapeshellarg($deploymentPath),
                     $line,
                     escapeshellarg($logFilePath)
                 );
@@ -185,17 +257,65 @@ class SiteGitDeploymentInstaller extends PackageInstaller implements \App\Packag
         }
 
         // Capture current Git commit SHA
-        $commands[] = function () use ($siteDirectory) {
+        $commands[] = function () use ($deploymentPath) {
             $remoteCommand = sprintf(
                 'git config --global --add safe.directory %s && cd %s && git rev-parse HEAD 2>/dev/null || echo ""',
-                escapeshellarg($siteDirectory),
-                escapeshellarg($siteDirectory)
+                escapeshellarg($deploymentPath),
+                escapeshellarg($deploymentPath)
             );
 
             $process = $this->server->ssh('brokeforge')
                 ->execute($remoteCommand);
 
             $this->commitSha = trim($process->getOutput()) ?: null;
+        };
+
+        // Atomically swap the site symlink to the new deployment
+        $commands[] = function () use ($site, $siteSymlink, $timestamp, $logFilePath, $deployment) {
+            $symlinkCommand = sprintf(
+                'ln -sfn deployments/%s/%s %s && echo "\n=== Symlink updated to deployment %s ===" >> %s',
+                escapeshellarg($site->domain),
+                $timestamp,
+                escapeshellarg($siteSymlink),
+                $timestamp,
+                escapeshellarg($logFilePath)
+            );
+
+            $process = $this->server->ssh('brokeforge')->execute($symlinkCommand);
+
+            if (! $process->isSuccessful()) {
+                throw new RuntimeException('Failed to update site symlink');
+            }
+
+            Log::info('Site symlink updated to new deployment', [
+                'deployment_id' => $deployment->id,
+                'timestamp' => $timestamp,
+            ]);
+        };
+
+        // Reload PHP-FPM to pick up any changes
+        $commands[] = function () use ($site, $logFilePath) {
+            $reloadCommand = sprintf(
+                'sudo service php%s-fpm reload && echo "\n=== PHP-FPM reloaded ===" >> %s',
+                $site->php_version,
+                escapeshellarg($logFilePath)
+            );
+
+            $process = $this->server->ssh('brokeforge')->execute($reloadCommand);
+
+            if (! $process->isSuccessful()) {
+                Log::warning('Failed to reload PHP-FPM', [
+                    'deployment_id' => $site->id,
+                ]);
+                // Don't throw - this is not critical
+            }
+        };
+
+        // Update deployment record with deployment_path
+        $commands[] = function () use ($deployment, $deploymentPath) {
+            $deployment->update([
+                'deployment_path' => $deploymentPath,
+            ]);
         };
 
         // Write completion message to log file
@@ -208,6 +328,71 @@ class SiteGitDeploymentInstaller extends PackageInstaller implements \App\Packag
         };
 
         return $commands;
+    }
+
+    /**
+     * Prune old deployments, keeping the most recent N deployments
+     */
+    protected function pruneOldDeployments(ServerSite $site, int $keep = 14): void
+    {
+        // Get all successful deployments with paths, ordered by created_at DESC
+        $deployments = $site->deployments()
+            ->where('status', 'success')
+            ->whereNotNull('deployment_path')
+            ->orderByDesc('created_at')
+            ->get();
+
+        if ($deployments->count() <= $keep) {
+            Log::info("No deployments to prune for site #{$site->id}", [
+                'total_deployments' => $deployments->count(),
+                'keep' => $keep,
+            ]);
+
+            return;
+        }
+
+        // Skip the first N deployments (keep them), get the rest to delete
+        $deploymentsToDelete = $deployments->skip($keep);
+
+        Log::info("Pruning old deployments for site #{$site->id}", [
+            'total_deployments' => $deployments->count(),
+            'to_delete' => $deploymentsToDelete->count(),
+            'keep' => $keep,
+        ]);
+
+        foreach ($deploymentsToDelete as $deployment) {
+            try {
+                // Delete deployment directory from remote server
+                $remoteCommand = sprintf(
+                    'rm -rf %s',
+                    escapeshellarg($deployment->deployment_path)
+                );
+
+                $process = $this->server->ssh('brokeforge')->execute($remoteCommand);
+
+                if ($process->isSuccessful()) {
+                    // Update deployment record to mark path as deleted
+                    $deployment->update(['deployment_path' => null]);
+
+                    Log::info('Deleted old deployment directory', [
+                        'deployment_id' => $deployment->id,
+                        'deployment_path' => $deployment->deployment_path,
+                    ]);
+                } else {
+                    Log::warning('Failed to delete old deployment directory', [
+                        'deployment_id' => $deployment->id,
+                        'deployment_path' => $deployment->deployment_path,
+                    ]);
+                }
+            } catch (\Exception $e) {
+                Log::error('Error deleting old deployment directory', [
+                    'deployment_id' => $deployment->id,
+                    'deployment_path' => $deployment->deployment_path,
+                    'error' => $e->getMessage(),
+                ]);
+                // Don't throw - continue pruning other deployments
+            }
+        }
     }
 
     public function milestones(): Milestones

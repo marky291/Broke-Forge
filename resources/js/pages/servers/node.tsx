@@ -6,12 +6,12 @@ import { CardFormModal } from '@/components/ui/card-form-modal';
 import { Label } from '@/components/ui/label';
 import { PageHeader } from '@/components/ui/page-header';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useEcho } from '@laravel/echo-react';
 import ServerLayout from '@/layouts/server/layout';
 import { dashboard } from '@/routes';
 import { show as showServer } from '@/routes/servers';
 import { type BreadcrumbItem, type Server, type ServerNode } from '@/types';
 import { Head, router, useForm } from '@inertiajs/react';
+import { useEcho } from '@laravel/echo-react';
 import { RotateCw, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -133,7 +133,17 @@ export default function Node({ server }: { server: Server }) {
                                 xmlns="http://www.w3.org/2000/svg"
                                 className="mx-auto mb-4 text-muted-foreground/30"
                             >
-                                <rect x="8" y="8" width="32" height="32" rx="4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                <rect
+                                    x="8"
+                                    y="8"
+                                    width="32"
+                                    height="32"
+                                    rx="4"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                />
                                 <path d="M8 20h32M20 8v32" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                             </svg>
                             <p className="text-muted-foreground">No Node.js versions installed</p>
@@ -154,7 +164,16 @@ export default function Node({ server }: { server: Server }) {
                             title="Node.js Versions"
                             icon={
                                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <rect x="2" y="2" width="8" height="8" rx="1" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+                                    <rect
+                                        x="2"
+                                        y="2"
+                                        width="8"
+                                        height="8"
+                                        rx="1"
+                                        stroke="currentColor"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                    />
                                     <path d="M2 5h8M5 2v8" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
                                 </svg>
                             }

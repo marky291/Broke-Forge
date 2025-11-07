@@ -45,10 +45,19 @@ class ProvisionedSiteInstaller extends PackageInstaller implements \App\Packages
 
     protected function commands(string $domain, string $documentRoot, string $phpVersion, bool $ssl, ?string $sslCertPath, ?string $sslKeyPath, ServerSite $site, array $config): array
     {
+        // Site root is where deployments are stored
+        $siteRoot = "/home/brokeforge/deployments/{$domain}";
+
+        // Site symlink is what nginx points to
+        $siteSymlink = "/home/brokeforge/{$domain}";
+
+        // Document root follows the symlink: /home/brokeforge/{domain}/public
+        $documentRootPath = "{$siteSymlink}/public";
+
         // Generate nginx configuration inline (avoid helper methods)
         $nginxConfig = view('nginx.site', [
             'domain' => $domain,
-            'documentRoot' => $documentRoot,
+            'documentRoot' => $documentRootPath,
             'phpSocket' => "/var/run/php/php{$phpVersion}-fpm.sock",
             'ssl' => $ssl,
             'sslCertPath' => $sslCertPath,
@@ -62,7 +71,11 @@ class ProvisionedSiteInstaller extends PackageInstaller implements \App\Packages
         $appUser = $brokeforgeCredential?->getUsername() ?: 'brokeforge';
 
         return [
-            "mkdir -p {$documentRoot}",
+            // Create deployments and shared directories
+            "mkdir -p {$siteRoot}/shared/storage",
+            "mkdir -p {$siteRoot}/shared/vendor",
+            "mkdir -p {$siteRoot}/shared/node_modules",
+            "touch {$siteRoot}/shared/.env",
             "mkdir -p /var/log/nginx/{$domain}",
 
             "cat > /etc/nginx/sites-available/{$domain} << 'NGINX_CONFIG_EOF'\n{$nginxConfig}\nNGINX_CONFIG_EOF",
@@ -73,13 +86,12 @@ class ProvisionedSiteInstaller extends PackageInstaller implements \App\Packages
 
             'nginx -s reload',
 
-            "chown -R {$appUser}:{$appUser} {$documentRoot}",
-            "chmod -R 775 {$documentRoot}",
-            "echo '<?php phpinfo();' > {$documentRoot}/index.php",
-            "chown {$appUser}:{$appUser} {$documentRoot}/index.php",
+            // Set ownership on shared directories
+            "chown -R {$appUser}:{$appUser} {$siteRoot}/shared",
+            "chmod -R 775 {$siteRoot}/shared",
 
             // Add git clone commands if repository is configured
-            ...($this->getGitCloneCommands($config, $documentRoot, $appUser, $site)),
+            ...($this->getGitCloneCommands($config, $siteRoot, $appUser, $site)),
 
             function () use ($site, $config) {
                 $site->refresh();
@@ -103,10 +115,11 @@ class ProvisionedSiteInstaller extends PackageInstaller implements \App\Packages
     /**
      * Get git clone commands if repository is configured
      */
-    protected function getGitCloneCommands(array $config, string $documentRoot, string $appUser, ServerSite $site): array
+    protected function getGitCloneCommands(array $config, string $siteRoot, string $appUser, ServerSite $site): array
     {
         if (! isset($config['git_repository'])) {
-            return [];
+            // If no git repository, create a simple placeholder deployment
+            return $this->createPlaceholderDeployment($siteRoot, $appUser, $site);
         }
 
         $gitConfig = $config['git_repository'];
@@ -114,7 +127,7 @@ class ProvisionedSiteInstaller extends PackageInstaller implements \App\Packages
         $branch = $gitConfig['branch'] ?? 'main';
 
         if (! $repository) {
-            return [];
+            return $this->createPlaceholderDeployment($siteRoot, $appUser, $site);
         }
 
         // Normalize repository to SSH URL - ALWAYS use SSH for git clone
@@ -126,7 +139,7 @@ class ProvisionedSiteInstaller extends PackageInstaller implements \App\Packages
         } elseif (preg_match('/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/', $repository)) {
             $repositorySshUrl = sprintf('git@github.com:%s.git', $repository);
         } else {
-            return [];
+            return $this->createPlaceholderDeployment($siteRoot, $appUser, $site);
         }
 
         // Check if site has dedicated deploy key
@@ -148,23 +161,100 @@ class ProvisionedSiteInstaller extends PackageInstaller implements \App\Packages
             $sshKeyPath
         );
 
-        // Determine the site directory (parent of document root)
-        $siteDirectory = dirname($documentRoot);
+        // Generate timestamp for deployment directory: ddMMYYYY-HHMMSS
+        $timestamp = now()->format('dmY-His');
+        $deploymentPath = "{$siteRoot}/{$timestamp}";
+        $siteSymlink = "/home/brokeforge/{$site->domain}";
 
-        return [
+        $commands = [
             // Generate SSH config for dedicated deploy keys (if applicable)
             ...$sshConfigCommands,
 
-            sprintf('rm -rf %1$s && mkdir -p %1$s', escapeshellarg($siteDirectory)),
+            // Clone repository to timestamp deployment directory
+            sprintf('rm -rf %s', escapeshellarg($deploymentPath)),
             sprintf(
                 '%s git clone -b %s %s %s',
                 $gitSshCommand,
                 escapeshellarg($branch),
                 escapeshellarg($transformedRepositoryUrl),
-                escapeshellarg($siteDirectory)
+                escapeshellarg($deploymentPath)
             ),
-            sprintf('chown -R %s:%s %s', $appUser, $appUser, escapeshellarg($siteDirectory)),
-            sprintf('chmod -R 775 %s', escapeshellarg($siteDirectory)),
+
+            // Create symlinks from deployment to shared directories
+            sprintf('ln -sfn ../shared/storage %s/storage', escapeshellarg($deploymentPath)),
+            sprintf('ln -sfn ../shared/.env %s/.env', escapeshellarg($deploymentPath)),
+            sprintf('ln -sfn ../shared/vendor %s/vendor', escapeshellarg($deploymentPath)),
+            sprintf('ln -sfn ../shared/node_modules %s/node_modules', escapeshellarg($deploymentPath)),
+
+            // Create site symlink pointing to initial deployment
+            sprintf('ln -sfn deployments/%s/%s %s', escapeshellarg($site->domain), $timestamp, escapeshellarg($siteSymlink)),
+
+            // Set ownership
+            sprintf('chown -R %s:%s %s', $appUser, $appUser, escapeshellarg($siteRoot)),
+            sprintf('chmod -R 775 %s', escapeshellarg($siteRoot)),
+
+            // Create initial deployment record in database
+            function () use ($site, $deploymentPath, $branch) {
+                // Get the commit SHA from the repository
+                $commitSha = null;
+                try {
+                    $process = $site->server->ssh('brokeforge')->execute("cd {$deploymentPath} && git rev-parse HEAD");
+                    if ($process->isSuccessful()) {
+                        $commitSha = trim($process->getOutput());
+                    }
+                } catch (\Exception $e) {
+                    // Ignore errors getting commit SHA
+                }
+
+                // Create initial deployment record
+                $initialDeployment = \App\Models\ServerDeployment::create([
+                    'server_id' => $site->server_id,
+                    'server_site_id' => $site->id,
+                    'status' => TaskStatus::Success,
+                    'deployment_script' => 'Initial deployment',
+                    'deployment_path' => $deploymentPath,
+                    'commit_sha' => $commitSha,
+                    'branch' => $branch,
+                    'started_at' => now(),
+                    'completed_at' => now(),
+                    'triggered_by' => 'system',
+                ]);
+
+                // Set as active deployment
+                $site->update(['active_deployment_id' => $initialDeployment->id]);
+            },
+        ];
+
+        return $commands;
+    }
+
+    /**
+     * Create placeholder deployment when no Git repository is configured
+     */
+    protected function createPlaceholderDeployment(string $siteRoot, string $appUser, ServerSite $site): array
+    {
+        // Generate timestamp for deployment directory: ddMMYYYY-HHMMSS
+        $timestamp = now()->format('dmY-His');
+        $deploymentPath = "{$siteRoot}/{$timestamp}";
+        $siteSymlink = "/home/brokeforge/{$site->domain}";
+
+        return [
+            // Create initial deployment directory with placeholder
+            sprintf('mkdir -p %s/public', escapeshellarg($deploymentPath)),
+            sprintf('echo \'<?php phpinfo();\' > %s/public/index.php', escapeshellarg($deploymentPath)),
+
+            // Create symlinks from deployment to shared directories
+            sprintf('ln -sfn ../shared/storage %s/storage', escapeshellarg($deploymentPath)),
+            sprintf('ln -sfn ../shared/.env %s/.env', escapeshellarg($deploymentPath)),
+            sprintf('ln -sfn ../shared/vendor %s/vendor', escapeshellarg($deploymentPath)),
+            sprintf('ln -sfn ../shared/node_modules %s/node_modules', escapeshellarg($deploymentPath)),
+
+            // Create site symlink pointing to initial deployment
+            sprintf('ln -sfn deployments/%s/%s %s', escapeshellarg($site->domain), $timestamp, escapeshellarg($siteSymlink)),
+
+            // Set ownership
+            sprintf('chown -R %s:%s %s', $appUser, $appUser, escapeshellarg($siteRoot)),
+            sprintf('chmod -R 775 %s', escapeshellarg($siteRoot)),
         ];
     }
 

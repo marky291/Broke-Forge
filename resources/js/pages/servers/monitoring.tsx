@@ -1,4 +1,4 @@
-import { CardList, type CardListAction } from '@/components/card-list';
+import { CardList } from '@/components/card-list';
 import { InstallSkeleton } from '@/components/install-skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -13,12 +13,25 @@ import ServerLayout from '@/layouts/server/layout';
 import { dashboard } from '@/routes';
 import { show as showServer } from '@/routes/servers';
 import { type BreadcrumbItem, type Server, type ServerMonitor } from '@/types';
-import { useEcho } from '@laravel/echo-react';
 import { Head, router, useForm } from '@inertiajs/react';
-import { Activity, AlertCircle, AlertTriangle, Bell, CheckCircle, Cpu, Edit, HardDrive, Loader2, MemoryStick, Power, PowerOff, RotateCw, Trash2 } from 'lucide-react';
+import { useEcho } from '@laravel/echo-react';
+import {
+    Activity,
+    AlertCircle,
+    AlertTriangle,
+    Bell,
+    Cpu,
+    Edit,
+    HardDrive,
+    Loader2,
+    MemoryStick,
+    Power,
+    PowerOff,
+    RotateCw,
+    Trash2,
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-
 
 export default function Monitoring({ server, selectedTimeframe = 24 }: { server: Server; selectedTimeframe?: number }) {
     const breadcrumbs: BreadcrumbItem[] = [
@@ -37,7 +50,15 @@ export default function Monitoring({ server, selectedTimeframe = 24 }: { server:
     const [editingMonitor, setEditingMonitor] = useState<ServerMonitor | null>(null);
 
     // Monitor form
-    const { data: monitorData, setData: setMonitorData, post: postMonitor, put: putMonitor, processing: monitorProcessing, errors: monitorErrors, reset: resetMonitor } = useForm({
+    const {
+        data: monitorData,
+        setData: setMonitorData,
+        post: postMonitor,
+        put: putMonitor,
+        processing: monitorProcessing,
+        errors: monitorErrors,
+        reset: resetMonitor,
+    } = useForm({
         name: '',
         metric_type: 'cpu' as 'cpu' | 'memory' | 'storage',
         operator: '>=' as '>' | '<' | '>=' | '<=' | '==',
@@ -122,9 +143,13 @@ export default function Monitoring({ server, selectedTimeframe = 24 }: { server:
         if (!confirm('Retry installing monitoring?')) {
             return;
         }
-        router.post(`/servers/${server.id}/monitoring/retry`, {}, {
-            preserveScroll: true,
-        });
+        router.post(
+            `/servers/${server.id}/monitoring/retry`,
+            {},
+            {
+                preserveScroll: true,
+            },
+        );
     };
 
     const handleIntervalChange = (value: string) => {
@@ -195,7 +220,10 @@ export default function Monitoring({ server, selectedTimeframe = 24 }: { server:
             operator: monitorData.operator,
             threshold: parseFloat(monitorData.threshold),
             duration_minutes: parseInt(monitorData.duration_minutes),
-            notification_emails: monitorData.notification_emails.split(',').map((email) => email.trim()).filter((email) => email),
+            notification_emails: monitorData.notification_emails
+                .split(',')
+                .map((email) => email.trim())
+                .filter((email) => email),
             cooldown_minutes: parseInt(monitorData.cooldown_minutes),
         };
 
@@ -348,7 +376,9 @@ export default function Monitoring({ server, selectedTimeframe = 24 }: { server:
                                     <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
                                 </div>
                                 <h3 className="mt-4 text-lg font-semibold">Installing Monitoring</h3>
-                                <p className="mt-2 text-sm text-muted-foreground">Please wait while monitoring is being installed on your server...</p>
+                                <p className="mt-2 text-sm text-muted-foreground">
+                                    Please wait while monitoring is being installed on your server...
+                                </p>
                             </div>
                         ) : server.monitoring_status === 'uninstalling' ? (
                             <div className="p-8 text-center">
@@ -356,7 +386,9 @@ export default function Monitoring({ server, selectedTimeframe = 24 }: { server:
                                     <Loader2 className="h-6 w-6 animate-spin text-orange-600" />
                                 </div>
                                 <h3 className="mt-4 text-lg font-semibold">Uninstalling Monitoring</h3>
-                                <p className="mt-2 text-sm text-muted-foreground">Please wait while monitoring is being removed from your server...</p>
+                                <p className="mt-2 text-sm text-muted-foreground">
+                                    Please wait while monitoring is being removed from your server...
+                                </p>
                             </div>
                         ) : (
                             <InstallSkeleton
@@ -416,16 +448,17 @@ export default function Monitoring({ server, selectedTimeframe = 24 }: { server:
                                         ) : (
                                             <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Normal</Badge>
                                         )}
-                                        {!monitor.enabled && <Badge className="bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200">Disabled</Badge>}
+                                        {!monitor.enabled && (
+                                            <Badge className="bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200">Disabled</Badge>
+                                        )}
                                     </div>
                                     <div className="mt-1 text-xs text-muted-foreground">
                                         <span>
-                                            {getMetricLabel(monitor.metric_type)} {getOperatorLabel(monitor.operator)} {monitor.threshold}% for {monitor.duration_minutes} min
+                                            {getMetricLabel(monitor.metric_type)} {getOperatorLabel(monitor.operator)} {monitor.threshold}% for{' '}
+                                            {monitor.duration_minutes} min
                                         </span>
                                         {monitor.last_triggered_at && (
-                                            <span className="ml-2">
-                                                • Last triggered: {new Date(monitor.last_triggered_at).toLocaleString()}
-                                            </span>
+                                            <span className="ml-2">• Last triggered: {new Date(monitor.last_triggered_at).toLocaleString()}</span>
                                         )}
                                     </div>
                                 </div>
@@ -456,11 +489,8 @@ export default function Monitoring({ server, selectedTimeframe = 24 }: { server:
 
                 {/* Combined Usage Chart */}
                 {isActive && latestMetrics && recentMetrics.length > 1 && (
-                    <CardContainer
-                        title="Usage"
-                        icon={<Activity className="h-3 w-3" />}
-                    >
-                        <ResponsiveContainer width="100%" height={250} className="pr-4 pt-2">
+                    <CardContainer title="Usage" icon={<Activity className="h-3 w-3" />}>
+                        <ResponsiveContainer width="100%" height={250} className="pt-2 pr-4">
                             <LineChart data={recentMetrics.slice().reverse()}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="rgb(229, 231, 235)" strokeOpacity={0.1} vertical={false} />
                                 <XAxis
@@ -543,7 +573,11 @@ export default function Monitoring({ server, selectedTimeframe = 24 }: { server:
 
                         <div className="grid gap-2">
                             <Label htmlFor="metric-type">Metric Type</Label>
-                            <Select value={monitorData.metric_type} onValueChange={(value: 'cpu' | 'memory' | 'storage') => setMonitorData('metric_type', value)} disabled={monitorProcessing}>
+                            <Select
+                                value={monitorData.metric_type}
+                                onValueChange={(value: 'cpu' | 'memory' | 'storage') => setMonitorData('metric_type', value)}
+                                disabled={monitorProcessing}
+                            >
                                 <SelectTrigger id="metric-type">
                                     <SelectValue placeholder="Select metric" />
                                 </SelectTrigger>
@@ -559,7 +593,11 @@ export default function Monitoring({ server, selectedTimeframe = 24 }: { server:
                         <div className="grid grid-cols-2 gap-4">
                             <div className="grid gap-2">
                                 <Label htmlFor="operator">Operator</Label>
-                                <Select value={monitorData.operator} onValueChange={(value: '>' | '<' | '>=' | '<=' | '==') => setMonitorData('operator', value)} disabled={monitorProcessing}>
+                                <Select
+                                    value={monitorData.operator}
+                                    onValueChange={(value: '>' | '<' | '>=' | '<=' | '==') => setMonitorData('operator', value)}
+                                    disabled={monitorProcessing}
+                                >
                                     <SelectTrigger id="operator">
                                         <SelectValue placeholder="Select operator" />
                                     </SelectTrigger>

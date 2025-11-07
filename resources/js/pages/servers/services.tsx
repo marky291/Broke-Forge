@@ -209,11 +209,7 @@ export default function Services({
 
     const handleDelete = (service: ServiceItem, serviceType: 'database' | 'cache-queue') => {
         const serviceName = currentServices?.[service.type]?.name || service.type;
-        if (
-            confirm(
-                `Are you sure you want to uninstall ${serviceName} ${service.version}? This will remove all data and cannot be undone.`,
-            )
-        ) {
+        if (confirm(`Are you sure you want to uninstall ${serviceName} ${service.version}? This will remove all data and cannot be undone.`)) {
             router.delete(`/servers/${server.id}/databases/${service.id}`, {
                 preserveScroll: true,
             });
@@ -225,9 +221,13 @@ export default function Services({
         if (!confirm(`Retry installing ${serviceName} ${service.version}?`)) {
             return;
         }
-        router.post(`/servers/${server.id}/databases/${service.id}/retry`, {}, {
-            preserveScroll: true,
-        });
+        router.post(
+            `/servers/${server.id}/databases/${service.id}/retry`,
+            {},
+            {
+                preserveScroll: true,
+            },
+        );
     };
 
     const getAvailableUpgradeVersions = (service: ServiceItem) => {
@@ -283,7 +283,8 @@ export default function Services({
                     )}
                     actions={(db) => {
                         const actions: CardListAction[] = [];
-                        const isInTransition = db.status === 'pending' || db.status === 'installing' || db.status === 'updating' || db.status === 'uninstalling';
+                        const isInTransition =
+                            db.status === 'pending' || db.status === 'installing' || db.status === 'updating' || db.status === 'uninstalling';
 
                         if (db.status === 'failed') {
                             actions.push({
@@ -328,8 +329,26 @@ export default function Services({
                         title="Cache & Queue"
                         icon={
                             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <rect x="1.5" y="1.5" width="9" height="3" rx="0.75" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
-                                <rect x="1.5" y="7.5" width="9" height="3" rx="0.75" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+                                <rect
+                                    x="1.5"
+                                    y="1.5"
+                                    width="9"
+                                    height="3"
+                                    rx="0.75"
+                                    stroke="currentColor"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                />
+                                <rect
+                                    x="1.5"
+                                    y="7.5"
+                                    width="9"
+                                    height="3"
+                                    rx="0.75"
+                                    stroke="currentColor"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                />
                                 <path d="M4.5 3V7.5M7.5 3V7.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
                             </svg>
                         }
@@ -451,7 +470,9 @@ export default function Services({
                                     placeholder={`Leave empty to use default (${data.type})`}
                                     disabled={processing}
                                 />
-                                <p className="text-xs text-muted-foreground">Optional. This is used to identify your {installDialogType === 'database' ? 'database' : 'instance'} in the list.</p>
+                                <p className="text-xs text-muted-foreground">
+                                    Optional. This is used to identify your {installDialogType === 'database' ? 'database' : 'instance'} in the list.
+                                </p>
                                 {errors.name && <div className="text-sm text-red-600">{errors.name}</div>}
                             </div>
 
@@ -537,7 +558,10 @@ export default function Services({
                         <DialogTitle>Update Service Version</DialogTitle>
                         <DialogDescription>
                             Update{' '}
-                            {selectedService && ((availableDatabases?.[selectedService.type]?.name || availableCacheQueue?.[selectedService.type]?.name) || selectedService.type)}{' '}
+                            {selectedService &&
+                                (availableDatabases?.[selectedService.type]?.name ||
+                                    availableCacheQueue?.[selectedService.type]?.name ||
+                                    selectedService.type)}{' '}
                             to a newer version.
                         </DialogDescription>
                     </DialogHeader>
