@@ -86,7 +86,7 @@ class ServerSiteDeploymentsControllerTest extends TestCase
             ->get("/servers/{$server->id}/sites/{$site->id}/deployments");
 
         // Assert
-        $response->assertRedirect("/servers/{$server->id}/sites/{$site->id}/application/git/setup");
+        $response->assertRedirect("/servers/{$server->id}/sites/{$site->id}/settings/git/setup");
         $response->assertSessionHas('error', 'Git repository must be installed before deploying.');
     }
 
@@ -232,7 +232,7 @@ class ServerSiteDeploymentsControllerTest extends TestCase
             ->post("/servers/{$server->id}/sites/{$site->id}/deployments");
 
         // Assert
-        $response->assertRedirect("/servers/{$server->id}/sites/{$site->id}/application/git/setup");
+        $response->assertRedirect("/servers/{$server->id}/sites/{$site->id}/settings/git/setup");
         $response->assertSessionHas('error', 'Git repository must be installed before deploying.');
 
         // Verify no deployment record was created

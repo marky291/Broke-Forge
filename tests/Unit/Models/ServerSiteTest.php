@@ -565,15 +565,15 @@ class ServerSiteTest extends TestCase
     }
 
     /**
-     * Test that deinstalled_at is cast to datetime.
+     * Test that uninstalled_at is cast to datetime.
      */
-    public function test_deinstalled_at_is_cast_to_datetime(): void
+    public function test_uninstalled_at_is_cast_to_datetime(): void
     {
         // Arrange
-        $site = ServerSite::factory()->create(['deinstalled_at' => now()]);
+        $site = ServerSite::factory()->create(['uninstalled_at' => now()]);
 
         // Act & Assert
-        $this->assertInstanceOf(\Illuminate\Support\Carbon::class, $site->deinstalled_at);
+        $this->assertInstanceOf(\Illuminate\Support\Carbon::class, $site->uninstalled_at);
     }
 
     /**

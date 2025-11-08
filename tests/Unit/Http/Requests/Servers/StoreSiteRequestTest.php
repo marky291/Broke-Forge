@@ -503,6 +503,8 @@ class StoreSiteRequestTest extends TestCase
         // Arrange
         $user = User::factory()->create();
         $server = Server::factory()->create(['user_id' => $user->id]);
+        // Create a non-WordPress framework (default factory creates a framework with unique slug)
+        $framework = AvailableFramework::factory()->create();
 
         $request = new StoreSiteRequest;
         $request->setContainer(app());
@@ -518,11 +520,14 @@ class StoreSiteRequestTest extends TestCase
 
         $data = [
             'domain' => 'example.com',
-            'available_framework_id' => $this->getValidFrameworkId(),
+            'available_framework_id' => $framework->id,
             'php_version' => '8.3',
             'ssl' => true,
             'git_branch' => 'main',
         ];
+
+        // Set the input data on the request so rules() can access it
+        $request->merge($data);
 
         // Act
         $validator = Validator::make($data, $request->rules());
@@ -642,6 +647,8 @@ class StoreSiteRequestTest extends TestCase
         // Arrange
         $user = User::factory()->create();
         $server = Server::factory()->create(['user_id' => $user->id]);
+        // Create a non-WordPress framework (default factory creates a framework with unique slug)
+        $framework = AvailableFramework::factory()->create();
 
         $request = new StoreSiteRequest;
         $request->setContainer(app());
@@ -657,11 +664,14 @@ class StoreSiteRequestTest extends TestCase
 
         $data = [
             'domain' => 'example.com',
-            'available_framework_id' => $this->getValidFrameworkId(),
+            'available_framework_id' => $framework->id,
             'php_version' => '8.3',
             'ssl' => true,
             'git_repository' => 'owner/repo',
         ];
+
+        // Set the input data on the request so rules() can access it
+        $request->merge($data);
 
         // Act
         $validator = Validator::make($data, $request->rules());
