@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('server_sites', function (Blueprint $table) {
-            $table->boolean('has_dedicated_deploy_key')->default(false)->after('deprovisioned_at');
+            $table->boolean('has_dedicated_deploy_key')->default(false)->after('uninstalled_at');
             $table->string('dedicated_deploy_key_id')->nullable()->after('has_dedicated_deploy_key');
             $table->string('dedicated_deploy_key_title')->nullable()->after('dedicated_deploy_key_id');
             $table->index('has_dedicated_deploy_key');

@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('server_sites', function (Blueprint $table) {
-            $table->text('error_log')->nullable()->after('deprovisioned_at');
+            $table->text('error_log')->nullable()->after('uninstalled_at');
         });
     }
 

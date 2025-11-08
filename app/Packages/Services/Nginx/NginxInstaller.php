@@ -209,8 +209,8 @@ class NginxInstaller extends PackageInstaller implements \App\Packages\Core\Base
                             'default_deployment_path' => $deploymentPath,
                         ],
                         'status' => 'active',
-                        'provisioned_at' => now(),
-                        'deprovisioned_at' => null,
+                        'installed_at' => now(),
+                        'uninstalled_at' => null,
                     ]
                 );
             },

@@ -96,7 +96,7 @@ class GitRepositoryInstallerJob implements ShouldQueue
                 'git_status' => TaskStatus::Success,
                 'git_installed_at' => now(),
                 'status' => 'active',
-                'provisioned_at' => now(),
+                'installed_at' => now(),
             ]);
 
             Log::info("Git repository installation completed for site #{$this->site->id} on server #{$this->server->id}");

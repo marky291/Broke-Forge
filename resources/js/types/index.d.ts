@@ -317,8 +317,8 @@ export interface ServerSite {
     dedicated_deploy_key_title?: string | null;
     error_log?: string | null;
     configuration?: Record<string, unknown> | null;
-    provisioned_at?: string | null;
-    provisioned_at_human?: string | null;
+    installed_at?: string | null;
+    installed_at_human?: string | null;
     git_installed_at?: string | null;
     created_at: string;
     updated_at: string;

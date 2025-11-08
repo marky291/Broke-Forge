@@ -344,7 +344,7 @@ class SitesTest extends TestCase
                 ->has('php_version')
                 ->has('ssl_enabled')
                 ->has('status')
-                ->has('provisioned_at')
+                ->has('installed_at')
                 ->has('last_deployed_at')
                 ->has('configuration')
                 ->etc()

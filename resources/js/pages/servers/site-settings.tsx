@@ -157,7 +157,7 @@ export default function SiteSettings({ site }: { site: ServerSite }) {
     };
 
     // Show provisioning progress if site or Git is installing
-    if (site.status === 'provisioning' || site.git_status === 'installing') {
+    if (site.status === 'installing' || site.git_status === 'installing') {
         return (
             <SiteLayout server={server} site={site} breadcrumbs={breadcrumbs}>
                 <Head title={`Settings — ${site.domain}`} />

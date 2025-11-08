@@ -30,8 +30,8 @@ type ServerSite = {
     is_default: boolean;
     default_site_status?: string | null;
     status: string;
-    provisioned_at: string | null;
-    provisioned_at_human?: string | null;
+    installed_at: string | null;
+    installed_at_human?: string | null;
     last_deployed_at: string | null;
     last_deployed_at_human?: string | null;
     configuration?: {

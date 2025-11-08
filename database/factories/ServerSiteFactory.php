@@ -31,14 +31,14 @@ class ServerSiteFactory extends Factory
             'ssl_cert_path' => null,
             'ssl_key_path' => null,
             'nginx_config_path' => '/etc/nginx/sites-available/'.$this->faker->slug(2),
-            'status' => $this->faker->randomElement(['active', 'provisioning', 'failed']),
+            'status' => $this->faker->randomElement(['active', 'installing', 'failed']),
             'git_status' => null,
             'configuration' => [],
-            'provisioned_at' => $this->faker->dateTimeBetween('-6 months', 'now'),
+            'installed_at' => $this->faker->dateTimeBetween('-6 months', 'now'),
             'git_installed_at' => null,
             'last_deployment_sha' => null,
             'last_deployed_at' => null,
-            'deprovisioned_at' => null,
+            'uninstalled_at' => null,
         ];
     }
 
@@ -61,7 +61,7 @@ class ServerSiteFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'status' => 'active',
-            'provisioned_at' => now(),
+            'installed_at' => now(),
         ]);
     }
 

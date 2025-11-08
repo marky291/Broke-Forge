@@ -31,7 +31,7 @@ class SiteRemover extends PackageRemover implements ServerPackage
         }
 
         if (! $domain) {
-            throw new \LogicException('Site domain must be provided for deprovisioning.');
+            throw new \LogicException('Site domain must be provided for uninstalling site.');
         }
 
         $this->remove($this->commands($domain, $site));
@@ -55,7 +55,7 @@ class SiteRemover extends PackageRemover implements ServerPackage
                 if ($site) {
                     $site->update([
                         'status' => 'disabled',
-                        'deprovisioned_at' => now(),
+                        'uninstalled_at' => now(),
                     ]);
                 }
             },

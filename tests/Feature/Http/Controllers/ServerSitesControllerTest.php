@@ -231,7 +231,7 @@ class ServerSitesControllerTest extends TestCase
 
         $provisioningSite = ServerSite::factory()->create([
             'server_id' => $server->id,
-            'status' => 'provisioning',
+            'status' => 'installing',
             'created_at' => now()->subDay(),
         ]);
 
@@ -244,7 +244,7 @@ class ServerSitesControllerTest extends TestCase
         $response->assertInertia(fn ($page) => $page
             ->component('servers/sites')
             ->has('server.sites', 2)
-            ->where('server.sites.0.status', 'provisioning')
+            ->where('server.sites.0.status', 'installing')
             ->where('server.sites.1.status', 'active')
         );
     }
@@ -313,7 +313,7 @@ class ServerSitesControllerTest extends TestCase
 
         $site = ServerSite::factory()->active()->create([
             'server_id' => $server->id,
-            'provisioned_at' => now()->subDays(5),
+            'installed_at' => now()->subDays(5),
         ]);
 
         // Act
@@ -325,8 +325,8 @@ class ServerSitesControllerTest extends TestCase
         $response->assertInertia(fn ($page) => $page
             ->component('servers/sites')
             ->has('server.sites', 1)
-            ->has('server.sites.0.provisioned_at')
-            ->has('server.sites.0.provisioned_at_human')
+            ->has('server.sites.0.installed_at')
+            ->has('server.sites.0.installed_at_human')
         );
     }
 
@@ -605,7 +605,7 @@ class ServerSitesControllerTest extends TestCase
         $server = Server::factory()->create(['user_id' => $user->id]);
         $site = ServerSite::factory()->create([
             'server_id' => $server->id,
-            'status' => 'provisioning',
+            'status' => 'installing',
             'is_default' => false,
         ]);
 

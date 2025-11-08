@@ -22,6 +22,14 @@ class ProvisionedSiteInstaller extends PackageInstaller implements \App\Packages
         // Load the existing site record
         $site = ServerSite::findOrFail($siteId);
 
+        // Check if this is a WordPress site
+        if ($site->siteFramework->slug === 'wordpress') {
+            // For WordPress sites, dispatch the WordPress installer job
+            \App\Packages\Services\Sites\Framework\WordPress\WordPressInstallerJob::dispatch($this->server, $siteId);
+
+            return $site;
+        }
+
         // Get the app user that will own site directories
         $brokeforgeCredential = $this->server->credentials()
             ->where('user', 'brokeforge')
@@ -98,7 +106,7 @@ class ProvisionedSiteInstaller extends PackageInstaller implements \App\Packages
 
                 $updates = [
                     'status' => 'active',
-                    'provisioned_at' => now(),
+                    'installed_at' => now(),
                 ];
 
                 // Update git_status if repository was cloned

@@ -453,8 +453,8 @@ class NginxInstallerTest extends TestCase
                     'default_deployment_path' => $deploymentPath,
                 ],
                 'status' => 'active',
-                'provisioned_at' => now(),
-                'deprovisioned_at' => null,
+                'installed_at' => now(),
+                'deinstalled_at' => null,
             ]
         );
 
@@ -502,8 +502,8 @@ class NginxInstallerTest extends TestCase
                     'default_deployment_path' => $deploymentPath,
                 ],
                 'status' => 'active',
-                'provisioned_at' => now(),
-                'deprovisioned_at' => null,
+                'installed_at' => now(),
+                'deinstalled_at' => null,
             ]
         );
 
@@ -547,8 +547,8 @@ class NginxInstallerTest extends TestCase
                     'default_deployment_path' => "/home/{$appUser}/deployments/default/07112025-120000",
                 ],
                 'status' => 'active',
-                'provisioned_at' => now(),
-                'deprovisioned_at' => null,
+                'installed_at' => now(),
+                'deinstalled_at' => null,
             ]
         );
 

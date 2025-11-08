@@ -323,17 +323,17 @@ class ServerSiteTest extends TestCase
     }
 
     /**
-     * Test that provisioned_at_human accessor returns human readable date.
+     * Test that installed_at_human accessor returns human readable date.
      */
-    public function test_provisioned_at_human_accessor_returns_human_readable_date(): void
+    public function test_installed_at_human_accessor_returns_human_readable_date(): void
     {
         // Arrange
         $site = ServerSite::factory()->create([
-            'provisioned_at' => now()->subDays(3),
+            'installed_at' => now()->subDays(3),
         ]);
 
         // Act
-        $humanDate = $site->provisioned_at_human;
+        $humanDate = $site->installed_at_human;
 
         // Assert
         $this->assertNotNull($humanDate);
@@ -341,15 +341,15 @@ class ServerSiteTest extends TestCase
     }
 
     /**
-     * Test that provisioned_at_human accessor returns null when provisioned_at is null.
+     * Test that installed_at_human accessor returns null when installed_at is null.
      */
-    public function test_provisioned_at_human_accessor_returns_null_when_provisioned_at_is_null(): void
+    public function test_installed_at_human_accessor_returns_null_when_installed_at_is_null(): void
     {
         // Arrange
-        $site = ServerSite::factory()->create(['provisioned_at' => null]);
+        $site = ServerSite::factory()->create(['installed_at' => null]);
 
         // Act
-        $humanDate = $site->provisioned_at_human;
+        $humanDate = $site->installed_at_human;
 
         // Assert
         $this->assertNull($humanDate);
@@ -529,15 +529,15 @@ class ServerSiteTest extends TestCase
     }
 
     /**
-     * Test that provisioned_at is cast to datetime.
+     * Test that installed_at is cast to datetime.
      */
-    public function test_provisioned_at_is_cast_to_datetime(): void
+    public function test_installed_at_is_cast_to_datetime(): void
     {
         // Arrange
-        $site = ServerSite::factory()->create(['provisioned_at' => now()]);
+        $site = ServerSite::factory()->create(['installed_at' => now()]);
 
         // Act & Assert
-        $this->assertInstanceOf(\Illuminate\Support\Carbon::class, $site->provisioned_at);
+        $this->assertInstanceOf(\Illuminate\Support\Carbon::class, $site->installed_at);
     }
 
     /**
@@ -565,15 +565,15 @@ class ServerSiteTest extends TestCase
     }
 
     /**
-     * Test that deprovisioned_at is cast to datetime.
+     * Test that deinstalled_at is cast to datetime.
      */
-    public function test_deprovisioned_at_is_cast_to_datetime(): void
+    public function test_deinstalled_at_is_cast_to_datetime(): void
     {
         // Arrange
-        $site = ServerSite::factory()->create(['deprovisioned_at' => now()]);
+        $site = ServerSite::factory()->create(['deinstalled_at' => now()]);
 
         // Act & Assert
-        $this->assertInstanceOf(\Illuminate\Support\Carbon::class, $site->deprovisioned_at);
+        $this->assertInstanceOf(\Illuminate\Support\Carbon::class, $site->deinstalled_at);
     }
 
     /**
@@ -582,7 +582,7 @@ class ServerSiteTest extends TestCase
     public function test_server_site_updated_event_dispatched_when_meaningful_fields_changed(): void
     {
         // Arrange
-        $site = ServerSite::factory()->create(['status' => 'provisioning']);
+        $site = ServerSite::factory()->create(['status' => 'installing']);
         Event::fake([ServerSiteUpdated::class]);
 
         // Act
@@ -671,7 +671,7 @@ class ServerSiteTest extends TestCase
 
         // Assert
         $this->assertEquals('active', $site->status);
-        $this->assertNotNull($site->provisioned_at);
+        $this->assertNotNull($site->installed_at);
     }
 
     /**

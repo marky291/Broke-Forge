@@ -50,13 +50,13 @@ class StoreSiteRequest extends FormRequest
                 'boolean',
             ],
             'git_repository' => [
-                'required',
+                'nullable',
                 'string',
                 'max:255',
                 'regex:/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/',
             ],
             'git_branch' => [
-                'required',
+                'nullable',
                 'string',
                 'max:255',
                 'regex:/^[A-Za-z0-9._\/-]+$/',
@@ -65,6 +65,12 @@ class StoreSiteRequest extends FormRequest
 
         // Conditional validation based on framework requirements
         if ($framework) {
+            // Git repository is required for non-WordPress frameworks
+            if ($framework->slug !== 'wordpress') {
+                $rules['git_repository'][] = 'required';
+                $rules['git_branch'][] = 'required';
+            }
+
             // PHP version is required for PHP-based frameworks (not static HTML)
             if ($framework->slug !== 'static-html') {
                 $rules['php_version'][] = 'required';

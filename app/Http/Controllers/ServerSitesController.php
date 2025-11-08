@@ -117,64 +117,69 @@ class ServerSitesController extends Controller
         $validated = $request->validated();
 
         try {
-            // Ensure GitHub OAuth is connected (mandatory)
-            $githubProvider = $request->user()->githubProvider();
-            if (! $githubProvider) {
-                return back()->with('error', 'Please connect GitHub to create sites with repositories.');
-            }
+            // Initialize configuration
+            $configuration = ['application_type' => 'application'];
+            $gitStatus = null;
 
-            // Parse repository owner/repo
-            if (! str_contains($validated['git_repository'], '/')) {
-                return back()->with('error', 'Repository must be in owner/repo format.');
-            }
-
-            [$owner, $repo] = explode('/', $validated['git_repository'], 2);
-
-            // Initialize GitHub API client
-            $apiClient = new GitHubApiClient($githubProvider);
-
-            // Validate repository exists and user has access
-            $repoResponse = $apiClient->getRepository($owner, $repo);
-            if (! $repoResponse->successful()) {
-                $errorMessage = 'Cannot access repository';
-
-                if ($repoResponse->status() === 404) {
-                    $errorMessage = "Repository '{$validated['git_repository']}' not found or you don't have access. Please verify the repository exists and you have admin or write permissions.";
-                } elseif ($repoResponse->status() === 403) {
-                    $errorMessage = 'Access denied to repository. Please check your GitHub OAuth permissions.';
+            // Handle Git repository validation for non-WordPress sites
+            if (! empty($validated['git_repository'])) {
+                // Ensure GitHub OAuth is connected (mandatory for Git sites)
+                $githubProvider = $request->user()->githubProvider();
+                if (! $githubProvider) {
+                    return back()->with('error', 'Please connect GitHub to create sites with repositories.');
                 }
 
-                Log::warning('GitHub repository validation failed', [
-                    'repository' => $validated['git_repository'],
-                    'status' => $repoResponse->status(),
-                    'response' => $repoResponse->json(),
-                ]);
+                // Parse repository owner/repo
+                if (! str_contains($validated['git_repository'], '/')) {
+                    return back()->with('error', 'Repository must be in owner/repo format.');
+                }
 
-                return back()->with('error', $errorMessage);
-            }
+                [$owner, $repo] = explode('/', $validated['git_repository'], 2);
 
-            // Build configuration with Git repository information
-            $configuration = [
-                'application_type' => 'application',
-                'git_repository' => [
+                // Initialize GitHub API client
+                $apiClient = new GitHubApiClient($githubProvider);
+
+                // Validate repository exists and user has access
+                $repoResponse = $apiClient->getRepository($owner, $repo);
+                if (! $repoResponse->successful()) {
+                    $errorMessage = 'Cannot access repository';
+
+                    if ($repoResponse->status() === 404) {
+                        $errorMessage = "Repository '{$validated['git_repository']}' not found or you don't have access. Please verify the repository exists and you have admin or write permissions.";
+                    } elseif ($repoResponse->status() === 403) {
+                        $errorMessage = 'Access denied to repository. Please check your GitHub OAuth permissions.';
+                    }
+
+                    Log::warning('GitHub repository validation failed', [
+                        'repository' => $validated['git_repository'],
+                        'status' => $repoResponse->status(),
+                        'response' => $repoResponse->json(),
+                    ]);
+
+                    return back()->with('error', $errorMessage);
+                }
+
+                // Build configuration with Git repository information
+                $configuration['git_repository'] = [
                     'provider' => 'github',
                     'repository' => $validated['git_repository'],
                     'branch' => $validated['git_branch'],
-                ],
-            ];
+                ];
+                $gitStatus = TaskStatus::Installing;
+            }
 
-            // Create site with Git status as "installing"
+            // Create site
             $site = ServerSite::create([
                 'server_id' => $server->id,
                 'domain' => $validated['domain'],
                 'available_framework_id' => $validated['available_framework_id'],
                 'php_version' => $validated['php_version'] ?? null,
                 'ssl_enabled' => $validated['ssl'],
-                'status' => 'provisioning',
+                'status' => 'installing',
                 'document_root' => "/home/brokeforge/{$validated['domain']}/public",
                 'nginx_config_path' => "/etc/nginx/sites-available/{$validated['domain']}",
                 'configuration' => $configuration,
-                'git_status' => TaskStatus::Installing,
+                'git_status' => $gitStatus,
                 'database_id' => $validated['database_id'] ?? null,
                 'node_id' => $validated['node_id'] ?? null,
             ]);
@@ -182,7 +187,7 @@ class ServerSitesController extends Controller
             // Dispatch site installation job with site ID
             ProvisionedSiteInstallerJob::dispatch($server, $site->id);
 
-            return back()->with('success', 'Site provisioning started.');
+            return back()->with('success', 'Site installation started.');
         } catch (\Throwable $e) {
             Log::error('Failed to create site', [
                 'error' => $e->getMessage(),
@@ -190,7 +195,7 @@ class ServerSitesController extends Controller
                 'trace' => $e->getTraceAsString(),
             ]);
 
-            return back()->with('error', 'Failed to start site provisioning: '.$e->getMessage());
+            return back()->with('error', 'Failed to start site installation: '.$e->getMessage());
         }
     }
 

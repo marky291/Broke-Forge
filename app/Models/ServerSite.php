@@ -43,7 +43,7 @@ class ServerSite extends Model
         'health',
         'git_status',
         'configuration',
-        'provisioned_at',
+        'installed_at',
         'git_installed_at',
         'last_deployment_sha',
         'last_deployed_at',
@@ -51,7 +51,7 @@ class ServerSite extends Model
         'auto_deploy_enabled',
         'webhook_id',
         'webhook_secret',
-        'deprovisioned_at',
+        'uninstalled_at',
         'error_log',
         'has_dedicated_deploy_key',
         'dedicated_deploy_key_id',
@@ -59,7 +59,7 @@ class ServerSite extends Model
     ];
 
     protected $appends = [
-        'provisioned_at_human',
+        'installed_at_human',
         'last_deployed_at_human',
     ];
 
@@ -74,19 +74,19 @@ class ServerSite extends Model
             'configuration' => 'array',
             'git_status' => TaskStatus::class,
             'default_site_status' => TaskStatus::class,
-            'provisioned_at' => 'datetime',
+            'installed_at' => 'datetime',
             'git_installed_at' => 'datetime',
             'last_deployed_at' => 'datetime',
-            'deprovisioned_at' => 'datetime',
+            'uninstalled_at' => 'datetime',
         ];
     }
 
     /**
-     * Get human-readable provisioned at timestamp.
+     * Get human-readable installed at timestamp.
      */
-    public function getProvisionedAtHumanAttribute(): ?string
+    public function getInstalledAtHumanAttribute(): ?string
     {
-        return $this->provisioned_at?->diffForHumans();
+        return $this->installed_at?->diffForHumans();
     }
 
     /**
@@ -108,6 +108,14 @@ class ServerSite extends Model
     public function siteFramework(): BelongsTo
     {
         return $this->belongsTo(AvailableFramework::class, 'available_framework_id');
+    }
+
+    /**
+     * Get the database for this site.
+     */
+    public function database(): BelongsTo
+    {
+        return $this->belongsTo(ServerDatabase::class, 'database_id');
     }
 
     /**

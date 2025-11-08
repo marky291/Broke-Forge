@@ -21,14 +21,14 @@ return new class extends Migration
             $table->string('ssl_cert_path')->nullable();
             $table->string('ssl_key_path')->nullable();
             $table->string('nginx_config_path');
-            $table->string('status')->default('provisioning');
+            $table->string('status')->default('installing');
             $table->json('configuration')->nullable();
             $table->string('git_status')->nullable();
             $table->timestamp('git_installed_at')->nullable();
             $table->string('last_deployment_sha')->nullable();
             $table->timestamp('last_deployed_at')->nullable();
-            $table->timestamp('provisioned_at')->nullable();
-            $table->timestamp('deprovisioned_at')->nullable();
+            $table->timestamp('installed_at')->nullable();
+            $table->timestamp('uninstalled_at')->nullable();
             $table->timestamps();
 
             $table->unique(['server_id', 'domain']);
