@@ -25,7 +25,7 @@ class ServerSiteGitController extends Controller
         ]);
 
         return redirect()
-            ->route('servers.sites.application.git.setup', [$server, $site])
+            ->route('servers.sites.settings.git.setup', [$server, $site])
             ->with('success', 'Installation cancelled. You can retry now.');
     }
 }

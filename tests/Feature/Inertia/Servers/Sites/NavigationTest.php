@@ -42,9 +42,9 @@ class NavigationTest extends TestCase
             'available_framework_id' => $framework->id,
         ]);
 
-        // Act - visit any site page (application page)
+        // Act - visit any site page (settings page)
         $response = $this->actingAs($user)
-            ->get(route('servers.sites.application', [
+            ->get(route('servers.sites.settings', [
                 'server' => $server->id,
                 'site' => $site->id,
             ]));
@@ -87,7 +87,7 @@ class NavigationTest extends TestCase
 
         // Act
         $response = $this->actingAs($user)
-            ->get(route('servers.sites.application', [
+            ->get(route('servers.sites.settings', [
                 'server' => $server->id,
                 'site' => $site->id,
             ]));
@@ -130,7 +130,7 @@ class NavigationTest extends TestCase
 
         // Act
         $response = $this->actingAs($user)
-            ->get(route('servers.sites.application', [
+            ->get(route('servers.sites.settings', [
                 'server' => $server->id,
                 'site' => $site->id,
             ]));
@@ -173,7 +173,7 @@ class NavigationTest extends TestCase
 
         // Act
         $response = $this->actingAs($user)
-            ->get(route('servers.sites.application', [
+            ->get(route('servers.sites.settings', [
                 'server' => $server->id,
                 'site' => $site->id,
             ]));
@@ -189,9 +189,9 @@ class NavigationTest extends TestCase
     }
 
     /**
-     * Test site application page provides framework env data in props.
+     * Test site settings page provides framework env data in props.
      */
-    public function test_site_application_page_provides_framework_env_data(): void
+    public function test_site_settings_page_provides_framework_env_data(): void
     {
         // Arrange
         $user = User::factory()->create();
@@ -219,7 +219,7 @@ class NavigationTest extends TestCase
 
         // Act
         $response = $this->actingAs($user)
-            ->get(route('servers.sites.application', [
+            ->get(route('servers.sites.settings', [
                 'server' => $server->id,
                 'site' => $site->id,
             ]));
@@ -264,7 +264,7 @@ class NavigationTest extends TestCase
 
         // Act
         $response = $this->actingAs($user)
-            ->get(route('servers.sites.application', [
+            ->get(route('servers.sites.settings', [
                 'server' => $server->id,
                 'site' => $site->id,
             ]));
@@ -308,7 +308,7 @@ class NavigationTest extends TestCase
 
         // Act
         $response = $this->actingAs($user)
-            ->get(route('servers.sites.application', [
+            ->get(route('servers.sites.settings', [
                 'server' => $server->id,
                 'site' => $site->id,
             ]));

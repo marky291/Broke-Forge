@@ -59,9 +59,9 @@ const formatDate = (dateString: string | null | undefined): string => {
 };
 
 /**
- * Render the BrokeForge site application view.
+ * Render the BrokeForge site settings view.
  */
-export default function SiteApplication({ site }: { site: ServerSite }) {
+export default function SiteSettings({ site }: { site: ServerSite }) {
     const { post, processing } = useForm();
     const server = site.server!;
     const applicationType = site.applicationType;
@@ -76,7 +76,7 @@ export default function SiteApplication({ site }: { site: ServerSite }) {
         { title: 'Dashboard', href: dashboard.url() },
         { title: `Server #${server.id}`, href: showServer(server.id).url },
         { title: 'Sites', href: `/servers/${server.id}/sites` },
-        { title: 'Application', href: '#' },
+        { title: 'Settings', href: '#' },
     ];
 
     const activeStatus = statusMeta[site.status] ?? statusMeta.default;
@@ -160,10 +160,10 @@ export default function SiteApplication({ site }: { site: ServerSite }) {
     if (site.status === 'provisioning' || site.git_status === 'installing') {
         return (
             <SiteLayout server={server} site={site} breadcrumbs={breadcrumbs}>
-                <Head title={`Application — ${site.domain}`} />
+                <Head title={`Settings — ${site.domain}`} />
                 <div className="space-y-8">
                     <div className="space-y-2">
-                        <h1 className="text-2xl font-semibold">Installing Application</h1>
+                        <h1 className="text-2xl font-semibold">Installing Site</h1>
                         <p className="text-sm text-muted-foreground">Setting up nginx and cloning your repository...</p>
                     </div>
                     <Card>
@@ -193,7 +193,7 @@ export default function SiteApplication({ site }: { site: ServerSite }) {
     if (applicationType === 'application' && gitRepository) {
         return (
             <SiteLayout server={server} site={site} breadcrumbs={breadcrumbs}>
-                <Head title={`Application — ${site.domain}`} />
+                <Head title={`Settings — ${site.domain}`} />
                 <div className="space-y-8">
                     <div className="space-y-2">
                         <div className="flex flex-wrap items-center gap-3">
@@ -379,7 +379,7 @@ export default function SiteApplication({ site }: { site: ServerSite }) {
     if (applicationType === 'static' || site.status === 'active') {
         return (
             <SiteLayout server={server} site={site} breadcrumbs={breadcrumbs}>
-                <Head title={`Application — ${site.domain}`} />
+                <Head title={`Settings — ${site.domain}`} />
                 <div className="space-y-8">
                     <div className="space-y-2">
                         <div className="flex flex-wrap items-center gap-3">
@@ -446,7 +446,7 @@ export default function SiteApplication({ site }: { site: ServerSite }) {
     // Fallback: still provisioning or unknown state
     return (
         <SiteLayout server={server} site={site} breadcrumbs={breadcrumbs}>
-            <Head title={`Application — ${site.domain}`} />
+            <Head title={`Settings — ${site.domain}`} />
             <div className="space-y-8">
                 <div className="space-y-2">
                     <h1 className="text-2xl font-semibold">Provisioning...</h1>

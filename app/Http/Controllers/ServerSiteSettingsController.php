@@ -8,17 +8,17 @@ use App\Models\ServerSite;
 use Inertia\Inertia;
 use Inertia\Response;
 
-class ServerSiteApplicationController extends Controller
+class ServerSiteSettingsController extends Controller
 {
     /**
-     * Display the application management page.
+     * Display the site settings page.
      */
     public function show(Server $server, ServerSite $site): Response
     {
         // Authorize user can view this server
         $this->authorize('view', $server);
 
-        return Inertia::render('servers/site-application', [
+        return Inertia::render('servers/site-settings', [
             'site' => new ServerSiteResource($site),
         ]);
     }

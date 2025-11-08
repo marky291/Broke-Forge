@@ -26,7 +26,7 @@ class ServerSiteDeploymentsController extends Controller
 
         // Check if site has Git repository installed
         if (! $site->hasGitRepository()) {
-            return redirect()->route('servers.sites.application.git.setup', [$server, $site])
+            return redirect()->route('servers.sites.settings.git.setup', [$server, $site])
                 ->with('error', 'Git repository must be installed before deploying.');
         }
 
@@ -62,7 +62,7 @@ class ServerSiteDeploymentsController extends Controller
 
         // Check if site has Git repository installed
         if (! $site->hasGitRepository()) {
-            return redirect()->route('servers.sites.application.git.setup', [$server, $site])
+            return redirect()->route('servers.sites.settings.git.setup', [$server, $site])
                 ->with('error', 'Git repository must be installed before deploying.');
         }
 

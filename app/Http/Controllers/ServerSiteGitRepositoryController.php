@@ -71,7 +71,7 @@ class ServerSiteGitRepositoryController extends Controller
         $this->logInstallationStart($server, $site, $configuration);
 
         return redirect()
-            ->route('servers.sites.application', [$server, $site])
+            ->route('servers.sites.settings', [$server, $site])
             ->with('info', 'Repository installation started. This may take a few minutes.');
     }
 
@@ -116,7 +116,7 @@ class ServerSiteGitRepositoryController extends Controller
     protected function redirectWithError(Server $server, ServerSite $site, string $message): RedirectResponse
     {
         return redirect()
-            ->route('servers.sites.application', [$server, $site])
+            ->route('servers.sites.settings', [$server, $site])
             ->withErrors(['repository' => $message]);
     }
 

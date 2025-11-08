@@ -39,8 +39,12 @@ class ServerSitesController extends Controller
         // Authorize user can view this server
         $this->authorize('view', $server);
 
-        // Always redirect to the application page
-        return redirect()->route('servers.sites.application', [$server, $site]);
+        // Redirect to deployments if Git is installed, otherwise settings
+        if ($site->git_status === TaskStatus::Success) {
+            return redirect()->route('servers.sites.deployments', [$server, $site]);
+        }
+
+        return redirect()->route('servers.sites.settings', [$server, $site]);
     }
 
     /**

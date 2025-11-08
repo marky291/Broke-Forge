@@ -44,7 +44,7 @@ export default function SiteLayout({ children, server, site, breadcrumbs }: Site
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     // Determine current active section
-    let currentSection: string = 'site-application';
+    let currentSection: string = 'site-settings';
 
     if (path.includes('/commands')) {
         currentSection = 'site-commands';
@@ -54,6 +54,8 @@ export default function SiteLayout({ children, server, site, breadcrumbs }: Site
         currentSection = 'explorer';
     } else if (path.includes('/environment')) {
         currentSection = 'site-environment';
+    } else if (path.includes('/settings')) {
+        currentSection = 'site-settings';
     }
 
     // Back to server navigation
@@ -65,26 +67,41 @@ export default function SiteLayout({ children, server, site, breadcrumbs }: Site
     };
 
     // Site-specific navigation items
-    const siteNavItems: NavItem[] = [
-        {
-            title: 'Application',
-            href: `/servers/${server.id}/sites/${site.id}/application`,
-            icon: AppWindow,
-            isActive: currentSection === 'site-application',
-        },
-        {
-            title: 'Commands',
-            href: `/servers/${server.id}/sites/${site.id}/commands`,
-            icon: Terminal,
-            isActive: currentSection === 'site-commands',
-        },
-        {
-            title: 'Explorer',
-            href: `/servers/${server.id}/sites/${site.id}/explorer`,
-            icon: Folder,
-            isActive: currentSection === 'explorer',
-        },
-    ];
+    const siteNavItems: NavItem[] = [];
+
+    // Conditionally add Deployments first if Git is installed
+    if (site.git_status === 'success') {
+        siteNavItems.push({
+            title: 'Deployments',
+            href: `/servers/${server.id}/sites/${site.id}/deployments`,
+            icon: Rocket,
+            isActive: currentSection === 'site-deployments',
+        });
+    }
+
+    // Add Settings (formerly Application)
+    siteNavItems.push({
+        title: 'Settings',
+        href: `/servers/${server.id}/sites/${site.id}/settings`,
+        icon: AppWindow,
+        isActive: currentSection === 'site-settings',
+    });
+
+    // Add Commands
+    siteNavItems.push({
+        title: 'Commands',
+        href: `/servers/${server.id}/sites/${site.id}/commands`,
+        icon: Terminal,
+        isActive: currentSection === 'site-commands',
+    });
+
+    // Add Explorer
+    siteNavItems.push({
+        title: 'Explorer',
+        href: `/servers/${server.id}/sites/${site.id}/explorer`,
+        icon: Folder,
+        isActive: currentSection === 'explorer',
+    });
 
     // Conditionally add Environment if framework supports it
     if (site.site_framework.env.supports) {
@@ -93,16 +110,6 @@ export default function SiteLayout({ children, server, site, breadcrumbs }: Site
             href: `/servers/${server.id}/sites/${site.id}/environment`,
             icon: FileCode2,
             isActive: currentSection === 'site-environment',
-        });
-    }
-
-    // Conditionally add Deployments if Git is installed
-    if (site.git_status === 'success') {
-        siteNavItems.push({
-            title: 'Deployments',
-            href: `/servers/${server.id}/sites/${site.id}/deployments`,
-            icon: Rocket,
-            isActive: currentSection === 'site-deployments',
         });
     }
 

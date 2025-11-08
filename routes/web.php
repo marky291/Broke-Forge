@@ -15,13 +15,13 @@ use App\Http\Controllers\ServerPhpController;
 use App\Http\Controllers\ServerProvisioningController;
 use App\Http\Controllers\ServerSchedulerController;
 use App\Http\Controllers\ServerSettingsController;
-use App\Http\Controllers\ServerSiteApplicationController;
 use App\Http\Controllers\ServerSiteCommandsController;
 use App\Http\Controllers\ServerSiteDeploymentsController;
 use App\Http\Controllers\ServerSiteEnvironmentController;
 use App\Http\Controllers\ServerSiteGitController;
 use App\Http\Controllers\ServerSiteGitRepositoryController;
 use App\Http\Controllers\ServerSitesController;
+use App\Http\Controllers\ServerSiteSettingsController;
 use App\Http\Controllers\ServerSupervisorController;
 use App\Http\Controllers\SourceProviderController;
 use Illuminate\Support\Facades\Route;
@@ -222,12 +222,12 @@ Route::middleware('auth')->group(function () {
                 ->name('sites.deployments.status');
             Route::get('{site}/deployments/{deployment}/stream', [ServerSiteDeploymentsController::class, 'streamLog'])
                 ->name('sites.deployments.stream');
-            Route::get('{site}/application', [ServerSiteApplicationController::class, 'show'])
-                ->name('sites.application');
-            Route::get('{site}/application/git/setup', [ServerSiteGitRepositoryController::class, 'show'])
-                ->name('sites.application.git.setup');
-            Route::post('{site}/application/git/setup', [ServerSiteGitRepositoryController::class, 'store'])
-                ->name('sites.application.git.store');
+            Route::get('{site}/settings', [ServerSiteSettingsController::class, 'show'])
+                ->name('sites.settings');
+            Route::get('{site}/settings/git/setup', [ServerSiteGitRepositoryController::class, 'show'])
+                ->name('sites.settings.git.setup');
+            Route::post('{site}/settings/git/setup', [ServerSiteGitRepositoryController::class, 'store'])
+                ->name('sites.settings.git.store');
             Route::post('{site}/git/cancel', [ServerSiteGitController::class, 'cancel'])
                 ->name('sites.git.cancel');
             Route::patch('{site}/set-default', [ServerSitesController::class, 'setDefault'])
