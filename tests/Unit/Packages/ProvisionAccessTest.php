@@ -466,4 +466,23 @@ class ProvisionAccessTest extends TestCase
         $this->assertStringContainsString('notify_step 2 "installing"', $script);
         $this->assertStringContainsString('notify_step 3 "installing"', $script);
     }
+
+    /**
+     * Test makeScriptFor script includes time synchronization setup.
+     */
+    public function test_make_script_for_script_includes_time_synchronization(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+        $provisionAccess = new ProvisionAccess;
+
+        // Act
+        $script = $provisionAccess->makeScriptFor($server, 'test-password');
+
+        // Assert - Should enable time synchronization to prevent clock skew issues
+        $this->assertStringContainsString('timedatectl set-ntp true', $script);
+        $this->assertStringContainsString('systemd-timesyncd', $script);
+        $this->assertStringContainsString('Time synchronization enabled', $script);
+    }
 }

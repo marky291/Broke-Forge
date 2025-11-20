@@ -19,6 +19,7 @@ class AvailableFramework extends Model
     protected $fillable = [
         'name',
         'slug',
+        'public_directory',
         'env',
         'requirements',
         'description',
@@ -86,5 +87,24 @@ class AvailableFramework extends Model
     public function getEnvFilePath(): ?string
     {
         return $this->env['file_path'] ?? null;
+    }
+
+    /**
+     * Get the public directory path for this framework.
+     *
+     * Returns empty string for frameworks where root is public (like WordPress),
+     * or '/public' for frameworks with a separate public subdirectory.
+     */
+    public function getPublicDirectory(): string
+    {
+        return $this->public_directory ?? '/public';
+    }
+
+    /**
+     * Check if this framework uses a separate public subdirectory.
+     */
+    public function hasPublicSubdirectory(): bool
+    {
+        return $this->getPublicDirectory() !== '';
     }
 }

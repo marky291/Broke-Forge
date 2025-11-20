@@ -12,13 +12,11 @@ class AvailableFrameworkSeeder extends Seeder
      */
     public function run(): void
     {
-        // Clear existing frameworks (use delete instead of truncate to avoid foreign key constraint issues)
-        AvailableFramework::query()->delete();
-
         $frameworks = [
             [
                 'name' => 'Laravel',
                 'slug' => 'laravel',
+                'public_directory' => '/public',
                 'env' => [
                     'file_path' => '.env',
                     'supports' => true,
@@ -34,6 +32,7 @@ class AvailableFrameworkSeeder extends Seeder
             [
                 'name' => 'WordPress',
                 'slug' => 'wordpress',
+                'public_directory' => '',
                 'env' => [
                     'file_path' => 'wp-config.php',
                     'supports' => true,
@@ -49,6 +48,7 @@ class AvailableFrameworkSeeder extends Seeder
             [
                 'name' => 'Generic PHP',
                 'slug' => 'generic-php',
+                'public_directory' => '/public',
                 'env' => [
                     'file_path' => '.env',
                     'supports' => true,
@@ -64,6 +64,7 @@ class AvailableFrameworkSeeder extends Seeder
             [
                 'name' => 'Static HTML',
                 'slug' => 'static-html',
+                'public_directory' => '/public',
                 'env' => [
                     'file_path' => null,
                     'supports' => false,
@@ -79,8 +80,11 @@ class AvailableFrameworkSeeder extends Seeder
         ];
 
         foreach ($frameworks as $framework) {
-            AvailableFramework::create($framework);
-            $this->command->info("✓ Created {$framework['name']} framework");
+            AvailableFramework::updateOrCreate(
+                ['slug' => $framework['slug']],
+                $framework
+            );
+            $this->command->info("✓ Created/Updated {$framework['name']} framework");
         }
 
         $this->command->info("\n✓ Seeded 4 frameworks successfully!");

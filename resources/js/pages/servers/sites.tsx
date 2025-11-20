@@ -201,9 +201,9 @@ export default function Sites({ server }: SitesProps) {
         }
     }, [flash?.open_add_site_modal]);
 
-    // Fetch GitHub repositories when modal opens
+    // Fetch GitHub repositories when modal opens (skip for WordPress)
     useEffect(() => {
-        if (showAddSiteDialog && repositories.length === 0) {
+        if (showAddSiteDialog && repositories.length === 0 && selectedFramework?.slug !== 'wordpress') {
             setLoadingRepositories(true);
             fetch(`/servers/${server.id}/github/repositories`)
                 .then((res) => res.json())
@@ -217,7 +217,7 @@ export default function Sites({ server }: SitesProps) {
                 })
                 .finally(() => setLoadingRepositories(false));
         }
-    }, [showAddSiteDialog, server.id, repositories]);
+    }, [showAddSiteDialog, server.id, repositories, selectedFramework]);
 
     // Auto-disable SSL for non-domain sites
     useEffect(() => {
@@ -689,7 +689,7 @@ export default function Sites({ server }: SitesProps) {
                     )}
 
                     {/* GitHub Connection Alert */}
-                    {!githubConnected && !loadingRepositories && (
+                    {selectedFramework && selectedFramework.slug !== 'wordpress' && !githubConnected && !loadingRepositories && (
                         <Alert variant="default" className="border-blue-200 bg-blue-50 dark:border-blue-900/50 dark:bg-blue-950/20">
                             <AlertCircle className="h-4 w-4 text-blue-600 dark:text-blue-500" />
                             <AlertDescription>
@@ -715,6 +715,7 @@ export default function Sites({ server }: SitesProps) {
                     )}
 
                     {/* Git Repository Section */}
+                    {selectedFramework && selectedFramework.slug !== 'wordpress' && (
                     <div className="grid w-full min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
                         <div className="min-w-0 space-y-2">
                             <div className="flex items-center gap-2">
@@ -801,6 +802,7 @@ export default function Sites({ server }: SitesProps) {
                             {form.errors.git_branch && <p className="text-sm text-red-500">{form.errors.git_branch}</p>}
                         </div>
                     </div>
+                    )}
                 </div>
             </CardFormModal>
 

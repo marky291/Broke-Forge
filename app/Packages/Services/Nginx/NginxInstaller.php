@@ -31,6 +31,9 @@ class NginxInstaller extends PackageInstaller implements \App\Packages\Core\Base
      */
     public function execute(PhpVersion $phpVersion): void
     {
+        // Make sure the system time is synchronized before package operations
+        TimeSyncInstallerJob::dispatchSync($this->server);
+
         // Ensure firewall is installed and configured first
         FirewallInstallerJob::dispatchSync($this->server);
 

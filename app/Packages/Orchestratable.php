@@ -16,7 +16,7 @@ use Illuminate\Queue\Middleware\WithoutOverlapping;
  *
  * This separation prevents lock contention when orchestrators dispatch child jobs synchronously.
  *
- * Examples: NginxInstallerJob, ProvisionedSiteInstallerJob
+ * Examples: NginxInstallerJob, SiteInstallerJob
  *
  * Child classes must implement their own handle() and failed() methods.
  */

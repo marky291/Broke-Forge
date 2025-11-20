@@ -19,7 +19,12 @@ class InstallDatabaseRequest extends FormRequest
         $server = $this->route('server');
 
         return [
-            'name' => ['nullable', 'string', 'max:64'],
+            'name' => [
+                'required',
+                'string',
+                'max:64',
+                'regex:/^[a-zA-Z0-9_-]+$/',
+            ],
             'type' => ['required', Rule::enum(\App\Enums\DatabaseType::class)],
             'version' => ['required', 'string', 'max:16'],
             'root_password' => ['required', 'string', 'min:8', 'max:128'],
@@ -66,6 +71,8 @@ class InstallDatabaseRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'name.required' => 'Database name is required.',
+            'name.regex' => 'Database name can only contain letters, numbers, hyphens, and underscores (no spaces).',
             'type.required' => 'Please select a database type.',
             'version.required' => 'Please select a database version.',
             'root_password.required' => 'Root password is required.',

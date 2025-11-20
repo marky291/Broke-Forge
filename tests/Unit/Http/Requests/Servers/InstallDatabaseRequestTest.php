@@ -43,6 +43,7 @@ class InstallDatabaseRequestTest extends TestCase
     {
         // Arrange
         $data = [
+            'name' => 'my_database',
             'type' => DatabaseType::PostgreSQL->value,
             'version' => '16',
             'root_password' => 'password123',
@@ -95,6 +96,7 @@ class InstallDatabaseRequestTest extends TestCase
 
         foreach ($validTypes as $type) {
             $data = [
+                'name' => 'test_db',
                 'type' => $type,
                 'version' => '1.0',
                 'root_password' => 'password123',
@@ -190,6 +192,7 @@ class InstallDatabaseRequestTest extends TestCase
 
         foreach ($validVersions as $version) {
             $data = [
+                'name' => 'test_db',
                 'type' => DatabaseType::MySQL->value,
                 'version' => $version,
                 'root_password' => 'password123',
@@ -253,6 +256,7 @@ class InstallDatabaseRequestTest extends TestCase
     {
         // Arrange
         $data = [
+            'name' => 'test_db',
             'type' => DatabaseType::MySQL->value,
             'version' => '8.0',
             'root_password' => 'password',
@@ -296,6 +300,7 @@ class InstallDatabaseRequestTest extends TestCase
     {
         // Arrange
         $data = [
+            'name' => 'test_db',
             'type' => DatabaseType::MySQL->value,
             'version' => '8.0',
             'root_password' => str_repeat('a', 128),
@@ -311,9 +316,9 @@ class InstallDatabaseRequestTest extends TestCase
     }
 
     /**
-     * Test validation passes when name is not provided.
+     * Test validation fails when name is not provided.
      */
-    public function test_validation_passes_when_name_is_not_provided(): void
+    public function test_validation_fails_when_name_is_not_provided(): void
     {
         // Arrange
         $data = [
@@ -328,7 +333,8 @@ class InstallDatabaseRequestTest extends TestCase
         $validator = Validator::make($data, $request->rules());
 
         // Assert
-        $this->assertFalse($validator->fails());
+        $this->assertTrue($validator->fails());
+        $this->assertArrayHasKey('name', $validator->errors()->toArray());
     }
 
     /**
@@ -377,12 +383,104 @@ class InstallDatabaseRequestTest extends TestCase
     }
 
     /**
+     * Test validation fails when name contains spaces.
+     */
+    public function test_validation_fails_when_name_contains_spaces(): void
+    {
+        // Arrange
+        $data = [
+            'name' => 'my database',
+            'type' => DatabaseType::MySQL->value,
+            'version' => '8.0',
+            'root_password' => 'password123',
+        ];
+
+        $request = new InstallDatabaseRequest;
+
+        // Act
+        $validator = Validator::make($data, $request->rules());
+
+        // Assert
+        $this->assertTrue($validator->fails());
+        $this->assertArrayHasKey('name', $validator->errors()->toArray());
+    }
+
+    /**
+     * Test validation fails when name contains special characters.
+     */
+    public function test_validation_fails_when_name_contains_special_characters(): void
+    {
+        // Arrange
+        $invalidNames = [
+            'my@database',
+            'my.database',
+            'my database',
+            'my!database',
+            'my#database',
+            'my$database',
+            'my%database',
+        ];
+
+        $request = new InstallDatabaseRequest;
+
+        foreach ($invalidNames as $name) {
+            $data = [
+                'name' => $name,
+                'type' => DatabaseType::MySQL->value,
+                'version' => '8.0',
+                'root_password' => 'password123',
+            ];
+
+            // Act
+            $validator = Validator::make($data, $request->rules());
+
+            // Assert
+            $this->assertTrue($validator->fails(), "Name '{$name}' should fail validation");
+            $this->assertArrayHasKey('name', $validator->errors()->toArray());
+        }
+    }
+
+    /**
+     * Test validation passes with valid name formats.
+     */
+    public function test_validation_passes_with_valid_name_formats(): void
+    {
+        // Arrange
+        $validNames = [
+            'mydatabase',
+            'my_database',
+            'my-database',
+            'MyDatabase123',
+            'database_2024',
+            'prod-db-001',
+        ];
+
+        $request = new InstallDatabaseRequest;
+
+        foreach ($validNames as $name) {
+            $data = [
+                'name' => $name,
+                'type' => DatabaseType::MySQL->value,
+                'version' => '8.0',
+                'root_password' => 'password123',
+            ];
+
+            // Act
+            $validator = Validator::make($data, $request->rules());
+
+            // Assert
+            $this->assertFalse($validator->fails(), "Name '{$name}' should pass validation");
+        }
+    }
+
+    /**
      * Test validation passes when port is not provided.
      */
     public function test_validation_passes_when_port_is_not_provided(): void
     {
         // Arrange
         $data = [
+            'name' => 'test_db',
             'type' => DatabaseType::MySQL->value,
             'version' => '8.0',
             'root_password' => 'password123',
@@ -404,6 +502,7 @@ class InstallDatabaseRequestTest extends TestCase
     {
         // Arrange
         $data = [
+            'name' => 'test_db',
             'type' => DatabaseType::MySQL->value,
             'version' => '8.0',
             'root_password' => 'password123',
@@ -472,6 +571,7 @@ class InstallDatabaseRequestTest extends TestCase
     {
         // Arrange
         $data = [
+            'name' => 'test_db',
             'type' => DatabaseType::MySQL->value,
             'version' => '8.0',
             'root_password' => 'password123',
@@ -494,6 +594,7 @@ class InstallDatabaseRequestTest extends TestCase
     {
         // Arrange
         $data = [
+            'name' => 'test_db',
             'type' => DatabaseType::MySQL->value,
             'version' => '8.0',
             'root_password' => 'password123',
@@ -525,6 +626,7 @@ class InstallDatabaseRequestTest extends TestCase
 
         foreach ($commonPorts as $port) {
             $data = [
+                'name' => 'test_db',
                 'type' => DatabaseType::MySQL->value,
                 'version' => '8.0',
                 'root_password' => 'password123',
@@ -585,6 +687,8 @@ class InstallDatabaseRequestTest extends TestCase
 
         // Assert
         $this->assertIsArray($messages);
+        $this->assertArrayHasKey('name.required', $messages);
+        $this->assertArrayHasKey('name.regex', $messages);
         $this->assertArrayHasKey('type.required', $messages);
         $this->assertArrayHasKey('version.required', $messages);
         $this->assertArrayHasKey('root_password.required', $messages);

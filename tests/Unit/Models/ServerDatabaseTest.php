@@ -411,4 +411,65 @@ class ServerDatabaseTest extends TestCase
         // Assert
         $this->assertEquals('8.0.35', $database->version);
     }
+
+    /**
+     * Test database has many sites relationship.
+     */
+    public function test_database_has_many_sites(): void
+    {
+        // Arrange
+        $server = Server::factory()->create();
+        $database = ServerDatabase::factory()->create([
+            'server_id' => $server->id,
+            'name' => 'production_db',
+        ]);
+
+        $site1 = \App\Models\ServerSite::factory()->create([
+            'server_id' => $server->id,
+            'database_id' => $database->id,
+            'domain' => 'example.com',
+        ]);
+
+        $site2 = \App\Models\ServerSite::factory()->create([
+            'server_id' => $server->id,
+            'database_id' => $database->id,
+            'domain' => 'another.com',
+        ]);
+
+        // Create a site without this database
+        \App\Models\ServerSite::factory()->create([
+            'server_id' => $server->id,
+            'database_id' => null,
+            'domain' => 'unrelated.com',
+        ]);
+
+        // Act
+        $sites = $database->sites;
+
+        // Assert
+        $this->assertCount(2, $sites);
+        $this->assertTrue($sites->contains($site1));
+        $this->assertTrue($sites->contains($site2));
+        $this->assertEquals('example.com', $sites->first()->domain);
+    }
+
+    /**
+     * Test database with no sites returns empty collection.
+     */
+    public function test_database_with_no_sites_returns_empty_collection(): void
+    {
+        // Arrange
+        $server = Server::factory()->create();
+        $database = ServerDatabase::factory()->create([
+            'server_id' => $server->id,
+            'name' => 'unused_db',
+        ]);
+
+        // Act
+        $sites = $database->sites;
+
+        // Assert
+        $this->assertCount(0, $sites);
+        $this->assertTrue($sites->isEmpty());
+    }
 }

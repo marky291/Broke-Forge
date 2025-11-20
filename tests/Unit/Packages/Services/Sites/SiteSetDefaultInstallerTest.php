@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Packages\Services\Sites;
 
+use App\Models\AvailableFramework;
 use App\Models\Server;
 use App\Models\ServerDeployment;
 use App\Models\ServerSite;
@@ -13,6 +14,14 @@ use Tests\TestCase;
 class SiteSetDefaultInstallerTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Seed frameworks for testing
+        $this->artisan('db:seed', ['--class' => 'AvailableFrameworkSeeder']);
+    }
 
     private function invokeProtectedMethod(object $object, string $methodName, array $parameters = []): mixed
     {
@@ -43,10 +52,12 @@ class SiteSetDefaultInstallerTest extends TestCase
         $commands = $this->invokeProtectedMethod($installer, 'commands', [$site]);
 
         // Assert
-        $this->assertCount(3, $commands);
+        $this->assertCount(5, $commands);
         $this->assertStringContainsString('ln -sfn example.com /home/brokeforge/default', $commands[0]);
-        $this->assertEquals('sudo service php8.4-fpm reload', $commands[1]);
-        $this->assertEquals('readlink /home/brokeforge/default', $commands[2]);
+        $this->assertStringContainsString('cat > /etc/nginx/sites-available/default', $commands[1]);
+        $this->assertEquals('sudo service php8.4-fpm reload', $commands[2]);
+        $this->assertEquals('sudo systemctl reload nginx', $commands[3]);
+        $this->assertEquals('readlink /home/brokeforge/default', $commands[4]);
     }
 
     /**
@@ -193,7 +204,7 @@ class SiteSetDefaultInstallerTest extends TestCase
         $commands = $this->invokeProtectedMethod($installer, 'commands', [$site]);
 
         // Assert
-        $this->assertStringContainsString('readlink /home/brokeforge/default', $commands[2]);
+        $this->assertStringContainsString('readlink /home/brokeforge/default', $commands[4]);
     }
 
     /**
@@ -253,5 +264,113 @@ class SiteSetDefaultInstallerTest extends TestCase
         // Assert
         $this->assertEquals('deployments/example.com/08112025-100000', $sourcePath);
         $this->assertStringStartsNotWith('/home/', $sourcePath);
+    }
+
+    /**
+     * Test generates nginx config with no /public directory for WordPress.
+     */
+    public function test_generates_nginx_config_without_public_directory_for_wordpress(): void
+    {
+        // Arrange
+        $server = Server::factory()->create();
+        $framework = AvailableFramework::where('slug', 'wordpress')->first();
+        $site = ServerSite::factory()->create([
+            'server_id' => $server->id,
+            'available_framework_id' => $framework->id,
+            'domain' => 'wordpress.local',
+            'php_version' => '8.4',
+            'status' => 'active',
+        ]);
+
+        $installer = new SiteSetDefaultInstaller($server);
+
+        // Act
+        $nginxConfig = $this->invokeProtectedMethod($installer, 'generateNginxConfig', [$site]);
+
+        // Assert
+        $this->assertStringContainsString('root /home/brokeforge/default;', $nginxConfig);
+        $this->assertStringNotContainsString('root /home/brokeforge/default/public;', $nginxConfig);
+        $this->assertStringContainsString('php8.4-fpm', $nginxConfig);
+    }
+
+    /**
+     * Test generates nginx config with /public directory for Laravel.
+     */
+    public function test_generates_nginx_config_with_public_directory_for_laravel(): void
+    {
+        // Arrange
+        $server = Server::factory()->create();
+        $framework = AvailableFramework::where('slug', 'laravel')->first();
+        $site = ServerSite::factory()->create([
+            'server_id' => $server->id,
+            'available_framework_id' => $framework->id,
+            'domain' => 'laravel.local',
+            'php_version' => '8.3',
+            'status' => 'active',
+        ]);
+
+        $installer = new SiteSetDefaultInstaller($server);
+
+        // Act
+        $nginxConfig = $this->invokeProtectedMethod($installer, 'generateNginxConfig', [$site]);
+
+        // Assert
+        $this->assertStringContainsString('root /home/brokeforge/default/public;', $nginxConfig);
+        $this->assertStringContainsString('php8.3-fpm', $nginxConfig);
+    }
+
+    /**
+     * Test generates nginx config with /public directory for GenericPhp.
+     */
+    public function test_generates_nginx_config_with_public_directory_for_generic_php(): void
+    {
+        // Arrange
+        $server = Server::factory()->create();
+        $framework = AvailableFramework::where('slug', 'generic-php')->first();
+        $site = ServerSite::factory()->create([
+            'server_id' => $server->id,
+            'available_framework_id' => $framework->id,
+            'domain' => 'generic.local',
+            'php_version' => '8.4',
+            'status' => 'active',
+        ]);
+
+        $installer = new SiteSetDefaultInstaller($server);
+
+        // Act
+        $nginxConfig = $this->invokeProtectedMethod($installer, 'generateNginxConfig', [$site]);
+
+        // Assert
+        $this->assertStringContainsString('root /home/brokeforge/default/public;', $nginxConfig);
+        $this->assertStringContainsString('php8.4-fpm', $nginxConfig);
+    }
+
+    /**
+     * Test nginx config includes all required directives.
+     */
+    public function test_nginx_config_includes_required_directives(): void
+    {
+        // Arrange
+        $server = Server::factory()->create();
+        $framework = AvailableFramework::where('slug', 'laravel')->first();
+        $site = ServerSite::factory()->create([
+            'server_id' => $server->id,
+            'available_framework_id' => $framework->id,
+            'domain' => 'test.local',
+            'php_version' => '8.4',
+            'status' => 'active',
+        ]);
+
+        $installer = new SiteSetDefaultInstaller($server);
+
+        // Act
+        $nginxConfig = $this->invokeProtectedMethod($installer, 'generateNginxConfig', [$site]);
+
+        // Assert - verify essential nginx directives
+        $this->assertStringContainsString('listen 80 default_server;', $nginxConfig);
+        $this->assertStringContainsString('server_name _;', $nginxConfig);
+        $this->assertStringContainsString('index index.php index.html index.htm;', $nginxConfig);
+        $this->assertStringContainsString('try_files $uri $uri/ /index.php?$query_string;', $nginxConfig);
+        $this->assertStringContainsString('fastcgi_pass unix:/var/run/php/php8.4-fpm.sock;', $nginxConfig);
     }
 }

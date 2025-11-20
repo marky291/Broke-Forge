@@ -4,12 +4,12 @@ namespace Tests\Unit\Packages\Services\Sites;
 
 use App\Models\Server;
 use App\Models\ServerSite;
-use App\Packages\Services\Sites\ProvisionedSiteInstallerJob;
+use App\Packages\Services\Sites\SiteInstallerJob;
 use Exception;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-class ProvisionedSiteInstallerJobTest extends TestCase
+class SiteInstallerJobTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -17,7 +17,7 @@ class ProvisionedSiteInstallerJobTest extends TestCase
     {
         $server = Server::factory()->create();
         $site = ServerSite::factory()->create(['server_id' => $server->id]);
-        $job = new ProvisionedSiteInstallerJob($server, $site->id);
+        $job = new SiteInstallerJob($server, $site->id);
         $this->assertEquals(600, $job->timeout);
     }
 
@@ -25,7 +25,7 @@ class ProvisionedSiteInstallerJobTest extends TestCase
     {
         $server = Server::factory()->create();
         $site = ServerSite::factory()->create(['server_id' => $server->id]);
-        $job = new ProvisionedSiteInstallerJob($server, $site->id);
+        $job = new SiteInstallerJob($server, $site->id);
         $this->assertEquals(0, $job->tries);
     }
 
@@ -36,15 +36,15 @@ class ProvisionedSiteInstallerJobTest extends TestCase
     {
         $server = Server::factory()->create();
         $site = ServerSite::factory()->create(['server_id' => $server->id]);
-        $job = new ProvisionedSiteInstallerJob($server, $site->id);
-        $this->assertEquals(3, $job->maxExceptions);
+        $job = new SiteInstallerJob($server, $site->id);
+        $this->assertEquals(1, $job->maxExceptions);
     }
 
     public function test_middleware_configured_with_without_overlapping(): void
     {
         $server = Server::factory()->create();
         $site = ServerSite::factory()->create(['server_id' => $server->id]);
-        $job = new ProvisionedSiteInstallerJob($server, $site->id);
+        $job = new SiteInstallerJob($server, $site->id);
         $middleware = $job->middleware();
         $this->assertCount(1, $middleware);
         $this->assertInstanceOf(\Illuminate\Queue\Middleware\WithoutOverlapping::class, $middleware[0]);
@@ -54,8 +54,8 @@ class ProvisionedSiteInstallerJobTest extends TestCase
     {
         $server = Server::factory()->create();
         $siteId = 123;
-        $job = new ProvisionedSiteInstallerJob($server, $siteId);
-        $this->assertInstanceOf(ProvisionedSiteInstallerJob::class, $job);
+        $job = new SiteInstallerJob($server, $siteId);
+        $this->assertInstanceOf(SiteInstallerJob::class, $job);
         $this->assertEquals($server->id, $job->server->id);
         $this->assertEquals($siteId, $job->siteId);
     }
@@ -64,7 +64,7 @@ class ProvisionedSiteInstallerJobTest extends TestCase
     {
         $server = Server::factory()->create();
         $site = ServerSite::factory()->create(['server_id' => $server->id]);
-        $job = new ProvisionedSiteInstallerJob($server, $site->id);
+        $job = new SiteInstallerJob($server, $site->id);
         $exception = new Exception('Operation failed');
         $job->failed($exception);
         $site->refresh();
@@ -75,7 +75,7 @@ class ProvisionedSiteInstallerJobTest extends TestCase
     {
         $server = Server::factory()->create();
         $site = ServerSite::factory()->create(['server_id' => $server->id, 'error_log' => null]);
-        $job = new ProvisionedSiteInstallerJob($server, $site->id);
+        $job = new SiteInstallerJob($server, $site->id);
         $errorMessage = 'Test error message';
         $exception = new Exception($errorMessage);
         $job->failed($exception);
@@ -88,7 +88,7 @@ class ProvisionedSiteInstallerJobTest extends TestCase
         $server = Server::factory()->create();
         $site = ServerSite::factory()->create(['server_id' => $server->id]);
 
-        $job = new ProvisionedSiteInstallerJob($server, $site->id);
+        $job = new SiteInstallerJob($server, $site->id);
         $siteId = $site->id;
         $site->delete(); // Now fresh() will return null
 

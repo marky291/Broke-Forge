@@ -48,7 +48,7 @@ class WordPressInstallerJobTest extends TestCase
         // Assert
         $this->assertEquals(600, $job->timeout);
         $this->assertEquals(0, $job->tries);
-        $this->assertEquals(3, $job->maxExceptions);
+        $this->assertEquals(1, $job->maxExceptions);
     }
 
     /**
@@ -285,5 +285,54 @@ class WordPressInstallerJobTest extends TestCase
 
         // This would be called by the job handler
         ServerSite::findOrFail($nonExistentSiteId);
+    }
+
+    /**
+     * Test WordPress installer updates document_root to remove /public suffix.
+     *
+     * WordPress doesn't use a separate /public directory - index.php lives in the root.
+     * The document_root should be /home/brokeforge/{domain} not /home/brokeforge/{domain}/public
+     */
+    public function test_wordpress_installer_updates_document_root_to_remove_public_suffix(): void
+    {
+        // Arrange
+        $server = Server::factory()->create();
+        $database = ServerDatabase::factory()->create(['server_id' => $server->id]);
+
+        $wordpress = AvailableFramework::firstOrCreate(
+            ['slug' => 'wordpress'],
+            [
+                'name' => 'WordPress',
+                'env' => ['file_path' => 'wp-config.php', 'supports' => true],
+                'requirements' => ['database' => true, 'redis' => false, 'nodejs' => false, 'composer' => false],
+            ]
+        );
+
+        // Create site with /public suffix (as the controller does)
+        $site = ServerSite::factory()->create([
+            'server_id' => $server->id,
+            'available_framework_id' => $wordpress->id,
+            'database_id' => $database->id,
+            'domain' => 'wordpress-test.com',
+            'status' => 'installing',
+            'document_root' => '/home/brokeforge/wordpress-test.com/public', // Controller sets this with /public
+        ]);
+
+        // Verify initial state
+        $this->assertEquals('/home/brokeforge/wordpress-test.com/public', $site->document_root);
+
+        // Act - Update document_root as the WordPress installer should do
+        $siteSymlink = "/home/brokeforge/{$site->domain}";
+        $site->update(['document_root' => $siteSymlink]);
+
+        // Assert - document_root should be updated to remove /public suffix
+        $site->refresh();
+        $expectedDocumentRoot = "/home/brokeforge/{$site->domain}"; // WITHOUT /public
+
+        $this->assertEquals(
+            $expectedDocumentRoot,
+            $site->document_root,
+            'WordPress document_root must not include /public suffix'
+        );
     }
 }

@@ -20,6 +20,7 @@ use App\Http\Controllers\ServerSiteDeploymentsController;
 use App\Http\Controllers\ServerSiteEnvironmentController;
 use App\Http\Controllers\ServerSiteGitController;
 use App\Http\Controllers\ServerSiteGitRepositoryController;
+use App\Http\Controllers\ServerSiteInstallationController;
 use App\Http\Controllers\ServerSitesController;
 use App\Http\Controllers\ServerSiteSettingsController;
 use App\Http\Controllers\ServerSupervisorController;
@@ -202,6 +203,8 @@ Route::middleware('auth')->group(function () {
                 ->name('sites');
             Route::post('/', [ServerSitesController::class, 'store'])
                 ->name('sites.store');
+            Route::get('{site}/installing', [ServerSiteInstallationController::class, 'show'])
+                ->name('sites.installing');
             Route::post('{site}/deploy-key', [ServerSitesController::class, 'generateDeployKey'])
                 ->name('sites.deploy-key.generate');
             Route::get('{site}/commands', ServerSiteCommandsController::class)
@@ -237,6 +240,8 @@ Route::middleware('auth')->group(function () {
             Route::post('{site}/uninstall', [ServerSitesController::class, 'uninstall'])
                 ->name('sites.uninstall')
                 ->middleware('throttle:5,1');
+            Route::post('{site}/retry-installation', [ServerSitesController::class, 'retryInstallation'])
+                ->name('sites.retry-installation');
             Route::delete('{site}', [ServerSitesController::class, 'destroy'])
                 ->name('sites.destroy')
                 ->middleware('throttle:5,1');

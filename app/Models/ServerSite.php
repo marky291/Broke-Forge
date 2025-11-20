@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\TaskStatus;
+use Illuminate\Database\Eloquent\Casts\AsCollection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -38,6 +39,7 @@ class ServerSite extends Model
         'ssl_key_path',
         'nginx_config_path',
         'status',
+        'installation_state',
         'is_default',
         'default_site_status',
         'health',
@@ -72,6 +74,7 @@ class ServerSite extends Model
             'has_dedicated_deploy_key' => 'boolean',
             'webhook_secret' => 'encrypted',
             'configuration' => 'array',
+            'installation_state' => AsCollection::class,
             'git_status' => TaskStatus::class,
             'default_site_status' => TaskStatus::class,
             'installed_at' => 'datetime',
@@ -268,6 +271,7 @@ class ServerSite extends Model
             $broadcastFields = [
                 'domain',
                 'status',
+                'installation_state',
                 'is_default',
                 'default_site_status',
                 'health',

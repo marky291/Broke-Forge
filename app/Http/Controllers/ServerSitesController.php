@@ -8,8 +8,8 @@ use App\Http\Requests\Servers\StoreSiteRequest;
 use App\Http\Resources\ServerResource;
 use App\Models\Server;
 use App\Models\ServerSite;
-use App\Packages\Services\Sites\ProvisionedSiteInstallerJob;
 use App\Packages\Services\Sites\SiteDeployKeyGenerator;
+use App\Packages\Services\Sites\SiteInstallerJob;
 use App\Packages\Services\Sites\SiteRemoverJob;
 use App\Packages\Services\Sites\SiteSetDefaultJob;
 use App\Packages\Services\Sites\SiteUnsetDefaultJob;
@@ -185,9 +185,10 @@ class ServerSitesController extends Controller
             ]);
 
             // Dispatch site installation job with site ID
-            ProvisionedSiteInstallerJob::dispatch($server, $site->id);
+            SiteInstallerJob::dispatch($server, $site->id);
 
-            return back()->with('success', 'Site installation started.');
+            // Redirect to installation progress page
+            return redirect()->route('servers.sites.installing', [$server, $site]);
         } catch (\Throwable $e) {
             Log::error('Failed to create site', [
                 'error' => $e->getMessage(),
@@ -197,6 +198,44 @@ class ServerSitesController extends Controller
 
             return back()->with('error', 'Failed to start site installation: '.$e->getMessage());
         }
+    }
+
+    /**
+     * Retry failed site installation.
+     */
+    public function retryInstallation(Server $server, ServerSite $site): RedirectResponse
+    {
+        // Authorize user can update this server
+        $this->authorize('update', $server);
+
+        // Verify site belongs to this server
+        if ($site->server_id !== $server->id) {
+            abort(404);
+        }
+
+        // Only retry if installation failed
+        if ($site->status !== 'failed') {
+            return back()->with('error', 'Can only retry failed installations.');
+        }
+
+        Log::info('Retrying site installation', [
+            'server_id' => $server->id,
+            'site_id' => $site->id,
+            'domain' => $site->domain,
+        ]);
+
+        // Reset site status and error log
+        $site->update([
+            'status' => 'installing',
+            'error_log' => null,
+            'installation_state' => null,
+        ]);
+
+        // Dispatch site installation job
+        SiteInstallerJob::dispatch($server, $site->id);
+
+        // Redirect back to installation progress page
+        return redirect()->route('servers.sites.installing', [$server, $site]);
     }
 
     /**

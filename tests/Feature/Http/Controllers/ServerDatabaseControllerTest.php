@@ -242,6 +242,7 @@ class ServerDatabaseControllerTest extends TestCase
         // Act
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
+                'name' => 'mariadb_test',
                 'type' => 'mariadb',
                 'version' => '10.11',
                 'root_password' => 'SecurePass456',
@@ -275,6 +276,7 @@ class ServerDatabaseControllerTest extends TestCase
         // Act
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
+                'name' => 'postgres_db',
                 'type' => 'postgresql',
                 'version' => '15',
                 'root_password' => 'PostgresPass789',
@@ -308,6 +310,7 @@ class ServerDatabaseControllerTest extends TestCase
         // Act
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
+                'name' => 'test_db',
                 'version' => '8.0',
                 'root_password' => 'SecurePassword123',
             ]);
@@ -329,6 +332,7 @@ class ServerDatabaseControllerTest extends TestCase
         // Act
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
+                'name' => 'test_db',
                 'type' => 'mysql',
                 'root_password' => 'SecurePassword123',
             ]);
@@ -350,6 +354,7 @@ class ServerDatabaseControllerTest extends TestCase
         // Act
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
+                'name' => 'test_db',
                 'type' => 'mysql',
                 'version' => '8.0',
             ]);
@@ -371,6 +376,7 @@ class ServerDatabaseControllerTest extends TestCase
         // Act
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
+                'name' => 'test_db',
                 'type' => 'invalid_database',
                 'version' => '8.0',
                 'root_password' => 'SecurePassword123',
@@ -393,6 +399,7 @@ class ServerDatabaseControllerTest extends TestCase
         // Act
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
+                'name' => 'test_db',
                 'type' => 'mysql',
                 'version' => '8.0',
                 'root_password' => 'short',
@@ -415,6 +422,7 @@ class ServerDatabaseControllerTest extends TestCase
         // Act
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
+                'name' => 'test_db',
                 'type' => 'mysql',
                 'version' => '8.0',
                 'root_password' => 'SecurePassword123',
@@ -438,6 +446,7 @@ class ServerDatabaseControllerTest extends TestCase
         // Act
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
+                'name' => 'test_db',
                 'type' => 'mysql',
                 'version' => '8.0',
                 'root_password' => 'SecurePassword123',
@@ -463,6 +472,7 @@ class ServerDatabaseControllerTest extends TestCase
         // Act
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
+                'name' => 'test_db',
                 'type' => 'mysql',
                 'version' => '8.0',
                 'root_password' => 'SecurePassword123',
@@ -488,6 +498,7 @@ class ServerDatabaseControllerTest extends TestCase
         // Act
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
+                'name' => 'test_db',
                 'type' => 'mysql',
                 'version' => '8.0',
                 'root_password' => 'SecurePassword123',
@@ -508,6 +519,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         // Act
         $response = $this->post("/servers/{$server->id}/databases", [
+            'name' => 'test_db',
             'type' => 'mysql',
             'version' => '8.0',
             'root_password' => 'SecurePassword123',
@@ -532,6 +544,7 @@ class ServerDatabaseControllerTest extends TestCase
         // Act
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
+                'name' => 'mysql',
                 'type' => 'mysql',
                 'version' => '8.0',
                 'root_password' => 'SecurePassword123',
@@ -560,6 +573,7 @@ class ServerDatabaseControllerTest extends TestCase
         // Act
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
+                'name' => 'postgres_test',
                 'type' => 'postgresql',
                 'version' => '16',
                 'root_password' => 'SecurePassword123',
@@ -1033,6 +1047,7 @@ class ServerDatabaseControllerTest extends TestCase
         // Act - Install MySQL
         $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
+                'name' => 'mysql_test',
                 'type' => 'mysql',
                 'version' => '8.0',
                 'root_password' => 'SecurePassword123',
@@ -1042,6 +1057,7 @@ class ServerDatabaseControllerTest extends TestCase
         // Act - Attempt to install PostgreSQL (same database category)
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
+                'name' => 'postgres_test',
                 'type' => 'postgresql',
                 'version' => '16',
                 'root_password' => 'PostgresPass789',
@@ -1080,6 +1096,7 @@ class ServerDatabaseControllerTest extends TestCase
         // Act - try to install another database on same port
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
+                'name' => 'mariadb_test',
                 'type' => 'mariadb',
                 'version' => '11.4',
                 'root_password' => 'SecurePassword123',
@@ -1105,6 +1122,7 @@ class ServerDatabaseControllerTest extends TestCase
         // Install MySQL database
         $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
+                'name' => 'mysql_prod',
                 'type' => 'mysql',
                 'version' => '8.0',
                 'root_password' => 'Password1',
@@ -1114,6 +1132,7 @@ class ServerDatabaseControllerTest extends TestCase
         // Act - install Redis (different category - cache/queue)
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
+                'name' => 'redis_cache',
                 'type' => 'redis',
                 'version' => '7.2',
                 'root_password' => 'Password2',

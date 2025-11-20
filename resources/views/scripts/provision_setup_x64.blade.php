@@ -146,6 +146,95 @@ chmod 755 /home/{{ $appUser }}
 
 echo "[+] App user '{{ $appUser }}' configured for Git operations with full ownership of home directory"
 
+# Configure sudo access for app user (brokeforge)
+# Allow passwordless sudo for web server and service operations
+cat > /etc/sudoers.d/{{ $appUser }} <<'SUDOERS_EOF'
+# Managed by BrokeForge - Allow {{ $appUser }} to manage web services and sites
+
+# Nginx binary
+{{ $appUser }} ALL=(ALL) NOPASSWD: /usr/sbin/nginx
+
+# Systemctl commands for nginx (both /bin and /usr/bin paths)
+{{ $appUser }} ALL=(ALL) NOPASSWD: /bin/systemctl reload nginx
+{{ $appUser }} ALL=(ALL) NOPASSWD: /bin/systemctl restart nginx
+{{ $appUser }} ALL=(ALL) NOPASSWD: /bin/systemctl start nginx
+{{ $appUser }} ALL=(ALL) NOPASSWD: /bin/systemctl stop nginx
+{{ $appUser }} ALL=(ALL) NOPASSWD: /usr/bin/systemctl reload nginx
+{{ $appUser }} ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart nginx
+{{ $appUser }} ALL=(ALL) NOPASSWD: /usr/bin/systemctl start nginx
+{{ $appUser }} ALL=(ALL) NOPASSWD: /usr/bin/systemctl stop nginx
+
+# Systemctl commands for PHP-FPM services (wildcard for version numbers)
+{{ $appUser }} ALL=(ALL) NOPASSWD: /bin/systemctl reload php*-fpm
+{{ $appUser }} ALL=(ALL) NOPASSWD: /bin/systemctl restart php*-fpm
+{{ $appUser }} ALL=(ALL) NOPASSWD: /bin/systemctl start php*-fpm
+{{ $appUser }} ALL=(ALL) NOPASSWD: /bin/systemctl stop php*-fpm
+{{ $appUser }} ALL=(ALL) NOPASSWD: /usr/bin/systemctl reload php*-fpm
+{{ $appUser }} ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart php*-fpm
+{{ $appUser }} ALL=(ALL) NOPASSWD: /usr/bin/systemctl start php*-fpm
+{{ $appUser }} ALL=(ALL) NOPASSWD: /usr/bin/systemctl stop php*-fpm
+
+# Service command
+{{ $appUser }} ALL=(ALL) NOPASSWD: /usr/sbin/service
+
+# File system operations (both /bin and /usr/bin paths)
+{{ $appUser }} ALL=(ALL) NOPASSWD: /bin/mkdir
+{{ $appUser }} ALL=(ALL) NOPASSWD: /usr/bin/mkdir
+{{ $appUser }} ALL=(ALL) NOPASSWD: /bin/ln
+{{ $appUser }} ALL=(ALL) NOPASSWD: /usr/bin/ln
+{{ $appUser }} ALL=(ALL) NOPASSWD: /bin/rm
+{{ $appUser }} ALL=(ALL) NOPASSWD: /usr/bin/rm
+{{ $appUser }} ALL=(ALL) NOPASSWD: /bin/mv
+{{ $appUser }} ALL=(ALL) NOPASSWD: /usr/bin/mv
+{{ $appUser }} ALL=(ALL) NOPASSWD: /bin/chown
+{{ $appUser }} ALL=(ALL) NOPASSWD: /usr/bin/chown
+{{ $appUser }} ALL=(ALL) NOPASSWD: /bin/chmod
+{{ $appUser }} ALL=(ALL) NOPASSWD: /usr/bin/chmod
+{{ $appUser }} ALL=(ALL) NOPASSWD: /bin/cat
+{{ $appUser }} ALL=(ALL) NOPASSWD: /usr/bin/cat
+
+# Shell operations
+{{ $appUser }} ALL=(ALL) NOPASSWD: /bin/bash
+{{ $appUser }} ALL=(ALL) NOPASSWD: /usr/bin/bash
+{{ $appUser }} ALL=(ALL) NOPASSWD: /usr/bin/tee
+{{ $appUser }} ALL=(ALL) NOPASSWD: /bin/tee
+SUDOERS_EOF
+chmod 440 /etc/sudoers.d/{{ $appUser }}
+
+# Verify sudoers file syntax
+if visudo -c -f /etc/sudoers.d/{{ $appUser }} >/dev/null 2>&1; then
+  echo "[+] Sudo access configured for {{ $appUser }}"
+
+  # Test passwordless sudo for critical commands
+  echo "[→] Testing passwordless sudo for {{ $appUser }}..."
+  SUDO_TEST_FAILED=0
+
+  # Test mkdir
+  if ! sudo -u {{ $appUser }} sudo -n mkdir -p /tmp/brokeforge-sudo-test >/dev/null 2>&1; then
+    echo "[!] WARNING: Passwordless sudo test failed for mkdir"
+    SUDO_TEST_FAILED=1
+  fi
+
+  # Test nginx -t
+  if command -v nginx >/dev/null 2>&1; then
+    if ! sudo -u {{ $appUser }} sudo -n nginx -t >/dev/null 2>&1; then
+      echo "[!] WARNING: Passwordless sudo test failed for nginx (nginx may not be installed yet)"
+    fi
+  fi
+
+  # Cleanup test directory
+  rm -rf /tmp/brokeforge-sudo-test 2>/dev/null || true
+
+  if [ $SUDO_TEST_FAILED -eq 0 ]; then
+    echo "[✓] Passwordless sudo verified for {{ $appUser }}"
+  else
+    echo "[!] WARNING: Some passwordless sudo tests failed"
+  fi
+else
+  echo "[!] WARNING: Sudoers file syntax error, removing invalid file"
+  rm -f /etc/sudoers.d/{{ $appUser }}
+fi
+
 # Set passwords for all configured users
 echo "root:${ROOT_PASSWORD}" | chpasswd
 
@@ -162,6 +251,16 @@ echo "[+] User passwords configured"
 # Basic updates and common tools
 if command -v apt-get >/dev/null 2>&1; then
   export DEBIAN_FRONTEND=noninteractive
+
+  # Ensure system time is synchronized before package operations
+  # This prevents APT failures due to clock skew (e.g., "Release file is not valid yet")
+  if command -v timedatectl >/dev/null 2>&1; then
+    timedatectl set-ntp true 2>/dev/null || true
+    systemctl restart systemd-timesyncd 2>/dev/null || true
+    sleep 2
+    echo "[+] Time synchronization enabled"
+  fi
+
   apt-get update -y
   apt-get install -y curl ca-certificates sudo
 

@@ -76,6 +76,25 @@ export default function DatabaseInstallationForm({ serverId, availableTypes }: D
                         <div className="space-y-4">
                             <h3 className="font-medium">Configuration</h3>
                             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                <div className="space-y-2 md:col-span-2">
+                                    <Label htmlFor="name">
+                                        Database Name <span className="text-destructive">*</span>
+                                    </Label>
+                                    <Input
+                                        id="name"
+                                        name="name"
+                                        type="text"
+                                        value={data.name || ''}
+                                        onChange={(e) => setData('name', e.target.value)}
+                                        placeholder="my_database"
+                                        disabled={processing}
+                                        required
+                                        pattern="[a-zA-Z0-9_-]+"
+                                    />
+                                    <p className="text-xs text-muted-foreground">Only letters, numbers, hyphens, and underscores (no spaces)</p>
+                                    {errors.name && <div className="text-sm text-destructive">{errors.name}</div>}
+                                </div>
+
                                 <div className="space-y-2">
                                     <Label htmlFor="version">Version</Label>
                                     <Select value={data.version || ''} onValueChange={(value) => setData('version', value)} disabled={processing}>
@@ -129,7 +148,7 @@ export default function DatabaseInstallationForm({ serverId, availableTypes }: D
 
                         {/* Submit Button */}
                         <div className="flex justify-end">
-                            <Button type="submit" disabled={processing || !data.type}>
+                            <Button type="submit" disabled={processing || !data.type || !data.name}>
                                 {processing ? 'Installing...' : 'Install Database'}
                             </Button>
                         </div>

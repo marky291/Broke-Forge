@@ -27,12 +27,22 @@ class SiteSetDefaultInstaller extends PackageInstaller
         // Determine source path for symlink
         $sourcePath = $this->determineSourcePath($site);
 
+        // Generate new Nginx default config with correct public directory
+        $nginxConfig = $this->generateNginxConfig($site);
+        $nginxConfigPath = '/etc/nginx/sites-available/default';
+
         return [
             // Swap symlink atomically (relative path for proper symlink resolution)
             "ln -sfn {$sourcePath} /home/{$appUser}/default",
 
+            // Update Nginx default config with framework-specific public directory
+            "cat > {$nginxConfigPath} << 'NGINX_CONFIG_EOF'\n{$nginxConfig}\nNGINX_CONFIG_EOF",
+
             // Reload PHP-FPM to apply changes
             "sudo service php{$site->php_version}-fpm reload",
+
+            // Reload Nginx to apply config changes
+            'sudo systemctl reload nginx',
 
             // Verify symlink was created successfully
             "readlink /home/{$appUser}/default",
@@ -63,5 +73,27 @@ class SiteSetDefaultInstaller extends PackageInstaller
 
         // Fallback: use site symlink (which points to latest deployment for git-based sites)
         return $site->domain;
+    }
+
+    /**
+     * Generate Nginx default config with framework-specific public directory.
+     */
+    private function generateNginxConfig(ServerSite $site): string
+    {
+        $appUser = config('app.ssh_user', str_replace(' ', '', strtolower(config('app.name'))));
+
+        // Load framework relationship if not already loaded
+        if (! $site->relationLoaded('siteFramework')) {
+            $site->load('siteFramework');
+        }
+
+        // Get framework-specific public directory (empty string for WordPress, '/public' for others)
+        $publicDirectory = $site->siteFramework->getPublicDirectory();
+
+        return view('nginx.default', [
+            'appUser' => $appUser,
+            'phpVersion' => $site->php_version,
+            'publicDirectory' => $publicDirectory,
+        ])->render();
     }
 }

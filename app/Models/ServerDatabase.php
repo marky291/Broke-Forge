@@ -7,6 +7,7 @@ use App\Enums\TaskStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ServerDatabase extends Model
 {
@@ -39,6 +40,11 @@ class ServerDatabase extends Model
     public function server(): BelongsTo
     {
         return $this->belongsTo(Server::class);
+    }
+
+    public function sites(): HasMany
+    {
+        return $this->hasMany(ServerSite::class, 'database_id');
     }
 
     /**

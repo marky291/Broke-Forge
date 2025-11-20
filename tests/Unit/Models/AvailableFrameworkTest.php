@@ -297,4 +297,112 @@ class AvailableFrameworkTest extends TestCase
         $this->assertFalse($framework->requiresComposer());
         $this->assertFalse($framework->supportsEnv());
     }
+
+    /**
+     * Test that getPublicDirectory returns empty string for WordPress.
+     */
+    public function test_get_public_directory_returns_empty_string_for_wordpress(): void
+    {
+        // Arrange
+        $framework = AvailableFramework::where('slug', 'wordpress')->first();
+
+        // Act
+        $publicDir = $framework->getPublicDirectory();
+
+        // Assert
+        $this->assertEquals('', $publicDir);
+    }
+
+    /**
+     * Test that getPublicDirectory returns /public for Laravel.
+     */
+    public function test_get_public_directory_returns_public_for_laravel(): void
+    {
+        // Arrange
+        $framework = AvailableFramework::where('slug', 'laravel')->first();
+
+        // Act
+        $publicDir = $framework->getPublicDirectory();
+
+        // Assert
+        $this->assertEquals('/public', $publicDir);
+    }
+
+    /**
+     * Test that getPublicDirectory returns /public for GenericPhp.
+     */
+    public function test_get_public_directory_returns_public_for_generic_php(): void
+    {
+        // Arrange
+        $framework = AvailableFramework::where('slug', 'generic-php')->first();
+
+        // Act
+        $publicDir = $framework->getPublicDirectory();
+
+        // Assert
+        $this->assertEquals('/public', $publicDir);
+    }
+
+    /**
+     * Test that getPublicDirectory returns /public for StaticHTML.
+     */
+    public function test_get_public_directory_returns_public_for_static_html(): void
+    {
+        // Arrange
+        $framework = AvailableFramework::where('slug', 'static-html')->first();
+
+        // Act
+        $publicDir = $framework->getPublicDirectory();
+
+        // Assert
+        $this->assertEquals('/public', $publicDir);
+    }
+
+    /**
+     * Test that hasPublicSubdirectory returns false for WordPress.
+     */
+    public function test_has_public_subdirectory_returns_false_for_wordpress(): void
+    {
+        // Arrange
+        $framework = AvailableFramework::where('slug', 'wordpress')->first();
+
+        // Act & Assert
+        $this->assertFalse($framework->hasPublicSubdirectory());
+    }
+
+    /**
+     * Test that hasPublicSubdirectory returns true for Laravel.
+     */
+    public function test_has_public_subdirectory_returns_true_for_laravel(): void
+    {
+        // Arrange
+        $framework = AvailableFramework::where('slug', 'laravel')->first();
+
+        // Act & Assert
+        $this->assertTrue($framework->hasPublicSubdirectory());
+    }
+
+    /**
+     * Test that hasPublicSubdirectory returns true for GenericPhp.
+     */
+    public function test_has_public_subdirectory_returns_true_for_generic_php(): void
+    {
+        // Arrange
+        $framework = AvailableFramework::where('slug', 'generic-php')->first();
+
+        // Act & Assert
+        $this->assertTrue($framework->hasPublicSubdirectory());
+    }
+
+    /**
+     * Test that hasPublicSubdirectory returns true for StaticHTML.
+     */
+    public function test_has_public_subdirectory_returns_true_for_static_html(): void
+    {
+        // Arrange
+        $framework = AvailableFramework::where('slug', 'static-html')->first();
+
+        // Act & Assert
+        $this->assertTrue($framework->hasPublicSubdirectory());
+    }
 }

@@ -4,14 +4,14 @@ namespace App\Packages\Services\Sites;
 
 use App\Models\ServerSite;
 use App\Packages\Core\Base\PackageRemover;
-use App\Packages\Core\Base\ServerPackage;
+use App\Packages\Core\Base\SitePackage;
 
 /**
  * Site Removal Class
  *
  * Handles site removal and cleanup with progress tracking
  */
-class SiteRemover extends PackageRemover implements ServerPackage
+class SiteRemover extends PackageRemover implements SitePackage
 {
     /**
      * Execute the site removal
@@ -40,13 +40,13 @@ class SiteRemover extends PackageRemover implements ServerPackage
     protected function commands(string $domain, ?ServerSite $site): array
     {
         return [
-            "rm -f /etc/nginx/sites-enabled/{$domain}",
+            "sudo rm -f /etc/nginx/sites-enabled/{$domain}",
 
-            'nginx -t',
+            'sudo nginx -t',
 
-            'nginx -s reload',
+            'sudo systemctl reload nginx',
 
-            "[ -f /etc/nginx/sites-available/{$domain} ] && mv /etc/nginx/sites-available/{$domain} /etc/nginx/sites-available/{$domain}.disabled.$(date +%Y%m%d-%H%M%S)",
+            "sudo bash -c \"[ -f /etc/nginx/sites-available/{$domain} ] && mv /etc/nginx/sites-available/{$domain} /etc/nginx/sites-available/{$domain}.disabled.\$(date +%Y%m%d-%H%M%S)\"",
 
             // Optional backup command kept as reference for operators who may enable it.
             // "tar -czf /var/backups/sites/{$domain}-$(date +%Y%m%d-%H%M%S).tar.gz /var/www/{$domain} 2>/dev/null || true",

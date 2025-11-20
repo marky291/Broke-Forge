@@ -13,15 +13,15 @@ server {
     charset utf-8;
 
     location / {
-        try_files $uri $uri/ /index.php?$query_string;
+        try_files {{'$'}}uri {{'$'}}uri/ /index.php?{{'$'}}query_string;
     }
 
     # PHP-FPM configuration
     location ~ \.php$ {
-        try_files $uri =404;
+        try_files {{'$'}}uri =404;
         fastcgi_pass unix:{{ $phpSocket }};
         fastcgi_index index.php;
-        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        fastcgi_param SCRIPT_FILENAME {{'$'}}document_root{{'$'}}fastcgi_script_name;
         include fastcgi_params;
     }
 
@@ -68,15 +68,15 @@ server {
     charset utf-8;
 
     location / {
-        try_files $uri $uri/ /index.php?$query_string;
+        try_files {{'$'}}uri {{'$'}}uri/ /index.php?{{'$'}}query_string;
     }
 
     # PHP-FPM configuration
     location ~ \.php$ {
-        try_files $uri =404;
+        try_files {{'$'}}uri =404;
         fastcgi_pass unix:{{ $phpSocket }};
         fastcgi_index index.php;
-        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        fastcgi_param SCRIPT_FILENAME {{'$'}}document_root{{'$'}}fastcgi_script_name;
         include fastcgi_params;
     }
 
@@ -105,6 +105,6 @@ server {
     listen 80;
     listen [::]:80;
     server_name {{ $domain }} www.{{ $domain }};
-    return 301 https://$server_name$request_uri;
+    return 301 https://{{'$'}}server_name{{'$'}}request_uri;
 }
 @endif

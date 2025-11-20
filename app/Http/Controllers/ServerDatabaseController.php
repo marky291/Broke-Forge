@@ -64,7 +64,7 @@ class ServerDatabaseController extends Controller
 
         // ✅ CREATE RECORD FIRST with 'pending' status
         $database = $server->databases()->create([
-            'name' => $validated['name'] ?? $validated['type'],
+            'name' => $validated['name'],
             'type' => $validated['type'],
             'version' => $validated['version'],
             'port' => $port,
@@ -166,6 +166,16 @@ class ServerDatabaseController extends Controller
         // Ensure database belongs to this server
         if ($database->server_id !== $server->id) {
             abort(404);
+        }
+
+        // Check if any sites are using this database
+        $sitesUsingDatabase = $database->sites()->get();
+        if ($sitesUsingDatabase->isNotEmpty()) {
+            $sitesList = $sitesUsingDatabase->pluck('domain')->join(', ');
+
+            return redirect()
+                ->route('servers.services', $server)
+                ->with('error', "Cannot uninstall database '{$database->name}'. It is currently being used by the following sites: {$sitesList}. Please remove or update these sites first.");
         }
 
         // Update database record to pending status

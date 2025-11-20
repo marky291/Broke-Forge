@@ -4,7 +4,7 @@ server {
 
     server_name _;
 
-    root /home/{{ $appUser }}/default/public;
+    root /home/{{ $appUser }}/default{{ $publicDirectory }};
     index index.php index.html index.htm;
 
     location / {

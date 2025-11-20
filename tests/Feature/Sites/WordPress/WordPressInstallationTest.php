@@ -21,6 +21,8 @@ class WordPressInstallationTest extends TestCase
     public function test_wordpress_site_can_be_created_without_git_repository(): void
     {
         // Arrange
+        Queue::fake();
+
         $user = User::factory()->create();
         $server = Server::factory()->create(['user_id' => $user->id]);
         $database = ServerDatabase::factory()->create(['server_id' => $server->id]);
@@ -93,8 +95,8 @@ class WordPressInstallationTest extends TestCase
                 'ssl' => false,
             ]);
 
-        // Assert - ProvisionedSiteInstallerJob should be dispatched (which will dispatch WordPress job)
-        Queue::assertPushed(\App\Packages\Services\Sites\ProvisionedSiteInstallerJob::class, function ($job) use ($server) {
+        // Assert - SiteInstallerJob should be dispatched (which will dispatch WordPress job)
+        Queue::assertPushed(\App\Packages\Services\Sites\SiteInstallerJob::class, function ($job) use ($server) {
             return $job->server->id === $server->id;
         });
     }

@@ -1113,4 +1113,146 @@ class ServerSitesControllerTest extends TestCase
             )
         );
     }
+
+    /**
+     * Test guest cannot retry installation.
+     */
+    public function test_guest_cannot_retry_installation(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+        $site = ServerSite::factory()->create([
+            'server_id' => $server->id,
+            'status' => 'failed',
+        ]);
+
+        // Act
+        $response = $this->post("/servers/{$server->id}/sites/{$site->id}/retry-installation");
+
+        // Assert - guests should be redirected to login
+        $response->assertStatus(302);
+        $response->assertRedirect('/login');
+    }
+
+    /**
+     * Test user can retry failed installation.
+     */
+    public function test_user_can_retry_failed_installation(): void
+    {
+        // Arrange
+        Queue::fake();
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+        $site = ServerSite::factory()->create([
+            'server_id' => $server->id,
+            'status' => 'failed',
+            'error_log' => 'Previous error',
+            'installation_state' => ['step' => 3],
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->post("/servers/{$server->id}/sites/{$site->id}/retry-installation");
+
+        // Assert - status should be reset to installing
+        $site->refresh();
+        $this->assertEquals('installing', $site->status);
+        $this->assertNull($site->error_log);
+        $this->assertNull($site->installation_state);
+
+        // Assert - redirects to installation page
+        $response->assertStatus(302);
+        $response->assertRedirect("/servers/{$server->id}/sites/{$site->id}/installing");
+    }
+
+    /**
+     * Test user cannot retry installation for other user's server.
+     */
+    public function test_user_cannot_retry_installation_for_other_users_server(): void
+    {
+        // Arrange
+        $user1 = User::factory()->create();
+        $user2 = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user1->id]);
+        $site = ServerSite::factory()->create([
+            'server_id' => $server->id,
+            'status' => 'failed',
+        ]);
+
+        // Act
+        $response = $this->actingAs($user2)
+            ->post("/servers/{$server->id}/sites/{$site->id}/retry-installation");
+
+        // Assert - should be forbidden
+        $response->assertStatus(403);
+    }
+
+    /**
+     * Test cannot retry installation if status is not failed.
+     */
+    public function test_cannot_retry_installation_if_status_is_not_failed(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+        $site = ServerSite::factory()->create([
+            'server_id' => $server->id,
+            'status' => 'active',
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->post("/servers/{$server->id}/sites/{$site->id}/retry-installation");
+
+        // Assert - should return error
+        $response->assertStatus(302);
+        $response->assertSessionHas('error', 'Can only retry failed installations.');
+    }
+
+    /**
+     * Test retry installation dispatches SiteInstallerJob.
+     */
+    public function test_retry_installation_dispatches_site_installer_job(): void
+    {
+        // Arrange
+        Queue::fake();
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+        $site = ServerSite::factory()->create([
+            'server_id' => $server->id,
+            'status' => 'failed',
+        ]);
+
+        // Act
+        $this->actingAs($user)
+            ->post("/servers/{$server->id}/sites/{$site->id}/retry-installation");
+
+        // Assert - SiteInstallerJob should be dispatched
+        Queue::assertPushed(\App\Packages\Services\Sites\SiteInstallerJob::class, function ($job) use ($server, $site) {
+            return $job->server->id === $server->id && $job->siteId === $site->id;
+        });
+    }
+
+    /**
+     * Test retry installation returns 404 for site from different server.
+     */
+    public function test_retry_installation_returns_404_for_site_from_different_server(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server1 = Server::factory()->create(['user_id' => $user->id]);
+        $server2 = Server::factory()->create(['user_id' => $user->id]);
+        $site = ServerSite::factory()->create([
+            'server_id' => $server2->id,
+            'status' => 'failed',
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->post("/servers/{$server1->id}/sites/{$site->id}/retry-installation");
+
+        // Assert - should return 404
+        $response->assertStatus(404);
+    }
 }
