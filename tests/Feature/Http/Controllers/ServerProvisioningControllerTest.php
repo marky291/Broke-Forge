@@ -560,9 +560,9 @@ class ServerProvisioningControllerTest extends TestCase
     }
 
     /**
-     * Test retry provisioning keeps provision data for display.
+     * Test retry provisioning clears provision state when SSH not established.
      */
-    public function test_retry_provisioning_keeps_provision_data_for_history(): void
+    public function test_retry_provisioning_clears_provision_state_when_ssh_not_established(): void
     {
         // Arrange
         $user = User::factory()->create();
@@ -572,7 +572,7 @@ class ServerProvisioningControllerTest extends TestCase
             'provision_state' => collect([
                 1 => 'success',
                 2 => 'success',
-                3 => 'failed',
+                3 => 'failed', // SSH not established
             ]),
         ]);
 
@@ -585,8 +585,136 @@ class ServerProvisioningControllerTest extends TestCase
 
         $server->refresh();
 
-        // Provision data is kept for history (will be cleared on step 1 completion)
-        $this->assertNotEmpty($server->provision_state);
-        $this->assertEquals('failed', $server->provision_state->get(3));
+        // Provision state should be cleared since SSH failed
+        $this->assertTrue($server->provision_state->isEmpty());
+        $this->assertEquals(TaskStatus::Pending, $server->provision_status);
+    }
+
+    /**
+     * Test retry provisioning dispatches job when SSH is established.
+     */
+    public function test_retry_dispatches_job_when_ssh_established(): void
+    {
+        // Arrange
+        \Illuminate\Support\Facades\Queue::fake();
+
+        $user = User::factory()->create();
+        $server = Server::factory()->create([
+            'user_id' => $user->id,
+            'provision_status' => TaskStatus::Failed,
+            'provision_state' => collect([
+                1 => 'success',
+                2 => 'success',
+                3 => 'success', // SSH established
+                4 => 'success',
+                5 => 'failed',
+            ]),
+            'provision_config' => collect([
+                'php_version' => '8.4',
+            ]),
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->post("/servers/{$server->id}/provision/retry");
+
+        // Assert
+        $response->assertStatus(302);
+        $response->assertRedirect(route('servers.provisioning', $server));
+        $response->assertSessionHas('success', 'Provisioning restarted.');
+
+        $server->refresh();
+
+        // Status should be installing, not pending
+        $this->assertEquals(TaskStatus::Installing, $server->provision_status);
+
+        // Job should be dispatched
+        \Illuminate\Support\Facades\Queue::assertPushed(
+            \App\Packages\Services\Nginx\NginxInstallerJob::class,
+            fn ($job) => $job->server->id === $server->id && $job->isProvisioningServer === true
+        );
+    }
+
+    /**
+     * Test retry provisioning cleans up existing resources when SSH established.
+     */
+    public function test_retry_cleans_up_resources_when_ssh_established(): void
+    {
+        // Arrange
+        \Illuminate\Support\Facades\Queue::fake();
+
+        $user = User::factory()->create();
+        $server = Server::factory()->create([
+            'user_id' => $user->id,
+            'provision_status' => TaskStatus::Failed,
+            'provision_state' => collect([
+                1 => 'success',
+                2 => 'success',
+                3 => 'success',
+                4 => 'success',
+                5 => 'failed',
+            ]),
+            'provision_config' => collect([
+                'php_version' => '8.4',
+            ]),
+        ]);
+
+        // Create some related resources that should be cleaned up
+        $server->phps()->create([
+            'version' => '8.4',
+            'is_cli_default' => true,
+            'status' => 'failed',
+        ]);
+        $server->nodes()->create([
+            'version' => '20',
+            'status' => 'failed',
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->post("/servers/{$server->id}/provision/retry");
+
+        // Assert
+        $response->assertStatus(302);
+
+        $server->refresh();
+
+        // Related resources should be deleted
+        $this->assertEquals(0, $server->phps()->count());
+        $this->assertEquals(0, $server->nodes()->count());
+    }
+
+    /**
+     * Test retry without php_version in provision_config falls back to reset.
+     */
+    public function test_retry_falls_back_to_reset_without_php_version(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create([
+            'user_id' => $user->id,
+            'provision_status' => TaskStatus::Failed,
+            'provision_state' => collect([
+                1 => 'success',
+                2 => 'success',
+                3 => 'success', // SSH established but no php_version
+            ]),
+            'provision_config' => collect([]), // No php_version
+        ]);
+
+        $oldPassword = $server->ssh_root_password;
+
+        // Act
+        $response = $this->actingAs($user)
+            ->post("/servers/{$server->id}/provision/retry");
+
+        // Assert - should fall back to reset behavior
+        $response->assertStatus(302);
+        $response->assertSessionHas('success', 'Provisioning reset. Run the provisioning command again.');
+
+        $server->refresh();
+
+        $this->assertEquals(TaskStatus::Pending, $server->provision_status);
+        $this->assertNotEquals($oldPassword, $server->ssh_root_password);
     }
 }

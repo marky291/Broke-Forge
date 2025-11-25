@@ -74,6 +74,7 @@ class HandleInertiaRequests extends Middleware
                 'user' => $request->user() ? [
                     ...$request->user()->toArray(),
                     'plan_name' => $request->user()->getCurrentPlanName(),
+                    'can_create_server' => $request->user()->canCreateServer(),
                 ] : null,
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',

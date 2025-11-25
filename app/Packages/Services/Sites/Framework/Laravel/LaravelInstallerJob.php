@@ -91,6 +91,10 @@ class LaravelInstallerJob extends BaseFrameworkInstaller
         // Create shared symlinks
         $this->executeCommands($this->createSharedSymlinks($deploymentPath));
 
+        // Create Laravel storage directory structure (required before composer install)
+        $siteRoot = "/home/brokeforge/deployments/{$site->domain}";
+        $this->executeCommands($this->createLaravelStorageStructure($siteRoot, $deploymentPath));
+
         // Step 4: Create and configure environment file
         $this->updateInstallationStep($site, $currentStep, TaskStatus::Installing);
         $commands = $this->configureEnvironmentFile($site, $deploymentPath);

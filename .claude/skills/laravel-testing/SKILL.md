@@ -1,7 +1,7 @@
 ---
 name: Laravel 12 Test Writer
 description: Use this skill when creating tests, writing tests, creating test coverage, or testing code. Automatically invoked for creating and maintaining unit tests, HTTP tests, and Inertia tests following Laravel 12 and PHPUnit best practices for BrokeForge. Also triggered by prompts like "write tests for [URL]", "test [URL/endpoint]", "write inertia tests for modal [ModalName]", "create tests for [component/page/controller]", or any variation requesting test creation for URLs, pages, controllers, services, or frontend components.
-allowed-tools: Bash(php artisan*), Bash(vendor/bin/pint*), Read, Writyese, Edit, Glob, Grep, mcp__laravel-boost__*
+allowed-tools: Bash(php artisan*), Bash(vendor/bin/pint*), Read, Write, Edit, Glob, Grep, mcp__laravel-boost__*
 ---
 
 # Laravel 12 Test Writer

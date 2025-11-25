@@ -1302,4 +1302,402 @@ class ServerDatabaseControllerTest extends TestCase
             ->where('server.databases.1.type', 'redis')
         );
     }
+
+    /**
+     * Test guest cannot access database detail page.
+     */
+    public function test_guest_cannot_access_database_detail_page(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+        $database = ServerDatabase::factory()->create([
+            'server_id' => $server->id,
+            'type' => DatabaseType::MySQL,
+        ]);
+
+        // Act
+        $response = $this->get("/servers/{$server->id}/databases/{$database->id}");
+
+        // Assert - guests should be redirected to login
+        $response->assertStatus(302);
+        $response->assertRedirect('/login');
+    }
+
+    /**
+     * Test authenticated user can access their MySQL database detail page.
+     */
+    public function test_user_can_access_their_mysql_database_detail_page(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+        $database = ServerDatabase::factory()->create([
+            'server_id' => $server->id,
+            'type' => DatabaseType::MySQL,
+            'status' => TaskStatus::Active,
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/databases/{$database->id}");
+
+        // Assert
+        $response->assertStatus(200);
+    }
+
+    /**
+     * Test authenticated user can access their MariaDB database detail page.
+     */
+    public function test_user_can_access_their_mariadb_database_detail_page(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+        $database = ServerDatabase::factory()->create([
+            'server_id' => $server->id,
+            'type' => DatabaseType::MariaDB,
+            'status' => TaskStatus::Active,
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/databases/{$database->id}");
+
+        // Assert
+        $response->assertStatus(200);
+    }
+
+    /**
+     * Test authenticated user can access their PostgreSQL database detail page.
+     */
+    public function test_user_can_access_their_postgresql_database_detail_page(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+        $database = ServerDatabase::factory()->create([
+            'server_id' => $server->id,
+            'type' => DatabaseType::PostgreSQL,
+            'status' => TaskStatus::Active,
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/databases/{$database->id}");
+
+        // Assert
+        $response->assertStatus(200);
+    }
+
+    /**
+     * Test user cannot access other users database detail page.
+     */
+    public function test_user_cannot_access_other_users_database_detail_page(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $otherUser = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $otherUser->id]);
+        $database = ServerDatabase::factory()->create([
+            'server_id' => $server->id,
+            'type' => DatabaseType::MySQL,
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/databases/{$database->id}");
+
+        // Assert
+        $response->assertStatus(403);
+    }
+
+    /**
+     * Test database detail page renders correct Inertia component.
+     */
+    public function test_database_detail_page_renders_correct_inertia_component(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+        $database = ServerDatabase::factory()->create([
+            'server_id' => $server->id,
+            'type' => DatabaseType::MySQL,
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/databases/{$database->id}");
+
+        // Assert
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('servers/database-details')
+            ->has('server')
+            ->has('database')
+        );
+    }
+
+    /**
+     * Test database detail page includes database data.
+     */
+    public function test_database_detail_page_includes_database_data(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create([
+            'user_id' => $user->id,
+            'vanity_name' => 'Database Server',
+        ]);
+        $database = ServerDatabase::factory()->create([
+            'server_id' => $server->id,
+            'name' => 'Production MySQL',
+            'type' => DatabaseType::MySQL,
+            'version' => '8.0',
+            'port' => 3306,
+            'status' => TaskStatus::Active,
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/databases/{$database->id}");
+
+        // Assert
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('servers/database-details')
+            ->where('database.id', $database->id)
+            ->where('database.name', 'Production MySQL')
+            ->where('database.type', 'mysql')
+            ->where('database.version', '8.0')
+            ->where('database.port', 3306)
+            ->where('database.status', 'active')
+        );
+    }
+
+    /**
+     * Test database detail page only allows MySQL, MariaDB, and PostgreSQL (404 for Redis).
+     */
+    public function test_database_detail_page_only_allows_supported_database_types(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+        $redisDatabase = ServerDatabase::factory()->create([
+            'server_id' => $server->id,
+            'type' => DatabaseType::Redis,
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/databases/{$redisDatabase->id}");
+
+        // Assert - Redis should return 404
+        $response->assertStatus(404);
+    }
+
+    /**
+     * Test database must belong to the server (404 for wrong database).
+     */
+    public function test_database_must_belong_to_server(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server1 = Server::factory()->create(['user_id' => $user->id]);
+        $server2 = Server::factory()->create(['user_id' => $user->id]);
+        $database = ServerDatabase::factory()->create([
+            'server_id' => $server2->id,
+            'type' => DatabaseType::MySQL,
+        ]);
+
+        // Act - Try to access database from server2 using server1's URL
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server1->id}/databases/{$database->id}");
+
+        // Assert - Should return 404 because database doesn't belong to server1
+        $response->assertStatus(404);
+    }
+
+    /**
+     * Test cannot uninstall database when sites are using it.
+     */
+    public function test_cannot_uninstall_database_when_sites_are_using_it(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        $database = ServerDatabase::factory()->create([
+            'server_id' => $server->id,
+            'type' => DatabaseType::MySQL,
+            'status' => TaskStatus::Active,
+        ]);
+
+        // Create sites using this database
+        \App\Models\ServerSite::factory()->create([
+            'server_id' => $server->id,
+            'database_id' => $database->id,
+            'domain' => 'example.com',
+        ]);
+
+        \App\Models\ServerSite::factory()->create([
+            'server_id' => $server->id,
+            'database_id' => $database->id,
+            'domain' => 'test.com',
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->delete("/servers/{$server->id}/databases/{$database->id}");
+
+        // Assert
+        $response->assertStatus(302);
+        $response->assertRedirect("/servers/{$server->id}/services");
+        $response->assertSessionHas('error');
+
+        // Database should still be active (not deleted)
+        $database->refresh();
+        $this->assertEquals(TaskStatus::Active, $database->status);
+    }
+
+    /**
+     * Test error message includes site names when database cannot be uninstalled.
+     */
+    public function test_error_message_includes_site_names_when_database_cannot_be_uninstalled(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        $database = ServerDatabase::factory()->create([
+            'server_id' => $server->id,
+            'type' => DatabaseType::MySQL,
+            'status' => TaskStatus::Active,
+        ]);
+
+        // Create sites using this database
+        \App\Models\ServerSite::factory()->create([
+            'server_id' => $server->id,
+            'database_id' => $database->id,
+            'domain' => 'wordpress.com',
+        ]);
+
+        \App\Models\ServerSite::factory()->create([
+            'server_id' => $server->id,
+            'database_id' => $database->id,
+            'domain' => 'laravel.com',
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->delete("/servers/{$server->id}/databases/{$database->id}");
+
+        // Assert
+        $response->assertStatus(302);
+        $response->assertSessionHas('error');
+
+        $errorMessage = session('error');
+        $this->assertStringContainsString('2 sites', $errorMessage);
+        $this->assertStringContainsString('wordpress.com', $errorMessage);
+        $this->assertStringContainsString('laravel.com', $errorMessage);
+        $this->assertStringContainsString('delete these sites', $errorMessage);
+    }
+
+    /**
+     * Test error message uses singular form when one site is using database.
+     */
+    public function test_error_message_uses_singular_form_for_one_site(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        $database = ServerDatabase::factory()->create([
+            'server_id' => $server->id,
+            'type' => DatabaseType::PostgreSQL,
+            'status' => TaskStatus::Active,
+        ]);
+
+        // Create one site using this database
+        \App\Models\ServerSite::factory()->create([
+            'server_id' => $server->id,
+            'database_id' => $database->id,
+            'domain' => 'example.com',
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->delete("/servers/{$server->id}/databases/{$database->id}");
+
+        // Assert
+        $response->assertStatus(302);
+        $response->assertSessionHas('error');
+
+        $errorMessage = session('error');
+        $this->assertStringContainsString('1 site currently depend', $errorMessage);
+        $this->assertStringNotContainsString('2 sites', $errorMessage);
+        $this->assertStringContainsString('example.com', $errorMessage);
+    }
+
+    /**
+     * Test database services page includes sites_count for each database.
+     */
+    public function test_database_services_page_includes_sites_count(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        $database = ServerDatabase::factory()->create([
+            'server_id' => $server->id,
+            'type' => DatabaseType::MySQL,
+            'status' => TaskStatus::Active,
+        ]);
+
+        // Create sites using this database
+        \App\Models\ServerSite::factory()->count(3)->create([
+            'server_id' => $server->id,
+            'database_id' => $database->id,
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/services");
+
+        // Assert
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('servers/services')
+            ->has('server.databases', 1)
+            ->where('server.databases.0.sites_count', 3)
+        );
+    }
+
+    /**
+     * Test database services page shows zero sites_count for database with no sites.
+     */
+    public function test_database_services_page_shows_zero_sites_count_for_database_with_no_sites(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        $database = ServerDatabase::factory()->create([
+            'server_id' => $server->id,
+            'type' => DatabaseType::MySQL,
+            'status' => TaskStatus::Active,
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/services");
+
+        // Assert
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('servers/services')
+            ->has('server.databases', 1)
+            ->where('server.databases.0.sites_count', 0)
+        );
+    }
 }

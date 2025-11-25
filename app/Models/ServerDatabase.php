@@ -47,6 +47,16 @@ class ServerDatabase extends Model
         return $this->hasMany(ServerSite::class, 'database_id');
     }
 
+    public function schemas(): HasMany
+    {
+        return $this->hasMany(ServerDatabaseSchema::class);
+    }
+
+    public function users(): HasMany
+    {
+        return $this->hasMany(ServerDatabaseUser::class);
+    }
+
     /**
      * Boot the model and dispatch broadcast events.
      */

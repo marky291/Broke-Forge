@@ -5,6 +5,7 @@ namespace Tests\Unit\Packages\Services\Database\PostgreSQL;
 use App\Enums\TaskStatus;
 use App\Models\Server;
 use App\Models\ServerDatabase;
+use App\Models\ServerDatabaseUser;
 use App\Packages\Services\Database\PostgreSQL\PostgreSQLInstallerJob;
 use Exception;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -197,5 +198,50 @@ class PostgreSQLInstallerJobTest extends TestCase
         $this->assertEquals('8.0', $database->version);
         $this->assertEquals(3306, $database->port);
         $this->assertEquals($server->id, $database->server_id);
+    }
+
+    /**
+     * Test handleSuccess creates postgres superuser after successful installation.
+     */
+    public function test_handle_success_creates_postgres_user(): void
+    {
+        // Arrange
+        $server = Server::factory()->create();
+        $database = ServerDatabase::factory()->create([
+            'server_id' => $server->id,
+            'status' => TaskStatus::Installing,
+            'root_password' => 'secret-postgres-password',
+        ]);
+
+        $job = new PostgreSQLInstallerJob($server, $database);
+
+        // Act - use reflection to call protected method
+        $reflection = new \ReflectionClass($job);
+        $method = $reflection->getMethod('handleSuccess');
+        $method->setAccessible(true);
+        $method->invoke($job, $database);
+
+        // Assert - database status updated to Active
+        $database->refresh();
+        $this->assertEquals(TaskStatus::Active, $database->status);
+
+        // Assert - postgres user created (PostgreSQL uses 'postgres', not 'root')
+        $this->assertDatabaseHas('server_database_users', [
+            'server_database_id' => $database->id,
+            'is_root' => true,
+            'username' => 'postgres',
+            'host' => 'localhost',
+            'privileges' => 'all',
+            'status' => TaskStatus::Active->value,
+        ]);
+
+        // Verify postgres user properties
+        $postgresUser = ServerDatabaseUser::where('server_database_id', $database->id)
+            ->where('is_root', true)
+            ->first();
+
+        $this->assertNotNull($postgresUser);
+        $this->assertEquals('postgres', $postgresUser->username);
+        $this->assertTrue($postgresUser->is_root);
     }
 }

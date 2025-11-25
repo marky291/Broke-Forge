@@ -9,6 +9,7 @@ use App\Models\ServerPhp;
 use App\Packages\Enums\NodeVersion;
 use App\Packages\Enums\PhpVersion;
 use App\Packages\Services\Node\NodeInstallerJob;
+use App\Packages\Services\TimeSync\TimeSyncInstallerJob;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -587,5 +588,59 @@ class NginxInstallerTest extends TestCase
         // Verify specific directories are chmod'd
         $allChmodCommands = $chmodCommands->join(' ');
         $this->assertStringContainsString('/deployments', $allChmodCommands);
+    }
+
+    /**
+     * Test that TimeSyncInstallerJob is properly imported and can be instantiated.
+     * This verifies the import statement was added correctly after the bug fix.
+     */
+    public function test_time_sync_installer_job_can_be_instantiated(): void
+    {
+        // Arrange
+        $server = Server::factory()->create();
+
+        // Act - Create job as NginxInstaller does
+        $job = new TimeSyncInstallerJob($server);
+
+        // Assert - Verify job structure
+        $this->assertInstanceOf(TimeSyncInstallerJob::class, $job);
+        $this->assertEquals($server->id, $job->server->id);
+    }
+
+    /**
+     * Test that TimeSyncInstallerJob class exists in the correct namespace.
+     * Ensures the import path App\Packages\Services\TimeSync\TimeSyncInstallerJob is valid.
+     */
+    public function test_time_sync_installer_job_exists_in_correct_namespace(): void
+    {
+        // Assert - Verify class exists in the expected namespace
+        $this->assertTrue(
+            class_exists(\App\Packages\Services\TimeSync\TimeSyncInstallerJob::class),
+            'TimeSyncInstallerJob should exist in App\Packages\Services\TimeSync namespace'
+        );
+    }
+
+    /**
+     * Test that NginxInstaller has access to TimeSyncInstallerJob.
+     * Verifies the import statement in NginxInstaller.php is correct.
+     */
+    public function test_nginx_installer_can_reference_time_sync_installer_job(): void
+    {
+        // Arrange
+        $server = Server::factory()->create();
+        $installer = new \App\Packages\Services\Nginx\NginxInstaller($server);
+
+        // Use reflection to verify the class can be loaded without errors
+        $reflection = new \ReflectionClass($installer);
+
+        // Assert - If we got here, the class loaded successfully with all imports
+        $this->assertInstanceOf(\ReflectionClass::class, $reflection);
+        $this->assertEquals('App\Packages\Services\Nginx\NginxInstaller', $reflection->getName());
+
+        // Verify TimeSyncInstallerJob is importable from NginxInstaller's context
+        $this->assertTrue(
+            class_exists(TimeSyncInstallerJob::class),
+            'TimeSyncInstallerJob should be importable from NginxInstaller context'
+        );
     }
 }

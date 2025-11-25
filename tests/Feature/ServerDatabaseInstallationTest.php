@@ -35,7 +35,7 @@ class ServerDatabaseInstallationTest extends TestCase
         // Act - attempt to install MariaDB (same category)
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
-                'name' => 'Second Database',
+                'name' => 'second_database',
                 'type' => 'mariadb',
                 'version' => '11.4',
                 'port' => 3307,
@@ -64,7 +64,7 @@ class ServerDatabaseInstallationTest extends TestCase
         // Act - install MySQL on empty server
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
-                'name' => 'First Database',
+                'name' => 'first_database',
                 'type' => 'mysql',
                 'version' => '8.0',
                 'port' => 3306,
@@ -78,7 +78,7 @@ class ServerDatabaseInstallationTest extends TestCase
         $this->assertDatabaseHas('server_databases', [
             'server_id' => $server->id,
             'type' => 'mysql',
-            'name' => 'First Database',
+            'name' => 'first_database',
             'status' => 'pending',
         ]);
     }
@@ -106,7 +106,7 @@ class ServerDatabaseInstallationTest extends TestCase
         // Act - install Redis (different category)
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
-                'name' => 'Cache Service',
+                'name' => 'cache_service',
                 'type' => 'redis',
                 'version' => '7.2',
                 'port' => 6379,
@@ -187,7 +187,7 @@ class ServerDatabaseInstallationTest extends TestCase
         // Act - attempt to install MySQL (same category)
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
-                'name' => 'Second Database',
+                'name' => 'second_database',
                 'type' => 'mysql',
                 'version' => '8.0',
                 'port' => 3306,
@@ -225,7 +225,7 @@ class ServerDatabaseInstallationTest extends TestCase
         // Act - install MariaDB (same category but previous is failed)
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
-                'name' => 'New Database',
+                'name' => 'new_database',
                 'type' => 'mariadb',
                 'version' => '11.4',
                 'port' => 3307,
@@ -265,7 +265,7 @@ class ServerDatabaseInstallationTest extends TestCase
         // Act - attempt to install second Redis
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
-                'name' => 'Second Redis',
+                'name' => 'second_redis',
                 'type' => 'redis',
                 'version' => '7.0',
                 'port' => 6380,
@@ -292,7 +292,7 @@ class ServerDatabaseInstallationTest extends TestCase
         // Act
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
-                'name' => 'Unauthorized Database',
+                'name' => 'unauthorized_database',
                 'type' => 'mysql',
                 'version' => '8.0',
                 'port' => 3306,
@@ -303,7 +303,7 @@ class ServerDatabaseInstallationTest extends TestCase
         $response->assertStatus(403);
         $this->assertDatabaseMissing('server_databases', [
             'server_id' => $server->id,
-            'name' => 'Unauthorized Database',
+            'name' => 'unauthorized_database',
         ]);
     }
 
@@ -337,7 +337,7 @@ class ServerDatabaseInstallationTest extends TestCase
         // Act - submit with short password
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
-                'name' => 'Test Database',
+                'name' => 'test_database',
                 'type' => 'mysql',
                 'version' => '8.0',
                 'port' => 3306,
@@ -371,7 +371,7 @@ class ServerDatabaseInstallationTest extends TestCase
         // Act - attempt to use same port (even though first one failed, port is still taken)
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
-                'name' => 'Test Database',
+                'name' => 'test_database',
                 'type' => 'mariadb',
                 'version' => '11.4',
                 'port' => 3306,
@@ -405,7 +405,7 @@ class ServerDatabaseInstallationTest extends TestCase
         // Act - attempt to install MariaDB
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
-                'name' => 'Second Database',
+                'name' => 'second_database',
                 'type' => 'mariadb',
                 'version' => '11.4',
                 'port' => 3307,
@@ -439,7 +439,7 @@ class ServerDatabaseInstallationTest extends TestCase
         // Act - attempt to install PostgreSQL
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
-                'name' => 'Second Database',
+                'name' => 'second_database',
                 'type' => 'postgresql',
                 'version' => '16',
                 'port' => 5432,
@@ -461,7 +461,7 @@ class ServerDatabaseInstallationTest extends TestCase
 
         // Act
         $response = $this->post("/servers/{$server->id}/databases", [
-            'name' => 'Test Database',
+            'name' => 'test_database',
             'type' => 'mysql',
             'version' => '8.0',
             'port' => 3306,
@@ -486,7 +486,7 @@ class ServerDatabaseInstallationTest extends TestCase
         // Act
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
-                'name' => 'Test Database',
+                'name' => 'test_database',
                 'type' => 'mysql',
                 'version' => '8.0',
                 'port' => 3306,

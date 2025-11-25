@@ -188,6 +188,7 @@ class ServerResource extends JsonResource
         return $this->sites()->with('siteFramework')->latest('id')->get()->map(fn ($site) => [
             'id' => $site->id,
             'domain' => $site->domain,
+            'database_id' => $site->database_id,
             'document_root' => $site->document_root,
             'php_version' => $site->php_version,
             'ssl_enabled' => $site->ssl_enabled,
@@ -355,13 +356,14 @@ class ServerResource extends JsonResource
      */
     protected function transformDatabases(): array
     {
-        return $this->databases()->latest()->get()->map(fn ($db) => [
+        return $this->databases()->withCount('sites')->latest()->get()->map(fn ($db) => [
             'id' => $db->id,
             'name' => $db->name,
             'type' => $db->type?->value ?? $db->type,
             'version' => $db->version,
             'port' => $db->port,
             'status' => $db->status?->value ?? $db->status,
+            'sites_count' => $db->sites_count,
             'error_log' => $db->error_log,
             'created_at' => $db->created_at?->toISOString(),
             'updated_at' => $db->updated_at?->toISOString(),

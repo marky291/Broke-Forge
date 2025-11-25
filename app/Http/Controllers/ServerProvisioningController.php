@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Enums\TaskStatus;
 use App\Http\Resources\ServerProvisioningResource;
 use App\Models\Server;
+use App\Packages\Enums\PhpVersion;
 use App\Packages\ProvisionAccess;
+use App\Packages\Services\Nginx\NginxInstallerJob;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -64,11 +66,13 @@ class ServerProvisioningController extends Controller
     }
 
     /**
-     * Reset the server so provisioning can be attempted again.
+     * Retry provisioning for a failed server.
+     *
+     * If SSH connection is already established (step 3 complete), re-dispatch
+     * NginxInstallerJob directly. Otherwise, reset to pending for manual re-run.
      */
     public function retry(Server $server): RedirectResponse
     {
-        // Authorize user can update this server
         $this->authorize('update', $server);
 
         if ($server->provision_status !== TaskStatus::Failed) {
@@ -77,11 +81,45 @@ class ServerProvisioningController extends Controller
                 ->with('error', 'Provisioning is not in a failed state.');
         }
 
-        // Generate new root password for the next attempt
-        $server->ssh_root_password = Server::generatePassword();
+        // Check if SSH connection was already established (step 3 = success)
+        $sshEstablished = $server->provision_state->get(3) === TaskStatus::Success->value;
 
+        if ($sshEstablished && $server->provision_config?->has('php_version')) {
+            // SSH is working - clean up failed installation and re-dispatch job
+            $server->databases()->delete();
+            $server->phps()->delete();
+            $server->reverseProxy()->delete();
+            $server->firewall?->rules()->delete();
+            $server->firewall()->delete();
+            $server->scheduledTasks()->delete();
+            $server->supervisorTasks()->delete();
+            $server->nodes()->delete();
+
+            // Reset provision state to step 3 complete, step 5 installing
+            $server->provision_state = collect([
+                1 => TaskStatus::Success->value,
+                2 => TaskStatus::Success->value,
+                3 => TaskStatus::Success->value,
+                4 => TaskStatus::Success->value,
+                5 => TaskStatus::Installing->value,
+            ]);
+            $server->provision_status = TaskStatus::Installing;
+            $server->save();
+
+            // Dispatch the provisioning job
+            $phpVersion = PhpVersion::from($server->provision_config->get('php_version'));
+            NginxInstallerJob::dispatch($server, $phpVersion, isProvisioningServer: true);
+
+            return redirect()
+                ->route('servers.provisioning', $server)
+                ->with('success', 'Provisioning restarted.');
+        }
+
+        // SSH not established - reset everything for manual re-run
+        $server->ssh_root_password = Server::generatePassword();
         $server->connection_status = TaskStatus::Pending;
         $server->provision_status = TaskStatus::Pending;
+        $server->provision_state = collect();
         $server->save();
 
         return redirect()

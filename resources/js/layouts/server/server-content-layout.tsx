@@ -48,7 +48,7 @@ export default function ServerContentLayout({ children, server, breadcrumbs }: S
         currentSection = 'php';
     } else if (path.includes('/node')) {
         currentSection = 'node';
-    } else if (path.includes('/services')) {
+    } else if (path.includes('/services') || path.includes('/databases')) {
         currentSection = 'services';
     } else if (path.includes('/firewall')) {
         currentSection = 'firewall';
@@ -60,10 +60,13 @@ export default function ServerContentLayout({ children, server, breadcrumbs }: S
         currentSection = 'settings';
     }
 
-    // Back to dashboard navigation
+    // Determine if we're on a detail page (e.g., /servers/6/databases/5)
+    const isServiceDetailPage = /\/databases\/\d+/.test(path);
+
+    // Back navigation - contextual based on whether we're on a detail page within services
     const backToDashboardNav: NavItem = {
-        title: 'Back to Dashboard',
-        href: '/dashboard',
+        title: isServiceDetailPage ? 'Back to Services' : 'Back to Dashboard',
+        href: isServiceDetailPage ? `/servers/${server.id}/services` : '/dashboard',
         icon: ArrowLeft,
         isActive: false,
     };

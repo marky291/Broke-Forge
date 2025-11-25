@@ -1,4 +1,5 @@
 import { CardList, type CardListAction } from '@/components/card-list';
+import { ServiceIcon } from '@/components/service-icon';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { CardBadge } from '@/components/ui/card-badge';
@@ -11,9 +12,9 @@ import ServerLayout from '@/layouts/server/layout';
 import { dashboard } from '@/routes';
 import { show as showServer } from '@/routes/servers';
 import { type BreadcrumbItem, type Server } from '@/types';
-import { Head, router, useForm } from '@inertiajs/react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { useEcho } from '@laravel/echo-react';
-import { DatabaseIcon, Layers, Loader2, Pencil, RotateCw, Trash2 } from 'lucide-react';
+import { CheckCircle2, ChevronRight, DatabaseIcon, Globe, Layers, Loader2, Pencil, RotateCw, Trash2, XCircle } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 type DatabaseVersion = {
@@ -40,6 +41,7 @@ type ServiceItem = {
     version: string;
     port: number;
     status: string;
+    sites_count?: number;
     created_at: string;
 };
 
@@ -54,6 +56,8 @@ export default function Services({
     availableDatabases?: AvailableServices;
     availableCacheQueue?: AvailableServices;
 }) {
+    const { flash } = usePage<{ flash: { success?: string; error?: string } }>().props;
+
     // Filter databases (exclude cache/queue like Redis)
     const databases = useMemo(() => {
         const allDatabases = server.databases || [];
@@ -81,6 +85,8 @@ export default function Services({
     const [selectedService, setSelectedService] = useState<ServiceItem | null>(null);
     const [updateVersion, setUpdateVersion] = useState<string>('');
     const [submitError, setSubmitError] = useState<string | null>(null);
+    const [isDependentSitesDialogOpen, setIsDependentSitesDialogOpen] = useState(false);
+    const [dependentSitesDatabase, setDependentSitesDatabase] = useState<ServiceItem | null>(null);
 
     // Determine which service types are available for the current dialog
     const currentServices = installDialogType === 'database' ? availableDatabases : availableCacheQueue;
@@ -209,6 +215,15 @@ export default function Services({
 
     const handleDelete = (service: ServiceItem, serviceType: 'database' | 'cache-queue') => {
         const serviceName = currentServices?.[service.type]?.name || service.type;
+        const sitesCount = service.sites_count ?? 0;
+
+        // Check if sites are using this database
+        if (serviceType === 'database' && sitesCount > 0) {
+            setDependentSitesDatabase(service);
+            setIsDependentSitesDialogOpen(true);
+            return;
+        }
+
         if (confirm(`Are you sure you want to uninstall ${serviceName} ${service.version}? This will remove all data and cannot be undone.`)) {
             router.delete(`/servers/${server.id}/databases/${service.id}`, {
                 preserveScroll: true,
@@ -242,6 +257,22 @@ export default function Services({
         <ServerLayout server={server} breadcrumbs={breadcrumbs}>
             <Head title={`Services — ${server.vanity_name}`} />
             <PageHeader title="Services Management" description="Install and manage database, caching, and queueing services for your server.">
+                {/* Success Message */}
+                {flash?.success && (
+                    <Alert variant="default" className="border-green-200 bg-green-50 text-green-900">
+                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                        <AlertDescription>{flash.success}</AlertDescription>
+                    </Alert>
+                )}
+
+                {/* Error Message */}
+                {flash?.error && (
+                    <Alert variant="destructive">
+                        <XCircle className="h-4 w-4" />
+                        <AlertDescription>{flash.error}</AlertDescription>
+                    </Alert>
+                )}
+
                 {/* Databases Section */}
                 <CardList<ServiceItem>
                     title="Databases"
@@ -266,21 +297,44 @@ export default function Services({
                     addButtonLabel="Add Database"
                     items={databases}
                     keyExtractor={(db) => db.id}
-                    renderItem={(db) => (
-                        <div className="flex items-center justify-between gap-3">
-                            <div className="min-w-0 flex-1">
-                                <div className="truncate text-sm font-medium">
-                                    {availableDatabases?.[db.type]?.name || db.type} {db.version}
+                    renderItem={(db) => {
+                        const hasDetailPage = ['mysql', 'mariadb', 'postgresql'].includes(db.type);
+                        const sitesCount = db.sites_count ?? 0;
+                        const content = (
+                            <div className="flex items-center justify-between gap-3">
+                                <div className="flex min-w-0 flex-1 items-center gap-3">
+                                    <ServiceIcon service={db.type as any} />
+                                    <div className="min-w-0 flex-1">
+                                        <div className="truncate text-sm font-medium">
+                                            {availableDatabases?.[db.type]?.name || db.type} {db.version}
+                                        </div>
+                                        <div className="truncate text-xs text-muted-foreground">
+                                            Port {db.port} · {db.name}
+                                            {sitesCount > 0 && (
+                                                <span className="ml-2 text-blue-600 dark:text-blue-400">
+                                                    · {sitesCount} {sitesCount === 1 ? 'site' : 'sites'} using
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="truncate text-xs text-muted-foreground">
-                                    Port {db.port} · {db.name}
+                                <div className="flex items-center gap-2 flex-shrink-0">
+                                    <CardBadge variant={db.status as any} />
+                                    {hasDetailPage && <ChevronRight className="h-4 w-4 text-muted-foreground" />}
                                 </div>
                             </div>
-                            <div className="flex-shrink-0">
-                                <CardBadge variant={db.status as any} />
-                            </div>
-                        </div>
-                    )}
+                        );
+
+                        if (hasDetailPage) {
+                            return (
+                                <Link href={`/servers/${server.id}/databases/${db.id}`} className="block hover:bg-muted/50 -mx-3 px-3 rounded transition-colors">
+                                    {content}
+                                </Link>
+                            );
+                        }
+
+                        return content;
+                    }}
                     actions={(db) => {
                         const actions: CardListAction[] = [];
                         const isInTransition =
@@ -358,12 +412,15 @@ export default function Services({
                         keyExtractor={(service) => service.id}
                         renderItem={(service) => (
                             <div className="flex items-center justify-between gap-3">
-                                <div className="min-w-0 flex-1">
-                                    <div className="truncate text-sm font-medium">
-                                        {availableCacheQueue?.[service.type]?.name || service.type} {service.version}
-                                    </div>
-                                    <div className="truncate text-xs text-muted-foreground">
-                                        Port {service.port} · {service.name}
+                                <div className="flex min-w-0 flex-1 items-center gap-3">
+                                    <ServiceIcon service={service.type as any} />
+                                    <div className="min-w-0 flex-1">
+                                        <div className="truncate text-sm font-medium">
+                                            {availableCacheQueue?.[service.type]?.name || service.type} {service.version}
+                                        </div>
+                                        <div className="truncate text-xs text-muted-foreground">
+                                            Port {service.port} · {service.name}
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="flex-shrink-0">
@@ -601,6 +658,87 @@ export default function Services({
                                     }
                                 >
                                     Update Service
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
+
+            {/* Dependent Sites Warning Dialog */}
+            <Dialog open={isDependentSitesDialogOpen} onOpenChange={setIsDependentSitesDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <XCircle className="h-5 w-5 text-red-600" />
+                            Cannot Uninstall Database
+                        </DialogTitle>
+                        <DialogDescription>
+                            This database cannot be uninstalled because sites are currently using it.
+                        </DialogDescription>
+                    </DialogHeader>
+                    {dependentSitesDatabase && (
+                        <div className="space-y-4">
+                            <Alert variant="destructive">
+                                <AlertDescription>
+                                    <strong>
+                                        {dependentSitesDatabase.sites_count || 0}{' '}
+                                        {(dependentSitesDatabase.sites_count || 0) === 1 ? 'site' : 'sites'} currently depend on this
+                                        database
+                                    </strong>
+                                </AlertDescription>
+                            </Alert>
+
+                            {(() => {
+                                const dependentSites = (server.sites || []).filter(
+                                    (site) => site.database_id === dependentSitesDatabase.id,
+                                );
+
+                                return dependentSites.length > 0 ? (
+                                    <div className="space-y-2">
+                                        <Label>Sites using this database:</Label>
+                                        <div className="max-h-60 overflow-auto rounded-md border">
+                                            <ul className="divide-y">
+                                                {dependentSites.map((site) => (
+                                                    <li key={site.id} className="flex items-center justify-between px-4 py-3">
+                                                        <div className="flex items-center gap-3">
+                                                            <Globe className="h-4 w-4 text-muted-foreground" />
+                                                            <span className="font-medium">{site.domain}</span>
+                                                        </div>
+                                                        <Link
+                                                            href={`/servers/${server.id}/sites/${site.id}`}
+                                                            className="text-sm text-blue-600 hover:underline dark:text-blue-400"
+                                                        >
+                                                            View Site
+                                                        </Link>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="rounded-md border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950/20">
+                                        <p className="text-sm text-amber-900 dark:text-amber-100">
+                                            Unable to load the list of sites. Please check the Sites page to see which sites are using this
+                                            database.
+                                        </p>
+                                    </div>
+                                );
+                            })()}
+
+                            <div className="rounded-md bg-blue-50 p-4 dark:bg-blue-950/20">
+                                <p className="text-sm text-blue-900 dark:text-blue-100">
+                                    <strong>To uninstall this database:</strong>
+                                </p>
+                                <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-blue-800 dark:text-blue-200">
+                                    <li>Delete these sites, or</li>
+                                    <li>Migrate them to a different database</li>
+                                </ul>
+                            </div>
+
+                            <div className="flex justify-end gap-3">
+                                <Button variant="outline" onClick={() => setIsDependentSitesDialogOpen(false)}>
+                                    Close
                                 </Button>
                             </div>
                         </div>

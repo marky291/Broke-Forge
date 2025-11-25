@@ -147,7 +147,7 @@ export default function Dashboard({ dashboard }: { dashboard: DashboardData }) {
                 </div>
 
                 {/* Recent Servers Section */}
-                {servers && servers.length > 0 ? (
+                {servers && servers.length > 0 && (
                     <CardList<Server>
                         title="Recent servers"
                         icon={
@@ -165,6 +165,16 @@ export default function Dashboard({ dashboard }: { dashboard: DashboardData }) {
                                 <path d="M3 5h6M3 7h6" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
                             </svg>
                         }
+                        onAddClick={() => {
+                            if (auth.user.can_create_server) {
+                                // The DeployServerModal will be shown via a different trigger
+                                // For now, we need to handle this case
+                                document.getElementById('deploy-server-trigger')?.click();
+                            } else {
+                                router.visit('/billing');
+                            }
+                        }}
+                        addButtonLabel="Add Server"
                         items={servers}
                         keyExtractor={(server) => server.id}
                         onItemClick={(server) => router.visit(showServer(server.id).url)}
@@ -194,7 +204,14 @@ export default function Dashboard({ dashboard }: { dashboard: DashboardData }) {
                         emptyStateMessage="No servers yet. Deploy your first server to get started."
                         emptyStateIcon={<ServerIcon className="h-6 w-6 text-muted-foreground" />}
                     />
-                ) : (
+                )}
+                {/* Hidden trigger for DeployServerModal when servers exist */}
+                {servers && servers.length > 0 && auth.user.can_create_server && (
+                    <DeployServerModal
+                        trigger={<button id="deploy-server-trigger" className="hidden" aria-hidden="true" />}
+                    />
+                )}
+                {(!servers || servers.length === 0) && (
                     <CardContainer
                         title="Recent servers"
                         icon={
@@ -213,21 +230,36 @@ export default function Dashboard({ dashboard }: { dashboard: DashboardData }) {
                             </svg>
                         }
                         action={
-                            <DeployServerModal
-                                trigger={<CardContainerAddButton label="Add Server" onClick={() => {}} aria-label="Deploy Server" />}
-                            />
+                            auth.user.can_create_server ? (
+                                <DeployServerModal
+                                    trigger={<CardContainerAddButton label="Add Server" onClick={() => {}} aria-label="Deploy Server" />}
+                                />
+                            ) : (
+                                <CardContainerAddButton
+                                    label="Add Server"
+                                    onClick={() => router.visit('/billing')}
+                                    aria-label="Upgrade to Deploy Server"
+                                />
+                            )
                         }
                     >
                         <div className="py-12 text-center">
                             <p className="text-sm text-muted-foreground">No servers yet. Deploy your first server to get started.</p>
-                            <DeployServerModal
-                                trigger={
-                                    <Button className="mt-4" size="sm">
-                                        <Plus className="mr-2 size-4" />
-                                        Deploy Server
-                                    </Button>
-                                }
-                            />
+                            {auth.user.can_create_server ? (
+                                <DeployServerModal
+                                    trigger={
+                                        <Button className="mt-4" size="sm">
+                                            <Plus className="mr-2 size-4" />
+                                            Deploy Server
+                                        </Button>
+                                    }
+                                />
+                            ) : (
+                                <Button className="mt-4" size="sm" onClick={() => router.visit('/billing')}>
+                                    <Plus className="mr-2 size-4" />
+                                    Deploy Server
+                                </Button>
+                            )}
                         </div>
                     </CardContainer>
                 )}

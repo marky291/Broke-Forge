@@ -38,6 +38,8 @@ export interface User {
     email_verified_at: string | null;
     created_at: string;
     updated_at: string;
+    plan_name?: string;
+    can_create_server?: boolean;
     [key: string]: unknown; // This allows for additional properties...
 }
 
@@ -115,6 +117,7 @@ export interface Server {
         version: string;
         port: number;
         status: string;
+        sites_count?: number;
         created_at: string;
     }[];
     phps: ServerPhp[];
@@ -299,6 +302,7 @@ export interface ServerSite {
     id: number;
     server_id: number;
     domain: string;
+    database_id?: number | null;
     document_root: string;
     php_version: string;
     ssl_enabled: boolean;

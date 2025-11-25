@@ -344,6 +344,28 @@ abstract class BaseFrameworkInstaller extends Taskable
     }
 
     /**
+     * Create Laravel storage directory structure.
+     *
+     * Laravel requires specific storage subdirectories to exist before
+     * composer install runs, as the post-autoload hook executes artisan
+     * commands that need to access these paths.
+     */
+    protected function createLaravelStorageStructure(string $siteRoot, string $deploymentPath): array
+    {
+        return [
+            sprintf('mkdir -p %s/shared/storage/framework/cache/data', escapeshellarg($siteRoot)),
+            sprintf('mkdir -p %s/shared/storage/framework/sessions', escapeshellarg($siteRoot)),
+            sprintf('mkdir -p %s/shared/storage/framework/testing', escapeshellarg($siteRoot)),
+            sprintf('mkdir -p %s/shared/storage/framework/views', escapeshellarg($siteRoot)),
+            sprintf('mkdir -p %s/shared/storage/logs', escapeshellarg($siteRoot)),
+            sprintf('mkdir -p %s/shared/storage/app/public', escapeshellarg($siteRoot)),
+            sprintf('mkdir -p %s/bootstrap/cache', escapeshellarg($deploymentPath)),
+            sprintf('chmod -R 775 %s/shared/storage', escapeshellarg($siteRoot)),
+            sprintf('chmod 775 %s/bootstrap/cache', escapeshellarg($deploymentPath)),
+        ];
+    }
+
+    /**
      * Finalize installation by updating site status.
      */
     protected function finalizeInstallation(ServerSite $site, array $additionalData = []): void

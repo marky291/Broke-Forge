@@ -53,8 +53,7 @@ class TimeSyncInstallerJob extends Taskable
     protected function getAdditionalSuccessData(Model $model): array
     {
         return [
-            'timesync_installed_at' => no
-            w(),
+            'timesync_installed_at' => now(),
         ];
     }
 

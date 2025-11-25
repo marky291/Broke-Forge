@@ -354,4 +354,45 @@ class LaravelInstallerJobTest extends TestCase
         // Password with spaces should be quoted
         $this->assertStringContainsString('DB_PASSWORD="my secret password"', $allCommands);
     }
+
+    /**
+     * Test Laravel storage structure is created with all required directories.
+     */
+    public function test_creates_laravel_storage_structure_with_all_required_directories(): void
+    {
+        // Arrange
+        $server = Server::factory()->create();
+        $site = ServerSite::factory()->create([
+            'server_id' => $server->id,
+            'domain' => 'test.com',
+        ]);
+        $job = new LaravelInstallerJob($server, $site->id);
+        $siteRoot = '/home/brokeforge/deployments/test.com';
+        $deploymentPath = "{$siteRoot}/12345";
+
+        // Act - use reflection to access protected method
+        $reflection = new \ReflectionClass($job);
+        $method = $reflection->getMethod('createLaravelStorageStructure');
+        $method->setAccessible(true);
+        $commands = $method->invoke($job, $siteRoot, $deploymentPath);
+
+        // Assert
+        $this->assertIsArray($commands);
+        $this->assertNotEmpty($commands);
+
+        // Join all commands to check for required directories
+        $allCommands = implode(' ', $commands);
+
+        // Verify all Laravel storage directories are created
+        $this->assertStringContainsString('storage/framework/cache/data', $allCommands);
+        $this->assertStringContainsString('storage/framework/sessions', $allCommands);
+        $this->assertStringContainsString('storage/framework/testing', $allCommands);
+        $this->assertStringContainsString('storage/framework/views', $allCommands);
+        $this->assertStringContainsString('storage/logs', $allCommands);
+        $this->assertStringContainsString('storage/app/public', $allCommands);
+        $this->assertStringContainsString('bootstrap/cache', $allCommands);
+
+        // Verify permissions are set
+        $this->assertStringContainsString('chmod', $allCommands);
+    }
 }

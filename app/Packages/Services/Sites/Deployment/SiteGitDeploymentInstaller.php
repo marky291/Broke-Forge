@@ -207,6 +207,39 @@ class SiteGitDeploymentInstaller extends PackageInstaller implements \App\Packag
             }
         };
 
+        // Create Laravel storage directory structure (required before composer install)
+        $commands[] = function () use ($siteRoot, $deploymentPath) {
+            $storageCommands = sprintf(
+                'mkdir -p %s/shared/storage/framework/cache/data && '.
+                'mkdir -p %s/shared/storage/framework/sessions && '.
+                'mkdir -p %s/shared/storage/framework/testing && '.
+                'mkdir -p %s/shared/storage/framework/views && '.
+                'mkdir -p %s/shared/storage/logs && '.
+                'mkdir -p %s/shared/storage/app/public && '.
+                'mkdir -p %s/bootstrap/cache && '.
+                'chmod -R 775 %s/shared/storage && '.
+                'chmod 775 %s/bootstrap/cache',
+                escapeshellarg($siteRoot),
+                escapeshellarg($siteRoot),
+                escapeshellarg($siteRoot),
+                escapeshellarg($siteRoot),
+                escapeshellarg($siteRoot),
+                escapeshellarg($siteRoot),
+                escapeshellarg($deploymentPath),
+                escapeshellarg($siteRoot),
+                escapeshellarg($deploymentPath)
+            );
+
+            $process = $this->server->ssh('brokeforge')->execute($storageCommands);
+
+            if (! $process->isSuccessful()) {
+                Log::warning('Failed to create Laravel storage structure during deployment', [
+                    'deployment_path' => $deploymentPath,
+                ]);
+                // Don't throw - site might not be Laravel
+            }
+        };
+
         // Execute each line of the deployment script in the new deployment directory
         foreach ($scriptLines as $index => $line) {
             $commands[] = function () use ($deploymentPath, $line, $logFilePath, $deployment, $index) {

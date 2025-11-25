@@ -5,6 +5,7 @@ namespace App\Packages\Services\Database\PostgreSQL;
 use App\Enums\TaskStatus;
 use App\Models\Server;
 use App\Models\ServerDatabase;
+use App\Models\ServerDatabaseUser;
 use App\Packages\Taskable;
 use Illuminate\Database\Eloquent\Model;
 
@@ -63,5 +64,25 @@ class PostgreSqlInstallerJob extends Taskable
             'error' => $exception->getMessage(),
             'trace' => $exception->getTraceAsString(),
         ];
+    }
+
+    /**
+     * Override handleSuccess to create root user after successful installation.
+     */
+    protected function handleSuccess(Model $model): void
+    {
+        // Call parent to update status to Active
+        parent::handleSuccess($model);
+
+        // Create postgres superuser record for this database
+        ServerDatabaseUser::create([
+            'server_database_id' => $model->id,
+            'is_root' => true,
+            'username' => 'postgres',
+            'password' => $model->root_password,
+            'host' => 'localhost',
+            'privileges' => 'all',
+            'status' => TaskStatus::Active,
+        ]);
     }
 }

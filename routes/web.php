@@ -142,6 +142,28 @@ Route::middleware('auth')->group(function () {
         Route::get('services', [ServerDatabaseController::class, 'services'])
             ->name('services');
 
+        // Database detail page
+        Route::get('databases/{database}', [ServerDatabaseController::class, 'show'])
+            ->name('databases.show');
+
+        // Database Schema management
+        Route::post('databases/{database}/schemas', [\App\Http\Controllers\ServerDatabaseSchemaController::class, 'store'])
+            ->name('databases.schemas.store');
+        Route::delete('databases/{database}/schemas/{schema}', [\App\Http\Controllers\ServerDatabaseSchemaController::class, 'destroy'])
+            ->name('databases.schemas.destroy');
+
+        // Database User management
+        Route::post('databases/{database}/users', [\App\Http\Controllers\ServerDatabaseUserController::class, 'store'])
+            ->name('databases.users.store');
+        Route::patch('databases/{database}/users/{user}', [\App\Http\Controllers\ServerDatabaseUserController::class, 'update'])
+            ->name('databases.users.update');
+        Route::post('databases/{database}/users/{user}/retry', [\App\Http\Controllers\ServerDatabaseUserController::class, 'retry'])
+            ->name('databases.users.retry');
+        Route::post('databases/{database}/users/{user}/cancel-update', [\App\Http\Controllers\ServerDatabaseUserController::class, 'cancelUpdate'])
+            ->name('databases.users.cancel-update');
+        Route::delete('databases/{database}/users/{user}', [\App\Http\Controllers\ServerDatabaseUserController::class, 'destroy'])
+            ->name('databases.users.destroy');
+
         // Database CRUD endpoints
         Route::post('databases', [ServerDatabaseController::class, 'store'])
             ->name('databases.install');

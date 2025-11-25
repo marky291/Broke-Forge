@@ -28,21 +28,20 @@ class SiteSetDefaultJobTest extends TestCase
             'php_version' => '8.4',
         ]);
 
-        // Mock SSH commands
-        $this->mockSshConnection($server, [
-            'ln -sfn '.$site->domain.' /home/brokeforge/default' => [
-                'success' => true,
-                'output' => '',
-            ],
-            'sudo service php8.4-fpm reload' => [
-                'success' => true,
-                'output' => 'Reloading PHP 8.4 FPM',
-            ],
-            'readlink /home/brokeforge/default' => [
-                'success' => true,
-                'output' => $site->domain,
-            ],
-        ]);
+        // Mock SSH for installer (which executes multiple commands via PackageManager)
+        $mockSsh = \Mockery::mock(\Spatie\Ssh\Ssh::class);
+        $mockSsh->shouldReceive('setTimeout')->andReturnSelf();
+        $mockSsh->shouldReceive('execute')->andReturnUsing(function ($cmd) use ($site) {
+            $mockProcess = \Mockery::mock(\Symfony\Component\Process\Process::class);
+            $mockProcess->shouldReceive('isSuccessful')->andReturn(true);
+            $mockProcess->shouldReceive('getOutput')->andReturn($cmd === 'readlink /home/brokeforge/default' ? $site->domain : '');
+            $mockProcess->shouldReceive('getCommandLine')->andReturn($cmd);
+
+            return $mockProcess;
+        });
+
+        $server = \Mockery::mock($server)->makePartial();
+        $server->shouldReceive('ssh')->andReturn($mockSsh);
 
         // Create job
         $job = new SiteSetDefaultJob($server, $site, 0);
@@ -69,21 +68,20 @@ class SiteSetDefaultJobTest extends TestCase
             'php_version' => '8.4',
         ]);
 
-        // Mock SSH commands
-        $this->mockSshConnection($server, [
-            'ln -sfn '.$site->domain.' /home/brokeforge/default' => [
-                'success' => true,
-                'output' => '',
-            ],
-            'sudo service php8.4-fpm reload' => [
-                'success' => true,
-                'output' => 'Reloading PHP 8.4 FPM',
-            ],
-            'readlink /home/brokeforge/default' => [
-                'success' => true,
-                'output' => $site->domain,
-            ],
-        ]);
+        // Mock SSH for installer (which executes multiple commands via PackageManager)
+        $mockSsh = \Mockery::mock(\Spatie\Ssh\Ssh::class);
+        $mockSsh->shouldReceive('setTimeout')->andReturnSelf();
+        $mockSsh->shouldReceive('execute')->andReturnUsing(function ($cmd) use ($site) {
+            $mockProcess = \Mockery::mock(\Symfony\Component\Process\Process::class);
+            $mockProcess->shouldReceive('isSuccessful')->andReturn(true);
+            $mockProcess->shouldReceive('getOutput')->andReturn($cmd === 'readlink /home/brokeforge/default' ? $site->domain : '');
+            $mockProcess->shouldReceive('getCommandLine')->andReturn($cmd);
+
+            return $mockProcess;
+        });
+
+        $server = \Mockery::mock($server)->makePartial();
+        $server->shouldReceive('ssh')->andReturn($mockSsh);
 
         $job = new SiteSetDefaultJob($server, $site, 0);
 
@@ -231,21 +229,20 @@ class SiteSetDefaultJobTest extends TestCase
             'php_version' => '8.4',
         ]);
 
-        // Mock SSH commands
-        $this->mockSshConnection($server, [
-            'ln -sfn '.$site->domain.' /home/brokeforge/default' => [
-                'success' => true,
-                'output' => '',
-            ],
-            'sudo service php8.4-fpm reload' => [
-                'success' => true,
-                'output' => 'Reloading PHP 8.4 FPM',
-            ],
-            'readlink /home/brokeforge/default' => [
-                'success' => true,
-                'output' => $site->domain,
-            ],
-        ]);
+        // Mock SSH for installer (which executes multiple commands via PackageManager)
+        $mockSsh = \Mockery::mock(\Spatie\Ssh\Ssh::class);
+        $mockSsh->shouldReceive('setTimeout')->andReturnSelf();
+        $mockSsh->shouldReceive('execute')->andReturnUsing(function ($cmd) use ($site) {
+            $mockProcess = \Mockery::mock(\Symfony\Component\Process\Process::class);
+            $mockProcess->shouldReceive('isSuccessful')->andReturn(true);
+            $mockProcess->shouldReceive('getOutput')->andReturn($cmd === 'readlink /home/brokeforge/default' ? $site->domain : '');
+            $mockProcess->shouldReceive('getCommandLine')->andReturn($cmd);
+
+            return $mockProcess;
+        });
+
+        $server = \Mockery::mock($server)->makePartial();
+        $server->shouldReceive('ssh')->andReturn($mockSsh);
 
         $job = new SiteSetDefaultJob($server, $site, 0);
 
@@ -273,21 +270,20 @@ class SiteSetDefaultJobTest extends TestCase
             'error_log' => 'Previous error',
         ]);
 
-        // Mock SSH commands
-        $this->mockSshConnection($server, [
-            'ln -sfn '.$site->domain.' /home/brokeforge/default' => [
-                'success' => true,
-                'output' => '',
-            ],
-            'sudo service php8.4-fpm reload' => [
-                'success' => true,
-                'output' => 'Reloading PHP 8.4 FPM',
-            ],
-            'readlink /home/brokeforge/default' => [
-                'success' => true,
-                'output' => $site->domain,
-            ],
-        ]);
+        // Mock SSH for installer (which executes multiple commands via PackageManager)
+        $mockSsh = \Mockery::mock(\Spatie\Ssh\Ssh::class);
+        $mockSsh->shouldReceive('setTimeout')->andReturnSelf();
+        $mockSsh->shouldReceive('execute')->andReturnUsing(function ($cmd) use ($site) {
+            $mockProcess = \Mockery::mock(\Symfony\Component\Process\Process::class);
+            $mockProcess->shouldReceive('isSuccessful')->andReturn(true);
+            $mockProcess->shouldReceive('getOutput')->andReturn($cmd === 'readlink /home/brokeforge/default' ? $site->domain : '');
+            $mockProcess->shouldReceive('getCommandLine')->andReturn($cmd);
+
+            return $mockProcess;
+        });
+
+        $server = \Mockery::mock($server)->makePartial();
+        $server->shouldReceive('ssh')->andReturn($mockSsh);
 
         $job = new SiteSetDefaultJob($server, $site, 0);
 

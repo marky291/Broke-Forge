@@ -18,6 +18,7 @@ use App\Packages\Services\PHP\PhpInstallerJob;
 use App\Packages\Services\Scheduler\ServerSchedulerInstallerJob;
 use App\Packages\Services\Scheduler\Task\ServerScheduleTaskInstallerJob;
 use App\Packages\Services\Supervisor\SupervisorInstallerJob;
+use App\Packages\Services\TimeSync\TimeSyncInstallerJob;
 
 /**
  * Nginx Web Server Installation Class
@@ -191,6 +192,7 @@ class NginxInstaller extends PackageInstaller implements \App\Packages\Core\Base
                 $nginxConfig = view('nginx.default', [
                     'appUser' => $appUser,
                     'phpVersion' => $phpVersion,
+                    'publicDirectory' => '/public',
                 ])->render();
 
                 return "cat > /etc/nginx/sites-available/default << 'EOF'\n{$nginxConfig}\nEOF";

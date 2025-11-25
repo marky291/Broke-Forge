@@ -91,7 +91,7 @@ export function CardFormModal({
                                 <DialogTitle>{title}</DialogTitle>
                                 {description && <DialogDescription>{description}</DialogDescription>}
                             </DialogHeader>
-                            <div className="min-w-0">{children}</div>
+                            <div className="min-w-0 space-y-4">{children}</div>
                             <DialogFooter>
                                 <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
                                     Cancel

@@ -21,7 +21,9 @@ class OrchestratableTest extends TestCase
     public function test_job_has_correct_tries_property(): void
     {
         $job = $this->createTestOrchestrator();
-        $this->assertEquals(0, $job->tries);
+        // tries = 1 means the job runs once and fails immediately on exception (no retries)
+        // This is critical for orchestrators to prevent re-running completed sub-jobs
+        $this->assertEquals(1, $job->tries);
     }
 
     public function test_job_has_correct_max_exceptions_property(): void

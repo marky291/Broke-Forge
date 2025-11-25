@@ -47,6 +47,71 @@ class ServerDatabaseController extends Controller
         ]);
     }
 
+    public function show(Server $server, ServerDatabase $database): Response
+    {
+        // Authorize user can view this server
+        $this->authorize('view', $server);
+
+        // Ensure database belongs to this server
+        if ($database->server_id !== $server->id) {
+            abort(404);
+        }
+
+        $databaseType = $database->type instanceof DatabaseType
+            ? $database->type
+            : DatabaseType::from($database->type);
+
+        // Only allow detail pages for MySQL, MariaDB, and PostgreSQL
+        if (! in_array($databaseType, [DatabaseType::MySQL, DatabaseType::MariaDB, DatabaseType::PostgreSQL])) {
+            abort(404, 'This database type does not have a detail page.');
+        }
+
+        // Get schemas and managed users
+        $schemas = $database->schemas()->latest()->get()->map(fn ($schema) => [
+            'id' => $schema->id,
+            'name' => $schema->name,
+            'character_set' => $schema->character_set,
+            'collation' => $schema->collation,
+            'status' => $schema->status?->value ?? $schema->status,
+            'error_log' => $schema->error_log,
+            'created_at' => $schema->created_at?->toISOString(),
+        ])->toArray();
+
+        $managedUsers = $database->users()->latest()->with('schemas')->get()->map(fn ($user) => [
+            'id' => $user->id,
+            'is_root' => $user->is_root,
+            'username' => $user->username,
+            'host' => $user->host,
+            'privileges' => $user->privileges,
+            'status' => $user->status?->value ?? $user->status,
+            'error_log' => $user->error_log,
+            'update_status' => $user->update_status?->value ?? $user->update_status,
+            'update_error_log' => $user->update_error_log,
+            'schemas' => $user->schemas->map(fn ($schema) => [
+                'id' => $schema->id,
+                'name' => $schema->name,
+            ])->toArray(),
+            'created_at' => $user->created_at?->toISOString(),
+        ])->toArray();
+
+        return Inertia::render('servers/database-details', [
+            'server' => new ServerResource($server),
+            'database' => [
+                'id' => $database->id,
+                'name' => $database->name,
+                'type' => $database->type?->value ?? $database->type,
+                'version' => $database->version,
+                'port' => $database->port,
+                'status' => $database->status?->value ?? $database->status,
+                'error_log' => $database->error_log,
+                'created_at' => $database->created_at?->toISOString(),
+                'updated_at' => $database->updated_at?->toISOString(),
+            ],
+            'schemas' => $schemas,
+            'managedUsers' => $managedUsers,
+        ]);
+    }
+
     public function store(InstallDatabaseRequest $request, Server $server): RedirectResponse
     {
         // Authorize user can update this server
@@ -172,10 +237,14 @@ class ServerDatabaseController extends Controller
         $sitesUsingDatabase = $database->sites()->get();
         if ($sitesUsingDatabase->isNotEmpty()) {
             $sitesList = $sitesUsingDatabase->pluck('domain')->join(', ');
+            $count = $sitesUsingDatabase->count();
+            $siteWord = $count === 1 ? 'site' : 'sites';
+
+            $databaseTypeName = $database->type instanceof DatabaseType ? $database->type->value : $database->type;
 
             return redirect()
                 ->route('servers.services', $server)
-                ->with('error', "Cannot uninstall database '{$database->name}'. It is currently being used by the following sites: {$sitesList}. Please remove or update these sites first.");
+                ->with('error', "Cannot uninstall {$databaseTypeName} database. {$count} {$siteWord} currently depend on it: {$sitesList}. To proceed, either delete these sites or migrate them to a different database.");
         }
 
         // Update database record to pending status

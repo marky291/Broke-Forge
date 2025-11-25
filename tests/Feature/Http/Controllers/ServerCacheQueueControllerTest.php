@@ -392,6 +392,7 @@ class ServerCacheQueueControllerTest extends TestCase
         // Act
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
+                'name' => 'redis_cache',
                 'type' => 'redis',
                 'version' => '7.2',
                 'port' => 6379,

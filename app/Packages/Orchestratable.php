@@ -31,8 +31,10 @@ abstract class Orchestratable implements ShouldQueue
 
     /**
      * The number of times the job may be attempted.
+     * Set to 1 to fail immediately on exception (no retries).
+     * Orchestrators should not retry as sub-jobs may have already completed.
      */
-    public $tries = 0;
+    public $tries = 1;
 
     /**
      * The number of exceptions to allow before failing.

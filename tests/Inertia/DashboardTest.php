@@ -801,4 +801,87 @@ class DashboardTest extends TestCase
             ->where('dashboard.sites.0.id', $userSite->id)
         );
     }
+
+    /**
+     * Test Inertia shares can_create_server true when user has available slots.
+     */
+    public function test_inertia_shares_can_create_server_true_when_user_has_available_slots(): void
+    {
+        // Arrange
+        $user = User::factory()->create(['email_verified_at' => now()]);
+        // User has no servers, free plan allows 1
+
+        // Act
+        $response = $this->actingAs($user)->get('/dashboard');
+
+        // Assert
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->where('auth.user.can_create_server', true)
+        );
+    }
+
+    /**
+     * Test Inertia shares can_create_server false when user is at server limit.
+     */
+    public function test_inertia_shares_can_create_server_false_when_user_at_limit(): void
+    {
+        // Arrange
+        $user = User::factory()->create(['email_verified_at' => now()]);
+        Server::factory()->create([
+            'user_id' => $user->id,
+            'counted_in_subscription' => true,
+        ]);
+        // Free plan limit is 1, user now has 1 server
+
+        // Act
+        $response = $this->actingAs($user)->get('/dashboard');
+
+        // Assert
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->where('auth.user.can_create_server', false)
+        );
+    }
+
+    /**
+     * Test Inertia shares can_create_server true when user has servers not counted in subscription.
+     */
+    public function test_inertia_shares_can_create_server_true_when_servers_not_counted(): void
+    {
+        // Arrange
+        $user = User::factory()->create(['email_verified_at' => now()]);
+        Server::factory()->create([
+            'user_id' => $user->id,
+            'counted_in_subscription' => false, // Not counted toward limit
+        ]);
+        // User has a server that doesn't count, so they can still create
+
+        // Act
+        $response = $this->actingAs($user)->get('/dashboard');
+
+        // Assert
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->where('auth.user.can_create_server', true)
+        );
+    }
+
+    /**
+     * Test Inertia shares plan_name with user data.
+     */
+    public function test_inertia_shares_plan_name_with_user_data(): void
+    {
+        // Arrange
+        $user = User::factory()->create(['email_verified_at' => now()]);
+
+        // Act
+        $response = $this->actingAs($user)->get('/dashboard');
+
+        // Assert
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->where('auth.user.plan_name', 'Free')
+        );
+    }
 }

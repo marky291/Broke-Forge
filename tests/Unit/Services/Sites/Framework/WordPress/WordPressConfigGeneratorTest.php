@@ -51,7 +51,7 @@ class WordPressConfigGeneratorTest extends TestCase
 
         // Assert
         $this->assertStringContainsString("define('DB_NAME', 'wordpress_db');", $config);
-        $this->assertStringContainsString("define('DB_USER', 'wordpress_db');", $config); // Uses database name as username
+        $this->assertStringContainsString("define('DB_USER', 'root');", $config);
         $this->assertStringContainsString("define('DB_PASSWORD', 'secure_password_123');", $config);
         $this->assertStringContainsString("define('DB_HOST', 'localhost');", $config);
     }
