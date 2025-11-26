@@ -21,22 +21,7 @@ class NavigationTest extends TestCase
         // Arrange
         $user = User::factory()->create();
         $server = Server::factory()->create(['user_id' => $user->id]);
-        $framework = AvailableFramework::firstOrCreate(
-            ['slug' => 'laravel'],
-            [
-                'name' => 'Laravel',
-                'env' => [
-                    'supports' => true,
-                    'file_path' => '.env',
-                ],
-                'requirements' => [
-                    'database' => true,
-                    'redis' => false,
-                    'nodejs' => false,
-                    'composer' => true,
-                ],
-            ]
-        );
+        $framework = AvailableFramework::factory()->laravel()->create();
         $site = ServerSite::factory()->create([
             'server_id' => $server->id,
             'available_framework_id' => $framework->id,
@@ -64,22 +49,7 @@ class NavigationTest extends TestCase
         // Arrange
         $user = User::factory()->create();
         $server = Server::factory()->create(['user_id' => $user->id]);
-        $framework = AvailableFramework::firstOrCreate(
-            ['slug' => 'static-html'],
-            [
-                'name' => 'Static HTML',
-                'env' => [
-                    'supports' => false,
-                    'file_path' => null,
-                ],
-                'requirements' => [
-                    'database' => false,
-                    'redis' => false,
-                    'nodejs' => false,
-                    'composer' => false,
-                ],
-            ]
-        );
+        $framework = AvailableFramework::factory()->staticHtml()->create();
         $site = ServerSite::factory()->create([
             'server_id' => $server->id,
             'available_framework_id' => $framework->id,
@@ -107,22 +77,7 @@ class NavigationTest extends TestCase
         // Arrange
         $user = User::factory()->create();
         $server = Server::factory()->create(['user_id' => $user->id]);
-        $framework = AvailableFramework::firstOrCreate(
-            ['slug' => 'wordpress'],
-            [
-                'name' => 'WordPress',
-                'env' => [
-                    'supports' => true,
-                    'file_path' => '.env',
-                ],
-                'requirements' => [
-                    'database' => true,
-                    'redis' => false,
-                    'nodejs' => false,
-                    'composer' => false,
-                ],
-            ]
-        );
+        $framework = AvailableFramework::factory()->wordpress()->create();
         $site = ServerSite::factory()->create([
             'server_id' => $server->id,
             'available_framework_id' => $framework->id,
@@ -150,22 +105,7 @@ class NavigationTest extends TestCase
         // Arrange
         $user = User::factory()->create();
         $server = Server::factory()->create(['user_id' => $user->id]);
-        $framework = AvailableFramework::firstOrCreate(
-            ['slug' => 'laravel'],
-            [
-                'name' => 'Laravel',
-                'env' => [
-                    'supports' => true,
-                    'file_path' => '.env',
-                ],
-                'requirements' => [
-                    'database' => true,
-                    'redis' => false,
-                    'nodejs' => false,
-                    'composer' => true,
-                ],
-            ]
-        );
+        $framework = AvailableFramework::factory()->laravel()->create();
         $site = ServerSite::factory()->create([
             'server_id' => $server->id,
             'available_framework_id' => $framework->id,
@@ -196,22 +136,7 @@ class NavigationTest extends TestCase
         // Arrange
         $user = User::factory()->create();
         $server = Server::factory()->create(['user_id' => $user->id]);
-        $framework = AvailableFramework::firstOrCreate(
-            ['slug' => 'laravel'],
-            [
-                'name' => 'Laravel',
-                'env' => [
-                    'supports' => true,
-                    'file_path' => '.env',
-                ],
-                'requirements' => [
-                    'database' => true,
-                    'redis' => false,
-                    'nodejs' => false,
-                    'composer' => true,
-                ],
-            ]
-        );
+        $framework = AvailableFramework::factory()->laravel()->create();
         $site = ServerSite::factory()->create([
             'server_id' => $server->id,
             'available_framework_id' => $framework->id,
@@ -240,22 +165,7 @@ class NavigationTest extends TestCase
         // Arrange
         $user = User::factory()->create();
         $server = Server::factory()->create(['user_id' => $user->id]);
-        $framework = AvailableFramework::firstOrCreate(
-            ['slug' => 'laravel'],
-            [
-                'name' => 'Laravel',
-                'env' => [
-                    'supports' => true,
-                    'file_path' => '.env',
-                ],
-                'requirements' => [
-                    'database' => true,
-                    'redis' => false,
-                    'nodejs' => false,
-                    'composer' => true,
-                ],
-            ]
-        );
+        $framework = AvailableFramework::factory()->laravel()->create();
         $site = ServerSite::factory()->create([
             'server_id' => $server->id,
             'available_framework_id' => $framework->id,
@@ -284,22 +194,7 @@ class NavigationTest extends TestCase
         // Arrange
         $user = User::factory()->create();
         $server = Server::factory()->create(['user_id' => $user->id]);
-        $framework = AvailableFramework::firstOrCreate(
-            ['slug' => 'laravel'],
-            [
-                'name' => 'Laravel',
-                'env' => [
-                    'supports' => true,
-                    'file_path' => '.env',
-                ],
-                'requirements' => [
-                    'database' => true,
-                    'redis' => false,
-                    'nodejs' => false,
-                    'composer' => true,
-                ],
-            ]
-        );
+        $framework = AvailableFramework::factory()->laravel()->create();
         $site = ServerSite::factory()->create([
             'server_id' => $server->id,
             'available_framework_id' => $framework->id,

@@ -15,7 +15,7 @@ class AvailableFrameworkSeeder extends Seeder
         $frameworks = [
             [
                 'name' => 'Laravel',
-                'slug' => 'laravel',
+                'slug' => AvailableFramework::LARAVEL,
                 'public_directory' => '/public',
                 'env' => [
                     'file_path' => '.env',
@@ -31,7 +31,7 @@ class AvailableFrameworkSeeder extends Seeder
             ],
             [
                 'name' => 'WordPress',
-                'slug' => 'wordpress',
+                'slug' => AvailableFramework::WORDPRESS,
                 'public_directory' => '',
                 'env' => [
                     'file_path' => 'wp-config.php',
@@ -47,7 +47,7 @@ class AvailableFrameworkSeeder extends Seeder
             ],
             [
                 'name' => 'Generic PHP',
-                'slug' => 'generic-php',
+                'slug' => AvailableFramework::GENERIC_PHP,
                 'public_directory' => '/public',
                 'env' => [
                     'file_path' => '.env',
@@ -63,7 +63,7 @@ class AvailableFrameworkSeeder extends Seeder
             ],
             [
                 'name' => 'Static HTML',
-                'slug' => 'static-html',
+                'slug' => AvailableFramework::STATIC_HTML,
                 'public_directory' => '/public',
                 'env' => [
                     'file_path' => null,

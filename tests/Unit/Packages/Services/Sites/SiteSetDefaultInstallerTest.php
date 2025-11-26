@@ -2,7 +2,6 @@
 
 namespace Tests\Unit\Packages\Services\Sites;
 
-use App\Models\AvailableFramework;
 use App\Models\Server;
 use App\Models\ServerDeployment;
 use App\Models\ServerSite;
@@ -14,14 +13,6 @@ use Tests\TestCase;
 class SiteSetDefaultInstallerTest extends TestCase
 {
     use RefreshDatabase;
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        // Seed frameworks for testing
-        $this->artisan('db:seed', ['--class' => 'AvailableFrameworkSeeder']);
-    }
 
     private function invokeProtectedMethod(object $object, string $methodName, array $parameters = []): mixed
     {
@@ -273,10 +264,8 @@ class SiteSetDefaultInstallerTest extends TestCase
     {
         // Arrange
         $server = Server::factory()->create();
-        $framework = AvailableFramework::where('slug', 'wordpress')->first();
-        $site = ServerSite::factory()->create([
+        $site = ServerSite::factory()->wordpress()->create([
             'server_id' => $server->id,
-            'available_framework_id' => $framework->id,
             'domain' => 'wordpress.local',
             'php_version' => '8.4',
             'status' => 'active',
@@ -300,10 +289,8 @@ class SiteSetDefaultInstallerTest extends TestCase
     {
         // Arrange
         $server = Server::factory()->create();
-        $framework = AvailableFramework::where('slug', 'laravel')->first();
-        $site = ServerSite::factory()->create([
+        $site = ServerSite::factory()->laravel()->create([
             'server_id' => $server->id,
-            'available_framework_id' => $framework->id,
             'domain' => 'laravel.local',
             'php_version' => '8.3',
             'status' => 'active',
@@ -326,10 +313,8 @@ class SiteSetDefaultInstallerTest extends TestCase
     {
         // Arrange
         $server = Server::factory()->create();
-        $framework = AvailableFramework::where('slug', 'generic-php')->first();
-        $site = ServerSite::factory()->create([
+        $site = ServerSite::factory()->genericPhp()->create([
             'server_id' => $server->id,
-            'available_framework_id' => $framework->id,
             'domain' => 'generic.local',
             'php_version' => '8.4',
             'status' => 'active',
@@ -352,10 +337,8 @@ class SiteSetDefaultInstallerTest extends TestCase
     {
         // Arrange
         $server = Server::factory()->create();
-        $framework = AvailableFramework::where('slug', 'laravel')->first();
-        $site = ServerSite::factory()->create([
+        $site = ServerSite::factory()->laravel()->create([
             'server_id' => $server->id,
-            'available_framework_id' => $framework->id,
             'domain' => 'test.local',
             'php_version' => '8.4',
             'status' => 'active',

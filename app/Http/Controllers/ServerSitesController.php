@@ -6,6 +6,7 @@ use App\Enums\TaskStatus;
 use App\Http\Controllers\Concerns\PreparesSiteData;
 use App\Http\Requests\Servers\StoreSiteRequest;
 use App\Http\Resources\ServerResource;
+use App\Models\AvailableFramework;
 use App\Models\Server;
 use App\Models\ServerSite;
 use App\Packages\Services\Sites\SiteDeployKeyGenerator;
@@ -168,6 +169,9 @@ class ServerSitesController extends Controller
                 $gitStatus = TaskStatus::Installing;
             }
 
+            // Get the framework for public directory path
+            $framework = AvailableFramework::findOrFail($validated['available_framework_id']);
+
             // Create site
             $site = ServerSite::create([
                 'server_id' => $server->id,
@@ -176,7 +180,7 @@ class ServerSitesController extends Controller
                 'php_version' => $validated['php_version'] ?? null,
                 'ssl_enabled' => $validated['ssl'],
                 'status' => 'installing',
-                'document_root' => "/home/brokeforge/{$validated['domain']}/public",
+                'document_root' => "/home/brokeforge/{$validated['domain']}".$framework->getPublicDirectory(),
                 'nginx_config_path' => "/etc/nginx/sites-available/{$validated['domain']}",
                 'configuration' => $configuration,
                 'git_status' => $gitStatus,

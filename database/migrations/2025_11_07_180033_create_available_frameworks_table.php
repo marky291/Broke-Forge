@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('slug')->unique();
+            $table->string('public_directory')->default('/public');
             $table->json('env');
             $table->json('requirements');
             $table->text('description')->nullable();

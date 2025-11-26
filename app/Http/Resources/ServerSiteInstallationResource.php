@@ -3,10 +3,6 @@
 namespace App\Http\Resources;
 
 use App\Enums\TaskStatus;
-use App\Packages\Services\Sites\Framework\GenericPhp\GenericPhpInstallerJob;
-use App\Packages\Services\Sites\Framework\Laravel\LaravelInstallerJob;
-use App\Packages\Services\Sites\Framework\StaticHtml\StaticHtmlInstallerJob;
-use App\Packages\Services\Sites\Framework\WordPress\WordPressInstallerJob;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -57,19 +53,9 @@ class ServerSiteInstallationResource extends JsonResource
      */
     protected function getStepDefinitionsForFramework(): array
     {
-        // Create temporary installer instance to get steps
-        // Framework IDs: 1=Laravel, 2=WordPress, 3=GenericPhp, 4=StaticHtml
-        $installer = match ($this->available_framework_id) {
-            1 => new LaravelInstallerJob($this->server, $this->id),
-            2 => new WordPressInstallerJob($this->server, $this->id),
-            3 => new GenericPhpInstallerJob($this->server, $this->id),
-            4 => new StaticHtmlInstallerJob($this->server, $this->id),
-            default => null,
-        };
-
-        if (! $installer) {
-            return [];
-        }
+        // Create temporary installer instance to get steps using framework's installer class
+        $installerClass = $this->siteFramework->getInstallerClass();
+        $installer = new $installerClass($this->server, $this->id);
 
         // Use reflection to call protected method
         $reflection = new \ReflectionClass($installer);

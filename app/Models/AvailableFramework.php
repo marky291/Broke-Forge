@@ -2,6 +2,11 @@
 
 namespace App\Models;
 
+use App\Packages\Services\Sites\Framework\GenericPhp\GenericPhpInstallerJob;
+use App\Packages\Services\Sites\Framework\Laravel\LaravelInstallerJob;
+use App\Packages\Services\Sites\Framework\StaticHtml\StaticHtmlInstallerJob;
+use App\Packages\Services\Sites\Framework\WordPress\WordPressInstallerJob;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -15,6 +20,17 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class AvailableFramework extends Model
 {
     use HasFactory;
+
+    /**
+     * Framework slug constants.
+     */
+    public const LARAVEL = 'laravel';
+
+    public const WORDPRESS = 'wordpress';
+
+    public const GENERIC_PHP = 'generic-php';
+
+    public const STATIC_HTML = 'static-html';
 
     protected $fillable = [
         'name',
@@ -106,5 +122,57 @@ class AvailableFramework extends Model
     public function hasPublicSubdirectory(): bool
     {
         return $this->getPublicDirectory() !== '';
+    }
+
+    /**
+     * Get the installer job class for this framework.
+     *
+     * @return class-string
+     */
+    public function getInstallerClass(): string
+    {
+        return match ($this->slug) {
+            self::LARAVEL => LaravelInstallerJob::class,
+            self::WORDPRESS => WordPressInstallerJob::class,
+            self::GENERIC_PHP => GenericPhpInstallerJob::class,
+            self::STATIC_HTML => StaticHtmlInstallerJob::class,
+            default => throw new \RuntimeException("Unknown framework: {$this->slug}"),
+        };
+    }
+
+    /**
+     * Check if this framework requires a Git repository.
+     *
+     * WordPress sites don't require Git as they are installed via WP-CLI.
+     */
+    public function requiresGitRepository(): bool
+    {
+        return $this->slug !== self::WORDPRESS;
+    }
+
+    /**
+     * Check if this framework requires a PHP version.
+     *
+     * Static HTML sites don't require PHP.
+     */
+    public function requiresPhpVersion(): bool
+    {
+        return $this->slug !== self::STATIC_HTML;
+    }
+
+    /**
+     * Find a framework by its slug.
+     */
+    public static function findBySlug(string $slug): ?self
+    {
+        return static::where('slug', $slug)->first();
+    }
+
+    /**
+     * Scope a query to a specific slug.
+     */
+    public function scopeSlug(Builder $query, string $slug): Builder
+    {
+        return $query->where('slug', $slug);
     }
 }

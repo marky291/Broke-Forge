@@ -27,14 +27,7 @@ class WordPressConfigGeneratorTest extends TestCase
             'root_password' => 'secure_password_123',
         ]);
 
-        $wordpress = AvailableFramework::firstOrCreate(
-            ['slug' => 'wordpress'],
-            [
-                'name' => 'WordPress',
-                'env' => ['file_path' => 'wp-config.php', 'supports' => true],
-                'requirements' => ['database' => true, 'redis' => false, 'nodejs' => false, 'composer' => false],
-            ]
-        );
+        $wordpress = AvailableFramework::factory()->wordpress()->create();
 
         $site = ServerSite::factory()->create([
             'server_id' => $server->id,
@@ -65,14 +58,7 @@ class WordPressConfigGeneratorTest extends TestCase
         $server = Server::factory()->create();
         $database = ServerDatabase::factory()->create(['server_id' => $server->id]);
 
-        $wordpress = AvailableFramework::firstOrCreate(
-            ['slug' => 'wordpress'],
-            [
-                'name' => 'WordPress',
-                'env' => ['file_path' => 'wp-config.php', 'supports' => true],
-                'requirements' => ['database' => true, 'redis' => false, 'nodejs' => false, 'composer' => false],
-            ]
-        );
+        $wordpress = AvailableFramework::factory()->wordpress()->create();
 
         $site = ServerSite::factory()->create([
             'server_id' => $server->id,
@@ -110,14 +96,7 @@ class WordPressConfigGeneratorTest extends TestCase
         $server = Server::factory()->create();
         $database = ServerDatabase::factory()->create(['server_id' => $server->id]);
 
-        $wordpress = AvailableFramework::firstOrCreate(
-            ['slug' => 'wordpress'],
-            [
-                'name' => 'WordPress',
-                'env' => ['file_path' => 'wp-config.php', 'supports' => true],
-                'requirements' => ['database' => true, 'redis' => false, 'nodejs' => false, 'composer' => false],
-            ]
-        );
+        $wordpress = AvailableFramework::factory()->wordpress()->create();
 
         $site = ServerSite::factory()->create([
             'server_id' => $server->id,
@@ -146,14 +125,7 @@ class WordPressConfigGeneratorTest extends TestCase
         $server = Server::factory()->create();
         $database = ServerDatabase::factory()->create(['server_id' => $server->id]);
 
-        $wordpress = AvailableFramework::firstOrCreate(
-            ['slug' => 'wordpress'],
-            [
-                'name' => 'WordPress',
-                'env' => ['file_path' => 'wp-config.php', 'supports' => true],
-                'requirements' => ['database' => true, 'redis' => false, 'nodejs' => false, 'composer' => false],
-            ]
-        );
+        $wordpress = AvailableFramework::factory()->wordpress()->create();
 
         $site = ServerSite::factory()->create([
             'server_id' => $server->id,
@@ -182,14 +154,7 @@ class WordPressConfigGeneratorTest extends TestCase
         $server = Server::factory()->create();
         $database = ServerDatabase::factory()->create(['server_id' => $server->id]);
 
-        $wordpress = AvailableFramework::firstOrCreate(
-            ['slug' => 'wordpress'],
-            [
-                'name' => 'WordPress',
-                'env' => ['file_path' => 'wp-config.php', 'supports' => true],
-                'requirements' => ['database' => true, 'redis' => false, 'nodejs' => false, 'composer' => false],
-            ]
-        );
+        $wordpress = AvailableFramework::factory()->wordpress()->create();
 
         $site = ServerSite::factory()->create([
             'server_id' => $server->id,
@@ -215,14 +180,7 @@ class WordPressConfigGeneratorTest extends TestCase
         $server = Server::factory()->create();
         $database = ServerDatabase::factory()->create(['server_id' => $server->id]);
 
-        $wordpress = AvailableFramework::firstOrCreate(
-            ['slug' => 'wordpress'],
-            [
-                'name' => 'WordPress',
-                'env' => ['file_path' => 'wp-config.php', 'supports' => true],
-                'requirements' => ['database' => true, 'redis' => false, 'nodejs' => false, 'composer' => false],
-            ]
-        );
+        $wordpress = AvailableFramework::factory()->wordpress()->create();
 
         $site = ServerSite::factory()->create([
             'server_id' => $server->id,
@@ -248,14 +206,7 @@ class WordPressConfigGeneratorTest extends TestCase
         $server = Server::factory()->create();
         $database = ServerDatabase::factory()->create(['server_id' => $server->id]);
 
-        $wordpress = AvailableFramework::firstOrCreate(
-            ['slug' => 'wordpress'],
-            [
-                'name' => 'WordPress',
-                'env' => ['file_path' => 'wp-config.php', 'supports' => true],
-                'requirements' => ['database' => true, 'redis' => false, 'nodejs' => false, 'composer' => false],
-            ]
-        );
+        $wordpress = AvailableFramework::factory()->wordpress()->create();
 
         $site = ServerSite::factory()->create([
             'server_id' => $server->id,
@@ -282,14 +233,7 @@ class WordPressConfigGeneratorTest extends TestCase
         $server = Server::factory()->create();
         $database = ServerDatabase::factory()->create(['server_id' => $server->id]);
 
-        $wordpress = AvailableFramework::firstOrCreate(
-            ['slug' => 'wordpress'],
-            [
-                'name' => 'WordPress',
-                'env' => ['file_path' => 'wp-config.php', 'supports' => true],
-                'requirements' => ['database' => true, 'redis' => false, 'nodejs' => false, 'composer' => false],
-            ]
-        );
+        $wordpress = AvailableFramework::factory()->wordpress()->create();
 
         $site = ServerSite::factory()->create([
             'server_id' => $server->id,
@@ -315,14 +259,7 @@ class WordPressConfigGeneratorTest extends TestCase
         $server = Server::factory()->create();
         $database = ServerDatabase::factory()->create(['server_id' => $server->id]);
 
-        $wordpress = AvailableFramework::firstOrCreate(
-            ['slug' => 'wordpress'],
-            [
-                'name' => 'WordPress',
-                'env' => ['file_path' => 'wp-config.php', 'supports' => true],
-                'requirements' => ['database' => true, 'redis' => false, 'nodejs' => false, 'composer' => false],
-            ]
-        );
+        $wordpress = AvailableFramework::factory()->wordpress()->create();
 
         $site = ServerSite::factory()->create([
             'server_id' => $server->id,
@@ -352,14 +289,7 @@ class WordPressConfigGeneratorTest extends TestCase
             'root_password' => "p@ss'word\"with\\special",
         ]);
 
-        $wordpress = AvailableFramework::firstOrCreate(
-            ['slug' => 'wordpress'],
-            [
-                'name' => 'WordPress',
-                'env' => ['file_path' => 'wp-config.php', 'supports' => true],
-                'requirements' => ['database' => true, 'redis' => false, 'nodejs' => false, 'composer' => false],
-            ]
-        );
+        $wordpress = AvailableFramework::factory()->wordpress()->create();
 
         $site = ServerSite::factory()->create([
             'server_id' => $server->id,

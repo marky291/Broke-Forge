@@ -67,14 +67,14 @@ class StoreSiteRequest extends FormRequest
 
         // Conditional validation based on framework requirements
         if ($framework) {
-            // Git repository is required for non-WordPress frameworks
-            if ($framework->slug !== 'wordpress') {
+            // Git repository is required for frameworks that need it
+            if ($framework->requiresGitRepository()) {
                 $rules['git_repository'][] = 'required';
                 $rules['git_branch'][] = 'required';
             }
 
-            // PHP version is required for PHP-based frameworks (not static HTML)
-            if ($framework->slug !== 'static-html') {
+            // PHP version is required for PHP-based frameworks
+            if ($framework->requiresPhpVersion()) {
                 $rules['php_version'][] = 'required';
             }
 

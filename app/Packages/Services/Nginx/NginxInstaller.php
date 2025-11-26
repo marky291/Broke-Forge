@@ -5,6 +5,7 @@ namespace App\Packages\Services\Nginx;
 use App\Enums\ReverseProxyType;
 use App\Enums\ScheduleFrequency;
 use App\Enums\TaskStatus;
+use App\Models\AvailableFramework;
 use App\Models\ServerPhp;
 use App\Models\ServerReverseProxy;
 use App\Packages\Core\Base\Package;
@@ -200,9 +201,12 @@ class NginxInstaller extends PackageInstaller implements \App\Packages\Core\Base
 
             // Persist the default Nginx site now that provisioning succeeded
             function () use ($appUser, $phpVersion, $deploymentPath) {
+                $staticHtmlFramework = AvailableFramework::findBySlug(AvailableFramework::STATIC_HTML);
+
                 $this->server->sites()->updateOrCreate(
                     ['domain' => 'default'],
                     [
+                        'available_framework_id' => $staticHtmlFramework?->id,
                         'document_root' => "/home/{$appUser}/default",
                         'nginx_config_path' => '/etc/nginx/sites-available/default',
                         'php_version' => $phpVersion,

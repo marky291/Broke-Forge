@@ -3,6 +3,7 @@
 namespace Tests\Unit\Packages\Services\Nginx;
 
 use App\Enums\TaskStatus;
+use App\Models\AvailableFramework;
 use App\Models\Server;
 use App\Models\ServerNode;
 use App\Models\ServerPhp;
@@ -16,6 +17,14 @@ use Tests\TestCase;
 class NginxInstallerTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Seed frameworks for testing
+        $this->artisan('db:seed', ['--class' => 'AvailableFrameworkSeeder']);
+    }
 
     /**
      * Test that Node 22 record can be created with correct attributes for provisioning.
@@ -438,11 +447,13 @@ class NginxInstallerTest extends TestCase
         $appUser = config('app.ssh_user', str_replace(' ', '', strtolower(config('app.name'))));
         $phpVersion = PhpVersion::PHP83;
         $deploymentPath = "/home/{$appUser}/deployments/default/07112025-120000";
+        $staticHtmlFramework = AvailableFramework::findBySlug(AvailableFramework::STATIC_HTML);
 
         // Act - Create default site record as NginxInstaller does
         $site = $server->sites()->updateOrCreate(
             ['domain' => 'default'],
             [
+                'available_framework_id' => $staticHtmlFramework->id,
                 'document_root' => "/home/{$appUser}/default",
                 'nginx_config_path' => '/etc/nginx/sites-available/default',
                 'php_version' => $phpVersion,
@@ -487,11 +498,13 @@ class NginxInstallerTest extends TestCase
         $appUser = config('app.ssh_user', str_replace(' ', '', strtolower(config('app.name'))));
         $phpVersion = PhpVersion::PHP83;
         $deploymentPath = "/home/{$appUser}/deployments/default/07112025-120000";
+        $staticHtmlFramework = AvailableFramework::findBySlug(AvailableFramework::STATIC_HTML);
 
         // Act - Create default site record as NginxInstaller does during provisioning
         $site = $server->sites()->updateOrCreate(
             ['domain' => 'default'],
             [
+                'available_framework_id' => $staticHtmlFramework->id,
                 'document_root' => "/home/{$appUser}/default",
                 'nginx_config_path' => '/etc/nginx/sites-available/default',
                 'php_version' => $phpVersion,
@@ -532,11 +545,13 @@ class NginxInstallerTest extends TestCase
         $server = Server::factory()->create();
         $appUser = config('app.ssh_user', str_replace(' ', '', strtolower(config('app.name'))));
         $phpVersion = PhpVersion::PHP83;
+        $staticHtmlFramework = AvailableFramework::findBySlug(AvailableFramework::STATIC_HTML);
 
         // Act - Create default site as NginxInstaller does
         $site = $server->sites()->updateOrCreate(
             ['domain' => 'default'],
             [
+                'available_framework_id' => $staticHtmlFramework->id,
                 'document_root' => "/home/{$appUser}/default",
                 'nginx_config_path' => '/etc/nginx/sites-available/default',
                 'php_version' => $phpVersion,

@@ -611,23 +611,7 @@ class SitesTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create(['user_id' => $user->id]);
 
-        $framework = AvailableFramework::firstOrCreate(
-            ['slug' => 'laravel'],
-            [
-                'name' => 'Laravel',
-                'env' => [
-                    'file_path' => '.env',
-                    'supports' => true,
-                ],
-                'requirements' => [
-                    'database' => true,
-                    'redis' => true,
-                    'nodejs' => true,
-                    'composer' => true,
-                ],
-                'description' => 'Laravel PHP framework with full-stack capabilities',
-            ]
-        );
+        $framework = AvailableFramework::factory()->laravel()->create();
 
         ServerSite::factory()->create([
             'server_id' => $server->id,
@@ -648,7 +632,7 @@ class SitesTest extends TestCase
             ->has('server.sites.0.site_framework', fn ($framework) => $framework
                 ->has('id')
                 ->where('name', 'Laravel')
-                ->where('slug', 'laravel')
+                ->where('slug', AvailableFramework::LARAVEL)
                 ->has('env')
                 ->has('requirements')
                 ->etc()
@@ -703,41 +687,8 @@ class SitesTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create(['user_id' => $user->id]);
 
-        $wordpress = AvailableFramework::firstOrCreate(
-            ['slug' => 'wordpress'],
-            [
-                'name' => 'WordPress',
-                'env' => [
-                    'file_path' => 'wp-config.php',
-                    'supports' => true,
-                ],
-                'requirements' => [
-                    'database' => true,
-                    'redis' => false,
-                    'nodejs' => false,
-                    'composer' => false,
-                ],
-                'description' => 'WordPress CMS with PHP and MySQL',
-            ]
-        );
-
-        $laravel = AvailableFramework::firstOrCreate(
-            ['slug' => 'laravel'],
-            [
-                'name' => 'Laravel',
-                'env' => [
-                    'file_path' => '.env',
-                    'supports' => true,
-                ],
-                'requirements' => [
-                    'database' => true,
-                    'redis' => true,
-                    'nodejs' => true,
-                    'composer' => true,
-                ],
-                'description' => 'Laravel PHP framework with full-stack capabilities',
-            ]
-        );
+        $wordpress = AvailableFramework::factory()->wordpress()->create();
+        $laravel = AvailableFramework::factory()->laravel()->create();
 
         // Site with WordPress
         ServerSite::factory()->create([
@@ -776,6 +727,7 @@ class SitesTest extends TestCase
         // Arrange
         $user = User::factory()->create();
         $server = Server::factory()->create(['user_id' => $user->id]);
+        AvailableFramework::factory()->laravel()->create();
 
         // Act
         $response = $this->actingAs($user)
@@ -806,19 +758,7 @@ class SitesTest extends TestCase
         $server = Server::factory()->create(['user_id' => $user->id]);
 
         // Ensure Laravel framework exists with requirements
-        AvailableFramework::firstOrCreate(
-            ['slug' => 'laravel'],
-            [
-                'name' => 'Laravel',
-                'env' => ['file_path' => '.env', 'supports' => true],
-                'requirements' => [
-                    'database' => true,
-                    'redis' => true,
-                    'nodejs' => true,
-                    'composer' => true,
-                ],
-            ]
-        );
+        AvailableFramework::factory()->laravel()->create();
 
         // Act
         $response = $this->actingAs($user)

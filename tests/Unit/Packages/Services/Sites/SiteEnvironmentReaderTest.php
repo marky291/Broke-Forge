@@ -45,16 +45,7 @@ class SiteEnvironmentReaderTest extends TestCase
      */
     public function test_get_env_file_path_returns_null_when_framework_does_not_support_env(): void
     {
-        // Get or create static-html framework
-        $framework = AvailableFramework::firstOrCreate(
-            ['slug' => 'static-html'],
-            [
-                'name' => 'Static HTML',
-                'env' => ['file_path' => null, 'supports' => false],
-                'requirements' => ['database' => false, 'redis' => false, 'nodejs' => false, 'composer' => false],
-                'description' => 'Static HTML/CSS/JS website',
-            ]
-        );
+        $framework = AvailableFramework::factory()->staticHtml()->create();
 
         $server = Server::factory()->create();
         $site = ServerSite::factory()->create([
@@ -80,16 +71,7 @@ class SiteEnvironmentReaderTest extends TestCase
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('Framework does not support environment file editing');
 
-        // Get or create static-html framework
-        $framework = AvailableFramework::firstOrCreate(
-            ['slug' => 'static-html'],
-            [
-                'name' => 'Static HTML',
-                'env' => ['file_path' => null, 'supports' => false],
-                'requirements' => ['database' => false, 'redis' => false, 'nodejs' => false, 'composer' => false],
-                'description' => 'Static HTML/CSS/JS website',
-            ]
-        );
+        $framework = AvailableFramework::factory()->staticHtml()->create();
 
         $server = Server::factory()->create();
         $site = ServerSite::factory()->create([
@@ -169,16 +151,7 @@ class SiteEnvironmentReaderTest extends TestCase
      */
     public function test_get_env_file_path_uses_framework_env_file_path(): void
     {
-        // Get or create WordPress framework
-        $framework = AvailableFramework::firstOrCreate(
-            ['slug' => 'wordpress'],
-            [
-                'name' => 'WordPress',
-                'env' => ['file_path' => 'wp-config.php', 'supports' => true],
-                'requirements' => ['database' => true, 'redis' => false, 'nodejs' => false, 'composer' => false],
-                'description' => 'WordPress CMS with PHP and MySQL',
-            ]
-        );
+        $framework = AvailableFramework::factory()->wordpress()->create();
 
         $server = Server::factory()->create();
         $site = ServerSite::factory()->create([

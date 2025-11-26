@@ -30,20 +30,7 @@ class WordPressInstallationTest extends TestCase
         $database = ServerDatabase::factory()->create(['server_id' => $server->id]);
         ServerPhp::factory()->create(['server_id' => $server->id, 'version' => '8.3', 'status' => TaskStatus::Active]);
 
-        $wordpress = AvailableFramework::firstOrCreate(
-            ['slug' => 'wordpress'],
-            [
-                'name' => 'WordPress',
-                'env' => ['file_path' => 'wp-config.php', 'supports' => true],
-                'requirements' => [
-                    'database' => true,
-                    'redis' => false,
-                    'nodejs' => false,
-                    'composer' => false,
-                ],
-                'description' => 'WordPress CMS',
-            ]
-        );
+        $wordpress = AvailableFramework::factory()->wordpress()->create();
 
         // Act - create WordPress site without Git fields
         $response = $this->actingAs($user)
@@ -80,14 +67,7 @@ class WordPressInstallationTest extends TestCase
         $database = ServerDatabase::factory()->create(['server_id' => $server->id]);
         ServerPhp::factory()->create(['server_id' => $server->id, 'version' => '8.3', 'status' => TaskStatus::Active]);
 
-        $wordpress = AvailableFramework::firstOrCreate(
-            ['slug' => 'wordpress'],
-            [
-                'name' => 'WordPress',
-                'env' => ['file_path' => 'wp-config.php', 'supports' => true],
-                'requirements' => ['database' => true, 'redis' => false, 'nodejs' => false, 'composer' => false],
-            ]
-        );
+        $wordpress = AvailableFramework::factory()->wordpress()->create();
 
         // Act
         $this->actingAs($user)
@@ -115,14 +95,7 @@ class WordPressInstallationTest extends TestCase
         $server = Server::factory()->create(['user_id' => $user->id]);
         $database = ServerDatabase::factory()->create(['server_id' => $server->id]);
 
-        $wordpress = AvailableFramework::firstOrCreate(
-            ['slug' => 'wordpress'],
-            [
-                'name' => 'WordPress',
-                'env' => ['file_path' => 'wp-config.php', 'supports' => true],
-                'requirements' => ['database' => true, 'redis' => false, 'nodejs' => false, 'composer' => false],
-            ]
-        );
+        $wordpress = AvailableFramework::factory()->wordpress()->create();
 
         $site = ServerSite::factory()->create([
             'server_id' => $server->id,
@@ -155,14 +128,7 @@ class WordPressInstallationTest extends TestCase
         $server = Server::factory()->create(['user_id' => $user->id]);
         $database = ServerDatabase::factory()->create(['server_id' => $server->id]);
 
-        $wordpress = AvailableFramework::firstOrCreate(
-            ['slug' => 'wordpress'],
-            [
-                'name' => 'WordPress',
-                'env' => ['file_path' => 'wp-config.php', 'supports' => true],
-                'requirements' => ['database' => true, 'redis' => false, 'nodejs' => false, 'composer' => false],
-            ]
-        );
+        $wordpress = AvailableFramework::factory()->wordpress()->create();
 
         $site = ServerSite::factory()->create([
             'server_id' => $server->id,
@@ -195,14 +161,7 @@ class WordPressInstallationTest extends TestCase
         $server = Server::factory()->create(['user_id' => $user->id]);
         $database = ServerDatabase::factory()->create(['server_id' => $server->id]);
 
-        $wordpress = AvailableFramework::firstOrCreate(
-            ['slug' => 'wordpress'],
-            [
-                'name' => 'WordPress',
-                'env' => ['file_path' => 'wp-config.php', 'supports' => true],
-                'requirements' => ['database' => true, 'redis' => false, 'nodejs' => false, 'composer' => false],
-            ]
-        );
+        $wordpress = AvailableFramework::factory()->wordpress()->create();
 
         $site = ServerSite::factory()->create([
             'server_id' => $server->id,
@@ -234,14 +193,7 @@ class WordPressInstallationTest extends TestCase
         $database = ServerDatabase::factory()->create(['server_id' => $server->id]);
         ServerPhp::factory()->create(['server_id' => $server->id, 'version' => '8.3', 'status' => TaskStatus::Active]);
 
-        $wordpress = AvailableFramework::firstOrCreate(
-            ['slug' => 'wordpress'],
-            [
-                'name' => 'WordPress',
-                'env' => ['file_path' => 'wp-config.php', 'supports' => true],
-                'requirements' => ['database' => true, 'redis' => false, 'nodejs' => false, 'composer' => false],
-            ]
-        );
+        $wordpress = AvailableFramework::factory()->wordpress()->create();
 
         // Act - submit without Git fields
         $response = $this->actingAs($user)
@@ -268,14 +220,7 @@ class WordPressInstallationTest extends TestCase
         $server = Server::factory()->create(['user_id' => $user->id]);
         $database = ServerDatabase::factory()->create(['server_id' => $server->id]);
 
-        $laravel = AvailableFramework::firstOrCreate(
-            ['slug' => 'laravel'],
-            [
-                'name' => 'Laravel',
-                'env' => ['file_path' => '.env', 'supports' => true],
-                'requirements' => ['database' => true, 'redis' => true, 'nodejs' => true, 'composer' => true],
-            ]
-        );
+        $laravel = AvailableFramework::factory()->laravel()->create();
 
         // Act - submit Laravel site without Git fields
         $response = $this->actingAs($user)
@@ -300,14 +245,7 @@ class WordPressInstallationTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create(['user_id' => $user->id]);
 
-        $wordpress = AvailableFramework::firstOrCreate(
-            ['slug' => 'wordpress'],
-            [
-                'name' => 'WordPress',
-                'env' => ['file_path' => 'wp-config.php', 'supports' => true],
-                'requirements' => ['database' => true, 'redis' => false, 'nodejs' => false, 'composer' => false],
-            ]
-        );
+        $wordpress = AvailableFramework::factory()->wordpress()->create();
 
         // Act - submit without database_id
         $response = $this->actingAs($user)
@@ -334,14 +272,7 @@ class WordPressInstallationTest extends TestCase
         $database = ServerDatabase::factory()->create(['server_id' => $server->id]);
         ServerPhp::factory()->create(['server_id' => $server->id, 'version' => '8.3', 'status' => TaskStatus::Active]);
 
-        $wordpress = AvailableFramework::firstOrCreate(
-            ['slug' => 'wordpress'],
-            [
-                'name' => 'WordPress',
-                'env' => ['file_path' => 'wp-config.php', 'supports' => true],
-                'requirements' => ['database' => true, 'redis' => false, 'nodejs' => false, 'composer' => false],
-            ]
-        );
+        $wordpress = AvailableFramework::factory()->wordpress()->create();
 
         // Act
         $response = $this->actingAs($user)
@@ -369,14 +300,7 @@ class WordPressInstallationTest extends TestCase
         $database = ServerDatabase::factory()->create(['server_id' => $server->id]);
         ServerPhp::factory()->create(['server_id' => $server->id, 'version' => '8.3', 'status' => TaskStatus::Active]);
 
-        $wordpress = AvailableFramework::firstOrCreate(
-            ['slug' => 'wordpress'],
-            [
-                'name' => 'WordPress',
-                'env' => ['file_path' => 'wp-config.php', 'supports' => true],
-                'requirements' => ['database' => true, 'redis' => false, 'nodejs' => false, 'composer' => false],
-            ]
-        );
+        $wordpress = AvailableFramework::factory()->wordpress()->create();
 
         // Act
         $response = $this->actingAs($user)
@@ -406,14 +330,7 @@ class WordPressInstallationTest extends TestCase
         $server = Server::factory()->create(['user_id' => $user->id]);
         $database = ServerDatabase::factory()->create(['server_id' => $server->id]);
 
-        $wordpress = AvailableFramework::firstOrCreate(
-            ['slug' => 'wordpress'],
-            [
-                'name' => 'WordPress',
-                'env' => ['file_path' => 'wp-config.php', 'supports' => true],
-                'requirements' => ['database' => true, 'redis' => false, 'nodejs' => false, 'composer' => false],
-            ]
-        );
+        $wordpress = AvailableFramework::factory()->wordpress()->create();
 
         // Act
         $response = $this->post("/servers/{$server->id}/sites", [

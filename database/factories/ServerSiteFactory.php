@@ -102,4 +102,50 @@ class ServerSiteFactory extends Factory
             'git_status' => TaskStatus::Failed,
         ]);
     }
+
+    /**
+     * Indicate that the site uses the Laravel framework.
+     */
+    public function laravel(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'available_framework_id' => AvailableFramework::factory()->laravel(),
+            'document_root' => '/home/brokeforge/'.$this->faker->domainName().'/public',
+        ]);
+    }
+
+    /**
+     * Indicate that the site uses the WordPress framework.
+     */
+    public function wordpress(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'available_framework_id' => AvailableFramework::factory()->wordpress(),
+            'document_root' => '/home/brokeforge/'.$this->faker->domainName(),
+            'php_version' => $this->faker->randomElement(['8.1', '8.2', '8.3']),
+        ]);
+    }
+
+    /**
+     * Indicate that the site uses the Generic PHP framework.
+     */
+    public function genericPhp(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'available_framework_id' => AvailableFramework::factory()->genericPhp(),
+            'document_root' => '/home/brokeforge/'.$this->faker->domainName().'/public',
+        ]);
+    }
+
+    /**
+     * Indicate that the site uses the Static HTML framework.
+     */
+    public function staticHtml(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'available_framework_id' => AvailableFramework::factory()->staticHtml(),
+            'document_root' => '/home/brokeforge/'.$this->faker->domainName().'/public',
+            'php_version' => null,
+        ]);
+    }
 }

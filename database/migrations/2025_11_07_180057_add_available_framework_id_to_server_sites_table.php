@@ -13,10 +13,9 @@ return new class extends Migration
     {
         Schema::table('server_sites', function (Blueprint $table) {
             $table->foreignId('available_framework_id')
-                ->nullable()
                 ->after('server_id')
                 ->constrained()
-                ->onDelete('set null');
+                ->onDelete('restrict');
         });
     }
 

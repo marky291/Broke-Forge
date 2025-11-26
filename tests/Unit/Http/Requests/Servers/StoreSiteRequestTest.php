@@ -312,14 +312,7 @@ class StoreSiteRequestTest extends TestCase
         $server = Server::factory()->create(['user_id' => $user->id]);
 
         // Get or create a PHP-based framework (not static-html) to ensure php_version is required
-        $framework = AvailableFramework::firstOrCreate(
-            ['slug' => 'laravel'],
-            [
-                'name' => 'Laravel',
-                'env' => ['file_path' => '.env', 'supports' => true],
-                'requirements' => ['database' => true, 'redis' => true, 'nodejs' => true, 'composer' => true],
-            ]
-        );
+        $framework = AvailableFramework::factory()->laravel()->create();
 
         $request = new StoreSiteRequest;
         $request->setContainer(app());

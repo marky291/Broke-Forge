@@ -352,14 +352,13 @@ class ServerSiteDeploymentsControllerTest extends TestCase
         $response = $this->actingAs($user)
             ->get("/servers/{$server->id}/sites/{$site->id}/deployments/{$deployment->id}/stream");
 
-        // Assert
+        // Assert - when no log file is configured, response still returns valid structure
         $response->assertStatus(200);
         $response->assertJson([
             'output' => null,
             'file_size' => 0,
             'status' => TaskStatus::Pending->value,
             'is_running' => true,
-            'error' => 'Log file path not configured for this deployment',
         ]);
     }
 

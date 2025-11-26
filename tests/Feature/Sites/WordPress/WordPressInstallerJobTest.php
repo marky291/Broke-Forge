@@ -60,14 +60,7 @@ class WordPressInstallerJobTest extends TestCase
         $server = Server::factory()->create();
         $database = ServerDatabase::factory()->create(['server_id' => $server->id]);
 
-        $wordpress = AvailableFramework::firstOrCreate(
-            ['slug' => 'wordpress'],
-            [
-                'name' => 'WordPress',
-                'env' => ['file_path' => 'wp-config.php', 'supports' => true],
-                'requirements' => ['database' => true, 'redis' => false, 'nodejs' => false, 'composer' => false],
-            ]
-        );
+        $wordpress = AvailableFramework::factory()->wordpress()->create();
 
         $site = ServerSite::factory()->create([
             'server_id' => $server->id,
@@ -102,14 +95,7 @@ class WordPressInstallerJobTest extends TestCase
             'root_password' => 'secure_password',
         ]);
 
-        $wordpress = AvailableFramework::firstOrCreate(
-            ['slug' => 'wordpress'],
-            [
-                'name' => 'WordPress',
-                'env' => ['file_path' => 'wp-config.php', 'supports' => true],
-                'requirements' => ['database' => true, 'redis' => false, 'nodejs' => false, 'composer' => false],
-            ]
-        );
+        $wordpress = AvailableFramework::factory()->wordpress()->create();
 
         $site = ServerSite::factory()->create([
             'server_id' => $server->id,
@@ -141,14 +127,7 @@ class WordPressInstallerJobTest extends TestCase
         $server = Server::factory()->create();
         $database = ServerDatabase::factory()->create(['server_id' => $server->id]);
 
-        $wordpress = AvailableFramework::firstOrCreate(
-            ['slug' => 'wordpress'],
-            [
-                'name' => 'WordPress',
-                'env' => ['file_path' => 'wp-config.php', 'supports' => true],
-                'requirements' => ['database' => true, 'redis' => false, 'nodejs' => false, 'composer' => false],
-            ]
-        );
+        $wordpress = AvailableFramework::factory()->wordpress()->create();
 
         $site = ServerSite::factory()->create([
             'server_id' => $server->id,
@@ -180,14 +159,7 @@ class WordPressInstallerJobTest extends TestCase
         $server = Server::factory()->create();
         $database = ServerDatabase::factory()->create(['server_id' => $server->id]);
 
-        $wordpress = AvailableFramework::firstOrCreate(
-            ['slug' => 'wordpress'],
-            [
-                'name' => 'WordPress',
-                'env' => ['file_path' => 'wp-config.php', 'supports' => true],
-                'requirements' => ['database' => true, 'redis' => false, 'nodejs' => false, 'composer' => false],
-            ]
-        );
+        $wordpress = AvailableFramework::factory()->wordpress()->create();
 
         $site = ServerSite::factory()->create([
             'server_id' => $server->id,
@@ -243,14 +215,7 @@ class WordPressInstallerJobTest extends TestCase
             'root_password' => 'secure_password',
         ]);
 
-        $wordpress = AvailableFramework::firstOrCreate(
-            ['slug' => 'wordpress'],
-            [
-                'name' => 'WordPress',
-                'env' => ['file_path' => 'wp-config.php', 'supports' => true],
-                'requirements' => ['database' => true, 'redis' => false, 'nodejs' => false, 'composer' => false],
-            ]
-        );
+        $wordpress = AvailableFramework::factory()->wordpress()->create();
 
         $site = ServerSite::factory()->create([
             'server_id' => $server->id,
@@ -299,14 +264,7 @@ class WordPressInstallerJobTest extends TestCase
         $server = Server::factory()->create();
         $database = ServerDatabase::factory()->create(['server_id' => $server->id]);
 
-        $wordpress = AvailableFramework::firstOrCreate(
-            ['slug' => 'wordpress'],
-            [
-                'name' => 'WordPress',
-                'env' => ['file_path' => 'wp-config.php', 'supports' => true],
-                'requirements' => ['database' => true, 'redis' => false, 'nodejs' => false, 'composer' => false],
-            ]
-        );
+        $wordpress = AvailableFramework::factory()->wordpress()->create();
 
         // Create site with /public suffix (as the controller does)
         $site = ServerSite::factory()->create([

@@ -5,10 +5,6 @@ namespace App\Packages\Services\Sites;
 use App\Enums\TaskStatus;
 use App\Models\Server;
 use App\Models\ServerSite;
-use App\Packages\Services\Sites\Framework\GenericPhp\GenericPhpInstallerJob;
-use App\Packages\Services\Sites\Framework\Laravel\LaravelInstallerJob;
-use App\Packages\Services\Sites\Framework\StaticHtml\StaticHtmlInstallerJob;
-use App\Packages\Services\Sites\Framework\WordPress\WordPressInstallerJob;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\Middleware\WithoutOverlapping;
@@ -58,19 +54,9 @@ class SiteInstallerJob implements ShouldQueue
 
         Log::info("Routing site installation for site #{$site->id} (domain: {$site->domain}, framework: {$site->siteFramework->slug}) on server #{$this->server->id}");
 
-        // Route to appropriate framework installer based on available_framework_id
-        // Framework IDs from AvailableFrameworkSeeder:
-        // 1 = Laravel
-        // 2 = WordPress
-        // 3 = Generic PHP
-        // 4 = Static HTML
-        match ($site->available_framework_id) {
-            1 => LaravelInstallerJob::dispatchSync($this->server, $this->siteId),
-            2 => WordPressInstallerJob::dispatchSync($this->server, $this->siteId),
-            3 => GenericPhpInstallerJob::dispatchSync($this->server, $this->siteId),
-            4 => StaticHtmlInstallerJob::dispatchSync($this->server, $this->siteId),
-            default => throw new \RuntimeException("Unknown framework ID: {$site->available_framework_id}"),
-        };
+        // Route to appropriate framework installer based on framework slug
+        $installerClass = $site->siteFramework->getInstallerClass();
+        $installerClass::dispatchSync($this->server, $this->siteId);
 
         Log::info("Site installation job dispatched for site #{$site->id}");
     }

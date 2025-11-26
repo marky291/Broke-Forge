@@ -97,9 +97,8 @@ class WordPressInstallerJobTest extends TestCase
     {
         // Arrange
         $server = Server::factory()->create();
-        $site = ServerSite::factory()->create([
+        $site = ServerSite::factory()->wordpress()->create([
             'server_id' => $server->id,
-            'available_framework_id' => 2, // WordPress
         ]);
         $job = new WordPressInstallerJob($server, $site->id);
 
@@ -121,9 +120,8 @@ class WordPressInstallerJobTest extends TestCase
     {
         // Arrange
         $server = Server::factory()->create();
-        $site = ServerSite::factory()->create([
+        $site = ServerSite::factory()->wordpress()->create([
             'server_id' => $server->id,
-            'available_framework_id' => 2, // WordPress
         ]);
         $job = new WordPressInstallerJob($server, $site->id);
 

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Http\Controllers;
 
+use App\Models\AvailableFramework;
 use App\Models\Server;
 use App\Models\ServerSite;
 use App\Models\User;
@@ -19,7 +20,7 @@ class ServerSiteInstallationControllerTest extends TestCase
     {
         // Arrange
         $server = Server::factory()->create();
-        $site = ServerSite::factory()->create(['server_id' => $server->id]);
+        $site = ServerSite::factory()->laravel()->create(['server_id' => $server->id]);
 
         // Act
         $response = $this->get(route('servers.sites.installing', [$server, $site]));
@@ -36,7 +37,7 @@ class ServerSiteInstallationControllerTest extends TestCase
         // Arrange
         $user = User::factory()->create();
         $server = Server::factory()->create(['user_id' => $user->id]);
-        $site = ServerSite::factory()->create([
+        $site = ServerSite::factory()->laravel()->create([
             'server_id' => $server->id,
             'status' => 'installing',
         ]);
@@ -58,7 +59,7 @@ class ServerSiteInstallationControllerTest extends TestCase
         $user = User::factory()->create();
         $otherUser = User::factory()->create();
         $server = Server::factory()->create(['user_id' => $otherUser->id]);
-        $site = ServerSite::factory()->create([
+        $site = ServerSite::factory()->laravel()->create([
             'server_id' => $server->id,
             'status' => 'installing',
         ]);
@@ -79,7 +80,7 @@ class ServerSiteInstallationControllerTest extends TestCase
         // Arrange
         $user = User::factory()->create();
         $server = Server::factory()->create(['user_id' => $user->id]);
-        $site = ServerSite::factory()->create([
+        $site = ServerSite::factory()->laravel()->create([
             'server_id' => $server->id,
             'status' => 'active',
             'domain' => 'example.com',
@@ -102,9 +103,8 @@ class ServerSiteInstallationControllerTest extends TestCase
         // Arrange
         $user = User::factory()->create();
         $server = Server::factory()->create(['user_id' => $user->id]);
-        $site = ServerSite::factory()->create([
+        $site = ServerSite::factory()->wordpress()->create([
             'server_id' => $server->id,
-            'available_framework_id' => 2, // WordPress
             'status' => 'failed',
             'domain' => 'example.com',
             'installation_state' => collect([
@@ -136,7 +136,7 @@ class ServerSiteInstallationControllerTest extends TestCase
         $user = User::factory()->create();
         $server1 = Server::factory()->create(['user_id' => $user->id]);
         $server2 = Server::factory()->create(['user_id' => $user->id]);
-        $site = ServerSite::factory()->create([
+        $site = ServerSite::factory()->laravel()->create([
             'server_id' => $server2->id,
             'status' => 'installing',
         ]);
@@ -157,7 +157,7 @@ class ServerSiteInstallationControllerTest extends TestCase
         // Arrange
         $user = User::factory()->create();
         $server = Server::factory()->create(['user_id' => $user->id]);
-        $site = ServerSite::factory()->create([
+        $site = ServerSite::factory()->laravel()->create([
             'server_id' => $server->id,
             'status' => 'installing',
         ]);
@@ -184,7 +184,7 @@ class ServerSiteInstallationControllerTest extends TestCase
             'vanity_name' => 'Production Server',
             'public_ip' => '192.168.1.100',
         ]);
-        $site = ServerSite::factory()->create([
+        $site = ServerSite::factory()->laravel()->create([
             'server_id' => $server->id,
             'status' => 'installing',
         ]);
@@ -210,9 +210,8 @@ class ServerSiteInstallationControllerTest extends TestCase
         // Arrange
         $user = User::factory()->create();
         $server = Server::factory()->create(['user_id' => $user->id]);
-        $site = ServerSite::factory()->create([
+        $site = ServerSite::factory()->wordpress()->create([
             'server_id' => $server->id,
-            'available_framework_id' => 2, // WordPress
             'status' => 'installing',
             'domain' => 'example.com',
         ]);
@@ -226,7 +225,7 @@ class ServerSiteInstallationControllerTest extends TestCase
             ->has('site')
             ->where('site.domain', 'example.com')
             ->where('site.status', 'installing')
-            ->where('site.framework', 'wordpress')
+            ->where('site.framework', AvailableFramework::WORDPRESS)
             ->has('site.steps') // Should have framework-specific steps
         );
     }

@@ -1091,6 +1091,7 @@ class ServerSitesControllerTest extends TestCase
         // Arrange
         $user = User::factory()->create();
         $server = Server::factory()->create(['user_id' => $user->id]);
+        AvailableFramework::factory()->laravel()->create();
 
         // Act
         $response = $this->actingAs($user)
@@ -1377,8 +1378,8 @@ class ServerSitesControllerTest extends TestCase
             'status' => TaskStatus::Active,
         ]);
 
-        // Get a framework that requires PHP but not database/nodejs
-        $framework = AvailableFramework::where('slug', 'generic-php')->first();
+        // Create a framework that requires PHP but not database/nodejs
+        $framework = AvailableFramework::factory()->genericPhp()->create();
 
         // Act - create site with installed PHP version
         $response = $this->actingAs($user)
@@ -1412,8 +1413,8 @@ class ServerSitesControllerTest extends TestCase
             'status' => TaskStatus::Active,
         ]);
 
-        // Get a framework that requires PHP but not database/nodejs
-        $framework = AvailableFramework::where('slug', 'generic-php')->first();
+        // Create a framework that requires PHP but not database/nodejs
+        $framework = AvailableFramework::factory()->genericPhp()->create();
 
         // Act - try to create site with non-installed PHP version
         $response = $this->actingAs($user)
@@ -1447,8 +1448,8 @@ class ServerSitesControllerTest extends TestCase
             'status' => TaskStatus::Installing,
         ]);
 
-        // Get a framework that requires PHP but not database/nodejs
-        $framework = AvailableFramework::where('slug', 'generic-php')->first();
+        // Create a framework that requires PHP but not database/nodejs
+        $framework = AvailableFramework::factory()->genericPhp()->create();
 
         // Act - try to create site with PHP version that's not active yet
         $response = $this->actingAs($user)
