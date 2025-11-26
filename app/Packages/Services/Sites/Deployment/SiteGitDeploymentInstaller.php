@@ -191,9 +191,20 @@ class SiteGitDeploymentInstaller extends PackageInstaller implements \App\Packag
         };
 
         // Create symlinks to shared directories
+        // Note: We must remove existing directories/files before creating symlinks
+        // because git clone creates these directories from the repository,
+        // and `ln -sfn` will create a symlink INSIDE an existing directory
+        // rather than replacing it.
         $commands[] = function () use ($deploymentPath) {
             $symlinkCommands = sprintf(
-                'ln -sfn ../shared/storage %s/storage && ln -sfn ../shared/.env %s/.env && ln -sfn ../shared/vendor %s/vendor && ln -sfn ../shared/node_modules %s/node_modules',
+                'rm -rf %s/storage && ln -sfn ../shared/storage %s/storage && '.
+                'rm -f %s/.env && ln -sfn ../shared/.env %s/.env && '.
+                'rm -rf %s/vendor && ln -sfn ../shared/vendor %s/vendor && '.
+                'rm -rf %s/node_modules && ln -sfn ../shared/node_modules %s/node_modules',
+                escapeshellarg($deploymentPath),
+                escapeshellarg($deploymentPath),
+                escapeshellarg($deploymentPath),
+                escapeshellarg($deploymentPath),
                 escapeshellarg($deploymentPath),
                 escapeshellarg($deploymentPath),
                 escapeshellarg($deploymentPath),
@@ -208,7 +219,9 @@ class SiteGitDeploymentInstaller extends PackageInstaller implements \App\Packag
         };
 
         // Create Laravel storage directory structure (required before composer install)
-        $commands[] = function () use ($siteRoot, $deploymentPath) {
+        // Ownership is set to {appUser}:www-data so PHP-FPM can write
+        $appUser = $this->getAppUser();
+        $commands[] = function () use ($siteRoot, $deploymentPath, $appUser) {
             $storageCommands = sprintf(
                 'mkdir -p %s/shared/storage/framework/cache/data && '.
                 'mkdir -p %s/shared/storage/framework/sessions && '.
@@ -218,7 +231,9 @@ class SiteGitDeploymentInstaller extends PackageInstaller implements \App\Packag
                 'mkdir -p %s/shared/storage/app/public && '.
                 'mkdir -p %s/bootstrap/cache && '.
                 'chmod -R 775 %s/shared/storage && '.
-                'chmod 775 %s/bootstrap/cache',
+                'chmod 775 %s/bootstrap/cache && '.
+                'sudo chown -R %s:www-data %s/shared/storage && '.
+                'sudo chown -R %s:www-data %s/bootstrap/cache',
                 escapeshellarg($siteRoot),
                 escapeshellarg($siteRoot),
                 escapeshellarg($siteRoot),
@@ -227,6 +242,10 @@ class SiteGitDeploymentInstaller extends PackageInstaller implements \App\Packag
                 escapeshellarg($siteRoot),
                 escapeshellarg($deploymentPath),
                 escapeshellarg($siteRoot),
+                escapeshellarg($deploymentPath),
+                $appUser,
+                escapeshellarg($siteRoot),
+                $appUser,
                 escapeshellarg($deploymentPath)
             );
 
@@ -242,11 +261,14 @@ class SiteGitDeploymentInstaller extends PackageInstaller implements \App\Packag
 
         // Execute each line of the deployment script in the new deployment directory
         foreach ($scriptLines as $index => $line) {
-            $commands[] = function () use ($deploymentPath, $line, $logFilePath, $deployment, $index) {
+            $commands[] = function () use ($deploymentPath, $line, $logFilePath, $deployment, $index, $site) {
+                // Rewrite php and composer commands to use the site's PHP version
+                $rewrittenLine = $this->rewritePhpCommands($line, $site->php_version);
+
                 // Log the command being executed
                 $logCommandCommand = sprintf(
                     'echo "\n=== Running: %s ===" >> %s',
-                    addcslashes($line, '"\\$`'),
+                    addcslashes($rewrittenLine, '"\\$`'),
                     escapeshellarg($logFilePath)
                 );
                 $this->server->ssh('brokeforge')->execute($logCommandCommand);
@@ -256,7 +278,7 @@ class SiteGitDeploymentInstaller extends PackageInstaller implements \App\Packag
                     'git config --global --add safe.directory %s && cd %s && %s >> %s 2>&1',
                     escapeshellarg($deploymentPath),
                     escapeshellarg($deploymentPath),
-                    $line,
+                    $rewrittenLine,
                     escapeshellarg($logFilePath)
                 );
 
@@ -275,16 +297,16 @@ class SiteGitDeploymentInstaller extends PackageInstaller implements \App\Packag
 
                     Log::warning('Deployment script line failed.', [
                         'server_id' => $this->server->id,
-                        'line' => $line,
+                        'line' => $rewrittenLine,
                         'exit_code' => $process->getExitCode(),
                     ]);
 
-                    throw new RuntimeException("Deployment failed at line: {$line}");
+                    throw new RuntimeException("Deployment failed at line: {$rewrittenLine}");
                 }
 
                 Log::info("Deployment line #{$index} completed", [
                     'deployment_id' => $deployment->id,
-                    'line' => $line,
+                    'line' => $rewrittenLine,
                 ]);
             };
         }
@@ -426,6 +448,39 @@ class SiteGitDeploymentInstaller extends PackageInstaller implements \App\Packag
                 // Don't throw - continue pruning other deployments
             }
         }
+    }
+
+    /**
+     * Get the application user for file ownership.
+     *
+     * Returns the brokeforge user from credentials, or defaults to 'brokeforge'.
+     */
+    protected function getAppUser(): string
+    {
+        $brokeforgeCredential = $this->server->credentials()
+            ->where('user', 'brokeforge')
+            ->first();
+
+        return $brokeforgeCredential?->getUsername() ?: 'brokeforge';
+    }
+
+    /**
+     * Rewrite php and composer commands to use the site's PHP version.
+     */
+    protected function rewritePhpCommands(string $command, string $phpVersion): string
+    {
+        $phpBinary = "/usr/bin/php{$phpVersion}";
+        $composerCommand = "{$phpBinary} /usr/local/bin/composer";
+
+        // Replace standalone 'php ' at start of command or after && or ;
+        $command = preg_replace('/^php\s/', "{$phpBinary} ", $command);
+        $command = preg_replace('/(\s*&&\s*|\s*;\s*)php\s/', "$1{$phpBinary} ", $command);
+
+        // Replace standalone 'composer ' at start of command or after && or ;
+        $command = preg_replace('/^composer\s/', "{$composerCommand} ", $command);
+        $command = preg_replace('/(\s*&&\s*|\s*;\s*)composer\s/', "$1{$composerCommand} ", $command);
+
+        return $command;
     }
 
     public function milestones(): Milestones

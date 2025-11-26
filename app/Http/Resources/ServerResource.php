@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Enums\TaskStatus;
+use App\Models\AvailablePhpVersion;
 use App\Packages\Services\Node\Services\NodeConfigurationService;
 use App\Packages\Services\PHP\Services\PhpConfigurationService;
 use Illuminate\Http\Request;
@@ -56,6 +57,7 @@ class ServerResource extends JsonResource
             'sites' => $this->transformSites(),
             'phps' => $this->transformPhps(),
             'availablePhpVersions' => $this->transformAvailablePhpVersions(),
+            'installablePhpVersions' => $this->transformInstallablePhpVersions(),
             'phpExtensions' => PhpConfigurationService::getAvailableExtensions(),
             'defaultSettings' => PhpConfigurationService::getDefaultSettings(),
             'nodes' => $this->transformNodes(),
@@ -235,15 +237,41 @@ class ServerResource extends JsonResource
 
     /**
      * Transform available PHP versions into array of value/label objects.
+     * Returns only PHP versions that are installed and active on this server.
      */
     protected function transformAvailablePhpVersions(): array
     {
-        $versions = PhpConfigurationService::getAvailableVersions();
+        return $this->phps()
+            ->where('status', TaskStatus::Active)
+            ->orderByDesc('version')
+            ->get()
+            ->map(fn ($php) => [
+                'value' => $php->version,
+                'label' => 'PHP '.$php->version,
+            ])
+            ->toArray();
+    }
 
-        return collect($versions)->map(fn ($label, $value) => [
-            'value' => $value,
-            'label' => $label,
-        ])->values()->toArray();
+    /**
+     * Transform installable PHP versions into array of value/label objects.
+     * Returns all PHP versions from AvailablePhpVersion that are NOT already installed on this server.
+     * Includes deprecated versions so users can see them in the UI.
+     */
+    protected function transformInstallablePhpVersions(): array
+    {
+        $installedVersions = $this->phps()->pluck('version')->toArray();
+
+        return AvailablePhpVersion::ordered()
+            ->whereNotIn('version', $installedVersions)
+            ->get()
+            ->map(fn ($version) => [
+                'value' => $version->version,
+                'label' => $version->display_name,
+                'is_default' => $version->is_default,
+                'is_deprecated' => $version->is_deprecated,
+                'eol_date' => $version->eol_date?->toDateString(),
+            ])
+            ->toArray();
     }
 
     /**

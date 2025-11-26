@@ -25,8 +25,8 @@ use App\Http\Controllers\ServerSitesController;
 use App\Http\Controllers\ServerSiteSettingsController;
 use App\Http\Controllers\ServerSupervisorController;
 use App\Http\Controllers\SourceProviderController;
+use App\Http\Controllers\WelcomeController;
 use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
 
 /*
 |--------------------------------------------------------------------------
@@ -34,9 +34,7 @@ use Inertia\Inertia;
 |--------------------------------------------------------------------------
 */
 
-Route::get('/', function () {
-    return Inertia::render('welcome');
-})->name('home');
+Route::get('/', WelcomeController::class)->name('home');
 
 /*
 |--------------------------------------------------------------------------

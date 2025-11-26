@@ -49,6 +49,9 @@ class SiteEnvironmentReader
 
     /**
      * Get the full path to the environment file.
+     *
+     * The .env file lives in the shared directory for symlink-based deployments.
+     * Path: /home/brokeforge/deployments/{domain}/shared/.env
      */
     protected function getEnvFilePath(): ?string
     {
@@ -61,7 +64,7 @@ class SiteEnvironmentReader
         $siteRoot = $this->site->getSiteRoot();
         $envFile = $framework->getEnvFilePath();
 
-        return $siteRoot.'/'.$envFile;
+        return $siteRoot.'/shared/'.$envFile;
     }
 
     /**

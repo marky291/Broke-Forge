@@ -153,7 +153,10 @@ class LaravelInstallerJobTest extends TestCase
     {
         // Arrange
         $server = Server::factory()->create();
-        $site = ServerSite::factory()->create(['server_id' => $server->id]);
+        $site = ServerSite::factory()->create([
+            'server_id' => $server->id,
+            'domain' => 'test.com',
+        ]);
         $job = new LaravelInstallerJob($server, $site->id);
         $deploymentPath = '/home/brokeforge/deployments/test.com/12345';
 
@@ -171,6 +174,55 @@ class LaravelInstallerJobTest extends TestCase
         $this->assertStringContainsString('.env.example', $commands[0]);
         $this->assertStringContainsString('cp', $commands[0]);
         $this->assertStringContainsString('.env', $commands[0]);
+    }
+
+    /**
+     * Test configure environment file writes to shared/.env path.
+     *
+     * This is critical because the deployment directory's .env is symlinked
+     * to ../shared/.env. Using cp directly would break the symlink.
+     */
+    public function test_configure_environment_file_writes_to_shared_env_path(): void
+    {
+        // Arrange
+        $server = Server::factory()->create();
+        $database = \App\Models\ServerDatabase::factory()->create([
+            'server_id' => $server->id,
+            'name' => 'myapp_db',
+            'type' => 'mysql',
+            'port' => 3306,
+            'root_password' => 'secret',
+        ]);
+        $site = ServerSite::factory()->create([
+            'server_id' => $server->id,
+            'database_id' => $database->id,
+            'domain' => 'myapp.com',
+        ]);
+        $job = new LaravelInstallerJob($server, $site->id);
+        $deploymentPath = '/home/brokeforge/deployments/myapp.com/26112024-123456';
+
+        // Act
+        $reflection = new \ReflectionClass($job);
+        $method = $reflection->getMethod('configureEnvironmentFile');
+        $method->setAccessible(true);
+        $commands = $method->invoke($job, $site, $deploymentPath);
+
+        // Assert - all commands should target the shared/.env path
+        $sharedEnvPath = '/home/brokeforge/deployments/myapp.com/shared/.env';
+
+        // First command copies .env.example to shared/.env
+        $this->assertStringContainsString($sharedEnvPath, $commands[0]);
+        $this->assertStringContainsString('.env.example', $commands[0]);
+
+        // All database config commands should target shared/.env
+        foreach (array_slice($commands, 1) as $command) {
+            $this->assertStringContainsString($sharedEnvPath, $command);
+        }
+
+        // Verify database values are in commands
+        $allCommands = implode(' ', $commands);
+        $this->assertStringContainsString('DB_DATABASE', $allCommands);
+        $this->assertStringContainsString('myapp_db', $allCommands);
     }
 
     /**

@@ -89,6 +89,11 @@ type NodeVersion = {
     is_default: boolean;
 };
 
+type PhpVersion = {
+    value: string;
+    label: string;
+};
+
 type ServerType = {
     id: number;
     vanity_name: string;
@@ -102,6 +107,7 @@ type ServerType = {
     databases: Database[];
     nodes: NodeVersion[];
     availableFrameworks: AvailableFramework[];
+    availablePhpVersions: PhpVersion[];
     latestMetrics?: {
         cpu_usage: number;
         memory_total_mb: number;
@@ -594,11 +600,17 @@ export default function Sites({ server }: SitesProps) {
                                         <SelectValue placeholder="Select version" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="8.3">PHP 8.3</SelectItem>
-                                        <SelectItem value="8.2">PHP 8.2</SelectItem>
-                                        <SelectItem value="8.1">PHP 8.1</SelectItem>
-                                        <SelectItem value="8.0">PHP 8.0</SelectItem>
-                                        <SelectItem value="7.4">PHP 7.4</SelectItem>
+                                        {server.availablePhpVersions.length > 0 ? (
+                                            server.availablePhpVersions.map((version) => (
+                                                <SelectItem key={version.value} value={version.value}>
+                                                    {version.label}
+                                                </SelectItem>
+                                            ))
+                                        ) : (
+                                            <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                                                No PHP versions installed
+                                            </div>
+                                        )}
                                     </SelectContent>
                                 </Select>
                             </div>

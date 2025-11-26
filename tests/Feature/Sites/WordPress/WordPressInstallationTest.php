@@ -2,9 +2,11 @@
 
 namespace Tests\Feature\Sites\WordPress;
 
+use App\Enums\TaskStatus;
 use App\Models\AvailableFramework;
 use App\Models\Server;
 use App\Models\ServerDatabase;
+use App\Models\ServerPhp;
 use App\Models\ServerSite;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -26,6 +28,7 @@ class WordPressInstallationTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create(['user_id' => $user->id]);
         $database = ServerDatabase::factory()->create(['server_id' => $server->id]);
+        ServerPhp::factory()->create(['server_id' => $server->id, 'version' => '8.3', 'status' => TaskStatus::Active]);
 
         $wordpress = AvailableFramework::firstOrCreate(
             ['slug' => 'wordpress'],
@@ -75,6 +78,7 @@ class WordPressInstallationTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create(['user_id' => $user->id]);
         $database = ServerDatabase::factory()->create(['server_id' => $server->id]);
+        ServerPhp::factory()->create(['server_id' => $server->id, 'version' => '8.3', 'status' => TaskStatus::Active]);
 
         $wordpress = AvailableFramework::firstOrCreate(
             ['slug' => 'wordpress'],
@@ -224,9 +228,11 @@ class WordPressInstallationTest extends TestCase
     public function test_git_fields_are_not_required_for_wordpress_framework(): void
     {
         // Arrange
+        Queue::fake();
         $user = User::factory()->create();
         $server = Server::factory()->create(['user_id' => $user->id]);
         $database = ServerDatabase::factory()->create(['server_id' => $server->id]);
+        ServerPhp::factory()->create(['server_id' => $server->id, 'version' => '8.3', 'status' => TaskStatus::Active]);
 
         $wordpress = AvailableFramework::firstOrCreate(
             ['slug' => 'wordpress'],
@@ -326,6 +332,7 @@ class WordPressInstallationTest extends TestCase
         $otherUser = User::factory()->create();
         $server = Server::factory()->create(['user_id' => $otherUser->id]);
         $database = ServerDatabase::factory()->create(['server_id' => $server->id]);
+        ServerPhp::factory()->create(['server_id' => $server->id, 'version' => '8.3', 'status' => TaskStatus::Active]);
 
         $wordpress = AvailableFramework::firstOrCreate(
             ['slug' => 'wordpress'],
@@ -356,9 +363,11 @@ class WordPressInstallationTest extends TestCase
     public function test_wordpress_site_creation_with_ssl_enabled(): void
     {
         // Arrange
+        Queue::fake();
         $user = User::factory()->create();
         $server = Server::factory()->create(['user_id' => $user->id]);
         $database = ServerDatabase::factory()->create(['server_id' => $server->id]);
+        ServerPhp::factory()->create(['server_id' => $server->id, 'version' => '8.3', 'status' => TaskStatus::Active]);
 
         $wordpress = AvailableFramework::firstOrCreate(
             ['slug' => 'wordpress'],

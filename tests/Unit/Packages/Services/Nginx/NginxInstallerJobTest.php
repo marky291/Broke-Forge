@@ -35,7 +35,7 @@ class NginxInstallerJobTest extends TestCase
         $server = Server::factory()->create();
         $phpVersion = PhpVersion::PHP83;
         $job = new NginxInstallerJob($server, $phpVersion, false);
-        $this->assertEquals(0, $job->tries);
+        $this->assertEquals(1, $job->tries);
     }
 
     /**

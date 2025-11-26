@@ -2,19 +2,29 @@
 
 namespace App\Packages\Services\PHP\Services;
 
+use App\Models\AvailablePhpVersion;
+
 class PhpConfigurationService
 {
     /**
-     * Get available PHP versions (Ubuntu 24.04 compatible)
+     * Get available PHP versions from database (active, non-deprecated versions)
      */
     public static function getAvailableVersions(): array
     {
-        return [
-            '8.1' => 'PHP 8.1',
-            '8.2' => 'PHP 8.2',
-            '8.3' => 'PHP 8.3',
-            '8.4' => 'PHP 8.4',
-        ];
+        return AvailablePhpVersion::active()
+            ->ordered()
+            ->pluck('display_name', 'version')
+            ->toArray();
+    }
+
+    /**
+     * Get all PHP versions from database (including deprecated)
+     */
+    public static function getAllVersions(): array
+    {
+        return AvailablePhpVersion::ordered()
+            ->pluck('display_name', 'version')
+            ->toArray();
     }
 
     /**
@@ -63,10 +73,11 @@ class PhpConfigurationService
 
     /**
      * Get validation rules for PHP installation
+     * Uses getAllVersions() to allow installing deprecated versions
      */
     public static function getValidationRules(): array
     {
-        $versions = array_keys(self::getAvailableVersions());
+        $versions = array_keys(self::getAllVersions());
         $extensions = array_keys(self::getAvailableExtensions());
 
         return [

@@ -2,9 +2,11 @@
 
 namespace Tests\Unit\Http\Requests\Servers;
 
+use App\Enums\TaskStatus;
 use App\Http\Requests\Servers\StoreSiteRequest;
 use App\Models\AvailableFramework;
 use App\Models\Server;
+use App\Models\ServerPhp;
 use App\Models\ServerSite;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -24,6 +26,18 @@ class StoreSiteRequestTest extends TestCase
     }
 
     /**
+     * Install a PHP version on a server for tests.
+     */
+    private function installPhpVersion(Server $server, string $version): ServerPhp
+    {
+        return ServerPhp::factory()->create([
+            'server_id' => $server->id,
+            'version' => $version,
+            'status' => TaskStatus::Active,
+        ]);
+    }
+
+    /**
      * Test validation passes with all valid data.
      */
     public function test_validation_passes_with_all_valid_data(): void
@@ -31,6 +45,7 @@ class StoreSiteRequestTest extends TestCase
         // Arrange
         $user = User::factory()->create();
         $server = Server::factory()->create(['user_id' => $user->id]);
+        $this->installPhpVersion($server, '8.3');
 
         $request = new StoreSiteRequest;
         $request->setContainer(app());
@@ -105,6 +120,7 @@ class StoreSiteRequestTest extends TestCase
         // Arrange
         $user = User::factory()->create();
         $server = Server::factory()->create(['user_id' => $user->id]);
+        $this->installPhpVersion($server, '8.3');
 
         $request = new StoreSiteRequest;
         $request->setContainer(app());
@@ -251,6 +267,7 @@ class StoreSiteRequestTest extends TestCase
         $user = User::factory()->create();
         $server1 = Server::factory()->create(['user_id' => $user->id]);
         $server2 = Server::factory()->create(['user_id' => $user->id]);
+        $this->installPhpVersion($server2, '8.3');
 
         ServerSite::factory()->create([
             'server_id' => $server1->id,
@@ -346,6 +363,12 @@ class StoreSiteRequestTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create(['user_id' => $user->id]);
 
+        // Install all PHP versions that will be tested
+        $validVersions = ['7.4', '8.0', '8.1', '8.2', '8.3'];
+        foreach ($validVersions as $version) {
+            $this->installPhpVersion($server, $version);
+        }
+
         $request = new StoreSiteRequest;
         $request->setContainer(app());
         $request->setRouteResolver(fn () => new class($server)
@@ -358,7 +381,6 @@ class StoreSiteRequestTest extends TestCase
             }
         });
 
-        $validVersions = ['7.4', '8.0', '8.1', '8.2', '8.3'];
         $counter = 10;
 
         foreach ($validVersions as $version) {
@@ -464,6 +486,7 @@ class StoreSiteRequestTest extends TestCase
         // Arrange
         $user = User::factory()->create();
         $server = Server::factory()->create(['user_id' => $user->id]);
+        $this->installPhpVersion($server, '8.3');
 
         $request = new StoreSiteRequest;
         $request->setContainer(app());
@@ -545,6 +568,7 @@ class StoreSiteRequestTest extends TestCase
         // Arrange
         $user = User::factory()->create();
         $server = Server::factory()->create(['user_id' => $user->id]);
+        $this->installPhpVersion($server, '8.3');
 
         $request = new StoreSiteRequest;
         $request->setContainer(app());
@@ -689,6 +713,7 @@ class StoreSiteRequestTest extends TestCase
         // Arrange
         $user = User::factory()->create();
         $server = Server::factory()->create(['user_id' => $user->id]);
+        $this->installPhpVersion($server, '8.3');
 
         $request = new StoreSiteRequest;
         $request->setContainer(app());
@@ -815,7 +840,7 @@ class StoreSiteRequestTest extends TestCase
         $this->assertArrayHasKey('domain.regex', $messages);
         $this->assertArrayHasKey('domain.unique', $messages);
         $this->assertArrayHasKey('php_version.required', $messages);
-        $this->assertArrayHasKey('php_version.in', $messages);
+        $this->assertArrayHasKey('php_version.exists', $messages);
         $this->assertArrayHasKey('ssl.required', $messages);
         $this->assertArrayHasKey('git_repository.required', $messages);
         $this->assertArrayHasKey('git_repository.regex', $messages);

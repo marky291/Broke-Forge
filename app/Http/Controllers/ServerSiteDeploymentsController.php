@@ -144,19 +144,14 @@ class ServerSiteDeploymentsController extends Controller
     {
         $this->authorize('view', $server);
 
-        // If no log file path, return empty response
+        // If no log file path yet, return empty response
+        // This is normal during early deployment stages before git clone completes
         if (! $deployment->log_file_path) {
-            \Illuminate\Support\Facades\Log::warning('Deployment log file path not set', [
-                'deployment_id' => $deployment->id,
-                'server_id' => $server->id,
-            ]);
-
             return response()->json([
                 'output' => null,
                 'file_size' => 0,
                 'status' => $deployment->status->value,
                 'is_running' => $deployment->isPending() || $deployment->isRunning(),
-                'error' => 'Log file path not configured for this deployment',
             ]);
         }
 

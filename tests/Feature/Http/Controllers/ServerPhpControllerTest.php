@@ -16,6 +16,14 @@ class ServerPhpControllerTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Seed available PHP versions for validation
+        $this->artisan('db:seed', ['--class' => 'AvailablePhpVersionSeeder']);
+    }
+
     /**
      * Test guest cannot access server PHP page.
      */
@@ -932,7 +940,7 @@ class ServerPhpControllerTest extends TestCase
         // Act
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/php", [
-                'version' => '7.4', // Not in allowed list
+                'version' => '5.6', // Not in allowed list
                 'extensions' => ['gd'],
             ]);
 

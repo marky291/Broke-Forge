@@ -211,10 +211,7 @@ abstract class BaseFrameworkInstaller extends Taskable
         $siteRoot = "/home/brokeforge/deployments/{$domain}";
         $deploymentPath = "{$siteRoot}/{$timestamp}";
 
-        $brokeforgeCredential = $this->server->credentials()
-            ->where('user', 'brokeforge')
-            ->first();
-        $appUser = $brokeforgeCredential?->getUsername() ?: 'brokeforge';
+        $appUser = $this->getAppUser();
 
         return [
             "mkdir -p {$siteRoot}/shared/storage",
@@ -222,7 +219,8 @@ abstract class BaseFrameworkInstaller extends Taskable
             "mkdir -p {$siteRoot}/shared/node_modules",
             "touch {$siteRoot}/shared/.env",
             "mkdir -p {$deploymentPath}",
-            "sudo chown -R {$appUser}:{$appUser} {$siteRoot}",
+            // Use www-data as group so PHP-FPM can write to storage directories
+            "sudo chown -R {$appUser}:www-data {$siteRoot}",
             "sudo chmod -R 775 {$siteRoot}",
         ];
     }
@@ -332,14 +330,19 @@ abstract class BaseFrameworkInstaller extends Taskable
 
     /**
      * Create shared directory symlinks.
+     *
+     * Note: We must remove existing directories/files before creating symlinks
+     * because git clone may create these directories from the repository,
+     * and `ln -sfn` will create a symlink INSIDE an existing directory
+     * rather than replacing it.
      */
     protected function createSharedSymlinks(string $deploymentPath): array
     {
         return [
-            sprintf('ln -sfn ../shared/storage %s/storage', escapeshellarg($deploymentPath)),
-            sprintf('ln -sfn ../shared/.env %s/.env', escapeshellarg($deploymentPath)),
-            sprintf('ln -sfn ../shared/vendor %s/vendor', escapeshellarg($deploymentPath)),
-            sprintf('ln -sfn ../shared/node_modules %s/node_modules', escapeshellarg($deploymentPath)),
+            sprintf('rm -rf %s/storage && ln -sfn ../shared/storage %s/storage', escapeshellarg($deploymentPath), escapeshellarg($deploymentPath)),
+            sprintf('rm -f %s/.env && ln -sfn ../shared/.env %s/.env', escapeshellarg($deploymentPath), escapeshellarg($deploymentPath)),
+            sprintf('rm -rf %s/vendor && ln -sfn ../shared/vendor %s/vendor', escapeshellarg($deploymentPath), escapeshellarg($deploymentPath)),
+            sprintf('rm -rf %s/node_modules && ln -sfn ../shared/node_modules %s/node_modules', escapeshellarg($deploymentPath), escapeshellarg($deploymentPath)),
         ];
     }
 
@@ -349,9 +352,13 @@ abstract class BaseFrameworkInstaller extends Taskable
      * Laravel requires specific storage subdirectories to exist before
      * composer install runs, as the post-autoload hook executes artisan
      * commands that need to access these paths.
+     *
+     * Ownership is set to {appUser}:www-data so PHP-FPM (www-data) can write.
      */
     protected function createLaravelStorageStructure(string $siteRoot, string $deploymentPath): array
     {
+        $appUser = $this->getAppUser();
+
         return [
             sprintf('mkdir -p %s/shared/storage/framework/cache/data', escapeshellarg($siteRoot)),
             sprintf('mkdir -p %s/shared/storage/framework/sessions', escapeshellarg($siteRoot)),
@@ -362,6 +369,9 @@ abstract class BaseFrameworkInstaller extends Taskable
             sprintf('mkdir -p %s/bootstrap/cache', escapeshellarg($deploymentPath)),
             sprintf('chmod -R 775 %s/shared/storage', escapeshellarg($siteRoot)),
             sprintf('chmod 775 %s/bootstrap/cache', escapeshellarg($deploymentPath)),
+            // Ensure www-data group ownership for PHP-FPM write access
+            sprintf('sudo chown -R %s:www-data %s/shared/storage', $appUser, escapeshellarg($siteRoot)),
+            sprintf('sudo chown -R %s:www-data %s/bootstrap/cache', $appUser, escapeshellarg($deploymentPath)),
         ];
     }
 
@@ -512,6 +522,36 @@ EOF;
         return [
             'installed_at' => now(),
         ];
+    }
+
+    /**
+     * Get the application user for file ownership.
+     *
+     * Returns the brokeforge user from credentials, or defaults to 'brokeforge'.
+     */
+    protected function getAppUser(): string
+    {
+        $brokeforgeCredential = $this->server->credentials()
+            ->where('user', 'brokeforge')
+            ->first();
+
+        return $brokeforgeCredential?->getUsername() ?: 'brokeforge';
+    }
+
+    /**
+     * Get the PHP binary path for the site's PHP version.
+     */
+    protected function getPhpBinaryPath(ServerSite $site): string
+    {
+        return "/usr/bin/php{$site->php_version}";
+    }
+
+    /**
+     * Get the composer command using the site's PHP version.
+     */
+    protected function getComposerCommand(ServerSite $site): string
+    {
+        return "{$this->getPhpBinaryPath($site)} /usr/local/bin/composer";
     }
 
     /**

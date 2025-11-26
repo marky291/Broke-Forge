@@ -43,7 +43,9 @@ class StoreSiteRequest extends FormRequest
             'php_version' => [
                 'nullable',
                 'string',
-                'in:7.4,8.0,8.1,8.2,8.3',
+                Rule::exists('server_phps', 'version')
+                    ->where('server_id', $serverId)
+                    ->where('status', 'active'),
             ],
             'ssl' => [
                 'required',
@@ -112,7 +114,7 @@ class StoreSiteRequest extends FormRequest
             'available_framework_id.required' => 'Please select a framework.',
             'available_framework_id.exists' => 'The selected framework is invalid.',
             'php_version.required' => 'Please select a PHP version.',
-            'php_version.in' => 'Please select a valid PHP version.',
+            'php_version.exists' => 'The selected PHP version is not installed on this server.',
             'ssl.required' => 'Please specify whether to enable SSL.',
             'git_repository.required' => 'Git repository is required.',
             'git_repository.regex' => 'Repository must be in owner/repo format (e.g., owner/project).',

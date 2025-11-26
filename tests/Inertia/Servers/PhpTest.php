@@ -14,6 +14,14 @@ class PhpTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Seed available PHP versions for validation
+        $this->artisan('db:seed', ['--class' => 'AvailablePhpVersionSeeder']);
+    }
+
     /**
      * Test PHP page renders correct Inertia component for modal.
      */
@@ -524,7 +532,8 @@ class PhpTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create(['user_id' => $user->id]);
 
-        $availableVersions = ['8.1', '8.2', '8.3', '8.4'];
+        // All versions from AvailablePhpVersion (including deprecated)
+        $availableVersions = ['7.4', '8.0', '8.1', '8.2', '8.3', '8.4', '8.5'];
 
         // Act & Assert - test each available version
         foreach ($availableVersions as $version) {
@@ -551,7 +560,7 @@ class PhpTest extends TestCase
         // Act - submit invalid version via modal
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/php/install", [
-                'version' => '7.4', // Not in available versions
+                'version' => '5.6', // Not in available versions
             ]);
 
         // Assert - validation error returned to modal
@@ -658,5 +667,57 @@ class PhpTest extends TestCase
         $php = $server->phps()->where('version', '8.4')->first();
         $this->assertFalse($php->is_cli_default);
         $this->assertFalse($php->is_site_default);
+    }
+
+    /**
+     * Test PHP page provides installable PHP versions in Inertia props.
+     */
+    public function test_php_page_provides_installable_php_versions(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        // Act
+        $response = $this->actingAs($user)->get("/servers/{$server->id}/php");
+
+        // Assert - verify installable versions are in server props for modal dropdown
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('servers/php')
+            ->has('server.installablePhpVersions')
+            ->has('server.installablePhpVersions.0.value')
+            ->has('server.installablePhpVersions.0.label')
+            ->has('server.installablePhpVersions.0.is_default')
+            ->has('server.installablePhpVersions.0.is_deprecated')
+        );
+    }
+
+    /**
+     * Test installable PHP versions excludes already installed versions.
+     */
+    public function test_installable_php_versions_excludes_installed_versions(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        // Install PHP 8.3 on the server
+        ServerPhp::factory()->create([
+            'server_id' => $server->id,
+            'version' => '8.3',
+            'status' => TaskStatus::Active,
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)->get("/servers/{$server->id}/php");
+
+        // Assert - 8.3 should not be in installable versions
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('servers/php')
+            ->has('server.installablePhpVersions')
+            ->where('server.installablePhpVersions', fn ($versions) => collect($versions)->pluck('value')->doesntContain('8.3'))
+        );
     }
 }

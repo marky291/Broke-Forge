@@ -124,7 +124,8 @@ export interface Server {
     nodes: ServerNode[];
     composer: ServerComposer | null;
     sites: ServerSite[];
-    availablePhpVersions: Record<string, string>;
+    availablePhpVersions: Array<{ value: string; label: string }>;
+    installablePhpVersions: InstallablePhpVersion[];
     availableNodeVersions: Array<{ value: string; label: string }>;
     phpExtensions: Record<string, string>;
     defaultSettings: Record<string, string | number>;
@@ -148,6 +149,14 @@ export interface ServerPhp {
     modules?: ServerPhpModule[];
     created_at?: string;
     updated_at?: string;
+}
+
+export interface InstallablePhpVersion {
+    value: string;
+    label: string;
+    is_default: boolean;
+    is_deprecated: boolean;
+    eol_date: string | null;
 }
 
 export interface ServerNode {

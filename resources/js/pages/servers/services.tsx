@@ -14,7 +14,7 @@ import { show as showServer } from '@/routes/servers';
 import { type BreadcrumbItem, type Server } from '@/types';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { useEcho } from '@laravel/echo-react';
-import { CheckCircle2, ChevronRight, DatabaseIcon, Globe, Layers, Loader2, Pencil, RotateCw, Trash2, XCircle } from 'lucide-react';
+import { CheckCircle2, ChevronRight, DatabaseIcon, FileText, Globe, Layers, Loader2, Pencil, RotateCw, Trash2, XCircle } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 type DatabaseVersion = {
@@ -42,6 +42,7 @@ type ServiceItem = {
     port: number;
     status: string;
     sites_count?: number;
+    error_log?: string;
     created_at: string;
 };
 
@@ -87,6 +88,8 @@ export default function Services({
     const [submitError, setSubmitError] = useState<string | null>(null);
     const [isDependentSitesDialogOpen, setIsDependentSitesDialogOpen] = useState(false);
     const [dependentSitesDatabase, setDependentSitesDatabase] = useState<ServiceItem | null>(null);
+    const [isViewLogsDialogOpen, setIsViewLogsDialogOpen] = useState(false);
+    const [selectedServiceForLogs, setSelectedServiceForLogs] = useState<ServiceItem | null>(null);
 
     // Determine which service types are available for the current dialog
     const currentServices = installDialogType === 'database' ? availableDatabases : availableCacheQueue;
@@ -245,6 +248,11 @@ export default function Services({
         );
     };
 
+    const handleViewLogs = (service: ServiceItem) => {
+        setSelectedServiceForLogs(service);
+        setIsViewLogsDialogOpen(true);
+    };
+
     const getAvailableUpgradeVersions = (service: ServiceItem) => {
         const currentVersion = service.version;
         const services = service.type === 'redis' ? availableCacheQueue : availableDatabases;
@@ -299,6 +307,7 @@ export default function Services({
                     keyExtractor={(db) => db.id}
                     renderItem={(db) => {
                         const hasDetailPage = ['mysql', 'mariadb', 'postgresql'].includes(db.type);
+                        const isClickable = hasDetailPage && db.status === 'active';
                         const sitesCount = db.sites_count ?? 0;
                         const content = (
                             <div className="flex items-center justify-between gap-3">
@@ -320,12 +329,12 @@ export default function Services({
                                 </div>
                                 <div className="flex items-center gap-2 flex-shrink-0">
                                     <CardBadge variant={db.status as any} />
-                                    {hasDetailPage && <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+                                    {isClickable && <ChevronRight className="h-4 w-4 text-muted-foreground" />}
                                 </div>
                             </div>
                         );
 
-                        if (hasDetailPage) {
+                        if (isClickable) {
                             return (
                                 <Link href={`/servers/${server.id}/databases/${db.id}`} className="block hover:bg-muted/50 -mx-3 px-3 rounded transition-colors">
                                     {content}
@@ -341,6 +350,11 @@ export default function Services({
                             db.status === 'pending' || db.status === 'installing' || db.status === 'updating' || db.status === 'uninstalling';
 
                         if (db.status === 'failed') {
+                            actions.push({
+                                label: 'View Logs',
+                                onClick: () => handleViewLogs(db),
+                                icon: <FileText className="h-4 w-4" />,
+                            });
                             actions.push({
                                 label: 'Retry Installation',
                                 onClick: () => handleRetry(db),
@@ -437,6 +451,11 @@ export default function Services({
                                 service.status === 'uninstalling';
 
                             if (service.status === 'failed') {
+                                actions.push({
+                                    label: 'View Logs',
+                                    onClick: () => handleViewLogs(service),
+                                    icon: <FileText className="h-4 w-4" />,
+                                });
                                 actions.push({
                                     label: 'Retry Installation',
                                     onClick: () => handleRetry(service),
@@ -739,6 +758,49 @@ export default function Services({
                             <div className="flex justify-end gap-3">
                                 <Button variant="outline" onClick={() => setIsDependentSitesDialogOpen(false)}>
                                     Close
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
+
+            {/* View Logs Dialog */}
+            <Dialog open={isViewLogsDialogOpen} onOpenChange={setIsViewLogsDialogOpen}>
+                <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <FileText className="h-5 w-5" />
+                            Installation Error Log
+                        </DialogTitle>
+                        <DialogDescription>
+                            {selectedServiceForLogs && (
+                                <>
+                                    Error log for{' '}
+                                    {availableDatabases?.[selectedServiceForLogs.type]?.name ||
+                                        availableCacheQueue?.[selectedServiceForLogs.type]?.name ||
+                                        selectedServiceForLogs.type}{' '}
+                                    {selectedServiceForLogs.version}
+                                </>
+                            )}
+                        </DialogDescription>
+                    </DialogHeader>
+                    {selectedServiceForLogs && (
+                        <div className="space-y-4">
+                            <div className="max-h-96 overflow-auto rounded-md border bg-muted/50 p-4">
+                                <pre className="whitespace-pre-wrap break-words font-mono text-sm">
+                                    {selectedServiceForLogs.error_log || 'No error log available.'}
+                                </pre>
+                            </div>
+                            <div className="flex justify-end gap-3">
+                                <Button variant="outline" onClick={() => setIsViewLogsDialogOpen(false)}>
+                                    Close
+                                </Button>
+                                <Button onClick={() => {
+                                    setIsViewLogsDialogOpen(false);
+                                    handleRetry(selectedServiceForLogs);
+                                }}>
+                                    Retry Installation
                                 </Button>
                             </div>
                         </div>

@@ -416,4 +416,290 @@ class BaseFrameworkInstallerTest extends TestCase
         $this->assertNotNull($context);
         $this->assertStringContainsString('Composer install failed', $context);
     }
+
+    /**
+     * Test getPhpBinaryPath returns correct path for site's PHP version.
+     */
+    public function test_get_php_binary_path_returns_correct_path_for_php_version(): void
+    {
+        // Arrange
+        $server = Server::factory()->create();
+        $site = ServerSite::factory()->create([
+            'server_id' => $server->id,
+            'php_version' => '8.3',
+        ]);
+
+        $installer = new class($server, $site->id) extends BaseFrameworkInstaller
+        {
+            protected function getFrameworkSteps(ServerSite $site): array
+            {
+                return [['name' => 'Test', 'description' => 'Test Step']];
+            }
+
+            protected function installFramework(ServerSite $site): void
+            {
+                // Not needed for this test
+            }
+
+            protected function getOperationName(): string
+            {
+                return 'test installation';
+            }
+
+            public function test_get_php_binary_path(ServerSite $site): string
+            {
+                return $this->getPhpBinaryPath($site);
+            }
+        };
+
+        // Act
+        $phpPath = $installer->test_get_php_binary_path($site);
+
+        // Assert
+        $this->assertEquals('/usr/bin/php8.3', $phpPath);
+    }
+
+    /**
+     * Test getPhpBinaryPath works with different PHP versions.
+     */
+    public function test_get_php_binary_path_works_with_different_php_versions(): void
+    {
+        // Arrange
+        $server = Server::factory()->create();
+
+        $installer = new class($server, 1) extends BaseFrameworkInstaller
+        {
+            protected function getFrameworkSteps(ServerSite $site): array
+            {
+                return [['name' => 'Test', 'description' => 'Test Step']];
+            }
+
+            protected function installFramework(ServerSite $site): void
+            {
+                // Not needed for this test
+            }
+
+            protected function getOperationName(): string
+            {
+                return 'test installation';
+            }
+
+            public function test_get_php_binary_path(ServerSite $site): string
+            {
+                return $this->getPhpBinaryPath($site);
+            }
+        };
+
+        // Test PHP 8.1
+        $site81 = ServerSite::factory()->create([
+            'server_id' => $server->id,
+            'php_version' => '8.1',
+        ]);
+        $this->assertEquals('/usr/bin/php8.1', $installer->test_get_php_binary_path($site81));
+
+        // Test PHP 8.2
+        $site82 = ServerSite::factory()->create([
+            'server_id' => $server->id,
+            'php_version' => '8.2',
+        ]);
+        $this->assertEquals('/usr/bin/php8.2', $installer->test_get_php_binary_path($site82));
+
+        // Test PHP 8.4
+        $site84 = ServerSite::factory()->create([
+            'server_id' => $server->id,
+            'php_version' => '8.4',
+        ]);
+        $this->assertEquals('/usr/bin/php8.4', $installer->test_get_php_binary_path($site84));
+    }
+
+    /**
+     * Test getComposerCommand returns command with site's PHP version.
+     */
+    public function test_get_composer_command_returns_command_with_php_version(): void
+    {
+        // Arrange
+        $server = Server::factory()->create();
+        $site = ServerSite::factory()->create([
+            'server_id' => $server->id,
+            'php_version' => '8.3',
+        ]);
+
+        $installer = new class($server, $site->id) extends BaseFrameworkInstaller
+        {
+            protected function getFrameworkSteps(ServerSite $site): array
+            {
+                return [['name' => 'Test', 'description' => 'Test Step']];
+            }
+
+            protected function installFramework(ServerSite $site): void
+            {
+                // Not needed for this test
+            }
+
+            protected function getOperationName(): string
+            {
+                return 'test installation';
+            }
+
+            public function test_get_composer_command(ServerSite $site): string
+            {
+                return $this->getComposerCommand($site);
+            }
+        };
+
+        // Act
+        $composerCommand = $installer->test_get_composer_command($site);
+
+        // Assert
+        $this->assertEquals('/usr/bin/php8.3 /usr/local/bin/composer', $composerCommand);
+    }
+
+    /**
+     * Test getComposerCommand uses correct PHP binary for different versions.
+     */
+    public function test_get_composer_command_uses_correct_php_binary_for_different_versions(): void
+    {
+        // Arrange
+        $server = Server::factory()->create();
+
+        $installer = new class($server, 1) extends BaseFrameworkInstaller
+        {
+            protected function getFrameworkSteps(ServerSite $site): array
+            {
+                return [['name' => 'Test', 'description' => 'Test Step']];
+            }
+
+            protected function installFramework(ServerSite $site): void
+            {
+                // Not needed for this test
+            }
+
+            protected function getOperationName(): string
+            {
+                return 'test installation';
+            }
+
+            public function test_get_composer_command(ServerSite $site): string
+            {
+                return $this->getComposerCommand($site);
+            }
+        };
+
+        // Test PHP 8.1
+        $site81 = ServerSite::factory()->create([
+            'server_id' => $server->id,
+            'php_version' => '8.1',
+        ]);
+        $this->assertEquals('/usr/bin/php8.1 /usr/local/bin/composer', $installer->test_get_composer_command($site81));
+
+        // Test PHP 8.4
+        $site84 = ServerSite::factory()->create([
+            'server_id' => $server->id,
+            'php_version' => '8.4',
+        ]);
+        $this->assertEquals('/usr/bin/php8.4 /usr/local/bin/composer', $installer->test_get_composer_command($site84));
+    }
+
+    /**
+     * Test createSharedSymlinks removes existing directories before creating symlinks.
+     *
+     * This is critical because git clone creates a storage/ directory from the
+     * repository, and ln -sfn will create a symlink INSIDE an existing directory
+     * rather than replacing it.
+     */
+    public function test_create_shared_symlinks_removes_existing_directories_before_symlink(): void
+    {
+        // Arrange
+        $server = Server::factory()->create();
+        $site = ServerSite::factory()->create(['server_id' => $server->id]);
+
+        $installer = new class($server, $site->id) extends BaseFrameworkInstaller
+        {
+            protected function getFrameworkSteps(ServerSite $site): array
+            {
+                return [['name' => 'Test', 'description' => 'Test Step']];
+            }
+
+            protected function installFramework(ServerSite $site): void
+            {
+                // Not needed for this test
+            }
+
+            protected function getOperationName(): string
+            {
+                return 'test installation';
+            }
+
+            public function test_create_shared_symlinks(string $deploymentPath): array
+            {
+                return $this->createSharedSymlinks($deploymentPath);
+            }
+        };
+
+        // Act
+        $commands = $installer->test_create_shared_symlinks('/home/brokeforge/deployments/test.com/26112024-123456');
+
+        // Assert - storage must be removed before symlink
+        $this->assertCount(4, $commands);
+        $this->assertStringContainsString('rm -rf', $commands[0]);
+        $this->assertStringContainsString('/storage', $commands[0]);
+        $this->assertStringContainsString('ln -sfn ../shared/storage', $commands[0]);
+
+        // Assert - .env uses rm -f (file, not directory)
+        $this->assertStringContainsString('rm -f', $commands[1]);
+        $this->assertStringContainsString('/.env', $commands[1]);
+        $this->assertStringContainsString('ln -sfn ../shared/.env', $commands[1]);
+
+        // Assert - vendor must be removed before symlink
+        $this->assertStringContainsString('rm -rf', $commands[2]);
+        $this->assertStringContainsString('/vendor', $commands[2]);
+        $this->assertStringContainsString('ln -sfn ../shared/vendor', $commands[2]);
+
+        // Assert - node_modules must be removed before symlink
+        $this->assertStringContainsString('rm -rf', $commands[3]);
+        $this->assertStringContainsString('/node_modules', $commands[3]);
+        $this->assertStringContainsString('ln -sfn ../shared/node_modules', $commands[3]);
+    }
+
+    /**
+     * Test createSharedSymlinks uses correct deployment path in commands.
+     */
+    public function test_create_shared_symlinks_uses_correct_deployment_path(): void
+    {
+        // Arrange
+        $server = Server::factory()->create();
+        $site = ServerSite::factory()->create(['server_id' => $server->id]);
+        $deploymentPath = '/home/brokeforge/deployments/example.com/26112024-150000';
+
+        $installer = new class($server, $site->id) extends BaseFrameworkInstaller
+        {
+            protected function getFrameworkSteps(ServerSite $site): array
+            {
+                return [['name' => 'Test', 'description' => 'Test Step']];
+            }
+
+            protected function installFramework(ServerSite $site): void
+            {
+                // Not needed for this test
+            }
+
+            protected function getOperationName(): string
+            {
+                return 'test installation';
+            }
+
+            public function test_create_shared_symlinks(string $deploymentPath): array
+            {
+                return $this->createSharedSymlinks($deploymentPath);
+            }
+        };
+
+        // Act
+        $commands = $installer->test_create_shared_symlinks($deploymentPath);
+
+        // Assert - all commands should reference the deployment path
+        foreach ($commands as $command) {
+            $this->assertStringContainsString($deploymentPath, $command);
+        }
+    }
 }

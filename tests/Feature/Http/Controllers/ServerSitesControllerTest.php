@@ -3,7 +3,9 @@
 namespace Tests\Feature\Http\Controllers;
 
 use App\Enums\TaskStatus;
+use App\Models\AvailableFramework;
 use App\Models\Server;
+use App\Models\ServerPhp;
 use App\Models\ServerSite;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -1254,5 +1256,213 @@ class ServerSitesControllerTest extends TestCase
 
         // Assert - should return 404
         $response->assertStatus(404);
+    }
+
+    /**
+     * Test sites page includes only installed PHP versions in availablePhpVersions.
+     */
+    public function test_sites_page_includes_only_installed_php_versions(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        // Install PHP 8.3 and 8.2 on the server
+        ServerPhp::factory()->create([
+            'server_id' => $server->id,
+            'version' => '8.3',
+            'status' => TaskStatus::Active,
+        ]);
+
+        ServerPhp::factory()->create([
+            'server_id' => $server->id,
+            'version' => '8.2',
+            'status' => TaskStatus::Active,
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/sites");
+
+        // Assert - only installed versions should appear
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('servers/sites')
+            ->has('server.availablePhpVersions', 2)
+            ->where('server.availablePhpVersions.0.value', '8.3')
+            ->where('server.availablePhpVersions.0.label', 'PHP 8.3')
+            ->where('server.availablePhpVersions.1.value', '8.2')
+            ->where('server.availablePhpVersions.1.label', 'PHP 8.2')
+        );
+    }
+
+    /**
+     * Test availablePhpVersions excludes non-active PHP versions.
+     */
+    public function test_available_php_versions_excludes_non_active_versions(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        // Create active PHP version
+        ServerPhp::factory()->create([
+            'server_id' => $server->id,
+            'version' => '8.3',
+            'status' => TaskStatus::Active,
+        ]);
+
+        // Create installing PHP version (should be excluded)
+        ServerPhp::factory()->create([
+            'server_id' => $server->id,
+            'version' => '8.2',
+            'status' => TaskStatus::Installing,
+        ]);
+
+        // Create failed PHP version (should be excluded)
+        ServerPhp::factory()->create([
+            'server_id' => $server->id,
+            'version' => '8.1',
+            'status' => TaskStatus::Failed,
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/sites");
+
+        // Assert - only active version should appear
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('servers/sites')
+            ->has('server.availablePhpVersions', 1)
+            ->where('server.availablePhpVersions.0.value', '8.3')
+        );
+    }
+
+    /**
+     * Test availablePhpVersions is empty when no PHP versions are installed.
+     */
+    public function test_available_php_versions_is_empty_when_no_php_installed(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/sites");
+
+        // Assert - should be empty array
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('servers/sites')
+            ->has('server.availablePhpVersions', 0)
+        );
+    }
+
+    /**
+     * Test site creation validates PHP version against installed versions.
+     */
+    public function test_site_creation_validates_php_version_against_installed_versions(): void
+    {
+        // Arrange
+        Queue::fake();
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        // Install PHP 8.3 on the server
+        ServerPhp::factory()->create([
+            'server_id' => $server->id,
+            'version' => '8.3',
+            'status' => TaskStatus::Active,
+        ]);
+
+        // Get a framework that requires PHP but not database/nodejs
+        $framework = AvailableFramework::where('slug', 'generic-php')->first();
+
+        // Act - create site with installed PHP version
+        $response = $this->actingAs($user)
+            ->post("/servers/{$server->id}/sites", [
+                'domain' => 'example.com',
+                'available_framework_id' => $framework->id,
+                'php_version' => '8.3',
+                'ssl' => false,
+                'git_repository' => 'owner/repo',
+                'git_branch' => 'main',
+            ]);
+
+        // Assert - should succeed (redirect to installation page)
+        $response->assertStatus(302);
+        $response->assertSessionMissing('errors');
+    }
+
+    /**
+     * Test site creation rejects non-installed PHP version.
+     */
+    public function test_site_creation_rejects_non_installed_php_version(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        // Install PHP 8.3 on the server (but not 8.1)
+        ServerPhp::factory()->create([
+            'server_id' => $server->id,
+            'version' => '8.3',
+            'status' => TaskStatus::Active,
+        ]);
+
+        // Get a framework that requires PHP but not database/nodejs
+        $framework = AvailableFramework::where('slug', 'generic-php')->first();
+
+        // Act - try to create site with non-installed PHP version
+        $response = $this->actingAs($user)
+            ->post("/servers/{$server->id}/sites", [
+                'domain' => 'example.com',
+                'available_framework_id' => $framework->id,
+                'php_version' => '8.1', // Not installed
+                'ssl' => false,
+                'git_repository' => 'owner/repo',
+                'git_branch' => 'main',
+            ]);
+
+        // Assert - should fail validation
+        $response->assertStatus(302);
+        $response->assertSessionHasErrors(['php_version']);
+    }
+
+    /**
+     * Test site creation rejects PHP version that is installing (not active).
+     */
+    public function test_site_creation_rejects_php_version_that_is_installing(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        // Create PHP version that is still installing
+        ServerPhp::factory()->create([
+            'server_id' => $server->id,
+            'version' => '8.3',
+            'status' => TaskStatus::Installing,
+        ]);
+
+        // Get a framework that requires PHP but not database/nodejs
+        $framework = AvailableFramework::where('slug', 'generic-php')->first();
+
+        // Act - try to create site with PHP version that's not active yet
+        $response = $this->actingAs($user)
+            ->post("/servers/{$server->id}/sites", [
+                'domain' => 'example.com',
+                'available_framework_id' => $framework->id,
+                'php_version' => '8.3',
+                'ssl' => false,
+                'git_repository' => 'owner/repo',
+                'git_branch' => 'main',
+            ]);
+
+        // Assert - should fail validation
+        $response->assertStatus(302);
+        $response->assertSessionHasErrors(['php_version']);
     }
 }

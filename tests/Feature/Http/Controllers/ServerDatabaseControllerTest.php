@@ -1700,4 +1700,34 @@ class ServerDatabaseControllerTest extends TestCase
             ->where('server.databases.0.sites_count', 0)
         );
     }
+
+    /**
+     * Test database services page includes error_log for failed databases.
+     */
+    public function test_database_services_page_includes_error_log_for_failed_databases(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        $database = ServerDatabase::factory()->create([
+            'server_id' => $server->id,
+            'type' => DatabaseType::MySQL,
+            'status' => TaskStatus::Failed,
+            'error_log' => 'Installation failed: Connection timeout to package server',
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/services");
+
+        // Assert
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('servers/services')
+            ->has('server.databases', 1)
+            ->where('server.databases.0.status', TaskStatus::Failed->value)
+            ->where('server.databases.0.error_log', 'Installation failed: Connection timeout to package server')
+        );
+    }
 }

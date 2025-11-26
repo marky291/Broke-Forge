@@ -90,9 +90,10 @@ class GenericPhpInstallerJob extends BaseFrameworkInstaller
         if (isset($site->configuration['git_repository'])) {
             $this->executeCommands([
                 sprintf(
-                    'if [ -f %s/composer.json ]; then cd %s && composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader; fi',
+                    'if [ -f %s/composer.json ]; then cd %s && %s install --no-dev --no-interaction --prefer-dist --optimize-autoloader; fi',
                     escapeshellarg($deploymentPath),
-                    escapeshellarg($deploymentPath)
+                    escapeshellarg($deploymentPath),
+                    $this->getComposerCommand($site)
                 ),
             ]);
         }

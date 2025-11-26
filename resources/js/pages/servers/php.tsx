@@ -374,9 +374,10 @@ export default function Php({ server }: { server: Server }) {
                             <SelectValue placeholder="Select PHP version" />
                         </SelectTrigger>
                         <SelectContent>
-                            {server.availablePhpVersions.map((option) => (
+                            {server.installablePhpVersions.map((option) => (
                                 <SelectItem key={option.value} value={option.value}>
                                     {option.label}
+                                    {option.is_deprecated && <span className="ml-1 text-muted-foreground">(deprecated)</span>}
                                 </SelectItem>
                             ))}
                         </SelectContent>

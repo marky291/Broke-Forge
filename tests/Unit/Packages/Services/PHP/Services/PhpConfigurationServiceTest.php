@@ -3,10 +3,19 @@
 namespace Tests\Unit\Packages\Services\PHP\Services;
 
 use App\Packages\Services\PHP\Services\PhpConfigurationService;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class PhpConfigurationServiceTest extends TestCase
 {
+    use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->artisan('db:seed', ['--class' => 'AvailablePhpVersionSeeder']);
+    }
+
     /**
      * Test getAvailableVersions returns array of PHP versions.
      */
@@ -241,15 +250,15 @@ class PhpConfigurationServiceTest extends TestCase
     }
 
     /**
-     * Test getValidationRules version rule includes all available versions.
+     * Test getValidationRules version rule includes all versions (including deprecated).
      */
-    public function test_get_validation_rules_version_rule_includes_all_available_versions(): void
+    public function test_get_validation_rules_version_rule_includes_all_versions(): void
     {
         // Act
         $rules = PhpConfigurationService::getValidationRules();
-        $versions = PhpConfigurationService::getAvailableVersions();
+        $versions = PhpConfigurationService::getAllVersions();
 
-        // Assert
+        // Assert - validation includes all versions (including deprecated)
         $versionRule = $rules['version'];
         foreach (array_keys($versions) as $version) {
             $this->assertStringContainsString($version, $versionRule);
@@ -383,15 +392,66 @@ class PhpConfigurationServiceTest extends TestCase
     }
 
     /**
-     * Test getAvailableVersions returns exactly 4 versions.
+     * Test getAvailableVersions returns non-deprecated versions.
      */
-    public function test_get_available_versions_returns_exactly_four_versions(): void
+    public function test_get_available_versions_returns_non_deprecated_versions(): void
     {
         // Act
         $versions = PhpConfigurationService::getAvailableVersions();
 
+        // Assert - Should return 5 active versions (8.1, 8.2, 8.3, 8.4, 8.5)
+        $this->assertCount(5, $versions);
+        $this->assertArrayNotHasKey('7.4', $versions); // Deprecated
+        $this->assertArrayNotHasKey('8.0', $versions); // Deprecated
+    }
+
+    /**
+     * Test getAllVersions returns all PHP versions including deprecated.
+     */
+    public function test_get_all_versions_returns_all_php_versions_including_deprecated(): void
+    {
+        // Act
+        $versions = PhpConfigurationService::getAllVersions();
+
+        // Assert - Should return all 7 versions
+        $this->assertCount(7, $versions);
+        $this->assertArrayHasKey('7.4', $versions);
+        $this->assertArrayHasKey('8.0', $versions);
+        $this->assertArrayHasKey('8.1', $versions);
+        $this->assertArrayHasKey('8.2', $versions);
+        $this->assertArrayHasKey('8.3', $versions);
+        $this->assertArrayHasKey('8.4', $versions);
+        $this->assertArrayHasKey('8.5', $versions);
+    }
+
+    /**
+     * Test getAllVersions returns correct format.
+     */
+    public function test_get_all_versions_returns_correct_format(): void
+    {
+        // Act
+        $versions = PhpConfigurationService::getAllVersions();
+
         // Assert
-        $this->assertCount(4, $versions);
+        foreach ($versions as $key => $value) {
+            $this->assertIsString($key);
+            $this->assertIsString($value);
+            $this->assertStringStartsWith('PHP ', $value);
+        }
+    }
+
+    /**
+     * Test getValidationRules uses getAllVersions for validation.
+     */
+    public function test_get_validation_rules_uses_all_versions_for_validation(): void
+    {
+        // Act
+        $rules = PhpConfigurationService::getValidationRules();
+
+        // Assert - validation should accept deprecated versions too
+        $versionRule = $rules['version'];
+        $this->assertStringContainsString('7.4', $versionRule);
+        $this->assertStringContainsString('8.0', $versionRule);
     }
 
     /**

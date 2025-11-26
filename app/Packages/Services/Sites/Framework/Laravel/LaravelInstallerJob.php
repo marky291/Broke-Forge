@@ -105,7 +105,23 @@ class LaravelInstallerJob extends BaseFrameworkInstaller
         $this->updateInstallationStep($site, $currentStep, TaskStatus::Installing);
         if (isset($site->configuration['git_repository'])) {
             $this->executeCommands([
-                sprintf('cd %s && composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader', escapeshellarg($deploymentPath)),
+                sprintf('cd %s && %s install --no-dev --no-interaction --prefer-dist --optimize-autoloader', escapeshellarg($deploymentPath), $this->getComposerCommand($site)),
+            ]);
+
+            // Generate APP_KEY for Laravel encryption (must run AFTER composer install)
+            $this->executeCommands([
+                sprintf('cd %s && %s artisan key:generate --force',
+                    escapeshellarg($deploymentPath),
+                    $this->getPhpBinaryPath($site)
+                ),
+            ]);
+
+            // Create public/storage symlink for serving uploaded files
+            $this->executeCommands([
+                sprintf('cd %s && %s artisan storage:link --force',
+                    escapeshellarg($deploymentPath),
+                    $this->getPhpBinaryPath($site)
+                ),
             ]);
         }
         $this->updateInstallationStep($site, $currentStep++, TaskStatus::Success);
@@ -125,7 +141,7 @@ class LaravelInstallerJob extends BaseFrameworkInstaller
         $this->updateInstallationStep($site, $currentStep, TaskStatus::Installing);
         if (isset($site->configuration['git_repository']) && $site->database_id) {
             $this->executeCommands([
-                sprintf('cd %s && php artisan migrate --force', escapeshellarg($deploymentPath)),
+                sprintf('cd %s && %s artisan migrate --force', escapeshellarg($deploymentPath), $this->getPhpBinaryPath($site)),
             ]);
         }
         $this->updateInstallationStep($site, $currentStep++, TaskStatus::Success);
@@ -159,18 +175,23 @@ class LaravelInstallerJob extends BaseFrameworkInstaller
 
     /**
      * Create and configure Laravel environment file with database credentials.
+     *
+     * Writes directly to the shared/.env file to preserve symlink structure.
+     * The deployment directory's .env is symlinked to ../shared/.env
      */
     protected function configureEnvironmentFile(ServerSite $site, string $deploymentPath): array
     {
         $commands = [];
+        $siteRoot = "/home/brokeforge/deployments/{$site->domain}";
+        $sharedEnvPath = "{$siteRoot}/shared/.env";
 
-        // Check if .env.example exists and copy it, otherwise create empty .env
+        // Copy .env.example directly to shared/.env (not through the symlink)
+        // This preserves the symlink at {deploymentPath}/.env -> ../shared/.env
         $commands[] = sprintf(
-            'if [ -f %s/.env.example ]; then cp %s/.env.example %s/.env; else touch %s/.env; fi',
+            'if [ -f %s/.env.example ]; then cp %s/.env.example %s; fi',
             escapeshellarg($deploymentPath),
             escapeshellarg($deploymentPath),
-            escapeshellarg($deploymentPath),
-            escapeshellarg($deploymentPath)
+            escapeshellarg($sharedEnvPath)
         );
 
         // Load the database relationship if database is configured
@@ -188,7 +209,7 @@ class LaravelInstallerJob extends BaseFrameworkInstaller
                     default => 'mysql',
                 };
 
-                // Generate sed commands to update database configuration
+                // Generate sed commands to update database configuration in shared .env
                 $dbConfig = [
                     'DB_CONNECTION' => $connectionType,
                     'DB_HOST' => '127.0.0.1',
@@ -202,16 +223,16 @@ class LaravelInstallerJob extends BaseFrameworkInstaller
                     $escapedValue = str_replace(['/', '&', '\\'], ['\\/', '\\&', '\\\\'], $value);
 
                     $commands[] = sprintf(
-                        'if grep -q "^%s=" %s/.env 2>/dev/null; then sed -i "s|^%s=.*|%s=%s|" %s/.env; else echo "%s=%s" >> %s/.env; fi',
+                        'if grep -q "^%s=" %s 2>/dev/null; then sed -i "s|^%s=.*|%s=%s|" %s; else echo "%s=%s" >> %s; fi',
                         $key,
-                        escapeshellarg($deploymentPath),
+                        escapeshellarg($sharedEnvPath),
                         $key,
-                        $key,
-                        $escapedValue,
-                        escapeshellarg($deploymentPath),
                         $key,
                         $escapedValue,
-                        escapeshellarg($deploymentPath)
+                        escapeshellarg($sharedEnvPath),
+                        $key,
+                        $escapedValue,
+                        escapeshellarg($sharedEnvPath)
                     );
                 }
 
@@ -225,12 +246,12 @@ class LaravelInstallerJob extends BaseFrameworkInstaller
                 $escapedPassword = str_replace(['/', '&', '\\'], ['\\/', '\\&', '\\\\'], $password);
 
                 $commands[] = sprintf(
-                    'if grep -q "^DB_PASSWORD=" %s/.env 2>/dev/null; then sed -i "s|^DB_PASSWORD=.*|DB_PASSWORD=%s|" %s/.env; else echo "DB_PASSWORD=%s" >> %s/.env; fi',
-                    escapeshellarg($deploymentPath),
+                    'if grep -q "^DB_PASSWORD=" %s 2>/dev/null; then sed -i "s|^DB_PASSWORD=.*|DB_PASSWORD=%s|" %s; else echo "DB_PASSWORD=%s" >> %s; fi',
+                    escapeshellarg($sharedEnvPath),
                     $escapedPassword,
-                    escapeshellarg($deploymentPath),
+                    escapeshellarg($sharedEnvPath),
                     $escapedPassword,
-                    escapeshellarg($deploymentPath)
+                    escapeshellarg($sharedEnvPath)
                 );
             }
         }
