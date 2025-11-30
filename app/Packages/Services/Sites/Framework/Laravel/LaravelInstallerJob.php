@@ -200,8 +200,8 @@ class LaravelInstallerJob extends BaseFrameworkInstaller
             $database = $site->database;
 
             if ($database) {
-                // Map database type to Laravel DB_CONNECTION value
-                $connectionType = match ($database->type->value) {
+                // Map database engine to Laravel DB_CONNECTION value
+                $connectionType = match ($database->engine->value) {
                     'mysql', 'mariadb' => 'mysql',
                     'postgresql' => 'pgsql',
                     'mongodb' => 'mongodb',

@@ -148,7 +148,7 @@ public function retry(Server $server, ServerDatabase $database): RedirectRespons
         'user_id' => auth()->id(),
         'server_id' => $server->id,
         'database_id' => $database->id,
-        'database_type' => $database->type,
+        'database_engine' => $database->type,
         'database_version' => $database->version,
         'ip_address' => request()->ip(),
     ]);

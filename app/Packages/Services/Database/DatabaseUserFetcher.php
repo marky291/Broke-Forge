@@ -2,7 +2,7 @@
 
 namespace App\Packages\Services\Database;
 
-use App\Enums\DatabaseType;
+use App\Enums\DatabaseEngine;
 use App\Models\Server;
 use App\Models\ServerDatabase;
 
@@ -18,15 +18,15 @@ class DatabaseUserFetcher
      */
     public function fetch(Server $server, ServerDatabase $database): array
     {
-        $databaseType = $database->type instanceof DatabaseType
-            ? $database->type
-            : DatabaseType::from($database->type);
+        $databaseEngine = $database->engine instanceof DatabaseEngine
+            ? $database->engine
+            : DatabaseEngine::from($database->engine);
 
         try {
-            return match ($databaseType) {
-                DatabaseType::MySQL, DatabaseType::MariaDB => $this->fetchMySqlUsers($server, $database),
-                DatabaseType::PostgreSQL => $this->fetchPostgreSqlUsers($server, $database),
-                default => ['users' => [], 'error' => 'Database type does not support user management'],
+            return match ($databaseEngine) {
+                DatabaseEngine::MySQL, DatabaseEngine::MariaDB => $this->fetchMySqlUsers($server, $database),
+                DatabaseEngine::PostgreSQL => $this->fetchPostgreSqlUsers($server, $database),
+                default => ['users' => [], 'error' => 'Database engine does not support user management'],
             };
         } catch (\Exception $e) {
             return [

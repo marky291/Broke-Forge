@@ -76,10 +76,11 @@ type AvailableFramework = {
 type Database = {
     id: number;
     name: string;
-    type: string;
+    engine: string;
     version: string;
     port: number;
     status: string;
+    storage_type: string;
 };
 
 type NodeVersion = {
@@ -655,16 +656,16 @@ export default function Sites({ server }: SitesProps) {
                                             <SelectValue placeholder="Select database" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {server.databases.filter(db => db.status === 'active').map((database) => (
+                                            {server.databases.filter(db => db.status === 'active' && db.storage_type === 'disk').map((database) => (
                                                 <SelectItem key={database.id} value={database.id.toString()}>
-                                                    {database.name} ({database.type} {database.version})
+                                                    {database.name} ({database.engine} {database.version})
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>
                                     </Select>
                                     {form.errors.database_id && <p className="text-sm text-red-500">{form.errors.database_id}</p>}
-                                    {server.databases.filter(db => db.status === 'active').length === 0 && (
-                                        <p className="text-xs text-amber-600">No active databases found. Create one first.</p>
+                                    {server.databases.filter(db => db.status === 'active' && db.storage_type === 'disk').length === 0 && (
+                                        <p className="text-xs text-amber-600">No active disk databases found. Create one first.</p>
                                     )}
                                 </div>
                             )}

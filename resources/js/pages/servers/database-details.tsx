@@ -18,10 +18,10 @@ import { useEcho } from '@laravel/echo-react';
 import { ArrowLeft, Database, Edit2, Plus, RotateCw, Trash2, Users, X } from 'lucide-react';
 import { useState } from 'react';
 
-type DatabaseType = {
+type DatabaseRecord = {
     id: number;
     name: string;
-    type: string;
+    engine: string;
     version: string;
     port: number;
     status: string;
@@ -61,7 +61,7 @@ export default function DatabaseDetails({
     managedUsers,
 }: {
     server: Server;
-    database: DatabaseType;
+    database: DatabaseRecord;
     schemas: Schema[];
     managedUsers: ManagedUser[];
 }) {
@@ -89,7 +89,7 @@ export default function DatabaseDetails({
         mysql: 'MySQL',
         mariadb: 'MariaDB',
         postgresql: 'PostgreSQL',
-    }[database.type] || database.type;
+    }[database.engine] || database.engine;
 
     const schemaForm = useForm({
         name: '',

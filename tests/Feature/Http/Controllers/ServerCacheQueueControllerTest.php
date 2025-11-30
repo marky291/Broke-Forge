@@ -2,7 +2,7 @@
 
 namespace Tests\Feature\Http\Controllers;
 
-use App\Enums\DatabaseType;
+use App\Enums\DatabaseEngine;
 use App\Enums\TaskStatus;
 use App\Models\Server;
 use App\Models\ServerDatabase;
@@ -127,7 +127,7 @@ class ServerCacheQueueControllerTest extends TestCase
 
         ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::Redis,
+            'engine' => DatabaseEngine::Redis,
             'version' => '7.2',
             'port' => 6379,
             'status' => TaskStatus::Active,
@@ -142,7 +142,7 @@ class ServerCacheQueueControllerTest extends TestCase
         $response->assertInertia(fn ($page) => $page
             ->component('servers/services')
             ->has('server.databases', 1)
-            ->where('server.databases.0.type', 'redis')
+            ->where('server.databases.0.engine', 'redis')
         );
     }
 
@@ -178,7 +178,7 @@ class ServerCacheQueueControllerTest extends TestCase
 
         ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::Redis,
+            'engine' => DatabaseEngine::Redis,
             'status' => TaskStatus::Installing,
         ]);
 
@@ -196,7 +196,7 @@ class ServerCacheQueueControllerTest extends TestCase
     }
 
     /**
-     * Test user can install Redis service.
+     * Test user can install Redis service with minimal data.
      */
     public function test_user_can_install_redis_service(): void
     {
@@ -205,14 +205,11 @@ class ServerCacheQueueControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create(['user_id' => $user->id]);
 
-        // Act
+        // Act - Redis only requires engine and version
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
-                'name' => 'redis-cache',
-                'type' => 'redis',
+                'engine' => 'redis',
                 'version' => '7.2',
-                'port' => 6379,
-                'root_password' => 'securepassword123',
             ]);
 
         // Assert
@@ -222,9 +219,9 @@ class ServerCacheQueueControllerTest extends TestCase
 
         $this->assertDatabaseHas('server_databases', [
             'server_id' => $server->id,
-            'type' => 'redis',
+            'name' => 'redis', // Uses engine name as default
+            'engine' => 'redis',
             'version' => '7.2',
-            'port' => 6379,
             'status' => TaskStatus::Pending->value,
         ]);
 
@@ -232,9 +229,38 @@ class ServerCacheQueueControllerTest extends TestCase
     }
 
     /**
-     * Test Redis installation requires valid password.
+     * Test user can install Redis service with custom port.
      */
-    public function test_redis_installation_requires_valid_password(): void
+    public function test_user_can_install_redis_service_with_custom_port(): void
+    {
+        // Arrange
+        Queue::fake();
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->post("/servers/{$server->id}/databases", [
+                'engine' => 'redis',
+                'version' => '7.2',
+                'port' => 6380,
+            ]);
+
+        // Assert
+        $response->assertStatus(302);
+        $this->assertDatabaseHas('server_databases', [
+            'server_id' => $server->id,
+            'engine' => 'redis',
+            'port' => 6380,
+        ]);
+
+        Queue::assertPushed(RedisInstallerJob::class);
+    }
+
+    /**
+     * Test Redis installation validates password if provided.
+     */
+    public function test_redis_installation_validates_password_if_provided(): void
     {
         // Arrange
         $user = User::factory()->create();
@@ -243,9 +269,8 @@ class ServerCacheQueueControllerTest extends TestCase
         // Act
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
-                'type' => 'redis',
+                'engine' => 'redis',
                 'version' => '7.2',
-                'port' => 6379,
                 'root_password' => 'weak', // Too short
             ]);
 
@@ -253,7 +278,7 @@ class ServerCacheQueueControllerTest extends TestCase
         $response->assertSessionHasErrors(['root_password']);
         $this->assertDatabaseMissing('server_databases', [
             'server_id' => $server->id,
-            'type' => 'redis',
+            'engine' => 'redis',
         ]);
     }
 
@@ -275,10 +300,9 @@ class ServerCacheQueueControllerTest extends TestCase
         // Act
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
-                'type' => 'redis',
+                'engine' => 'redis',
                 'version' => '7.2',
                 'port' => 6379, // Conflicting port
-                'root_password' => 'securepassword123',
             ]);
 
         // Assert
@@ -297,7 +321,7 @@ class ServerCacheQueueControllerTest extends TestCase
 
         $redis = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::Redis,
+            'engine' => DatabaseEngine::Redis,
             'version' => '7.0',
             'status' => TaskStatus::Active,
         ]);
@@ -332,7 +356,7 @@ class ServerCacheQueueControllerTest extends TestCase
 
         $redis = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::Redis,
+            'engine' => DatabaseEngine::Redis,
             'status' => TaskStatus::Installing,
         ]);
 
@@ -359,7 +383,7 @@ class ServerCacheQueueControllerTest extends TestCase
 
         $redis = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::Redis,
+            'engine' => DatabaseEngine::Redis,
             'status' => TaskStatus::Active,
         ]);
 
@@ -392,18 +416,15 @@ class ServerCacheQueueControllerTest extends TestCase
         // Act
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
-                'name' => 'redis_cache',
-                'type' => 'redis',
+                'engine' => 'redis',
                 'version' => '7.2',
-                'port' => 6379,
-                'root_password' => 'securepassword123',
             ]);
 
         // Assert
         $response->assertStatus(403);
         $this->assertDatabaseMissing('server_databases', [
             'server_id' => $server->id,
-            'type' => 'redis',
+            'engine' => 'redis',
         ]);
     }
 
@@ -419,7 +440,7 @@ class ServerCacheQueueControllerTest extends TestCase
 
         $redis = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::Redis,
+            'engine' => DatabaseEngine::Redis,
         ]);
 
         // Act
@@ -444,7 +465,7 @@ class ServerCacheQueueControllerTest extends TestCase
 
         $redis = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::Redis,
+            'engine' => DatabaseEngine::Redis,
         ]);
 
         // Act

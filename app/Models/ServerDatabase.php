@@ -2,7 +2,8 @@
 
 namespace App\Models;
 
-use App\Enums\DatabaseType;
+use App\Enums\DatabaseEngine;
+use App\Enums\StorageType;
 use App\Enums\TaskStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -16,7 +17,8 @@ class ServerDatabase extends Model
     protected $fillable = [
         'server_id',
         'name',
-        'type',
+        'engine',
+        'storage_type',
         'version',
         'port',
         'status',
@@ -31,7 +33,8 @@ class ServerDatabase extends Model
     protected function casts(): array
     {
         return [
-            'type' => DatabaseType::class,
+            'engine' => DatabaseEngine::class,
+            'storage_type' => StorageType::class,
             'status' => TaskStatus::class,
             'port' => 'integer',
         ];

@@ -2,7 +2,7 @@
 
 namespace Tests\Feature\Inertia\Servers;
 
-use App\Enums\DatabaseType;
+use App\Enums\DatabaseEngine;
 use App\Enums\TaskStatus;
 use App\Models\Server;
 use App\Models\ServerDatabase;
@@ -140,7 +140,7 @@ class ServicesTest extends TestCase
 
         ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
             'version' => '8.0',
             'port' => 3306,
             'status' => TaskStatus::Active,
@@ -148,7 +148,7 @@ class ServicesTest extends TestCase
 
         ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::PostgreSQL,
+            'engine' => DatabaseEngine::PostgreSQL,
             'version' => '16',
             'port' => 5432,
             'status' => TaskStatus::Active,
@@ -163,8 +163,8 @@ class ServicesTest extends TestCase
         $response->assertInertia(fn ($page) => $page
             ->component('servers/services')
             ->has('server.databases', 2)
-            ->where('server.databases.0.type', 'mysql')
-            ->where('server.databases.1.type', 'postgresql')
+            ->where('server.databases.0.engine', 'mysql')
+            ->where('server.databases.1.engine', 'postgresql')
         );
     }
 
@@ -179,7 +179,7 @@ class ServicesTest extends TestCase
 
         ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::Redis,
+            'engine' => DatabaseEngine::Redis,
             'version' => '7.2',
             'port' => 6379,
             'status' => TaskStatus::Active,
@@ -194,7 +194,7 @@ class ServicesTest extends TestCase
         $response->assertInertia(fn ($page) => $page
             ->component('servers/services')
             ->has('server.databases', 1)
-            ->where('server.databases.0.type', 'redis')
+            ->where('server.databases.0.engine', 'redis')
         );
     }
 
@@ -210,7 +210,7 @@ class ServicesTest extends TestCase
         // Create a regular database
         ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
             'version' => '8.0',
             'port' => 3306,
             'status' => TaskStatus::Active,
@@ -219,7 +219,7 @@ class ServicesTest extends TestCase
         // Create a cache/queue service
         ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::Redis,
+            'engine' => DatabaseEngine::Redis,
             'version' => '7.2',
             'port' => 6379,
             'status' => TaskStatus::Active,
@@ -234,8 +234,8 @@ class ServicesTest extends TestCase
         $response->assertInertia(fn ($page) => $page
             ->component('servers/services')
             ->has('server.databases', 2)
-            ->where('server.databases.0.type', 'mysql')
-            ->where('server.databases.1.type', 'redis')
+            ->where('server.databases.0.engine', 'mysql')
+            ->where('server.databases.1.engine', 'redis')
         );
     }
 
@@ -271,14 +271,14 @@ class ServicesTest extends TestCase
 
         $mysql = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
             'port' => 3306,
             'status' => TaskStatus::Installing,
         ]);
 
         $redis = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::Redis,
+            'engine' => DatabaseEngine::Redis,
             'port' => 6379,
             'status' => TaskStatus::Active,
         ]);
@@ -292,9 +292,9 @@ class ServicesTest extends TestCase
         $response->assertInertia(fn ($page) => $page
             ->component('servers/services')
             ->has('server.databases', 2)
-            ->where('server.databases.0.type', 'mysql')
+            ->where('server.databases.0.engine', 'mysql')
             ->where('server.databases.0.status', TaskStatus::Installing->value)
-            ->where('server.databases.1.type', 'redis')
+            ->where('server.databases.1.engine', 'redis')
             ->where('server.databases.1.status', TaskStatus::Active->value)
         );
     }
@@ -337,7 +337,7 @@ class ServicesTest extends TestCase
     /**
      * Test services page does not mix database types inappropriately.
      */
-    public function test_services_page_includes_all_database_types_in_data(): void
+    public function test_services_page_includes_all_database_engines_in_data(): void
     {
         // Arrange
         $user = User::factory()->create();
@@ -346,25 +346,25 @@ class ServicesTest extends TestCase
         // Create one of each type with unique ports
         ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
             'port' => 3306,
         ]);
 
         ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MariaDB,
+            'engine' => DatabaseEngine::MariaDB,
             'port' => 3307,
         ]);
 
         ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::PostgreSQL,
+            'engine' => DatabaseEngine::PostgreSQL,
             'port' => 5432,
         ]);
 
         ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::Redis,
+            'engine' => DatabaseEngine::Redis,
             'port' => 6379,
         ]);
 
@@ -443,7 +443,7 @@ class ServicesTest extends TestCase
 
         ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
             'version' => '8.0',
             'port' => 3306,
             'status' => TaskStatus::Failed,
@@ -460,7 +460,7 @@ class ServicesTest extends TestCase
             ->component('servers/services')
             ->has('server.databases', 1)
             ->where('server.databases.0.status', TaskStatus::Failed->value)
-            ->where('server.databases.0.type', 'mysql')
+            ->where('server.databases.0.engine', 'mysql')
         );
     }
 
@@ -477,7 +477,7 @@ class ServicesTest extends TestCase
 
         ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::PostgreSQL,
+            'engine' => DatabaseEngine::PostgreSQL,
             'version' => '16',
             'port' => 5432,
             'status' => TaskStatus::Failed,
@@ -510,28 +510,28 @@ class ServicesTest extends TestCase
         // Create databases with different statuses
         ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
             'port' => 3306,
             'status' => TaskStatus::Pending,
         ]);
 
         ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::PostgreSQL,
+            'engine' => DatabaseEngine::PostgreSQL,
             'port' => 5432,
             'status' => TaskStatus::Installing,
         ]);
 
         ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MariaDB,
+            'engine' => DatabaseEngine::MariaDB,
             'port' => 3307,
             'status' => TaskStatus::Active,
         ]);
 
         ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::Redis,
+            'engine' => DatabaseEngine::Redis,
             'port' => 6379,
             'status' => TaskStatus::Failed,
             'error_log' => 'Failed to configure Redis',
@@ -561,7 +561,7 @@ class ServicesTest extends TestCase
         ServerDatabase::factory()->create([
             'server_id' => $server->id,
             'name' => 'production-db',
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
             'version' => '8.0',
             'port' => 3306,
             'status' => TaskStatus::Active,
@@ -578,14 +578,14 @@ class ServicesTest extends TestCase
             ->has('server.databases', 1)
             ->has('server.databases.0.id')
             ->has('server.databases.0.name')
-            ->has('server.databases.0.type')
+            ->has('server.databases.0.engine')
             ->has('server.databases.0.version')
             ->has('server.databases.0.port')
             ->has('server.databases.0.status')
             ->has('server.databases.0.created_at')
             ->has('server.databases.0.updated_at')
             ->where('server.databases.0.name', 'production-db')
-            ->where('server.databases.0.type', 'mysql')
+            ->where('server.databases.0.engine', 'mysql')
             ->where('server.databases.0.version', '8.0')
             ->where('server.databases.0.port', 3306)
             ->where('server.databases.0.status', TaskStatus::Active->value)
@@ -603,7 +603,7 @@ class ServicesTest extends TestCase
 
         ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::Redis,
+            'engine' => DatabaseEngine::Redis,
             'version' => '7.2',
             'port' => 6379,
             'status' => TaskStatus::Failed,
@@ -619,7 +619,7 @@ class ServicesTest extends TestCase
         $response->assertInertia(fn ($page) => $page
             ->component('servers/services')
             ->has('server.databases', 1)
-            ->where('server.databases.0.type', 'redis')
+            ->where('server.databases.0.engine', 'redis')
             ->where('server.databases.0.status', TaskStatus::Failed->value)
             ->where('server.databases.0.error_log', 'Redis installation failed: Configuration error')
         );
@@ -636,7 +636,7 @@ class ServicesTest extends TestCase
 
         ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::PostgreSQL,
+            'engine' => DatabaseEngine::PostgreSQL,
             'version' => '16',
             'port' => 5432,
             'status' => TaskStatus::Pending,
@@ -652,7 +652,7 @@ class ServicesTest extends TestCase
             ->component('servers/services')
             ->has('server.databases', 1)
             ->where('server.databases.0.status', TaskStatus::Pending->value)
-            ->where('server.databases.0.type', 'postgresql')
+            ->where('server.databases.0.engine', 'postgresql')
         );
     }
 
@@ -667,7 +667,7 @@ class ServicesTest extends TestCase
 
         ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MariaDB,
+            'engine' => DatabaseEngine::MariaDB,
             'version' => '11.4',
             'port' => 3307,
             'status' => TaskStatus::Updating,
@@ -683,7 +683,7 @@ class ServicesTest extends TestCase
             ->component('servers/services')
             ->has('server.databases', 1)
             ->where('server.databases.0.status', TaskStatus::Updating->value)
-            ->where('server.databases.0.type', 'mariadb')
+            ->where('server.databases.0.engine', 'mariadb')
         );
     }
 
@@ -698,7 +698,7 @@ class ServicesTest extends TestCase
 
         ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
             'version' => '8.0',
             'port' => 3306,
             'status' => TaskStatus::Removing,
@@ -714,7 +714,7 @@ class ServicesTest extends TestCase
             ->component('servers/services')
             ->has('server.databases', 1)
             ->where('server.databases.0.status', TaskStatus::Removing->value)
-            ->where('server.databases.0.type', 'mysql')
+            ->where('server.databases.0.engine', 'mysql')
         );
     }
 
@@ -729,7 +729,7 @@ class ServicesTest extends TestCase
 
         ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
             'version' => '8.0',
             'port' => 3306,
             'status' => TaskStatus::Failed,

@@ -35,7 +35,7 @@ interface Server {
     os_name?: string;
     os_version?: string;
     os_codename?: string;
-    database_type?: string;
+    database_engine?: string;
     php_version?: string;
     created_at: string;
     updated_at: string;
@@ -225,10 +225,10 @@ export default function ProvisioningPage({ server, provision }: ProvisioningPage
                                     <dd className="text-sm font-medium">App server</dd>
                                 </div>
 
-                                {server.database_type && (
+                                {server.database_engine && (
                                     <div className="flex items-center gap-x-2">
                                         <dt className="text-sm text-muted-foreground">Database Type</dt>
-                                        <dd className="text-sm font-medium capitalize">{server.database_type}</dd>
+                                        <dd className="text-sm font-medium capitalize">{server.database_engine}</dd>
                                     </div>
                                 )}
 

@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests\Servers;
 
-use App\Enums\DatabaseType;
+use App\Enums\DatabaseEngine;
 use App\Services\DatabaseConfigurationService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -17,17 +17,23 @@ class InstallDatabaseRequest extends FormRequest
     public function rules(): array
     {
         $server = $this->route('server');
+        $engine = DatabaseEngine::tryFrom($this->input('engine'));
+        $isRedis = $engine === DatabaseEngine::Redis;
+
+        // Name and password are not needed for Redis (cache/queue services)
+        $nameRules = $isRedis
+            ? ['nullable', 'string', 'max:64', 'regex:/^[a-zA-Z0-9_-]+$/']
+            : ['required', 'string', 'max:64', 'regex:/^[a-zA-Z0-9_-]+$/'];
+
+        $passwordRules = $isRedis
+            ? ['nullable', 'string', 'min:8', 'max:128']
+            : ['required', 'string', 'min:8', 'max:128'];
 
         return [
-            'name' => [
-                'required',
-                'string',
-                'max:64',
-                'regex:/^[a-zA-Z0-9_-]+$/',
-            ],
-            'type' => ['required', Rule::enum(\App\Enums\DatabaseType::class)],
+            'name' => $nameRules,
+            'engine' => ['required', Rule::enum(\App\Enums\DatabaseEngine::class)],
             'version' => ['required', 'string', 'max:16'],
-            'root_password' => ['required', 'string', 'min:8', 'max:128'],
+            'root_password' => $passwordRules,
             'port' => [
                 'nullable',
                 'integer',
@@ -46,22 +52,22 @@ class InstallDatabaseRequest extends FormRequest
     {
         $validator->after(function ($validator) {
             $server = $this->route('server');
-            $requestedType = DatabaseType::tryFrom($this->input('type'));
+            $requestedEngine = DatabaseEngine::tryFrom($this->input('engine'));
 
-            if (! $server || ! $requestedType) {
+            if (! $server || ! $requestedEngine) {
                 return;
             }
 
             $databaseConfig = app(DatabaseConfigurationService::class);
 
             // Check if server already has a database in this category
-            if ($databaseConfig->hasExistingDatabaseInCategory($server, $requestedType)) {
-                $category = $databaseConfig->isDatabaseCategory($requestedType)
+            if ($databaseConfig->hasExistingDatabaseInCategory($server, $requestedEngine)) {
+                $category = $databaseConfig->isDatabaseCategory($requestedEngine)
                     ? 'database'
                     : 'cache/queue service';
 
                 $validator->errors()->add(
-                    'type',
+                    'engine',
                     "This server already has a {$category} installed. Please uninstall the existing {$category} before installing a new one."
                 );
             }
@@ -73,7 +79,7 @@ class InstallDatabaseRequest extends FormRequest
         return [
             'name.required' => 'Database name is required.',
             'name.regex' => 'Database name can only contain letters, numbers, hyphens, and underscores (no spaces).',
-            'type.required' => 'Please select a database type.',
+            'engine.required' => 'Please select a database engine.',
             'version.required' => 'Please select a database version.',
             'root_password.required' => 'Root password is required.',
             'root_password.min' => 'Root password must be at least 8 characters.',

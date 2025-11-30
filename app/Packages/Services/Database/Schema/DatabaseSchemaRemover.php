@@ -29,7 +29,7 @@ class DatabaseSchemaRemover extends PackageInstaller implements \App\Packages\Co
     protected function commands(string $schemaName): array
     {
         $rootPassword = $this->database->root_password;
-        $databaseType = $this->database->type->value;
+        $databaseType = $this->database->engine->value;
 
         if (in_array($databaseType, ['mysql', 'mariadb'])) {
             return [

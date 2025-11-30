@@ -9,7 +9,7 @@ class RedisUpdater extends PackageInstaller implements \App\Packages\Core\Base\S
 {
     public function execute(string $targetVersion): void
     {
-        $database = $this->server->databases()->where('type', 'redis')->latest()->first();
+        $database = $this->server->databases()->where('engine', 'redis')->latest()->first();
         $port = $database?->port ?? 6379;
         $password = $database?->root_password ?? bin2hex(random_bytes(16));
 
@@ -43,7 +43,7 @@ class RedisUpdater extends PackageInstaller implements \App\Packages\Core\Base\S
             "redis-cli -p {$port} -a {$password} ping",
             "redis-cli -p {$port} -a {$password} info server | grep redis_version",
 
-            fn () => $this->server->databases()->where('type', 'redis')->latest()->first()?->update([
+            fn () => $this->server->databases()->where('engine', 'redis')->latest()->first()?->update([
                 'status' => TaskStatus::Active->value,
                 'version' => $targetVersion,
             ]),

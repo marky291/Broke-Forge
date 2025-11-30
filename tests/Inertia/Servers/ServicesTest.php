@@ -68,7 +68,7 @@ class ServicesTest extends TestCase
         ServerDatabase::factory()->create([
             'server_id' => $server->id,
             'name' => 'Production MySQL',
-            'type' => 'mysql',
+            'engine' => 'mysql',
             'version' => '8.0',
             'port' => 3306,
             'status' => 'active',
@@ -84,7 +84,7 @@ class ServicesTest extends TestCase
             ->component('servers/services')
             ->has('server.databases', 1)
             ->where('server.databases.0.name', 'Production MySQL')
-            ->where('server.databases.0.type', 'mysql')
+            ->where('server.databases.0.engine', 'mysql')
             ->where('server.databases.0.status', 'active')
         );
     }
@@ -113,7 +113,7 @@ class ServicesTest extends TestCase
     /**
      * Test services page provides available database types.
      */
-    public function test_services_page_provides_available_database_types(): void
+    public function test_services_page_provides_available_database_engines(): void
     {
         // Arrange
         $user = User::factory()->create();
@@ -167,7 +167,7 @@ class ServicesTest extends TestCase
 
         ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => 'mysql',
+            'engine' => 'mysql',
             'version' => '8.0',
             'port' => 3306,
             'status' => 'active',
@@ -175,7 +175,7 @@ class ServicesTest extends TestCase
 
         ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => 'redis',
+            'engine' => 'redis',
             'version' => '7.2',
             'port' => 6379,
             'status' => 'active',
@@ -204,7 +204,7 @@ class ServicesTest extends TestCase
 
         ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => 'mysql',
+            'engine' => 'mysql',
             'version' => '8.0',
             'port' => 3306,
             'status' => 'pending',
@@ -212,7 +212,7 @@ class ServicesTest extends TestCase
 
         ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => 'redis',
+            'engine' => 'redis',
             'version' => '7.2',
             'port' => 6379,
             'status' => 'active',
@@ -242,7 +242,7 @@ class ServicesTest extends TestCase
 
         ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => 'mysql',
+            'engine' => 'mysql',
             'version' => '8.0',
             'port' => 3307,
             'status' => 'active',
@@ -305,7 +305,7 @@ class ServicesTest extends TestCase
 
         ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => 'mysql',
+            'engine' => 'mysql',
             'version' => '8.0',
             'port' => 3306,
             'status' => 'failed',
@@ -337,7 +337,7 @@ class ServicesTest extends TestCase
 
         ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => 'mariadb',
+            'engine' => 'mariadb',
             'version' => '11.4',
             'port' => 3306,
             'status' => 'active',

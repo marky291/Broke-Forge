@@ -25,7 +25,7 @@ class ServerDatabaseInstallationTest extends TestCase
         // Create existing MySQL database
         ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => 'mysql',
+            'engine' => 'mysql',
             'version' => '8.0',
             'port' => 3306,
             'status' => 'active',
@@ -36,7 +36,7 @@ class ServerDatabaseInstallationTest extends TestCase
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
                 'name' => 'second_database',
-                'type' => 'mariadb',
+                'engine' => 'mariadb',
                 'version' => '11.4',
                 'port' => 3307,
                 'root_password' => 'password456',
@@ -44,10 +44,10 @@ class ServerDatabaseInstallationTest extends TestCase
 
         // Assert
         $response->assertStatus(302);
-        $response->assertSessionHasErrors(['type']);
+        $response->assertSessionHasErrors(['engine']);
         $this->assertDatabaseMissing('server_databases', [
             'server_id' => $server->id,
-            'type' => 'mariadb',
+            'engine' => 'mariadb',
         ]);
     }
 
@@ -65,7 +65,7 @@ class ServerDatabaseInstallationTest extends TestCase
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
                 'name' => 'first_database',
-                'type' => 'mysql',
+                'engine' => 'mysql',
                 'version' => '8.0',
                 'port' => 3306,
                 'root_password' => 'securePassword123',
@@ -77,7 +77,7 @@ class ServerDatabaseInstallationTest extends TestCase
         $response->assertSessionHas('success');
         $this->assertDatabaseHas('server_databases', [
             'server_id' => $server->id,
-            'type' => 'mysql',
+            'engine' => 'mysql',
             'name' => 'first_database',
             'status' => 'pending',
         ]);
@@ -96,7 +96,7 @@ class ServerDatabaseInstallationTest extends TestCase
         // Create existing MySQL database
         ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => 'mysql',
+            'engine' => 'mysql',
             'version' => '8.0',
             'port' => 3306,
             'status' => 'active',
@@ -107,7 +107,7 @@ class ServerDatabaseInstallationTest extends TestCase
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
                 'name' => 'cache_service',
-                'type' => 'redis',
+                'engine' => 'redis',
                 'version' => '7.2',
                 'port' => 6379,
                 'root_password' => 'redisPassword123',
@@ -119,7 +119,7 @@ class ServerDatabaseInstallationTest extends TestCase
         $response->assertSessionHas('success');
         $this->assertDatabaseHas('server_databases', [
             'server_id' => $server->id,
-            'type' => 'redis',
+            'engine' => 'redis',
             'status' => 'pending',
         ]);
     }
@@ -137,7 +137,7 @@ class ServerDatabaseInstallationTest extends TestCase
         // Create existing Redis cache
         ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => 'redis',
+            'engine' => 'redis',
             'version' => '7.2',
             'port' => 6379,
             'status' => 'active',
@@ -148,7 +148,7 @@ class ServerDatabaseInstallationTest extends TestCase
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
                 'name' => 'Database',
-                'type' => 'mysql',
+                'engine' => 'mysql',
                 'version' => '8.0',
                 'port' => 3306,
                 'root_password' => 'mysqlPassword123',
@@ -160,7 +160,7 @@ class ServerDatabaseInstallationTest extends TestCase
         $response->assertSessionHas('success');
         $this->assertDatabaseHas('server_databases', [
             'server_id' => $server->id,
-            'type' => 'mysql',
+            'engine' => 'mysql',
             'status' => 'pending',
         ]);
     }
@@ -177,7 +177,7 @@ class ServerDatabaseInstallationTest extends TestCase
         // Create existing PostgreSQL database
         ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => 'postgresql',
+            'engine' => 'postgresql',
             'version' => '16',
             'port' => 5432,
             'status' => 'active',
@@ -188,7 +188,7 @@ class ServerDatabaseInstallationTest extends TestCase
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
                 'name' => 'second_database',
-                'type' => 'mysql',
+                'engine' => 'mysql',
                 'version' => '8.0',
                 'port' => 3306,
                 'root_password' => 'password456',
@@ -196,10 +196,10 @@ class ServerDatabaseInstallationTest extends TestCase
 
         // Assert - verify clear error message
         $response->assertStatus(302);
-        $response->assertSessionHasErrors(['type']);
+        $response->assertSessionHasErrors(['engine']);
         $errors = session('errors');
-        $this->assertStringContainsString('database', $errors->get('type')[0]);
-        $this->assertStringContainsString('uninstall', $errors->get('type')[0]);
+        $this->assertStringContainsString('database', $errors->get('engine')[0]);
+        $this->assertStringContainsString('uninstall', $errors->get('engine')[0]);
     }
 
     /**
@@ -215,7 +215,7 @@ class ServerDatabaseInstallationTest extends TestCase
         // Create failed MySQL installation (can retry)
         ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => 'mysql',
+            'engine' => 'mysql',
             'version' => '8.0',
             'port' => 3306,
             'status' => 'failed',
@@ -226,7 +226,7 @@ class ServerDatabaseInstallationTest extends TestCase
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
                 'name' => 'new_database',
-                'type' => 'mariadb',
+                'engine' => 'mariadb',
                 'version' => '11.4',
                 'port' => 3307,
                 'root_password' => 'newPassword123',
@@ -238,7 +238,7 @@ class ServerDatabaseInstallationTest extends TestCase
         $response->assertSessionHas('success');
         $this->assertDatabaseHas('server_databases', [
             'server_id' => $server->id,
-            'type' => 'mariadb',
+            'engine' => 'mariadb',
             'status' => 'pending',
         ]);
     }
@@ -255,7 +255,7 @@ class ServerDatabaseInstallationTest extends TestCase
         // Create existing Redis
         ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => 'redis',
+            'engine' => 'redis',
             'version' => '7.2',
             'port' => 6379,
             'status' => 'active',
@@ -266,7 +266,7 @@ class ServerDatabaseInstallationTest extends TestCase
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
                 'name' => 'second_redis',
-                'type' => 'redis',
+                'engine' => 'redis',
                 'version' => '7.0',
                 'port' => 6380,
                 'root_password' => 'password456',
@@ -274,9 +274,9 @@ class ServerDatabaseInstallationTest extends TestCase
 
         // Assert
         $response->assertStatus(302);
-        $response->assertSessionHasErrors(['type']);
+        $response->assertSessionHasErrors(['engine']);
         $errors = session('errors');
-        $this->assertStringContainsString('cache/queue', $errors->get('type')[0]);
+        $this->assertStringContainsString('cache/queue', $errors->get('engine')[0]);
     }
 
     /**
@@ -293,7 +293,7 @@ class ServerDatabaseInstallationTest extends TestCase
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
                 'name' => 'unauthorized_database',
-                'type' => 'mysql',
+                'engine' => 'mysql',
                 'version' => '8.0',
                 'port' => 3306,
                 'root_password' => 'password123',
@@ -322,7 +322,7 @@ class ServerDatabaseInstallationTest extends TestCase
 
         // Assert
         $response->assertStatus(302);
-        $response->assertSessionHasErrors(['type', 'version', 'root_password']);
+        $response->assertSessionHasErrors(['engine', 'version', 'root_password']);
     }
 
     /**
@@ -338,7 +338,7 @@ class ServerDatabaseInstallationTest extends TestCase
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
                 'name' => 'test_database',
-                'type' => 'mysql',
+                'engine' => 'mysql',
                 'version' => '8.0',
                 'port' => 3306,
                 'root_password' => 'short',
@@ -361,7 +361,7 @@ class ServerDatabaseInstallationTest extends TestCase
         // Create existing database on port 3306
         ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => 'mysql',
+            'engine' => 'mysql',
             'version' => '8.0',
             'port' => 3306,
             'status' => 'failed',
@@ -372,7 +372,7 @@ class ServerDatabaseInstallationTest extends TestCase
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
                 'name' => 'test_database',
-                'type' => 'mariadb',
+                'engine' => 'mariadb',
                 'version' => '11.4',
                 'port' => 3306,
                 'root_password' => 'password456',
@@ -395,7 +395,7 @@ class ServerDatabaseInstallationTest extends TestCase
         // Create pending MySQL installation
         ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => 'mysql',
+            'engine' => 'mysql',
             'version' => '8.0',
             'port' => 3306,
             'status' => 'pending',
@@ -406,7 +406,7 @@ class ServerDatabaseInstallationTest extends TestCase
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
                 'name' => 'second_database',
-                'type' => 'mariadb',
+                'engine' => 'mariadb',
                 'version' => '11.4',
                 'port' => 3307,
                 'root_password' => 'password456',
@@ -414,7 +414,7 @@ class ServerDatabaseInstallationTest extends TestCase
 
         // Assert
         $response->assertStatus(302);
-        $response->assertSessionHasErrors(['type']);
+        $response->assertSessionHasErrors(['engine']);
     }
 
     /**
@@ -429,7 +429,7 @@ class ServerDatabaseInstallationTest extends TestCase
         // Create installing MySQL
         ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => 'mysql',
+            'engine' => 'mysql',
             'version' => '8.0',
             'port' => 3306,
             'status' => 'installing',
@@ -440,7 +440,7 @@ class ServerDatabaseInstallationTest extends TestCase
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
                 'name' => 'second_database',
-                'type' => 'postgresql',
+                'engine' => 'postgresql',
                 'version' => '16',
                 'port' => 5432,
                 'root_password' => 'password456',
@@ -448,7 +448,7 @@ class ServerDatabaseInstallationTest extends TestCase
 
         // Assert
         $response->assertStatus(302);
-        $response->assertSessionHasErrors(['type']);
+        $response->assertSessionHasErrors(['engine']);
     }
 
     /**
@@ -462,7 +462,7 @@ class ServerDatabaseInstallationTest extends TestCase
         // Act
         $response = $this->post("/servers/{$server->id}/databases", [
             'name' => 'test_database',
-            'type' => 'mysql',
+            'engine' => 'mysql',
             'version' => '8.0',
             'port' => 3306,
             'root_password' => 'password123',
@@ -487,7 +487,7 @@ class ServerDatabaseInstallationTest extends TestCase
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
                 'name' => 'test_database',
-                'type' => 'mysql',
+                'engine' => 'mysql',
                 'version' => '8.0',
                 'port' => 3306,
                 'root_password' => 'securePassword123',
@@ -497,7 +497,7 @@ class ServerDatabaseInstallationTest extends TestCase
         $response->assertStatus(302);
         $this->assertDatabaseHas('server_databases', [
             'server_id' => $server->id,
-            'type' => 'mysql',
+            'engine' => 'mysql',
             'status' => 'pending',
         ]);
     }

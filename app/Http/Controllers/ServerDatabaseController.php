@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\DatabaseType;
+use App\Enums\DatabaseEngine;
 use App\Enums\TaskStatus;
 use App\Http\Controllers\Concerns\PreparesSiteData;
 use App\Http\Requests\Servers\InstallDatabaseRequest;
@@ -57,12 +57,12 @@ class ServerDatabaseController extends Controller
             abort(404);
         }
 
-        $databaseType = $database->type instanceof DatabaseType
-            ? $database->type
-            : DatabaseType::from($database->type);
+        $databaseType = $database->engine instanceof DatabaseEngine
+            ? $database->engine
+            : DatabaseEngine::from($database->engine);
 
         // Only allow detail pages for MySQL, MariaDB, and PostgreSQL
-        if (! in_array($databaseType, [DatabaseType::MySQL, DatabaseType::MariaDB, DatabaseType::PostgreSQL])) {
+        if (! in_array($databaseType, [DatabaseEngine::MySQL, DatabaseEngine::MariaDB, DatabaseEngine::PostgreSQL])) {
             abort(404, 'This database type does not have a detail page.');
         }
 
@@ -99,7 +99,7 @@ class ServerDatabaseController extends Controller
             'database' => [
                 'id' => $database->id,
                 'name' => $database->name,
-                'type' => $database->type?->value ?? $database->type,
+                'engine' => $database->engine?->value ?? $database->engine,
                 'version' => $database->version,
                 'port' => $database->port,
                 'status' => $database->status?->value ?? $database->status,
@@ -118,7 +118,7 @@ class ServerDatabaseController extends Controller
         $this->authorize('update', $server);
 
         $validated = $request->validated();
-        $databaseType = DatabaseType::from($validated['type']);
+        $databaseType = DatabaseEngine::from($validated['engine']);
 
         // Get next available port (uses requested port if available, otherwise auto-assigns)
         $port = $this->databaseConfig->getNextAvailablePort(
@@ -127,28 +127,32 @@ class ServerDatabaseController extends Controller
             $validated['port'] ?? null
         );
 
+        // Use engine name as default for Redis (cache/queue services don't need custom names)
+        $name = $validated['name'] ?? $databaseType->value;
+
         // ✅ CREATE RECORD FIRST with 'pending' status
         $database = $server->databases()->create([
-            'name' => $validated['name'],
-            'type' => $validated['type'],
+            'name' => $name,
+            'engine' => $validated['engine'],
+            'storage_type' => $databaseType->storageType(),
             'version' => $validated['version'],
             'port' => $port,
             'status' => TaskStatus::Pending->value,
-            'root_password' => $validated['root_password'],
+            'root_password' => $validated['root_password'] ?? null,
         ]);
 
         // ✅ THEN dispatch job with database record
         switch ($databaseType) {
-            case DatabaseType::MariaDB:
+            case DatabaseEngine::MariaDB:
                 MariaDbInstallerJob::dispatch($server, $database);
                 break;
-            case DatabaseType::MySQL:
+            case DatabaseEngine::MySQL:
                 MySqlInstallerJob::dispatch($server, $database);
                 break;
-            case DatabaseType::PostgreSQL:
+            case DatabaseEngine::PostgreSQL:
                 PostgreSqlInstallerJob::dispatch($server, $database);
                 break;
-            case DatabaseType::Redis:
+            case DatabaseEngine::Redis:
                 RedisInstallerJob::dispatch($server, $database);
                 break;
             default:
@@ -186,9 +190,9 @@ class ServerDatabaseController extends Controller
                 ->with('error', 'Database is currently being modified. Please wait.');
         }
 
-        $databaseType = $database->type instanceof DatabaseType
-            ? $database->type
-            : DatabaseType::from($database->type);
+        $databaseType = $database->engine instanceof DatabaseEngine
+            ? $database->engine
+            : DatabaseEngine::from($database->engine);
 
         // Store new version on database record and set status to updating
         $database->update([
@@ -198,16 +202,16 @@ class ServerDatabaseController extends Controller
 
         // Dispatch updater job with database model
         switch ($databaseType) {
-            case DatabaseType::MariaDB:
+            case DatabaseEngine::MariaDB:
                 MariaDbUpdaterJob::dispatch($server, $database);
                 break;
-            case DatabaseType::MySQL:
+            case DatabaseEngine::MySQL:
                 MySqlUpdaterJob::dispatch($server, $database);
                 break;
-            case DatabaseType::PostgreSQL:
+            case DatabaseEngine::PostgreSQL:
                 PostgreSqlUpdaterJob::dispatch($server, $database);
                 break;
-            case DatabaseType::Redis:
+            case DatabaseEngine::Redis:
                 RedisUpdaterJob::dispatch($server, $database);
                 break;
             default:
@@ -240,7 +244,7 @@ class ServerDatabaseController extends Controller
             $count = $sitesUsingDatabase->count();
             $siteWord = $count === 1 ? 'site' : 'sites';
 
-            $databaseTypeName = $database->type instanceof DatabaseType ? $database->type->value : $database->type;
+            $databaseTypeName = $database->engine instanceof DatabaseEngine ? $database->engine->value : $database->engine;
 
             return redirect()
                 ->route('servers.services', $server)
@@ -250,22 +254,22 @@ class ServerDatabaseController extends Controller
         // Update database record to pending status
         $database->update(['status' => TaskStatus::Pending->value]);
 
-        $databaseType = $database->type instanceof DatabaseType
-            ? $database->type
-            : DatabaseType::from($database->type);
+        $databaseType = $database->engine instanceof DatabaseEngine
+            ? $database->engine
+            : DatabaseEngine::from($database->engine);
 
         // Dispatch removal job with database model
         switch ($databaseType) {
-            case DatabaseType::MariaDB:
+            case DatabaseEngine::MariaDB:
                 MariaDbRemoverJob::dispatch($server, $database);
                 break;
-            case DatabaseType::MySQL:
+            case DatabaseEngine::MySQL:
                 MySqlRemoverJob::dispatch($server, $database);
                 break;
-            case DatabaseType::PostgreSQL:
+            case DatabaseEngine::PostgreSQL:
                 PostgreSqlRemoverJob::dispatch($server, $database);
                 break;
-            case DatabaseType::Redis:
+            case DatabaseEngine::Redis:
                 RedisRemoverJob::dispatch($server, $database);
                 break;
             default:
@@ -303,7 +307,7 @@ class ServerDatabaseController extends Controller
             'user_id' => auth()->id(),
             'server_id' => $server->id,
             'database_id' => $database->id,
-            'database_type' => $database->type,
+            'database_engine' => $database->engine?->value ?? $database->engine,
             'database_version' => $database->version,
             'ip_address' => request()->ip(),
         ]);
@@ -315,22 +319,22 @@ class ServerDatabaseController extends Controller
             'error_log' => null,
         ]);
 
-        $databaseType = $database->type instanceof DatabaseType
-            ? $database->type
-            : DatabaseType::from($database->type);
+        $databaseType = $database->engine instanceof DatabaseEngine
+            ? $database->engine
+            : DatabaseEngine::from($database->engine);
 
         // Re-dispatch installer job based on database type
         switch ($databaseType) {
-            case DatabaseType::MariaDB:
+            case DatabaseEngine::MariaDB:
                 MariaDbInstallerJob::dispatch($server, $database);
                 break;
-            case DatabaseType::MySQL:
+            case DatabaseEngine::MySQL:
                 MySqlInstallerJob::dispatch($server, $database);
                 break;
-            case DatabaseType::PostgreSQL:
+            case DatabaseEngine::PostgreSQL:
                 PostgreSqlInstallerJob::dispatch($server, $database);
                 break;
-            case DatabaseType::Redis:
+            case DatabaseEngine::Redis:
                 RedisInstallerJob::dispatch($server, $database);
                 break;
             default:

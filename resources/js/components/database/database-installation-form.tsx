@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Form } from '@inertiajs/react';
 import { DatabaseIcon } from 'lucide-react';
 
-interface DatabaseType {
+interface DatabaseEngineConfig {
     name: string;
     description: string;
     versions: Record<string, string>;
@@ -15,10 +15,10 @@ interface DatabaseType {
 
 interface DatabaseInstallationFormProps {
     serverId: number;
-    availableTypes: Record<string, DatabaseType>;
+    availableEngines: Record<string, DatabaseEngineConfig>;
 }
 
-export default function DatabaseInstallationForm({ serverId, availableTypes }: DatabaseInstallationFormProps) {
+export default function DatabaseInstallationForm({ serverId, availableEngines }: DatabaseInstallationFormProps) {
     return (
         <div className="rounded-xl border border-sidebar-border/70 bg-background shadow-sm dark:border-sidebar-border">
             <div className="px-4 py-3">
@@ -31,15 +31,15 @@ export default function DatabaseInstallationForm({ serverId, availableTypes }: D
             <Form method="post" action={`/servers/${serverId}/database`} resetOnSuccess={['root_password']} className="px-4 py-4">
                 {({ processing, errors, data, setData }) => (
                     <div className="space-y-6">
-                        {/* Database Type Selection */}
+                        {/* Database Engine Selection */}
                         <div className="space-y-4">
-                            <h3 className="font-medium">Database Type</h3>
+                            <h3 className="font-medium">Database Engine</h3>
                             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-                                {Object.entries(availableTypes).map(([type, config]) => (
+                                {Object.entries(availableEngines).map(([engineKey, config]) => (
                                     <div
-                                        key={type}
+                                        key={engineKey}
                                         className={`relative cursor-pointer rounded-lg border-2 p-4 transition-all ${
-                                            data.type === type
+                                            data.engine === engineKey
                                                 ? 'border-primary bg-primary/5'
                                                 : 'border-sidebar-border/70 bg-background hover:border-primary/50'
                                         } ${processing ? 'opacity-75' : ''}`}
@@ -47,7 +47,7 @@ export default function DatabaseInstallationForm({ serverId, availableTypes }: D
                                             !processing &&
                                             setData({
                                                 ...data,
-                                                type,
+                                                engine: engineKey,
                                                 version: config.default_version,
                                                 port: config.default_port,
                                             })
@@ -56,7 +56,7 @@ export default function DatabaseInstallationForm({ serverId, availableTypes }: D
                                         <div className="flex items-start gap-3">
                                             <div
                                                 className={`flex-shrink-0 rounded-md p-2 ${
-                                                    data.type === type ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                                                    data.engine === engineKey ? 'bg-primary text-primary-foreground' : 'bg-muted'
                                                 }`}
                                             >
                                                 <DatabaseIcon className="h-6 w-6" />
@@ -69,7 +69,7 @@ export default function DatabaseInstallationForm({ serverId, availableTypes }: D
                                     </div>
                                 ))}
                             </div>
-                            {errors.type && <div className="text-sm text-destructive">{errors.type}</div>}
+                            {errors.engine && <div className="text-sm text-destructive">{errors.engine}</div>}
                         </div>
 
                         {/* Configuration */}
@@ -102,8 +102,8 @@ export default function DatabaseInstallationForm({ serverId, availableTypes }: D
                                             <SelectValue placeholder="Select version" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {data.type &&
-                                                Object.entries(availableTypes[data.type]?.versions || {}).map(([value, label]) => (
+                                            {data.engine &&
+                                                Object.entries(availableEngines[data.engine]?.versions || {}).map(([value, label]) => (
                                                     <SelectItem key={value} value={value}>
                                                         {label}
                                                     </SelectItem>
@@ -148,7 +148,7 @@ export default function DatabaseInstallationForm({ serverId, availableTypes }: D
 
                         {/* Submit Button */}
                         <div className="flex justify-end">
-                            <Button type="submit" disabled={processing || !data.type || !data.name}>
+                            <Button type="submit" disabled={processing || !data.engine || !data.name}>
                                 {processing ? 'Installing...' : 'Install Database'}
                             </Button>
                         </div>

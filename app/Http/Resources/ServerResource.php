@@ -387,10 +387,11 @@ class ServerResource extends JsonResource
         return $this->databases()->withCount('sites')->latest()->get()->map(fn ($db) => [
             'id' => $db->id,
             'name' => $db->name,
-            'type' => $db->type?->value ?? $db->type,
+            'engine' => $db->engine?->value ?? $db->engine,
             'version' => $db->version,
             'port' => $db->port,
             'status' => $db->status?->value ?? $db->status,
+            'storage_type' => $db->storage_type?->value ?? $db->storage_type,
             'sites_count' => $db->sites_count,
             'error_log' => $db->error_log,
             'created_at' => $db->created_at?->toISOString(),

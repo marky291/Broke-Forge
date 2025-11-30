@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Enums\DatabaseType;
+use App\Enums\DatabaseEngine;
 use App\Enums\TaskStatus;
 use App\Events\ServerUpdated;
 use App\Models\Server;
@@ -31,7 +31,7 @@ class ServerDatabaseSchemaLifecycleTest extends TestCase
         $server = Server::factory()->create(['user_id' => $user->id]);
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
             'status' => TaskStatus::Active,
         ]);
 
@@ -63,7 +63,7 @@ class ServerDatabaseSchemaLifecycleTest extends TestCase
         $server = Server::factory()->create(['user_id' => $user->id]);
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
             'status' => TaskStatus::Active,
         ]);
 
@@ -92,7 +92,7 @@ class ServerDatabaseSchemaLifecycleTest extends TestCase
         $server = Server::factory()->create();
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
         ]);
 
         // Act
@@ -119,7 +119,7 @@ class ServerDatabaseSchemaLifecycleTest extends TestCase
         $server = Server::factory()->create();
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
         ]);
         $schema = ServerDatabaseSchema::create([
             'server_database_id' => $database->id,
@@ -147,7 +147,7 @@ class ServerDatabaseSchemaLifecycleTest extends TestCase
         $server = Server::factory()->create();
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
         ]);
         $schema = ServerDatabaseSchema::create([
             'server_database_id' => $database->id,
@@ -175,7 +175,7 @@ class ServerDatabaseSchemaLifecycleTest extends TestCase
         $server = Server::factory()->create();
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
         ]);
         $schema = ServerDatabaseSchema::create([
             'server_database_id' => $database->id,
@@ -199,7 +199,7 @@ class ServerDatabaseSchemaLifecycleTest extends TestCase
         $server = Server::factory()->create();
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
         ]);
         $schema = ServerDatabaseSchema::create([
             'server_database_id' => $database->id,
@@ -223,7 +223,7 @@ class ServerDatabaseSchemaLifecycleTest extends TestCase
         $server = Server::factory()->create();
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
         ]);
         $schema = ServerDatabaseSchema::create([
             'server_database_id' => $database->id,
@@ -252,7 +252,7 @@ class ServerDatabaseSchemaLifecycleTest extends TestCase
         $server = Server::factory()->create();
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
         ]);
         $schema = ServerDatabaseSchema::create([
             'server_database_id' => $database->id,
@@ -280,7 +280,7 @@ class ServerDatabaseSchemaLifecycleTest extends TestCase
         $server = Server::factory()->create(['user_id' => $user->id]);
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
             'status' => TaskStatus::Active,
         ]);
         $schema = ServerDatabaseSchema::create([
@@ -308,7 +308,7 @@ class ServerDatabaseSchemaLifecycleTest extends TestCase
         $server = Server::factory()->create(['user_id' => $user->id]);
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
             'status' => TaskStatus::Active,
         ]);
         $schema = ServerDatabaseSchema::create([
@@ -339,7 +339,7 @@ class ServerDatabaseSchemaLifecycleTest extends TestCase
         $server = Server::factory()->create(['user_id' => $otherUser->id]);
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
         ]);
 
         // Act
@@ -363,7 +363,7 @@ class ServerDatabaseSchemaLifecycleTest extends TestCase
         $server = Server::factory()->create(['user_id' => $otherUser->id]);
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
         ]);
         $schema = ServerDatabaseSchema::create([
             'server_database_id' => $database->id,
@@ -388,7 +388,7 @@ class ServerDatabaseSchemaLifecycleTest extends TestCase
         $server = Server::factory()->create();
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
         ]);
 
         // Act
@@ -410,7 +410,7 @@ class ServerDatabaseSchemaLifecycleTest extends TestCase
         $server = Server::factory()->create();
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
         ]);
         $schema = ServerDatabaseSchema::create([
             'server_database_id' => $database->id,

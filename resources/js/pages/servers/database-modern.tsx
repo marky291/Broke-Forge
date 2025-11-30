@@ -18,7 +18,7 @@ interface Server {
     updated_at: string;
 }
 
-interface DatabaseType {
+interface DatabaseEngineConfig {
     name: string;
     description: string;
     versions: Record<string, string>;
@@ -29,7 +29,7 @@ interface DatabaseType {
 interface ServerDatabase {
     id: number;
     name: string;
-    type: string;
+    engine: string;
     version: string;
     port: number;
     status: string;
@@ -39,11 +39,11 @@ interface ServerDatabase {
 
 interface DatabasePageProps {
     server: Server;
-    availableTypes?: Record<string, DatabaseType>;
+    availableEngines?: Record<string, DatabaseEngineConfig>;
     database?: ServerDatabase | null;
 }
 
-export default function DatabasePage({ server, availableTypes = {}, database = null }: DatabasePageProps) {
+export default function DatabasePage({ server, availableEngines = {}, database = null }: DatabasePageProps) {
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: dashboard.url() },
         { title: `Server #${server.id}`, href: showServer(server.id).url },
@@ -84,11 +84,11 @@ export default function DatabasePage({ server, availableTypes = {}, database = n
                         <DatabaseStatusDisplay
                             database={database}
                             serverId={server.id}
-                            availableTypes={availableTypes}
+                            availableEngines={availableEngines}
                             onUninstall={handleUninstallDatabase}
                         />
                     ) : (
-                        <DatabaseInstallationForm serverId={server.id} availableTypes={availableTypes} />
+                        <DatabaseInstallationForm serverId={server.id} availableEngines={availableEngines} />
                     )}
                 </div>
             </div>

@@ -4,6 +4,7 @@ namespace Tests\Feature\Http\Controllers;
 
 use App\Enums\TaskStatus;
 use App\Models\Server;
+use App\Models\ServerSite;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -591,7 +592,7 @@ class ServerProvisioningControllerTest extends TestCase
     }
 
     /**
-     * Test retry provisioning dispatches job when SSH is established.
+     * Test retry provisioning dispatches job when SSH is established with correct resumeFromStep.
      */
     public function test_retry_dispatches_job_when_ssh_established(): void
     {
@@ -621,24 +622,26 @@ class ServerProvisioningControllerTest extends TestCase
         // Assert
         $response->assertStatus(302);
         $response->assertRedirect(route('servers.provisioning', $server));
-        $response->assertSessionHas('success', 'Provisioning restarted.');
+        $response->assertSessionHas('success', 'Provisioning resumed from failed step.');
 
         $server->refresh();
 
         // Status should be installing, not pending
         $this->assertEquals(TaskStatus::Installing, $server->provision_status);
 
-        // Job should be dispatched
+        // Job should be dispatched with resumeFromStep=5
         \Illuminate\Support\Facades\Queue::assertPushed(
             \App\Packages\Services\Nginx\NginxInstallerJob::class,
-            fn ($job) => $job->server->id === $server->id && $job->isProvisioningServer === true
+            fn ($job) => $job->server->id === $server->id
+                && $job->isProvisioningServer === true
+                && $job->resumeFromStep === 5
         );
     }
 
     /**
-     * Test retry provisioning cleans up existing resources when SSH established.
+     * Test retry provisioning cleans up resources from failed step when step 5 fails.
      */
-    public function test_retry_cleans_up_resources_when_ssh_established(): void
+    public function test_retry_cleans_up_all_resources_when_step_5_fails(): void
     {
         // Arrange
         \Illuminate\Support\Facades\Queue::fake();
@@ -652,21 +655,132 @@ class ServerProvisioningControllerTest extends TestCase
                 2 => 'success',
                 3 => 'success',
                 4 => 'success',
-                5 => 'failed',
+                5 => 'failed', // Firewall step failed
             ]),
             'provision_config' => collect([
                 'php_version' => '8.4',
             ]),
         ]);
 
-        // Create some related resources that should be cleaned up
-        $server->phps()->create([
-            'version' => '8.4',
-            'is_cli_default' => true,
-            'status' => 'failed',
+        // Create firewall (should be deleted since step 5 failed)
+        $firewall = $server->firewall()->create(['status' => 'failed']);
+        $firewall->rules()->create(['name' => 'HTTP', 'port' => '80', 'rule_type' => 'allow', 'status' => 'failed']);
+
+        // Create resources from later steps (should also be deleted)
+        $server->phps()->create(['version' => '8.4', 'is_cli_default' => true, 'status' => 'failed']);
+        $server->nodes()->create(['version' => '20', 'status' => 'failed']);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->post("/servers/{$server->id}/provision/retry");
+
+        // Assert
+        $response->assertStatus(302);
+
+        $server->refresh();
+
+        // All resources should be deleted when step 5 fails
+        $this->assertNull($server->firewall);
+        $this->assertEquals(0, $server->phps()->count());
+        $this->assertEquals(0, $server->nodes()->count());
+    }
+
+    /**
+     * Test retry preserves firewall when step 6 (PHP) fails.
+     */
+    public function test_retry_preserves_firewall_when_step_6_fails(): void
+    {
+        // Arrange
+        \Illuminate\Support\Facades\Queue::fake();
+
+        $user = User::factory()->create();
+        $server = Server::factory()->create([
+            'user_id' => $user->id,
+            'provision_status' => TaskStatus::Failed,
+            'provision_state' => collect([
+                1 => 'success',
+                2 => 'success',
+                3 => 'success',
+                4 => 'success',
+                5 => 'success', // Firewall completed
+                6 => 'failed',  // PHP failed
+            ]),
+            'provision_config' => collect([
+                'php_version' => '8.4',
+            ]),
         ]);
-        $server->nodes()->create([
-            'version' => '20',
+
+        // Create firewall (should be preserved)
+        $firewall = $server->firewall()->create(['status' => 'active']);
+        $firewall->rules()->create(['name' => 'HTTP', 'port' => '80', 'rule_type' => 'allow', 'status' => 'active']);
+
+        // Create PHP (should be deleted)
+        $server->phps()->create(['version' => '8.4', 'is_cli_default' => true, 'status' => 'failed']);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->post("/servers/{$server->id}/provision/retry");
+
+        // Assert
+        $response->assertStatus(302);
+
+        $server->refresh();
+
+        // Firewall should be preserved
+        $this->assertNotNull($server->firewall);
+        $this->assertEquals(1, $server->firewall->rules()->count());
+
+        // PHP should be deleted
+        $this->assertEquals(0, $server->phps()->count());
+
+        // Job should resume from step 6
+        \Illuminate\Support\Facades\Queue::assertPushed(
+            \App\Packages\Services\Nginx\NginxInstallerJob::class,
+            fn ($job) => $job->resumeFromStep === 6
+        );
+    }
+
+    /**
+     * Test retry preserves firewall and PHP when step 7 (Nginx) fails.
+     */
+    public function test_retry_preserves_firewall_and_php_when_step_7_fails(): void
+    {
+        // Arrange
+        \Illuminate\Support\Facades\Queue::fake();
+
+        $user = User::factory()->create();
+        $server = Server::factory()->create([
+            'user_id' => $user->id,
+            'provision_status' => TaskStatus::Failed,
+            'provision_state' => collect([
+                1 => 'success',
+                2 => 'success',
+                3 => 'success',
+                4 => 'success',
+                5 => 'success', // Firewall completed
+                6 => 'success', // PHP completed
+                7 => 'failed',  // Nginx failed
+            ]),
+            'provision_config' => collect([
+                'php_version' => '8.4',
+            ]),
+        ]);
+
+        // Create firewall (should be preserved)
+        $firewall = $server->firewall()->create(['status' => 'active']);
+        $firewall->rules()->create(['name' => 'HTTP', 'port' => '80', 'rule_type' => 'allow', 'status' => 'active']);
+
+        // Create PHP (should be preserved)
+        $server->phps()->create(['version' => '8.4', 'is_cli_default' => true, 'status' => 'active']);
+
+        // Create reverse proxy (should be deleted)
+        $server->reverseProxy()->create(['type' => 'nginx', 'status' => 'failed']);
+
+        // Create default site (should be deleted)
+        ServerSite::factory()->create([
+            'server_id' => $server->id,
+            'domain' => 'default',
+            'is_default' => true,
             'status' => 'failed',
         ]);
 
@@ -679,9 +793,145 @@ class ServerProvisioningControllerTest extends TestCase
 
         $server->refresh();
 
-        // Related resources should be deleted
-        $this->assertEquals(0, $server->phps()->count());
+        // Firewall and PHP should be preserved
+        $this->assertNotNull($server->firewall);
+        $this->assertEquals(1, $server->phps()->count());
+
+        // Reverse proxy and default site should be deleted
+        $this->assertNull($server->reverseProxy);
+        $this->assertEquals(0, $server->sites()->where('is_default', true)->count());
+
+        // Job should resume from step 7
+        \Illuminate\Support\Facades\Queue::assertPushed(
+            \App\Packages\Services\Nginx\NginxInstallerJob::class,
+            fn ($job) => $job->resumeFromStep === 7
+        );
+    }
+
+    /**
+     * Test retry preserves all earlier resources when step 8 (final touches) fails.
+     */
+    public function test_retry_preserves_earlier_resources_when_step_8_fails(): void
+    {
+        // Arrange
+        \Illuminate\Support\Facades\Queue::fake();
+
+        $user = User::factory()->create();
+        $server = Server::factory()->create([
+            'user_id' => $user->id,
+            'provision_status' => TaskStatus::Failed,
+            'provision_state' => collect([
+                1 => 'success',
+                2 => 'success',
+                3 => 'success',
+                4 => 'success',
+                5 => 'success', // Firewall completed
+                6 => 'success', // PHP completed
+                7 => 'success', // Nginx completed
+                8 => 'failed',  // Final touches failed
+            ]),
+            'provision_config' => collect([
+                'php_version' => '8.4',
+            ]),
+        ]);
+
+        // Create firewall (should be preserved)
+        $firewall = $server->firewall()->create(['status' => 'active']);
+        $firewall->rules()->create(['name' => 'HTTP', 'port' => '80', 'rule_type' => 'allow', 'status' => 'active']);
+
+        // Create PHP (should be preserved)
+        $server->phps()->create(['version' => '8.4', 'is_cli_default' => true, 'status' => 'active']);
+
+        // Create reverse proxy (should be preserved)
+        $server->reverseProxy()->create(['type' => 'nginx', 'status' => 'active']);
+
+        // Create default site (should be preserved)
+        ServerSite::factory()->create([
+            'server_id' => $server->id,
+            'domain' => 'default',
+            'is_default' => true,
+            'status' => 'active',
+        ]);
+
+        // Create step 8 resources (should be deleted)
+        $server->scheduledTasks()->create([
+            'name' => 'Test task',
+            'command' => 'echo test',
+            'frequency' => 'daily',
+            'status' => 'failed',
+        ]);
+        $server->nodes()->create(['version' => '20', 'status' => 'failed']);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->post("/servers/{$server->id}/provision/retry");
+
+        // Assert
+        $response->assertStatus(302);
+
+        $server->refresh();
+
+        // Steps 5-7 resources should be preserved
+        $this->assertNotNull($server->firewall);
+        $this->assertEquals(1, $server->phps()->count());
+        $this->assertNotNull($server->reverseProxy);
+        $this->assertEquals(1, $server->sites()->where('is_default', true)->count());
+
+        // Step 8 resources should be deleted
+        $this->assertEquals(0, $server->scheduledTasks()->count());
         $this->assertEquals(0, $server->nodes()->count());
+
+        // Job should resume from step 8
+        \Illuminate\Support\Facades\Queue::assertPushed(
+            \App\Packages\Services\Nginx\NginxInstallerJob::class,
+            fn ($job) => $job->resumeFromStep === 8
+        );
+    }
+
+    /**
+     * Test retry sets correct provision_state preserving completed steps.
+     */
+    public function test_retry_preserves_completed_steps_in_provision_state(): void
+    {
+        // Arrange
+        \Illuminate\Support\Facades\Queue::fake();
+
+        $user = User::factory()->create();
+        $server = Server::factory()->create([
+            'user_id' => $user->id,
+            'provision_status' => TaskStatus::Failed,
+            'provision_state' => collect([
+                1 => 'success',
+                2 => 'success',
+                3 => 'success',
+                4 => 'success',
+                5 => 'success',
+                6 => 'success',
+                7 => 'failed', // Step 7 failed
+            ]),
+            'provision_config' => collect([
+                'php_version' => '8.4',
+            ]),
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->post("/servers/{$server->id}/provision/retry");
+
+        // Assert
+        $server->refresh();
+
+        // Steps 1-6 should remain success, step 7 should be installing
+        $this->assertEquals('success', $server->provision_state->get(1));
+        $this->assertEquals('success', $server->provision_state->get(2));
+        $this->assertEquals('success', $server->provision_state->get(3));
+        $this->assertEquals('success', $server->provision_state->get(4));
+        $this->assertEquals('success', $server->provision_state->get(5));
+        $this->assertEquals('success', $server->provision_state->get(6));
+        $this->assertEquals('installing', $server->provision_state->get(7));
+
+        // Step 8 should not exist yet
+        $this->assertNull($server->provision_state->get(8));
     }
 
     /**

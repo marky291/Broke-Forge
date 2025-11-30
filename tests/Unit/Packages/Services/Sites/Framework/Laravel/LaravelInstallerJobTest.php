@@ -189,7 +189,7 @@ class LaravelInstallerJobTest extends TestCase
         $database = \App\Models\ServerDatabase::factory()->create([
             'server_id' => $server->id,
             'name' => 'myapp_db',
-            'type' => 'mysql',
+            'engine' => 'mysql',
             'port' => 3306,
             'root_password' => 'secret',
         ]);
@@ -235,7 +235,7 @@ class LaravelInstallerJobTest extends TestCase
         $database = \App\Models\ServerDatabase::factory()->create([
             'server_id' => $server->id,
             'name' => 'test_database',
-            'type' => 'mysql',
+            'engine' => 'mysql',
             'port' => 3306,
             'root_password' => 'secret_password',
         ]);
@@ -282,7 +282,7 @@ class LaravelInstallerJobTest extends TestCase
         $database = \App\Models\ServerDatabase::factory()->create([
             'server_id' => $server->id,
             'name' => 'postgres_db',
-            'type' => 'postgresql',
+            'engine' => 'postgresql',
             'port' => 5432,
             'root_password' => 'pg_password',
         ]);
@@ -346,7 +346,7 @@ class LaravelInstallerJobTest extends TestCase
         $database = \App\Models\ServerDatabase::factory()->create([
             'server_id' => $server->id,
             'name' => 'test_db',
-            'type' => 'mysql',
+            'engine' => 'mysql',
             'port' => 3306,
             'root_password' => 'pass/word&special\\chars',
         ]);
@@ -383,7 +383,7 @@ class LaravelInstallerJobTest extends TestCase
         $database = \App\Models\ServerDatabase::factory()->create([
             'server_id' => $server->id,
             'name' => 'test_db',
-            'type' => 'mysql',
+            'engine' => 'mysql',
             'port' => 3306,
             'root_password' => 'my secret password',
         ]);

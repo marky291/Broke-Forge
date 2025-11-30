@@ -6,7 +6,7 @@ import { CheckIcon, DatabaseIcon, Loader2, XCircle } from 'lucide-react';
 interface ServerDatabase {
     id: number;
     name: string;
-    type: string;
+    engine: string;
     version: string;
     port: number;
     status: string;
@@ -17,11 +17,11 @@ interface ServerDatabase {
 interface DatabaseStatusDisplayProps {
     database: ServerDatabase;
     serverId: number;
-    availableTypes: Record<string, any>;
+    availableEngines: Record<string, any>;
     onUninstall: () => void;
 }
 
-export default function DatabaseStatusDisplay({ database, serverId, availableTypes, onUninstall }: DatabaseStatusDisplayProps) {
+export default function DatabaseStatusDisplay({ database, serverId, availableEngines, onUninstall }: DatabaseStatusDisplayProps) {
     const getStatusConfig = (status: string) => {
         switch (status) {
             case 'active':
@@ -72,7 +72,7 @@ export default function DatabaseStatusDisplay({ database, serverId, availableTyp
     const statusConfig = getStatusConfig(database.status);
     const StatusIcon = statusConfig.icon;
     const isProcessing = ['installing', 'uninstalling', 'updating'].includes(database.status);
-    const typeName = availableTypes[database.type]?.name || database.type;
+    const engineName = availableEngines[database.engine]?.name || database.engine;
 
     return (
         <div className="rounded-xl border border-sidebar-border/70 bg-background shadow-sm dark:border-sidebar-border">
@@ -94,8 +94,8 @@ export default function DatabaseStatusDisplay({ database, serverId, availableTyp
                 {/* Database Information */}
                 <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
                     <div>
-                        <div className="text-sm text-muted-foreground">Type</div>
-                        <div className="font-medium">{typeName}</div>
+                        <div className="text-sm text-muted-foreground">Engine</div>
+                        <div className="font-medium">{engineName}</div>
                     </div>
                     <div>
                         <div className="text-sm text-muted-foreground">Version</div>

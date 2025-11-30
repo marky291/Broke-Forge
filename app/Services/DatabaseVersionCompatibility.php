@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Enums\DatabaseType;
+use App\Enums\DatabaseEngine;
 
 class DatabaseVersionCompatibility
 {
@@ -60,7 +60,7 @@ class DatabaseVersionCompatibility
     /**
      * Check if a database version is compatible with an Ubuntu codename
      */
-    public function isCompatible(DatabaseType $dbType, string $dbVersion, string $ubuntuCodename): bool
+    public function isCompatible(DatabaseEngine $dbType, string $dbVersion, string $ubuntuCodename): bool
     {
         $compatibility = $this->getCompatibilityMatrix($dbType);
 
@@ -75,7 +75,7 @@ class DatabaseVersionCompatibility
      * Get the appropriate Ubuntu codename to use for a database version
      * Returns the actual codename if supported, or a fallback if configured
      */
-    public function getUbuntuCodenameForDatabase(DatabaseType $dbType, string $dbVersion, string $serverCodename): ?string
+    public function getUbuntuCodenameForDatabase(DatabaseEngine $dbType, string $dbVersion, string $serverCodename): ?string
     {
         $compatibility = $this->getCompatibilityMatrix($dbType);
 
@@ -97,7 +97,7 @@ class DatabaseVersionCompatibility
     /**
      * Get all compatible versions for a database type and Ubuntu codename
      */
-    public function getCompatibleVersions(DatabaseType $dbType, string $ubuntuCodename): array
+    public function getCompatibleVersions(DatabaseEngine $dbType, string $ubuntuCodename): array
     {
         $compatibility = $this->getCompatibilityMatrix($dbType);
         $compatibleVersions = [];
@@ -115,12 +115,12 @@ class DatabaseVersionCompatibility
     /**
      * Get the compatibility matrix for a database type
      */
-    private function getCompatibilityMatrix(DatabaseType $dbType): array
+    private function getCompatibilityMatrix(DatabaseEngine $dbType): array
     {
         return match ($dbType) {
-            DatabaseType::MariaDB => self::MARIADB_COMPATIBILITY,
-            DatabaseType::PostgreSQL => self::POSTGRESQL_COMPATIBILITY,
-            DatabaseType::MySQL => self::MYSQL_COMPATIBILITY,
+            DatabaseEngine::MariaDB => self::MARIADB_COMPATIBILITY,
+            DatabaseEngine::PostgreSQL => self::POSTGRESQL_COMPATIBILITY,
+            DatabaseEngine::MySQL => self::MYSQL_COMPATIBILITY,
             default => [],
         };
     }
@@ -136,7 +136,7 @@ class DatabaseVersionCompatibility
     /**
      * Validate if installation/update is possible
      */
-    public function validateInstallation(DatabaseType $dbType, string $dbVersion, string $ubuntuCodename): array
+    public function validateInstallation(DatabaseEngine $dbType, string $dbVersion, string $ubuntuCodename): array
     {
         $codename = $this->getUbuntuCodenameForDatabase($dbType, $dbVersion, $ubuntuCodename);
 

@@ -24,7 +24,7 @@ class DatabaseDetailsTest extends TestCase
         $server = Server::factory()->create(['user_id' => $user->id]);
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => 'mysql',
+            'engine' => 'mysql',
             'status' => 'active',
         ]);
 
@@ -52,7 +52,7 @@ class DatabaseDetailsTest extends TestCase
         ]);
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => 'mysql',
+            'engine' => 'mysql',
             'status' => 'active',
         ]);
 
@@ -80,7 +80,7 @@ class DatabaseDetailsTest extends TestCase
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
             'name' => 'Production MySQL',
-            'type' => 'mysql',
+            'engine' => 'mysql',
             'version' => '8.0',
             'port' => 3306,
             'status' => 'active',
@@ -96,7 +96,7 @@ class DatabaseDetailsTest extends TestCase
             ->component('servers/database-details')
             ->has('database')
             ->where('database.name', 'Production MySQL')
-            ->where('database.type', 'mysql')
+            ->where('database.engine', 'mysql')
             ->where('database.version', '8.0')
             ->where('database.port', 3306)
             ->where('database.status', 'active')
@@ -113,7 +113,7 @@ class DatabaseDetailsTest extends TestCase
         $server = Server::factory()->create(['user_id' => $user->id]);
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => 'mysql',
+            'engine' => 'mysql',
             'status' => 'active',
         ]);
         ServerDatabaseSchema::factory()->create([
@@ -146,7 +146,7 @@ class DatabaseDetailsTest extends TestCase
         $server = Server::factory()->create(['user_id' => $user->id]);
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => 'mysql',
+            'engine' => 'mysql',
             'status' => 'active',
         ]);
         ServerDatabaseUser::factory()->create([
@@ -183,7 +183,7 @@ class DatabaseDetailsTest extends TestCase
         $server = Server::factory()->create(['user_id' => $user->id]);
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => 'mysql',
+            'engine' => 'mysql',
             'status' => 'active',
         ]);
 
@@ -209,7 +209,7 @@ class DatabaseDetailsTest extends TestCase
         $server = Server::factory()->create(['user_id' => $user->id]);
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => 'mysql',
+            'engine' => 'mysql',
             'status' => 'active',
         ]);
 
@@ -235,7 +235,7 @@ class DatabaseDetailsTest extends TestCase
         $server = Server::factory()->create(['user_id' => $user->id]);
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => 'mysql',
+            'engine' => 'mysql',
             'status' => 'active',
         ]);
 
@@ -286,7 +286,7 @@ class DatabaseDetailsTest extends TestCase
         $server = Server::factory()->create(['user_id' => $user->id]);
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => 'mysql',
+            'engine' => 'mysql',
             'status' => 'pending',
         ]);
 
@@ -312,7 +312,7 @@ class DatabaseDetailsTest extends TestCase
         $server = Server::factory()->create(['user_id' => $user->id]);
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => 'mysql',
+            'engine' => 'mysql',
             'status' => 'failed',
             'error_log' => 'Installation failed: connection timeout',
         ]);
@@ -341,7 +341,7 @@ class DatabaseDetailsTest extends TestCase
         $server = Server::factory()->create(['user_id' => $otherUser->id]);
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => 'mysql',
+            'engine' => 'mysql',
             'status' => 'active',
         ]);
 
@@ -362,7 +362,7 @@ class DatabaseDetailsTest extends TestCase
         $server = Server::factory()->create();
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => 'mysql',
+            'engine' => 'mysql',
             'status' => 'active',
         ]);
 
@@ -387,7 +387,7 @@ class DatabaseDetailsTest extends TestCase
         $server = Server::factory()->create(['user_id' => $user->id]);
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => 'mysql',
+            'engine' => 'mysql',
             'status' => 'active',
         ]);
 
@@ -413,7 +413,7 @@ class DatabaseDetailsTest extends TestCase
         $server = Server::factory()->create(['user_id' => $user->id]);
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => 'mysql',
+            'engine' => 'mysql',
             'status' => 'active',
         ]);
 
@@ -453,7 +453,7 @@ class DatabaseDetailsTest extends TestCase
         $server = Server::factory()->create(['user_id' => $user->id]);
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => 'mysql',
+            'engine' => 'mysql',
             'status' => 'active',
         ]);
 
@@ -491,7 +491,7 @@ class DatabaseDetailsTest extends TestCase
         $server = Server::factory()->create(['user_id' => $user->id]);
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => 'mysql',
+            'engine' => 'mysql',
             'status' => 'active',
         ]);
 
@@ -539,7 +539,7 @@ class DatabaseDetailsTest extends TestCase
         $server = Server::factory()->create(['user_id' => $user->id]);
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => 'mysql',
+            'engine' => 'mysql',
             'status' => 'active',
         ]);
 
@@ -574,7 +574,7 @@ class DatabaseDetailsTest extends TestCase
         $server = Server::factory()->create(['user_id' => $user->id]);
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => 'postgresql',
+            'engine' => 'postgresql',
             'status' => 'active',
         ]);
 

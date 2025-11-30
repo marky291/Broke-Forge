@@ -2,7 +2,7 @@
 
 namespace Tests\Unit\Packages\Services\Database\User;
 
-use App\Enums\DatabaseType;
+use App\Enums\DatabaseEngine;
 use App\Models\Server;
 use App\Models\ServerDatabase;
 use App\Packages\Services\Database\User\DatabaseUserInstaller;
@@ -22,7 +22,7 @@ class UserInstallerTest extends TestCase
         $server = Server::factory()->create();
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
             'root_password' => 'test_password',
         ]);
 
@@ -50,7 +50,7 @@ class UserInstallerTest extends TestCase
         $server = Server::factory()->create();
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
             'root_password' => 'root_pass',
         ]);
 
@@ -81,7 +81,7 @@ class UserInstallerTest extends TestCase
         $server = Server::factory()->create();
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
             'root_password' => 'password',
         ]);
 
@@ -115,7 +115,7 @@ class UserInstallerTest extends TestCase
         $server = Server::factory()->create();
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::PostgreSQL,
+            'engine' => DatabaseEngine::PostgreSQL,
         ]);
 
         $installer = new DatabaseUserInstaller($server, $database);
@@ -142,7 +142,7 @@ class UserInstallerTest extends TestCase
         $server = Server::factory()->create();
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
             'root_password' => 'password',
         ]);
 
@@ -176,7 +176,7 @@ class UserInstallerTest extends TestCase
         $server = Server::factory()->create();
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
             'root_password' => 'password',
         ]);
 
@@ -204,7 +204,7 @@ class UserInstallerTest extends TestCase
         $server = Server::factory()->create();
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
             'root_password' => 'password',
         ]);
 
@@ -227,7 +227,7 @@ class UserInstallerTest extends TestCase
     /**
      * Test throws exception for unsupported database type.
      */
-    public function test_throws_exception_for_unsupported_database_type(): void
+    public function test_throws_exception_for_unsupported_database_engine(): void
     {
         // Arrange
         $this->expectException(\RuntimeException::class);
@@ -236,7 +236,7 @@ class UserInstallerTest extends TestCase
         $server = Server::factory()->create();
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::Redis,
+            'engine' => DatabaseEngine::Redis,
         ]);
 
         $installer = new DatabaseUserInstaller($server, $database);

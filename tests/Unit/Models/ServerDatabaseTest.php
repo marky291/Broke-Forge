@@ -2,7 +2,8 @@
 
 namespace Tests\Unit\Models;
 
-use App\Enums\DatabaseType;
+use App\Enums\DatabaseEngine;
+use App\Enums\StorageType;
 use App\Enums\TaskStatus;
 use App\Events\ServerUpdated;
 use App\Models\Server;
@@ -92,16 +93,16 @@ class ServerDatabaseTest extends TestCase
     }
 
     /**
-     * Test that type is cast to DatabaseType enum.
+     * Test that engine is cast to DatabaseEngine enum.
      */
-    public function test_type_is_cast_to_database_type_enum(): void
+    public function test_engine_is_cast_to_database_engine_enum(): void
     {
         // Arrange
-        $database = ServerDatabase::factory()->create(['type' => DatabaseType::MySQL]);
+        $database = ServerDatabase::factory()->create(['engine' => DatabaseEngine::MySQL]);
 
         // Act & Assert
-        $this->assertInstanceOf(DatabaseType::class, $database->type);
-        $this->assertEquals(DatabaseType::MySQL, $database->type);
+        $this->assertInstanceOf(DatabaseEngine::class, $database->engine);
+        $this->assertEquals(DatabaseEngine::MySQL, $database->engine);
     }
 
     /**
@@ -173,7 +174,8 @@ class ServerDatabaseTest extends TestCase
         $database = ServerDatabase::create([
             'server_id' => $server->id,
             'name' => 'test_db',
-            'type' => DatabaseType::PostgreSQL,
+            'engine' => DatabaseEngine::PostgreSQL,
+            'storage_type' => StorageType::Disk,
             'version' => '15.2',
             'port' => 5432,
             'status' => TaskStatus::Pending,
@@ -183,7 +185,8 @@ class ServerDatabaseTest extends TestCase
 
         // Assert
         $this->assertEquals('test_db', $database->name);
-        $this->assertEquals(DatabaseType::PostgreSQL, $database->type);
+        $this->assertEquals(DatabaseEngine::PostgreSQL, $database->engine);
+        $this->assertEquals(StorageType::Disk, $database->storage_type);
         $this->assertEquals('15.2', $database->version);
         $this->assertEquals(5432, $database->port);
         $this->assertEquals(TaskStatus::Pending, $database->status);
@@ -203,7 +206,7 @@ class ServerDatabaseTest extends TestCase
         $this->assertInstanceOf(ServerDatabase::class, $database);
         $this->assertNotNull($database->server_id);
         $this->assertNotNull($database->name);
-        $this->assertInstanceOf(DatabaseType::class, $database->type);
+        $this->assertInstanceOf(DatabaseEngine::class, $database->engine);
         $this->assertNotNull($database->version);
         $this->assertIsInt($database->port);
         $this->assertInstanceOf(TaskStatus::class, $database->status);
@@ -295,39 +298,39 @@ class ServerDatabaseTest extends TestCase
     }
 
     /**
-     * Test database can be MySQL type.
+     * Test database can have MySQL engine.
      */
-    public function test_database_can_be_mysql_type(): void
+    public function test_database_can_have_mysql_engine(): void
     {
         // Arrange & Act
-        $database = ServerDatabase::factory()->create(['type' => DatabaseType::MySQL]);
+        $database = ServerDatabase::factory()->create(['engine' => DatabaseEngine::MySQL]);
 
         // Assert
-        $this->assertEquals(DatabaseType::MySQL, $database->type);
+        $this->assertEquals(DatabaseEngine::MySQL, $database->engine);
     }
 
     /**
-     * Test database can be MariaDB type.
+     * Test database can have MariaDB engine.
      */
-    public function test_database_can_be_mariadb_type(): void
+    public function test_database_can_have_mariadb_engine(): void
     {
         // Arrange & Act
-        $database = ServerDatabase::factory()->create(['type' => DatabaseType::MariaDB]);
+        $database = ServerDatabase::factory()->create(['engine' => DatabaseEngine::MariaDB]);
 
         // Assert
-        $this->assertEquals(DatabaseType::MariaDB, $database->type);
+        $this->assertEquals(DatabaseEngine::MariaDB, $database->engine);
     }
 
     /**
-     * Test database can be PostgreSQL type.
+     * Test database can have PostgreSQL engine.
      */
-    public function test_database_can_be_postgresql_type(): void
+    public function test_database_can_have_postgresql_engine(): void
     {
         // Arrange & Act
-        $database = ServerDatabase::factory()->create(['type' => DatabaseType::PostgreSQL]);
+        $database = ServerDatabase::factory()->create(['engine' => DatabaseEngine::PostgreSQL]);
 
         // Assert
-        $this->assertEquals(DatabaseType::PostgreSQL, $database->type);
+        $this->assertEquals(DatabaseEngine::PostgreSQL, $database->engine);
     }
 
     /**
@@ -336,10 +339,10 @@ class ServerDatabaseTest extends TestCase
     public function test_database_can_be_mongodb_type(): void
     {
         // Arrange & Act
-        $database = ServerDatabase::factory()->create(['type' => DatabaseType::MongoDB]);
+        $database = ServerDatabase::factory()->create(['engine' => DatabaseEngine::MongoDB]);
 
         // Assert
-        $this->assertEquals(DatabaseType::MongoDB, $database->type);
+        $this->assertEquals(DatabaseEngine::MongoDB, $database->engine);
     }
 
     /**
@@ -348,10 +351,10 @@ class ServerDatabaseTest extends TestCase
     public function test_database_can_be_redis_type(): void
     {
         // Arrange & Act
-        $database = ServerDatabase::factory()->create(['type' => DatabaseType::Redis]);
+        $database = ServerDatabase::factory()->create(['engine' => DatabaseEngine::Redis]);
 
         // Assert
-        $this->assertEquals(DatabaseType::Redis, $database->type);
+        $this->assertEquals(DatabaseEngine::Redis, $database->engine);
     }
 
     /**
@@ -390,9 +393,9 @@ class ServerDatabaseTest extends TestCase
     public function test_database_stores_different_port_numbers(): void
     {
         // Arrange & Act
-        $mysqlDb = ServerDatabase::factory()->create(['type' => DatabaseType::MySQL, 'port' => 3306]);
-        $postgresDb = ServerDatabase::factory()->create(['type' => DatabaseType::PostgreSQL, 'port' => 5432]);
-        $redisDb = ServerDatabase::factory()->create(['type' => DatabaseType::Redis, 'port' => 6379]);
+        $mysqlDb = ServerDatabase::factory()->create(['engine' => DatabaseEngine::MySQL, 'port' => 3306]);
+        $postgresDb = ServerDatabase::factory()->create(['engine' => DatabaseEngine::PostgreSQL, 'port' => 5432]);
+        $redisDb = ServerDatabase::factory()->create(['engine' => DatabaseEngine::Redis, 'port' => 6379]);
 
         // Assert
         $this->assertEquals(3306, $mysqlDb->port);
@@ -471,5 +474,109 @@ class ServerDatabaseTest extends TestCase
         // Assert
         $this->assertCount(0, $sites);
         $this->assertTrue($sites->isEmpty());
+    }
+
+    /**
+     * Test that storage_type is cast to StorageType enum.
+     */
+    public function test_storage_type_is_cast_to_storage_type_enum(): void
+    {
+        // Arrange
+        $database = ServerDatabase::factory()->create(['storage_type' => StorageType::Disk]);
+
+        // Act & Assert
+        $this->assertInstanceOf(StorageType::class, $database->storage_type);
+        $this->assertEquals(StorageType::Disk, $database->storage_type);
+    }
+
+    /**
+     * Test database can have memory storage type.
+     */
+    public function test_database_can_have_memory_storage_type(): void
+    {
+        // Arrange & Act
+        $database = ServerDatabase::factory()->create(['storage_type' => StorageType::Memory]);
+
+        // Assert
+        $this->assertEquals(StorageType::Memory, $database->storage_type);
+    }
+
+    /**
+     * Test database can have disk storage type.
+     */
+    public function test_database_can_have_disk_storage_type(): void
+    {
+        // Arrange & Act
+        $database = ServerDatabase::factory()->create(['storage_type' => StorageType::Disk]);
+
+        // Assert
+        $this->assertEquals(StorageType::Disk, $database->storage_type);
+    }
+
+    /**
+     * Test factory generates valid storage_type based on database type.
+     */
+    public function test_factory_generates_valid_storage_type(): void
+    {
+        // Act
+        $database = ServerDatabase::factory()->create();
+
+        // Assert
+        $this->assertInstanceOf(StorageType::class, $database->storage_type);
+        $this->assertContains($database->storage_type, StorageType::cases());
+    }
+
+    /**
+     * Test storage_type can be mass assigned.
+     */
+    public function test_storage_type_can_be_mass_assigned(): void
+    {
+        // Arrange
+        $server = Server::factory()->create();
+
+        // Act
+        $database = ServerDatabase::create([
+            'server_id' => $server->id,
+            'name' => 'test_db',
+            'engine' => DatabaseEngine::MySQL,
+            'version' => '8.0',
+            'port' => 3306,
+            'status' => TaskStatus::Active,
+            'root_password' => 'password123',
+            'storage_type' => StorageType::Disk,
+        ]);
+
+        // Assert
+        $this->assertEquals(StorageType::Disk, $database->storage_type);
+    }
+
+    /**
+     * Test Redis database uses memory storage type.
+     */
+    public function test_redis_database_uses_memory_storage_type(): void
+    {
+        // Arrange & Act
+        $database = ServerDatabase::factory()->create([
+            'engine' => DatabaseEngine::Redis,
+            'storage_type' => DatabaseEngine::Redis->storageType(),
+        ]);
+
+        // Assert
+        $this->assertEquals(StorageType::Memory, $database->storage_type);
+    }
+
+    /**
+     * Test MySQL database uses disk storage type.
+     */
+    public function test_mysql_database_uses_disk_storage_type(): void
+    {
+        // Arrange & Act
+        $database = ServerDatabase::factory()->create([
+            'engine' => DatabaseEngine::MySQL,
+            'storage_type' => DatabaseEngine::MySQL->storageType(),
+        ]);
+
+        // Assert
+        $this->assertEquals(StorageType::Disk, $database->storage_type);
     }
 }

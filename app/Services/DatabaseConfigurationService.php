@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Enums\DatabaseType;
+use App\Enums\DatabaseEngine;
 use App\Models\Server;
 
 class DatabaseConfigurationService
@@ -13,7 +13,7 @@ class DatabaseConfigurationService
     public function getAvailableDatabases(?string $osCodename = null): array
     {
         return [
-            DatabaseType::MySQL->value => [
+            DatabaseEngine::MySQL->value => [
                 'name' => 'MySQL',
                 'description' => 'Widely adopted relational database trusted for PHP applications.',
                 'versions' => [
@@ -22,7 +22,7 @@ class DatabaseConfigurationService
                 'default_version' => '8.0',
                 'default_port' => 3306,
             ],
-            DatabaseType::MariaDB->value => [
+            DatabaseEngine::MariaDB->value => [
                 'name' => 'MariaDB',
                 'description' => 'High-performance MySQL-compatible database',
                 'versions' => [
@@ -32,7 +32,7 @@ class DatabaseConfigurationService
                 'default_version' => '11.4',
                 'default_port' => 3306,
             ],
-            DatabaseType::PostgreSQL->value => [
+            DatabaseEngine::PostgreSQL->value => [
                 'name' => 'PostgreSQL',
                 'description' => 'Advanced open-source relational database with strong SQL compliance.',
                 'versions' => [
@@ -50,7 +50,7 @@ class DatabaseConfigurationService
     public function getAvailableCacheQueue(?string $osCodename = null): array
     {
         return [
-            DatabaseType::Redis->value => [
+            DatabaseEngine::Redis->value => [
                 'name' => 'Redis',
                 'description' => 'In-memory data structure store for caching and queuing.',
                 'versions' => [
@@ -77,19 +77,19 @@ class DatabaseConfigurationService
         );
     }
 
-    public function getTypeConfiguration(DatabaseType $type): array
+    public function getTypeConfiguration(DatabaseEngine $type): array
     {
         $configs = $this->getAvailableTypes();
 
         return $configs[$type->value] ?? [];
     }
 
-    public function getDefaultPort(DatabaseType $type): int
+    public function getDefaultPort(DatabaseEngine $type): int
     {
         return $this->getTypeConfiguration($type)['default_port'] ?? 3306;
     }
 
-    public function getDefaultVersion(DatabaseType $type): string
+    public function getDefaultVersion(DatabaseEngine $type): string
     {
         return $this->getTypeConfiguration($type)['default_version'] ?? '8.0';
     }
@@ -98,7 +98,7 @@ class DatabaseConfigurationService
      * Find the next available port for a database type on the given server.
      * Starts with the default port and increments until an unused port is found.
      */
-    public function getNextAvailablePort(Server $server, DatabaseType $type, ?int $requestedPort = null): int
+    public function getNextAvailablePort(Server $server, DatabaseEngine $type, ?int $requestedPort = null): int
     {
         // If a specific port is requested, validate it's available
         if ($requestedPort !== null) {
@@ -133,13 +133,13 @@ class DatabaseConfigurationService
      * Determine if the database type belongs to the "database" category
      * (as opposed to cache/queue services)
      */
-    public function isDatabaseCategory(DatabaseType $type): bool
+    public function isDatabaseCategory(DatabaseEngine $type): bool
     {
         return in_array($type, [
-            DatabaseType::MySQL,
-            DatabaseType::MariaDB,
-            DatabaseType::PostgreSQL,
-            DatabaseType::MongoDB,
+            DatabaseEngine::MySQL,
+            DatabaseEngine::MariaDB,
+            DatabaseEngine::PostgreSQL,
+            DatabaseEngine::MongoDB,
         ]);
     }
 
@@ -147,7 +147,7 @@ class DatabaseConfigurationService
      * Check if the server already has a database installed in the same category
      * as the requested type (database vs cache/queue)
      */
-    public function hasExistingDatabaseInCategory(Server $server, DatabaseType $type): bool
+    public function hasExistingDatabaseInCategory(Server $server, DatabaseEngine $type): bool
     {
         $isDatabase = $this->isDatabaseCategory($type);
 
@@ -155,10 +155,10 @@ class DatabaseConfigurationService
             ->where(function ($query) use ($isDatabase) {
                 if ($isDatabase) {
                     // Check for any database type (MySQL, MariaDB, PostgreSQL, MongoDB)
-                    $query->whereIn('type', ['mysql', 'mariadb', 'postgresql', 'mongodb']);
+                    $query->whereIn('engine', ['mysql', 'mariadb', 'postgresql', 'mongodb']);
                 } else {
                     // Check for cache/queue type (Redis)
-                    $query->where('type', 'redis');
+                    $query->where('engine', 'redis');
                 }
             })
             ->whereNotIn('status', ['failed', 'removing'])

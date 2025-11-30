@@ -2,7 +2,7 @@
 
 namespace Tests\Unit\Packages\Services\Database\Schema;
 
-use App\Enums\DatabaseType;
+use App\Enums\DatabaseEngine;
 use App\Models\Server;
 use App\Models\ServerDatabase;
 use App\Packages\Services\Database\Schema\DatabaseSchemaInstaller;
@@ -22,7 +22,7 @@ class SchemaInstallerTest extends TestCase
         $server = Server::factory()->create();
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
             'root_password' => 'test_password',
         ]);
 
@@ -51,7 +51,7 @@ class SchemaInstallerTest extends TestCase
         $server = Server::factory()->create();
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MariaDB,
+            'engine' => DatabaseEngine::MariaDB,
             'root_password' => 'test_password',
         ]);
 
@@ -80,7 +80,7 @@ class SchemaInstallerTest extends TestCase
         $server = Server::factory()->create();
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::PostgreSQL,
+            'engine' => DatabaseEngine::PostgreSQL,
         ]);
 
         $installer = new DatabaseSchemaInstaller($server, $database);
@@ -107,7 +107,7 @@ class SchemaInstallerTest extends TestCase
         $server = Server::factory()->create();
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
             'root_password' => 'password',
         ]);
 
@@ -126,7 +126,7 @@ class SchemaInstallerTest extends TestCase
     /**
      * Test throws exception for unsupported database type.
      */
-    public function test_throws_exception_for_unsupported_database_type(): void
+    public function test_throws_exception_for_unsupported_database_engine(): void
     {
         // Arrange
         $this->expectException(\RuntimeException::class);
@@ -135,7 +135,7 @@ class SchemaInstallerTest extends TestCase
         $server = Server::factory()->create();
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::Redis, // Unsupported for schema creation
+            'engine' => DatabaseEngine::Redis, // Unsupported for schema creation
         ]);
 
         $installer = new DatabaseSchemaInstaller($server, $database);

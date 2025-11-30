@@ -21,7 +21,8 @@ class NginxInstallerJob extends Orchestratable
     public function __construct(
         public Server $server,
         public PhpVersion $phpVersion,
-        public bool $isProvisioningServer = false
+        public bool $isProvisioningServer = false,
+        public int $resumeFromStep = 5
     ) {}
 
     public function handle(): void
@@ -29,7 +30,7 @@ class NginxInstallerJob extends Orchestratable
         // Set no time limit for long-running installation process
         set_time_limit(0);
 
-        Log::info("Starting Nginx installation for server #{$this->server->id} with PHP {$this->phpVersion->value}");
+        Log::info("Starting Nginx installation for server #{$this->server->id} with PHP {$this->phpVersion->value}, resuming from step {$this->resumeFromStep}");
 
         try {
             // Create installer instance
@@ -40,7 +41,7 @@ class NginxInstallerJob extends Orchestratable
             }
 
             // Execute installation - the installer handles all logic, database tracking, and dependencies
-            $installer->execute($this->phpVersion);
+            $installer->execute($this->phpVersion, $this->resumeFromStep);
 
             Log::info("Nginx installation completed for server #{$this->server->id}");
 
@@ -95,6 +96,7 @@ class NginxInstallerJob extends Orchestratable
             'server_id' => $this->server->id,
             'php_version' => $this->phpVersion->value,
             'is_provisioning_server' => $this->isProvisioningServer,
+            'resume_from_step' => $this->resumeFromStep,
             'error' => $exception->getMessage(),
             'trace' => $exception->getTraceAsString(),
         ]);

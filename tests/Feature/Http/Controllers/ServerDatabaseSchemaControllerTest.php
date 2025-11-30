@@ -2,7 +2,7 @@
 
 namespace Tests\Feature\Http\Controllers;
 
-use App\Enums\DatabaseType;
+use App\Enums\DatabaseEngine;
 use App\Enums\TaskStatus;
 use App\Models\Server;
 use App\Models\ServerDatabase;
@@ -29,7 +29,7 @@ class ServerDatabaseSchemaControllerTest extends TestCase
         $server = Server::factory()->create(['user_id' => $user->id]);
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
             'status' => TaskStatus::Active,
         ]);
 
@@ -67,7 +67,7 @@ class ServerDatabaseSchemaControllerTest extends TestCase
         $server = Server::factory()->create(['user_id' => $user->id]);
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
             'status' => TaskStatus::Active,
         ]);
 
@@ -108,7 +108,7 @@ class ServerDatabaseSchemaControllerTest extends TestCase
         $server = Server::factory()->create(['user_id' => $user->id]);
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
         ]);
 
         // Act
@@ -130,7 +130,7 @@ class ServerDatabaseSchemaControllerTest extends TestCase
         $server = Server::factory()->create(['user_id' => $user->id]);
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
         ]);
 
         // Act
@@ -155,7 +155,7 @@ class ServerDatabaseSchemaControllerTest extends TestCase
         $server = Server::factory()->create(['user_id' => $user->id]);
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
         ]);
 
         // Act
@@ -180,7 +180,7 @@ class ServerDatabaseSchemaControllerTest extends TestCase
         $server = Server::factory()->create(['user_id' => $user->id]);
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
         ]);
 
         // Create existing database user
@@ -214,7 +214,7 @@ class ServerDatabaseSchemaControllerTest extends TestCase
         $server = Server::factory()->create(['user_id' => $user->id]);
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
         ]);
 
         // Act
@@ -243,7 +243,7 @@ class ServerDatabaseSchemaControllerTest extends TestCase
         $server = Server::factory()->create(['user_id' => $otherUser->id]);
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
         ]);
 
         // Act
@@ -268,7 +268,7 @@ class ServerDatabaseSchemaControllerTest extends TestCase
         $server = Server::factory()->create(['user_id' => $user->id]);
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
         ]);
 
         // Act
@@ -297,7 +297,7 @@ class ServerDatabaseSchemaControllerTest extends TestCase
         $server = Server::factory()->create(['user_id' => $user->id]);
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
         ]);
 
         // Act
@@ -328,7 +328,7 @@ class ServerDatabaseSchemaControllerTest extends TestCase
         $server = Server::factory()->create(['user_id' => $user->id]);
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
         ]);
 
         // Act
@@ -363,7 +363,7 @@ class ServerDatabaseSchemaControllerTest extends TestCase
         $server = Server::factory()->create(['user_id' => $user->id]);
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
         ]);
 
         // Act

@@ -2,7 +2,8 @@
 
 namespace Tests\Feature\Http\Controllers;
 
-use App\Enums\DatabaseType;
+use App\Enums\DatabaseEngine;
+use App\Enums\StorageType;
 use App\Enums\TaskStatus;
 use App\Models\Server;
 use App\Models\ServerDatabase;
@@ -123,7 +124,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
             'version' => '8.0',
             'port' => 3306,
             'status' => TaskStatus::Active,
@@ -173,7 +174,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::PostgreSQL,
+            'engine' => DatabaseEngine::PostgreSQL,
             'status' => TaskStatus::Installing,
         ]);
 
@@ -205,7 +206,7 @@ class ServerDatabaseControllerTest extends TestCase
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
                 'name' => 'MySQL',
-                'type' => 'mysql',
+                'engine' => 'mysql',
                 'version' => '8.0',
                 'root_password' => 'SecurePassword123',
                 'port' => 3306,
@@ -219,7 +220,7 @@ class ServerDatabaseControllerTest extends TestCase
         $this->assertDatabaseHas('server_databases', [
             'server_id' => $server->id,
             'name' => 'MySQL',
-            'type' => DatabaseType::MySQL->value,
+            'engine' => DatabaseEngine::MySQL->value,
             'version' => '8.0',
             'port' => 3306,
             'status' => TaskStatus::Pending->value,
@@ -243,7 +244,7 @@ class ServerDatabaseControllerTest extends TestCase
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
                 'name' => 'mariadb_test',
-                'type' => 'mariadb',
+                'engine' => 'mariadb',
                 'version' => '10.11',
                 'root_password' => 'SecurePass456',
             ]);
@@ -254,7 +255,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         $this->assertDatabaseHas('server_databases', [
             'server_id' => $server->id,
-            'type' => DatabaseType::MariaDB->value,
+            'engine' => DatabaseEngine::MariaDB->value,
             'version' => '10.11',
             'status' => TaskStatus::Pending->value,
         ]);
@@ -277,7 +278,7 @@ class ServerDatabaseControllerTest extends TestCase
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
                 'name' => 'postgres_db',
-                'type' => 'postgresql',
+                'engine' => 'postgresql',
                 'version' => '15',
                 'root_password' => 'PostgresPass789',
                 'port' => 5432,
@@ -289,7 +290,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         $this->assertDatabaseHas('server_databases', [
             'server_id' => $server->id,
-            'type' => DatabaseType::PostgreSQL->value,
+            'engine' => DatabaseEngine::PostgreSQL->value,
             'version' => '15',
             'port' => 5432,
             'status' => TaskStatus::Pending->value,
@@ -299,9 +300,9 @@ class ServerDatabaseControllerTest extends TestCase
     }
 
     /**
-     * Test install validates required type field.
+     * Test install validates required engine field.
      */
-    public function test_install_validates_required_type_field(): void
+    public function test_install_validates_required_engine_field(): void
     {
         // Arrange
         $user = User::factory()->create();
@@ -317,7 +318,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         // Assert
         $response->assertStatus(302);
-        $response->assertSessionHasErrors(['type']);
+        $response->assertSessionHasErrors(['engine']);
     }
 
     /**
@@ -333,7 +334,7 @@ class ServerDatabaseControllerTest extends TestCase
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
                 'name' => 'test_db',
-                'type' => 'mysql',
+                'engine' => 'mysql',
                 'root_password' => 'SecurePassword123',
             ]);
 
@@ -355,7 +356,7 @@ class ServerDatabaseControllerTest extends TestCase
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
                 'name' => 'test_db',
-                'type' => 'mysql',
+                'engine' => 'mysql',
                 'version' => '8.0',
             ]);
 
@@ -365,9 +366,9 @@ class ServerDatabaseControllerTest extends TestCase
     }
 
     /**
-     * Test install validates type is valid enum.
+     * Test install validates engine is valid enum.
      */
-    public function test_install_validates_type_is_valid_enum(): void
+    public function test_install_validates_engine_is_valid_enum(): void
     {
         // Arrange
         $user = User::factory()->create();
@@ -377,14 +378,14 @@ class ServerDatabaseControllerTest extends TestCase
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
                 'name' => 'test_db',
-                'type' => 'invalid_database',
+                'engine' => 'invalid_database',
                 'version' => '8.0',
                 'root_password' => 'SecurePassword123',
             ]);
 
         // Assert
         $response->assertStatus(302);
-        $response->assertSessionHasErrors(['type']);
+        $response->assertSessionHasErrors(['engine']);
     }
 
     /**
@@ -400,7 +401,7 @@ class ServerDatabaseControllerTest extends TestCase
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
                 'name' => 'test_db',
-                'type' => 'mysql',
+                'engine' => 'mysql',
                 'version' => '8.0',
                 'root_password' => 'short',
             ]);
@@ -423,7 +424,7 @@ class ServerDatabaseControllerTest extends TestCase
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
                 'name' => 'test_db',
-                'type' => 'mysql',
+                'engine' => 'mysql',
                 'version' => '8.0',
                 'root_password' => 'SecurePassword123',
                 'port' => 0,
@@ -447,7 +448,7 @@ class ServerDatabaseControllerTest extends TestCase
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
                 'name' => 'test_db',
-                'type' => 'mysql',
+                'engine' => 'mysql',
                 'version' => '8.0',
                 'root_password' => 'SecurePassword123',
                 'port' => 99999,
@@ -473,7 +474,7 @@ class ServerDatabaseControllerTest extends TestCase
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
                 'name' => 'test_db',
-                'type' => 'mysql',
+                'engine' => 'mysql',
                 'version' => '8.0',
                 'root_password' => 'SecurePassword123',
             ]);
@@ -499,7 +500,7 @@ class ServerDatabaseControllerTest extends TestCase
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
                 'name' => 'test_db',
-                'type' => 'mysql',
+                'engine' => 'mysql',
                 'version' => '8.0',
                 'root_password' => 'SecurePassword123',
             ]);
@@ -520,7 +521,7 @@ class ServerDatabaseControllerTest extends TestCase
         // Act
         $response = $this->post("/servers/{$server->id}/databases", [
             'name' => 'test_db',
-            'type' => 'mysql',
+            'engine' => 'mysql',
             'version' => '8.0',
             'root_password' => 'SecurePassword123',
         ]);
@@ -531,9 +532,9 @@ class ServerDatabaseControllerTest extends TestCase
     }
 
     /**
-     * Test database name defaults to type when not provided.
+     * Test database name defaults to engine when not provided.
      */
-    public function test_database_name_defaults_to_type_when_not_provided(): void
+    public function test_database_name_defaults_to_engine_when_not_provided(): void
     {
         // Arrange
         \Illuminate\Support\Facades\Queue::fake();
@@ -545,7 +546,7 @@ class ServerDatabaseControllerTest extends TestCase
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
                 'name' => 'mysql',
-                'type' => 'mysql',
+                'engine' => 'mysql',
                 'version' => '8.0',
                 'root_password' => 'SecurePassword123',
             ]);
@@ -574,7 +575,7 @@ class ServerDatabaseControllerTest extends TestCase
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
                 'name' => 'postgres_test',
-                'type' => 'postgresql',
+                'engine' => 'postgresql',
                 'version' => '16',
                 'root_password' => 'SecurePassword123',
                 'port' => 5432,
@@ -589,7 +590,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         $this->assertDatabaseHas('server_databases', [
             'server_id' => $server->id,
-            'type' => DatabaseType::PostgreSQL->value,
+            'engine' => DatabaseEngine::PostgreSQL->value,
             'status' => TaskStatus::Pending->value,
         ]);
     }
@@ -606,7 +607,7 @@ class ServerDatabaseControllerTest extends TestCase
         // Create a database with failed status and error message
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
             'version' => '8.0',
             'port' => 3306,
             'status' => TaskStatus::Failed,
@@ -639,7 +640,7 @@ class ServerDatabaseControllerTest extends TestCase
         // Create database in pending status
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MariaDB,
+            'engine' => DatabaseEngine::MariaDB,
             'version' => '11.4',
             'port' => 3310,
             'status' => TaskStatus::Pending,
@@ -677,7 +678,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
             'version' => '8.0',
             'status' => TaskStatus::Active,
         ]);
@@ -712,7 +713,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
             'version' => '8.0',
             'status' => TaskStatus::Active,
         ]);
@@ -742,7 +743,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
             'version' => '8.0',
             'status' => TaskStatus::Active,
         ]);
@@ -792,7 +793,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
             'status' => TaskStatus::Installing,
         ]);
 
@@ -819,7 +820,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
             'status' => TaskStatus::Removing,
         ]);
 
@@ -846,7 +847,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
             'status' => TaskStatus::Updating,
         ]);
 
@@ -873,7 +874,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
             'status' => TaskStatus::Active,
         ]);
 
@@ -898,7 +899,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
             'status' => TaskStatus::Active,
         ]);
 
@@ -923,7 +924,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
             'status' => TaskStatus::Active,
         ]);
 
@@ -950,7 +951,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::PostgreSQL,
+            'engine' => DatabaseEngine::PostgreSQL,
             'status' => TaskStatus::Active,
         ]);
 
@@ -998,7 +999,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
             'status' => TaskStatus::Active,
         ]);
 
@@ -1021,7 +1022,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
             'status' => TaskStatus::Active,
         ]);
 
@@ -1048,7 +1049,7 @@ class ServerDatabaseControllerTest extends TestCase
         $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
                 'name' => 'mysql_test',
-                'type' => 'mysql',
+                'engine' => 'mysql',
                 'version' => '8.0',
                 'root_password' => 'SecurePassword123',
                 'port' => 3306,
@@ -1058,7 +1059,7 @@ class ServerDatabaseControllerTest extends TestCase
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
                 'name' => 'postgres_test',
-                'type' => 'postgresql',
+                'engine' => 'postgresql',
                 'version' => '16',
                 'root_password' => 'PostgresPass789',
                 'port' => 5432,
@@ -1066,15 +1067,15 @@ class ServerDatabaseControllerTest extends TestCase
 
         // Assert - second database installation should fail
         $response->assertStatus(302);
-        $response->assertSessionHasErrors(['type']);
+        $response->assertSessionHasErrors(['engine']);
         $this->assertEquals(1, $server->databases()->count());
         $this->assertDatabaseHas('server_databases', [
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL->value,
+            'engine' => DatabaseEngine::MySQL->value,
         ]);
         $this->assertDatabaseMissing('server_databases', [
             'server_id' => $server->id,
-            'type' => DatabaseType::PostgreSQL->value,
+            'engine' => DatabaseEngine::PostgreSQL->value,
         ]);
     }
 
@@ -1089,7 +1090,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
             'port' => 3306,
         ]);
 
@@ -1097,7 +1098,7 @@ class ServerDatabaseControllerTest extends TestCase
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
                 'name' => 'mariadb_test',
-                'type' => 'mariadb',
+                'engine' => 'mariadb',
                 'version' => '11.4',
                 'root_password' => 'SecurePassword123',
                 'port' => 3306,
@@ -1123,7 +1124,7 @@ class ServerDatabaseControllerTest extends TestCase
         $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
                 'name' => 'mysql_prod',
-                'type' => 'mysql',
+                'engine' => 'mysql',
                 'version' => '8.0',
                 'root_password' => 'Password1',
                 'port' => 3306,
@@ -1133,7 +1134,7 @@ class ServerDatabaseControllerTest extends TestCase
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/databases", [
                 'name' => 'redis_cache',
-                'type' => 'redis',
+                'engine' => 'redis',
                 'version' => '7.2',
                 'root_password' => 'Password2',
                 'port' => 6379,
@@ -1146,11 +1147,11 @@ class ServerDatabaseControllerTest extends TestCase
         $this->assertEquals(2, $databases->count());
         $this->assertDatabaseHas('server_databases', [
             'server_id' => $server->id,
-            'type' => 'mysql',
+            'engine' => 'mysql',
         ]);
         $this->assertDatabaseHas('server_databases', [
             'server_id' => $server->id,
-            'type' => 'redis',
+            'engine' => 'redis',
         ]);
     }
 
@@ -1165,13 +1166,13 @@ class ServerDatabaseControllerTest extends TestCase
 
         ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
             'port' => 3306,
         ]);
 
         ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::PostgreSQL,
+            'engine' => DatabaseEngine::PostgreSQL,
             'port' => 5432,
         ]);
 
@@ -1202,14 +1203,14 @@ class ServerDatabaseControllerTest extends TestCase
 
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
             'port' => 3306,
             'status' => TaskStatus::Active,
         ]);
 
         $cacheService = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::Redis,
+            'engine' => DatabaseEngine::Redis,
             'port' => 6379,
             'status' => TaskStatus::Active,
         ]);
@@ -1271,7 +1272,7 @@ class ServerDatabaseControllerTest extends TestCase
         // Create both a MySQL and Redis instance
         ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
             'version' => '8.0',
             'port' => 3306,
             'status' => TaskStatus::Active,
@@ -1279,7 +1280,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::Redis,
+            'engine' => DatabaseEngine::Redis,
             'version' => '7.2',
             'port' => 6379,
             'status' => TaskStatus::Active,
@@ -1298,8 +1299,8 @@ class ServerDatabaseControllerTest extends TestCase
 
         // Verify Redis is in the data but will be filtered by frontend
         $response->assertInertia(fn ($page) => $page
-            ->where('server.databases.0.type', 'mysql')
-            ->where('server.databases.1.type', 'redis')
+            ->where('server.databases.0.engine', 'mysql')
+            ->where('server.databases.1.engine', 'redis')
         );
     }
 
@@ -1313,7 +1314,7 @@ class ServerDatabaseControllerTest extends TestCase
         $server = Server::factory()->create(['user_id' => $user->id]);
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
         ]);
 
         // Act
@@ -1334,7 +1335,7 @@ class ServerDatabaseControllerTest extends TestCase
         $server = Server::factory()->create(['user_id' => $user->id]);
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
             'status' => TaskStatus::Active,
         ]);
 
@@ -1356,7 +1357,7 @@ class ServerDatabaseControllerTest extends TestCase
         $server = Server::factory()->create(['user_id' => $user->id]);
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MariaDB,
+            'engine' => DatabaseEngine::MariaDB,
             'status' => TaskStatus::Active,
         ]);
 
@@ -1378,7 +1379,7 @@ class ServerDatabaseControllerTest extends TestCase
         $server = Server::factory()->create(['user_id' => $user->id]);
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::PostgreSQL,
+            'engine' => DatabaseEngine::PostgreSQL,
             'status' => TaskStatus::Active,
         ]);
 
@@ -1401,7 +1402,7 @@ class ServerDatabaseControllerTest extends TestCase
         $server = Server::factory()->create(['user_id' => $otherUser->id]);
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
         ]);
 
         // Act
@@ -1422,7 +1423,7 @@ class ServerDatabaseControllerTest extends TestCase
         $server = Server::factory()->create(['user_id' => $user->id]);
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
         ]);
 
         // Act
@@ -1452,7 +1453,7 @@ class ServerDatabaseControllerTest extends TestCase
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
             'name' => 'Production MySQL',
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
             'version' => '8.0',
             'port' => 3306,
             'status' => TaskStatus::Active,
@@ -1468,7 +1469,7 @@ class ServerDatabaseControllerTest extends TestCase
             ->component('servers/database-details')
             ->where('database.id', $database->id)
             ->where('database.name', 'Production MySQL')
-            ->where('database.type', 'mysql')
+            ->where('database.engine', 'mysql')
             ->where('database.version', '8.0')
             ->where('database.port', 3306)
             ->where('database.status', 'active')
@@ -1478,14 +1479,14 @@ class ServerDatabaseControllerTest extends TestCase
     /**
      * Test database detail page only allows MySQL, MariaDB, and PostgreSQL (404 for Redis).
      */
-    public function test_database_detail_page_only_allows_supported_database_types(): void
+    public function test_database_detail_page_only_allows_supported_database_engines(): void
     {
         // Arrange
         $user = User::factory()->create();
         $server = Server::factory()->create(['user_id' => $user->id]);
         $redisDatabase = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::Redis,
+            'engine' => DatabaseEngine::Redis,
         ]);
 
         // Act
@@ -1507,7 +1508,7 @@ class ServerDatabaseControllerTest extends TestCase
         $server2 = Server::factory()->create(['user_id' => $user->id]);
         $database = ServerDatabase::factory()->create([
             'server_id' => $server2->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
         ]);
 
         // Act - Try to access database from server2 using server1's URL
@@ -1529,7 +1530,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
             'status' => TaskStatus::Active,
         ]);
 
@@ -1571,7 +1572,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
             'status' => TaskStatus::Active,
         ]);
 
@@ -1614,7 +1615,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::PostgreSQL,
+            'engine' => DatabaseEngine::PostgreSQL,
             'status' => TaskStatus::Active,
         ]);
 
@@ -1650,7 +1651,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
             'status' => TaskStatus::Active,
         ]);
 
@@ -1684,7 +1685,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
             'status' => TaskStatus::Active,
         ]);
 
@@ -1712,7 +1713,7 @@ class ServerDatabaseControllerTest extends TestCase
 
         $database = ServerDatabase::factory()->create([
             'server_id' => $server->id,
-            'type' => DatabaseType::MySQL,
+            'engine' => DatabaseEngine::MySQL,
             'status' => TaskStatus::Failed,
             'error_log' => 'Installation failed: Connection timeout to package server',
         ]);
@@ -1729,5 +1730,140 @@ class ServerDatabaseControllerTest extends TestCase
             ->where('server.databases.0.status', TaskStatus::Failed->value)
             ->where('server.databases.0.error_log', 'Installation failed: Connection timeout to package server')
         );
+    }
+
+    /**
+     * Test installing MySQL database sets storage_type to disk.
+     */
+    public function test_installing_mysql_database_sets_storage_type_to_disk(): void
+    {
+        // Arrange
+        \Illuminate\Support\Facades\Queue::fake();
+
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->post("/servers/{$server->id}/databases", [
+                'name' => 'MySQL',
+                'engine' => 'mysql',
+                'version' => '8.0',
+                'root_password' => 'SecurePassword123',
+                'port' => 3306,
+            ]);
+
+        // Assert
+        $response->assertStatus(302);
+
+        $database = $server->databases()->first();
+        $this->assertEquals(StorageType::Disk, $database->storage_type);
+
+        $this->assertDatabaseHas('server_databases', [
+            'server_id' => $server->id,
+            'engine' => DatabaseEngine::MySQL->value,
+            'storage_type' => StorageType::Disk->value,
+        ]);
+    }
+
+    /**
+     * Test installing MariaDB database sets storage_type to disk.
+     */
+    public function test_installing_mariadb_database_sets_storage_type_to_disk(): void
+    {
+        // Arrange
+        \Illuminate\Support\Facades\Queue::fake();
+
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->post("/servers/{$server->id}/databases", [
+                'name' => 'MariaDB',
+                'engine' => 'mariadb',
+                'version' => '10.11',
+                'root_password' => 'SecurePassword123',
+            ]);
+
+        // Assert
+        $response->assertStatus(302);
+
+        $database = $server->databases()->first();
+        $this->assertEquals(StorageType::Disk, $database->storage_type);
+
+        $this->assertDatabaseHas('server_databases', [
+            'server_id' => $server->id,
+            'engine' => DatabaseEngine::MariaDB->value,
+            'storage_type' => StorageType::Disk->value,
+        ]);
+    }
+
+    /**
+     * Test installing PostgreSQL database sets storage_type to disk.
+     */
+    public function test_installing_postgresql_database_sets_storage_type_to_disk(): void
+    {
+        // Arrange
+        \Illuminate\Support\Facades\Queue::fake();
+
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->post("/servers/{$server->id}/databases", [
+                'name' => 'PostgreSQL',
+                'engine' => 'postgresql',
+                'version' => '16',
+                'root_password' => 'SecurePassword123',
+                'port' => 5432,
+            ]);
+
+        // Assert
+        $response->assertStatus(302);
+
+        $database = $server->databases()->first();
+        $this->assertEquals(StorageType::Disk, $database->storage_type);
+
+        $this->assertDatabaseHas('server_databases', [
+            'server_id' => $server->id,
+            'engine' => DatabaseEngine::PostgreSQL->value,
+            'storage_type' => StorageType::Disk->value,
+        ]);
+    }
+
+    /**
+     * Test installing Redis sets storage_type to memory.
+     */
+    public function test_installing_redis_sets_storage_type_to_memory(): void
+    {
+        // Arrange
+        \Illuminate\Support\Facades\Queue::fake();
+
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->post("/servers/{$server->id}/databases", [
+                'name' => 'Redis',
+                'engine' => 'redis',
+                'version' => '7.2',
+                'root_password' => 'SecurePassword123',
+                'port' => 6379,
+            ]);
+
+        // Assert
+        $response->assertStatus(302);
+
+        $database = $server->databases()->first();
+        $this->assertEquals(StorageType::Memory, $database->storage_type);
+
+        $this->assertDatabaseHas('server_databases', [
+            'server_id' => $server->id,
+            'engine' => DatabaseEngine::Redis->value,
+            'storage_type' => StorageType::Memory->value,
+        ]);
     }
 }

@@ -2,7 +2,7 @@
 
 namespace Tests\Unit\Services;
 
-use App\Enums\DatabaseType;
+use App\Enums\DatabaseEngine;
 use App\Services\DatabaseConfigurationService;
 use Tests\TestCase;
 
@@ -11,7 +11,7 @@ class DatabaseConfigurationServiceTest extends TestCase
     /**
      * Test getAvailableTypes returns all database types.
      */
-    public function test_get_available_types_returns_all_database_types(): void
+    public function test_get_available_types_returns_all_database_engines(): void
     {
         // Arrange
         $service = new DatabaseConfigurationService;
@@ -95,7 +95,7 @@ class DatabaseConfigurationServiceTest extends TestCase
         $service = new DatabaseConfigurationService;
 
         // Act
-        $config = $service->getTypeConfiguration(DatabaseType::MySQL);
+        $config = $service->getTypeConfiguration(DatabaseEngine::MySQL);
 
         // Assert
         $this->assertIsArray($config);
@@ -113,7 +113,7 @@ class DatabaseConfigurationServiceTest extends TestCase
         $service = new DatabaseConfigurationService;
 
         // Act
-        $config = $service->getTypeConfiguration(DatabaseType::MariaDB);
+        $config = $service->getTypeConfiguration(DatabaseEngine::MariaDB);
 
         // Assert
         $this->assertIsArray($config);
@@ -131,7 +131,7 @@ class DatabaseConfigurationServiceTest extends TestCase
         $service = new DatabaseConfigurationService;
 
         // Act
-        $config = $service->getTypeConfiguration(DatabaseType::PostgreSQL);
+        $config = $service->getTypeConfiguration(DatabaseEngine::PostgreSQL);
 
         // Assert
         $this->assertIsArray($config);
@@ -149,7 +149,7 @@ class DatabaseConfigurationServiceTest extends TestCase
         $service = new DatabaseConfigurationService;
 
         // Act
-        $port = $service->getDefaultPort(DatabaseType::MySQL);
+        $port = $service->getDefaultPort(DatabaseEngine::MySQL);
 
         // Assert
         $this->assertEquals(3306, $port);
@@ -164,7 +164,7 @@ class DatabaseConfigurationServiceTest extends TestCase
         $service = new DatabaseConfigurationService;
 
         // Act
-        $port = $service->getDefaultPort(DatabaseType::MariaDB);
+        $port = $service->getDefaultPort(DatabaseEngine::MariaDB);
 
         // Assert
         $this->assertEquals(3306, $port);
@@ -179,7 +179,7 @@ class DatabaseConfigurationServiceTest extends TestCase
         $service = new DatabaseConfigurationService;
 
         // Act
-        $port = $service->getDefaultPort(DatabaseType::PostgreSQL);
+        $port = $service->getDefaultPort(DatabaseEngine::PostgreSQL);
 
         // Assert
         $this->assertEquals(5432, $port);
@@ -194,7 +194,7 @@ class DatabaseConfigurationServiceTest extends TestCase
         $service = new DatabaseConfigurationService;
 
         // Act
-        $version = $service->getDefaultVersion(DatabaseType::MySQL);
+        $version = $service->getDefaultVersion(DatabaseEngine::MySQL);
 
         // Assert
         $this->assertEquals('8.0', $version);
@@ -209,7 +209,7 @@ class DatabaseConfigurationServiceTest extends TestCase
         $service = new DatabaseConfigurationService;
 
         // Act
-        $version = $service->getDefaultVersion(DatabaseType::MariaDB);
+        $version = $service->getDefaultVersion(DatabaseEngine::MariaDB);
 
         // Assert
         $this->assertEquals('11.4', $version);
@@ -224,7 +224,7 @@ class DatabaseConfigurationServiceTest extends TestCase
         $service = new DatabaseConfigurationService;
 
         // Act
-        $version = $service->getDefaultVersion(DatabaseType::PostgreSQL);
+        $version = $service->getDefaultVersion(DatabaseEngine::PostgreSQL);
 
         // Assert
         $this->assertEquals('16', $version);
@@ -239,8 +239,8 @@ class DatabaseConfigurationServiceTest extends TestCase
         $service = new DatabaseConfigurationService;
 
         // Act
-        $mysqlPort = $service->getDefaultPort(DatabaseType::MySQL);
-        $mariadbPort = $service->getDefaultPort(DatabaseType::MariaDB);
+        $mysqlPort = $service->getDefaultPort(DatabaseEngine::MySQL);
+        $mariadbPort = $service->getDefaultPort(DatabaseEngine::MariaDB);
 
         // Assert
         $this->assertEquals($mysqlPort, $mariadbPort);
@@ -256,8 +256,8 @@ class DatabaseConfigurationServiceTest extends TestCase
         $service = new DatabaseConfigurationService;
 
         // Act
-        $mysqlPort = $service->getDefaultPort(DatabaseType::MySQL);
-        $postgresqlPort = $service->getDefaultPort(DatabaseType::PostgreSQL);
+        $mysqlPort = $service->getDefaultPort(DatabaseEngine::MySQL);
+        $postgresqlPort = $service->getDefaultPort(DatabaseEngine::PostgreSQL);
 
         // Assert
         $this->assertNotEquals($mysqlPort, $postgresqlPort);
@@ -268,7 +268,7 @@ class DatabaseConfigurationServiceTest extends TestCase
     /**
      * Test all database types have required configuration keys.
      */
-    public function test_all_database_types_have_required_configuration_keys(): void
+    public function test_all_database_engines_have_required_configuration_keys(): void
     {
         // Arrange
         $service = new DatabaseConfigurationService;
@@ -288,7 +288,7 @@ class DatabaseConfigurationServiceTest extends TestCase
     /**
      * Test all database types have at least one version.
      */
-    public function test_all_database_types_have_at_least_one_version(): void
+    public function test_all_database_engines_have_at_least_one_version(): void
     {
         // Arrange
         $service = new DatabaseConfigurationService;
@@ -330,7 +330,7 @@ class DatabaseConfigurationServiceTest extends TestCase
         $service = new DatabaseConfigurationService;
 
         // Act
-        $config = $service->getTypeConfiguration(DatabaseType::MariaDB);
+        $config = $service->getTypeConfiguration(DatabaseEngine::MariaDB);
 
         // Assert
         $this->assertIsArray($config['versions']);
@@ -447,7 +447,7 @@ class DatabaseConfigurationServiceTest extends TestCase
         $service = new DatabaseConfigurationService;
 
         // Act
-        $config = $service->getTypeConfiguration(DatabaseType::Redis);
+        $config = $service->getTypeConfiguration(DatabaseEngine::Redis);
 
         // Assert
         $this->assertIsArray($config);
@@ -465,7 +465,7 @@ class DatabaseConfigurationServiceTest extends TestCase
         $service = new DatabaseConfigurationService;
 
         // Act
-        $port = $service->getDefaultPort(DatabaseType::Redis);
+        $port = $service->getDefaultPort(DatabaseEngine::Redis);
 
         // Assert
         $this->assertEquals(6379, $port);
@@ -480,7 +480,7 @@ class DatabaseConfigurationServiceTest extends TestCase
         $service = new DatabaseConfigurationService;
 
         // Act
-        $version = $service->getDefaultVersion(DatabaseType::Redis);
+        $version = $service->getDefaultVersion(DatabaseEngine::Redis);
 
         // Assert
         $this->assertEquals('7.2', $version);
@@ -495,7 +495,7 @@ class DatabaseConfigurationServiceTest extends TestCase
         $service = new DatabaseConfigurationService;
 
         // Act
-        $result = $service->isDatabaseCategory(DatabaseType::MySQL);
+        $result = $service->isDatabaseCategory(DatabaseEngine::MySQL);
 
         // Assert
         $this->assertTrue($result);
@@ -510,7 +510,7 @@ class DatabaseConfigurationServiceTest extends TestCase
         $service = new DatabaseConfigurationService;
 
         // Act
-        $result = $service->isDatabaseCategory(DatabaseType::MariaDB);
+        $result = $service->isDatabaseCategory(DatabaseEngine::MariaDB);
 
         // Assert
         $this->assertTrue($result);
@@ -525,7 +525,7 @@ class DatabaseConfigurationServiceTest extends TestCase
         $service = new DatabaseConfigurationService;
 
         // Act
-        $result = $service->isDatabaseCategory(DatabaseType::PostgreSQL);
+        $result = $service->isDatabaseCategory(DatabaseEngine::PostgreSQL);
 
         // Assert
         $this->assertTrue($result);
@@ -540,7 +540,7 @@ class DatabaseConfigurationServiceTest extends TestCase
         $service = new DatabaseConfigurationService;
 
         // Act
-        $result = $service->isDatabaseCategory(DatabaseType::MongoDB);
+        $result = $service->isDatabaseCategory(DatabaseEngine::MongoDB);
 
         // Assert
         $this->assertTrue($result);
@@ -555,7 +555,7 @@ class DatabaseConfigurationServiceTest extends TestCase
         $service = new DatabaseConfigurationService;
 
         // Act
-        $result = $service->isDatabaseCategory(DatabaseType::Redis);
+        $result = $service->isDatabaseCategory(DatabaseEngine::Redis);
 
         // Assert
         $this->assertFalse($result);
@@ -571,15 +571,16 @@ class DatabaseConfigurationServiceTest extends TestCase
         $server = \App\Models\Server::factory()->create();
         $server->databases()->create([
             'name' => 'test-mysql',
-            'type' => 'mysql',
+            'engine' => 'mysql',
             'version' => '8.0',
             'port' => 3306,
             'status' => 'active',
             'root_password' => 'password123',
+            'storage_type' => 'disk',
         ]);
 
         // Act
-        $result = $service->hasExistingDatabaseInCategory($server, DatabaseType::MariaDB);
+        $result = $service->hasExistingDatabaseInCategory($server, DatabaseEngine::MariaDB);
 
         // Assert - Should detect MySQL when checking for MariaDB (same category)
         $this->assertTrue($result);
@@ -595,15 +596,16 @@ class DatabaseConfigurationServiceTest extends TestCase
         $server = \App\Models\Server::factory()->create();
         $server->databases()->create([
             'name' => 'test-redis',
-            'type' => 'redis',
+            'engine' => 'redis',
             'version' => '7.2',
             'port' => 6379,
             'status' => 'active',
             'root_password' => 'password123',
+            'storage_type' => 'disk',
         ]);
 
         // Act
-        $result = $service->hasExistingDatabaseInCategory($server, DatabaseType::MySQL);
+        $result = $service->hasExistingDatabaseInCategory($server, DatabaseEngine::MySQL);
 
         // Assert - Should not detect Redis when checking for MySQL (different category)
         $this->assertFalse($result);
@@ -619,15 +621,16 @@ class DatabaseConfigurationServiceTest extends TestCase
         $server = \App\Models\Server::factory()->create();
         $server->databases()->create([
             'name' => 'test-mysql-failed',
-            'type' => 'mysql',
+            'engine' => 'mysql',
             'version' => '8.0',
             'port' => 3306,
             'status' => 'failed',
             'root_password' => 'password123',
+            'storage_type' => 'disk',
         ]);
 
         // Act
-        $result = $service->hasExistingDatabaseInCategory($server, DatabaseType::MySQL);
+        $result = $service->hasExistingDatabaseInCategory($server, DatabaseEngine::MySQL);
 
         // Assert - Should ignore failed installations
         $this->assertFalse($result);
@@ -643,15 +646,16 @@ class DatabaseConfigurationServiceTest extends TestCase
         $server = \App\Models\Server::factory()->create();
         $server->databases()->create([
             'name' => 'test-mysql-uninstalling',
-            'type' => 'mysql',
+            'engine' => 'mysql',
             'version' => '8.0',
             'port' => 3306,
             'status' => 'removing',
             'root_password' => 'password123',
+            'storage_type' => 'disk',
         ]);
 
         // Act
-        $result = $service->hasExistingDatabaseInCategory($server, DatabaseType::MySQL);
+        $result = $service->hasExistingDatabaseInCategory($server, DatabaseEngine::MySQL);
 
         // Assert - Should ignore uninstalling databases
         $this->assertFalse($result);
@@ -667,15 +671,16 @@ class DatabaseConfigurationServiceTest extends TestCase
         $server = \App\Models\Server::factory()->create();
         $server->databases()->create([
             'name' => 'test-mysql-pending',
-            'type' => 'mysql',
+            'engine' => 'mysql',
             'version' => '8.0',
             'port' => 3306,
             'status' => 'pending',
             'root_password' => 'password123',
+            'storage_type' => 'disk',
         ]);
 
         // Act
-        $result = $service->hasExistingDatabaseInCategory($server, DatabaseType::MySQL);
+        $result = $service->hasExistingDatabaseInCategory($server, DatabaseEngine::MySQL);
 
         // Assert - Should detect pending installations
         $this->assertTrue($result);
@@ -691,15 +696,16 @@ class DatabaseConfigurationServiceTest extends TestCase
         $server = \App\Models\Server::factory()->create();
         $server->databases()->create([
             'name' => 'test-mysql-installing',
-            'type' => 'mysql',
+            'engine' => 'mysql',
             'version' => '8.0',
             'port' => 3306,
             'status' => 'installing',
             'root_password' => 'password123',
+            'storage_type' => 'disk',
         ]);
 
         // Act
-        $result = $service->hasExistingDatabaseInCategory($server, DatabaseType::MySQL);
+        $result = $service->hasExistingDatabaseInCategory($server, DatabaseEngine::MySQL);
 
         // Assert - Should detect installing databases
         $this->assertTrue($result);
@@ -715,7 +721,7 @@ class DatabaseConfigurationServiceTest extends TestCase
         $server = \App\Models\Server::factory()->create();
 
         // Act
-        $result = $service->hasExistingDatabaseInCategory($server, DatabaseType::MySQL);
+        $result = $service->hasExistingDatabaseInCategory($server, DatabaseEngine::MySQL);
 
         // Assert
         $this->assertFalse($result);

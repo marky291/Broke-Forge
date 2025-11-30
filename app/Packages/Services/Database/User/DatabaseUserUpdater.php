@@ -29,7 +29,7 @@ class DatabaseUserUpdater extends PackageInstaller implements \App\Packages\Core
     protected function commands(string $username, string $password, string $host, string $privileges, array $schemas): array
     {
         $rootPassword = $this->database->root_password;
-        $databaseType = $this->database->type->value;
+        $databaseType = $this->database->engine->value;
 
         if (in_array($databaseType, ['mysql', 'mariadb'])) {
             return $this->mysqlCommands($username, $password, $host, $privileges, $schemas, $rootPassword);

@@ -2,7 +2,7 @@
 
 namespace Tests\Unit\Services;
 
-use App\Enums\DatabaseType;
+use App\Enums\DatabaseEngine;
 use App\Services\DatabaseVersionCompatibility;
 use Tests\TestCase;
 
@@ -17,10 +17,10 @@ class DatabaseVersionCompatibilityTest extends TestCase
         $service = new DatabaseVersionCompatibility;
 
         // Act & Assert
-        $this->assertTrue($service->isCompatible(DatabaseType::MariaDB, '11.6', 'jammy'));
-        $this->assertTrue($service->isCompatible(DatabaseType::MariaDB, '11.6', 'noble'));
-        $this->assertTrue($service->isCompatible(DatabaseType::MariaDB, '10.6', 'focal'));
-        $this->assertTrue($service->isCompatible(DatabaseType::MariaDB, '10.6', 'jammy'));
+        $this->assertTrue($service->isCompatible(DatabaseEngine::MariaDB, '11.6', 'jammy'));
+        $this->assertTrue($service->isCompatible(DatabaseEngine::MariaDB, '11.6', 'noble'));
+        $this->assertTrue($service->isCompatible(DatabaseEngine::MariaDB, '10.6', 'focal'));
+        $this->assertTrue($service->isCompatible(DatabaseEngine::MariaDB, '10.6', 'jammy'));
     }
 
     /**
@@ -32,8 +32,8 @@ class DatabaseVersionCompatibilityTest extends TestCase
         $service = new DatabaseVersionCompatibility;
 
         // Act & Assert
-        $this->assertFalse($service->isCompatible(DatabaseType::MariaDB, '11.6', 'focal'));
-        $this->assertFalse($service->isCompatible(DatabaseType::MariaDB, '10.6', 'noble'));
+        $this->assertFalse($service->isCompatible(DatabaseEngine::MariaDB, '11.6', 'focal'));
+        $this->assertFalse($service->isCompatible(DatabaseEngine::MariaDB, '10.6', 'noble'));
     }
 
     /**
@@ -45,11 +45,11 @@ class DatabaseVersionCompatibilityTest extends TestCase
         $service = new DatabaseVersionCompatibility;
 
         // Act & Assert
-        $this->assertTrue($service->isCompatible(DatabaseType::PostgreSQL, '17', 'jammy'));
-        $this->assertTrue($service->isCompatible(DatabaseType::PostgreSQL, '17', 'noble'));
-        $this->assertTrue($service->isCompatible(DatabaseType::PostgreSQL, '16', 'focal'));
-        $this->assertTrue($service->isCompatible(DatabaseType::PostgreSQL, '16', 'jammy'));
-        $this->assertTrue($service->isCompatible(DatabaseType::PostgreSQL, '13', 'bionic'));
+        $this->assertTrue($service->isCompatible(DatabaseEngine::PostgreSQL, '17', 'jammy'));
+        $this->assertTrue($service->isCompatible(DatabaseEngine::PostgreSQL, '17', 'noble'));
+        $this->assertTrue($service->isCompatible(DatabaseEngine::PostgreSQL, '16', 'focal'));
+        $this->assertTrue($service->isCompatible(DatabaseEngine::PostgreSQL, '16', 'jammy'));
+        $this->assertTrue($service->isCompatible(DatabaseEngine::PostgreSQL, '13', 'bionic'));
     }
 
     /**
@@ -61,8 +61,8 @@ class DatabaseVersionCompatibilityTest extends TestCase
         $service = new DatabaseVersionCompatibility;
 
         // Act & Assert
-        $this->assertFalse($service->isCompatible(DatabaseType::PostgreSQL, '17', 'focal'));
-        $this->assertFalse($service->isCompatible(DatabaseType::PostgreSQL, '17', 'bionic'));
+        $this->assertFalse($service->isCompatible(DatabaseEngine::PostgreSQL, '17', 'focal'));
+        $this->assertFalse($service->isCompatible(DatabaseEngine::PostgreSQL, '17', 'bionic'));
     }
 
     /**
@@ -74,10 +74,10 @@ class DatabaseVersionCompatibilityTest extends TestCase
         $service = new DatabaseVersionCompatibility;
 
         // Act & Assert
-        $this->assertTrue($service->isCompatible(DatabaseType::MySQL, '8.0', 'focal'));
-        $this->assertTrue($service->isCompatible(DatabaseType::MySQL, '8.0', 'jammy'));
-        $this->assertTrue($service->isCompatible(DatabaseType::MySQL, '5.7', 'bionic'));
-        $this->assertTrue($service->isCompatible(DatabaseType::MySQL, '5.7', 'focal'));
+        $this->assertTrue($service->isCompatible(DatabaseEngine::MySQL, '8.0', 'focal'));
+        $this->assertTrue($service->isCompatible(DatabaseEngine::MySQL, '8.0', 'jammy'));
+        $this->assertTrue($service->isCompatible(DatabaseEngine::MySQL, '5.7', 'bionic'));
+        $this->assertTrue($service->isCompatible(DatabaseEngine::MySQL, '5.7', 'focal'));
     }
 
     /**
@@ -89,8 +89,8 @@ class DatabaseVersionCompatibilityTest extends TestCase
         $service = new DatabaseVersionCompatibility;
 
         // Act & Assert
-        $this->assertFalse($service->isCompatible(DatabaseType::MySQL, '8.0', 'bionic'));
-        $this->assertFalse($service->isCompatible(DatabaseType::MySQL, '5.7', 'jammy'));
+        $this->assertFalse($service->isCompatible(DatabaseEngine::MySQL, '8.0', 'bionic'));
+        $this->assertFalse($service->isCompatible(DatabaseEngine::MySQL, '5.7', 'jammy'));
     }
 
     /**
@@ -102,8 +102,8 @@ class DatabaseVersionCompatibilityTest extends TestCase
         $service = new DatabaseVersionCompatibility;
 
         // Act & Assert
-        $this->assertFalse($service->isCompatible(DatabaseType::MariaDB, '99.9', 'jammy'));
-        $this->assertFalse($service->isCompatible(DatabaseType::PostgreSQL, '99', 'jammy'));
+        $this->assertFalse($service->isCompatible(DatabaseEngine::MariaDB, '99.9', 'jammy'));
+        $this->assertFalse($service->isCompatible(DatabaseEngine::PostgreSQL, '99', 'jammy'));
     }
 
     /**
@@ -115,9 +115,9 @@ class DatabaseVersionCompatibilityTest extends TestCase
         $service = new DatabaseVersionCompatibility;
 
         // Act & Assert
-        $this->assertEquals('jammy', $service->getUbuntuCodenameForDatabase(DatabaseType::MariaDB, '11.6', 'jammy'));
-        $this->assertEquals('noble', $service->getUbuntuCodenameForDatabase(DatabaseType::MariaDB, '11.6', 'noble'));
-        $this->assertEquals('focal', $service->getUbuntuCodenameForDatabase(DatabaseType::PostgreSQL, '16', 'focal'));
+        $this->assertEquals('jammy', $service->getUbuntuCodenameForDatabase(DatabaseEngine::MariaDB, '11.6', 'jammy'));
+        $this->assertEquals('noble', $service->getUbuntuCodenameForDatabase(DatabaseEngine::MariaDB, '11.6', 'noble'));
+        $this->assertEquals('focal', $service->getUbuntuCodenameForDatabase(DatabaseEngine::PostgreSQL, '16', 'focal'));
     }
 
     /**
@@ -129,10 +129,10 @@ class DatabaseVersionCompatibilityTest extends TestCase
         $service = new DatabaseVersionCompatibility;
 
         // Act & Assert - MariaDB 10.3 on jammy should fallback to focal
-        $this->assertEquals('focal', $service->getUbuntuCodenameForDatabase(DatabaseType::MariaDB, '10.3', 'jammy'));
+        $this->assertEquals('focal', $service->getUbuntuCodenameForDatabase(DatabaseEngine::MariaDB, '10.3', 'jammy'));
 
         // MariaDB 10.4 on noble should fallback to jammy
-        $this->assertEquals('jammy', $service->getUbuntuCodenameForDatabase(DatabaseType::MariaDB, '10.4', 'noble'));
+        $this->assertEquals('jammy', $service->getUbuntuCodenameForDatabase(DatabaseEngine::MariaDB, '10.4', 'noble'));
     }
 
     /**
@@ -144,8 +144,8 @@ class DatabaseVersionCompatibilityTest extends TestCase
         $service = new DatabaseVersionCompatibility;
 
         // Act & Assert
-        $this->assertNull($service->getUbuntuCodenameForDatabase(DatabaseType::MariaDB, '99.9', 'jammy'));
-        $this->assertNull($service->getUbuntuCodenameForDatabase(DatabaseType::MariaDB, '11.6', 'bionic'));
+        $this->assertNull($service->getUbuntuCodenameForDatabase(DatabaseEngine::MariaDB, '99.9', 'jammy'));
+        $this->assertNull($service->getUbuntuCodenameForDatabase(DatabaseEngine::MariaDB, '11.6', 'bionic'));
     }
 
     /**
@@ -157,8 +157,8 @@ class DatabaseVersionCompatibilityTest extends TestCase
         $service = new DatabaseVersionCompatibility;
 
         // Act
-        $jammyMariaDB = $service->getCompatibleVersions(DatabaseType::MariaDB, 'jammy');
-        $focalPostgreSQL = $service->getCompatibleVersions(DatabaseType::PostgreSQL, 'focal');
+        $jammyMariaDB = $service->getCompatibleVersions(DatabaseEngine::MariaDB, 'jammy');
+        $focalPostgreSQL = $service->getCompatibleVersions(DatabaseEngine::PostgreSQL, 'focal');
 
         // Assert
         $this->assertIsArray($jammyMariaDB);
@@ -182,7 +182,7 @@ class DatabaseVersionCompatibilityTest extends TestCase
         $service = new DatabaseVersionCompatibility;
 
         // Act
-        $result = $service->getCompatibleVersions(DatabaseType::MariaDB, 'unknown-codename');
+        $result = $service->getCompatibleVersions(DatabaseEngine::MariaDB, 'unknown-codename');
 
         // Assert - Will include versions with fallbacks
         $this->assertIsArray($result);
@@ -227,7 +227,7 @@ class DatabaseVersionCompatibilityTest extends TestCase
         $service = new DatabaseVersionCompatibility;
 
         // Act
-        $result = $service->validateInstallation(DatabaseType::MariaDB, '11.6', 'jammy');
+        $result = $service->validateInstallation(DatabaseEngine::MariaDB, '11.6', 'jammy');
 
         // Assert
         $this->assertTrue($result['valid']);
@@ -245,7 +245,7 @@ class DatabaseVersionCompatibilityTest extends TestCase
         $service = new DatabaseVersionCompatibility;
 
         // Act - MariaDB 10.3 on jammy uses fallback to focal
-        $result = $service->validateInstallation(DatabaseType::MariaDB, '10.3', 'jammy');
+        $result = $service->validateInstallation(DatabaseEngine::MariaDB, '10.3', 'jammy');
 
         // Assert
         $this->assertTrue($result['valid']);
@@ -265,7 +265,7 @@ class DatabaseVersionCompatibilityTest extends TestCase
         $service = new DatabaseVersionCompatibility;
 
         // Act
-        $result = $service->validateInstallation(DatabaseType::MariaDB, '11.6', 'focal');
+        $result = $service->validateInstallation(DatabaseEngine::MariaDB, '11.6', 'focal');
 
         // Assert
         $this->assertFalse($result['valid']);
@@ -283,7 +283,7 @@ class DatabaseVersionCompatibilityTest extends TestCase
         $service = new DatabaseVersionCompatibility;
 
         // Act
-        $result = $service->validateInstallation(DatabaseType::PostgreSQL, '99', 'jammy');
+        $result = $service->validateInstallation(DatabaseEngine::PostgreSQL, '99', 'jammy');
 
         // Assert
         $this->assertFalse($result['valid']);
@@ -299,12 +299,12 @@ class DatabaseVersionCompatibilityTest extends TestCase
         $service = new DatabaseVersionCompatibility;
 
         // Act & Assert - Should work on jammy and noble
-        $this->assertTrue($service->isCompatible(DatabaseType::MariaDB, '11.0', 'jammy'));
-        $this->assertTrue($service->isCompatible(DatabaseType::MariaDB, '11.6', 'noble'));
+        $this->assertTrue($service->isCompatible(DatabaseEngine::MariaDB, '11.0', 'jammy'));
+        $this->assertTrue($service->isCompatible(DatabaseEngine::MariaDB, '11.6', 'noble'));
 
         // Should not work on focal or bionic
-        $this->assertFalse($service->isCompatible(DatabaseType::MariaDB, '11.0', 'focal'));
-        $this->assertFalse($service->isCompatible(DatabaseType::MariaDB, '11.6', 'bionic'));
+        $this->assertFalse($service->isCompatible(DatabaseEngine::MariaDB, '11.0', 'focal'));
+        $this->assertFalse($service->isCompatible(DatabaseEngine::MariaDB, '11.6', 'bionic'));
     }
 
     /**
@@ -316,12 +316,12 @@ class DatabaseVersionCompatibilityTest extends TestCase
         $service = new DatabaseVersionCompatibility;
 
         // Act & Assert - Should work on jammy and noble
-        $this->assertTrue($service->isCompatible(DatabaseType::PostgreSQL, '17', 'jammy'));
-        $this->assertTrue($service->isCompatible(DatabaseType::PostgreSQL, '17', 'noble'));
+        $this->assertTrue($service->isCompatible(DatabaseEngine::PostgreSQL, '17', 'jammy'));
+        $this->assertTrue($service->isCompatible(DatabaseEngine::PostgreSQL, '17', 'noble'));
 
         // Should not work on focal or bionic
-        $this->assertFalse($service->isCompatible(DatabaseType::PostgreSQL, '17', 'focal'));
-        $this->assertFalse($service->isCompatible(DatabaseType::PostgreSQL, '17', 'bionic'));
+        $this->assertFalse($service->isCompatible(DatabaseEngine::PostgreSQL, '17', 'focal'));
+        $this->assertFalse($service->isCompatible(DatabaseEngine::PostgreSQL, '17', 'bionic'));
     }
 
     /**
@@ -333,12 +333,12 @@ class DatabaseVersionCompatibilityTest extends TestCase
         $service = new DatabaseVersionCompatibility;
 
         // Act & Assert - Should work on bionic and focal
-        $this->assertTrue($service->isCompatible(DatabaseType::MySQL, '5.7', 'bionic'));
-        $this->assertTrue($service->isCompatible(DatabaseType::MySQL, '5.7', 'focal'));
+        $this->assertTrue($service->isCompatible(DatabaseEngine::MySQL, '5.7', 'bionic'));
+        $this->assertTrue($service->isCompatible(DatabaseEngine::MySQL, '5.7', 'focal'));
 
         // Should not work on jammy or noble
-        $this->assertFalse($service->isCompatible(DatabaseType::MySQL, '5.7', 'jammy'));
-        $this->assertFalse($service->isCompatible(DatabaseType::MySQL, '5.7', 'noble'));
+        $this->assertFalse($service->isCompatible(DatabaseEngine::MySQL, '5.7', 'jammy'));
+        $this->assertFalse($service->isCompatible(DatabaseEngine::MySQL, '5.7', 'noble'));
     }
 
     /**
@@ -350,7 +350,7 @@ class DatabaseVersionCompatibilityTest extends TestCase
         $service = new DatabaseVersionCompatibility;
 
         // Act
-        $result = $service->validateInstallation(DatabaseType::MariaDB, '11.6', 'focal');
+        $result = $service->validateInstallation(DatabaseEngine::MariaDB, '11.6', 'focal');
 
         // Assert
         $this->assertFalse($result['valid']);

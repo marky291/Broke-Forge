@@ -817,4 +817,173 @@ class SitesTest extends TestCase
             ->has('server.nodes')
         );
     }
+
+    /**
+     * Test sites page databases include storage_type field.
+     *
+     * This ensures the frontend can filter databases by storage type
+     * (disk vs memory) for site creation.
+     */
+    public function test_sites_page_databases_include_storage_type_field(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        \App\Models\ServerDatabase::factory()->mysql()->create([
+            'server_id' => $server->id,
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/sites");
+
+        // Assert - storage_type field should be present
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('servers/sites')
+            ->has('server.databases', 1)
+            ->has('server.databases.0', fn ($database) => $database
+                ->has('id')
+                ->has('name')
+                ->has('engine')
+                ->has('version')
+                ->has('port')
+                ->has('status')
+                ->has('storage_type')
+                ->etc()
+            )
+        );
+    }
+
+    /**
+     * Test sites page databases show correct storage_type for disk databases.
+     */
+    public function test_sites_page_databases_show_disk_storage_type(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        \App\Models\ServerDatabase::factory()->mysql()->create([
+            'server_id' => $server->id,
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/sites");
+
+        // Assert - MySQL should have disk storage type
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('servers/sites')
+            ->has('server.databases', 1)
+            ->where('server.databases.0.engine', 'mysql')
+            ->where('server.databases.0.storage_type', 'disk')
+        );
+    }
+
+    /**
+     * Test sites page databases show correct storage_type for memory databases.
+     */
+    public function test_sites_page_databases_show_memory_storage_type(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        \App\Models\ServerDatabase::factory()->redis()->create([
+            'server_id' => $server->id,
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/sites");
+
+        // Assert - Redis should have memory storage type
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('servers/sites')
+            ->has('server.databases', 1)
+            ->where('server.databases.0.engine', 'redis')
+            ->where('server.databases.0.storage_type', 'memory')
+        );
+    }
+
+    /**
+     * Test sites page includes both disk and memory databases.
+     *
+     * The frontend filters to only show disk databases for site creation,
+     * but both types should be present in the response.
+     */
+    public function test_sites_page_includes_both_disk_and_memory_databases(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        $mysqlDb = \App\Models\ServerDatabase::factory()->mysql()->create([
+            'server_id' => $server->id,
+        ]);
+
+        $postgresDb = \App\Models\ServerDatabase::factory()->postgresql()->create([
+            'server_id' => $server->id,
+        ]);
+
+        $redisDb = \App\Models\ServerDatabase::factory()->redis()->create([
+            'server_id' => $server->id,
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/sites");
+
+        // Assert - All 3 databases should be present with correct storage types
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('servers/sites')
+            ->has('server.databases', 3)
+            // Verify each database has required fields including storage_type
+            ->has('server.databases.0.storage_type')
+            ->has('server.databases.1.storage_type')
+            ->has('server.databases.2.storage_type')
+        );
+
+        // Additionally verify the created databases have correct storage types
+        $this->assertEquals('disk', $mysqlDb->fresh()->storage_type->value);
+        $this->assertEquals('disk', $postgresDb->fresh()->storage_type->value);
+        $this->assertEquals('memory', $redisDb->fresh()->storage_type->value);
+    }
+
+    /**
+     * Test all disk database engines have disk storage type.
+     */
+    public function test_all_disk_database_engines_have_disk_storage_type(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $server = Server::factory()->create(['user_id' => $user->id]);
+
+        // Create all disk-based database types (use different ports to avoid unique constraint)
+        \App\Models\ServerDatabase::factory()->mysql()->create(['server_id' => $server->id]);
+        \App\Models\ServerDatabase::factory()->mariadb()->create(['server_id' => $server->id, 'port' => 3307]);
+        \App\Models\ServerDatabase::factory()->postgresql()->create(['server_id' => $server->id]);
+        \App\Models\ServerDatabase::factory()->mongodb()->create(['server_id' => $server->id]);
+
+        // Act
+        $response = $this->actingAs($user)
+            ->get("/servers/{$server->id}/sites");
+
+        // Assert - All should have disk storage type
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('servers/sites')
+            ->has('server.databases', 4)
+            // All should be disk storage (ordered by latest first)
+            ->where('server.databases.0.storage_type', 'disk')
+            ->where('server.databases.1.storage_type', 'disk')
+            ->where('server.databases.2.storage_type', 'disk')
+            ->where('server.databases.3.storage_type', 'disk')
+        );
+    }
 }

@@ -2,7 +2,7 @@
 
 namespace Tests\Unit\Http\Requests\Servers;
 
-use App\Enums\DatabaseType;
+use App\Enums\DatabaseEngine;
 use App\Http\Requests\Servers\InstallDatabaseRequest;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -21,7 +21,7 @@ class InstallDatabaseRequestTest extends TestCase
         // Arrange
         $data = [
             'name' => 'my_database',
-            'type' => DatabaseType::MySQL->value,
+            'engine' => DatabaseEngine::MySQL->value,
             'version' => '8.0',
             'root_password' => 'SecureP@ssw0rd123',
             'port' => 3306,
@@ -44,7 +44,7 @@ class InstallDatabaseRequestTest extends TestCase
         // Arrange
         $data = [
             'name' => 'my_database',
-            'type' => DatabaseType::PostgreSQL->value,
+            'engine' => DatabaseEngine::PostgreSQL->value,
             'version' => '16',
             'root_password' => 'password123',
         ];
@@ -76,28 +76,28 @@ class InstallDatabaseRequestTest extends TestCase
 
         // Assert
         $this->assertTrue($validator->fails());
-        $this->assertArrayHasKey('type', $validator->errors()->toArray());
+        $this->assertArrayHasKey('engine', $validator->errors()->toArray());
     }
 
     /**
      * Test validation passes with all valid database types.
      */
-    public function test_validation_passes_with_all_valid_database_types(): void
+    public function test_validation_passes_with_all_valid_database_engines(): void
     {
         // Arrange
         $request = new InstallDatabaseRequest;
         $validTypes = [
-            DatabaseType::MySQL->value,
-            DatabaseType::MariaDB->value,
-            DatabaseType::PostgreSQL->value,
-            DatabaseType::MongoDB->value,
-            DatabaseType::Redis->value,
+            DatabaseEngine::MySQL->value,
+            DatabaseEngine::MariaDB->value,
+            DatabaseEngine::PostgreSQL->value,
+            DatabaseEngine::MongoDB->value,
+            DatabaseEngine::Redis->value,
         ];
 
         foreach ($validTypes as $type) {
             $data = [
                 'name' => 'test_db',
-                'type' => $type,
+                'engine' => $type,
                 'version' => '1.0',
                 'root_password' => 'password123',
             ];
@@ -113,11 +113,11 @@ class InstallDatabaseRequestTest extends TestCase
     /**
      * Test validation fails with invalid database type.
      */
-    public function test_validation_fails_with_invalid_database_type(): void
+    public function test_validation_fails_with_invalid_database_engine(): void
     {
         // Arrange
         $data = [
-            'type' => 'invalid_db_type',
+            'engine' => 'invalid_db_type',
             'version' => '8.0',
             'root_password' => 'password123',
         ];
@@ -129,7 +129,7 @@ class InstallDatabaseRequestTest extends TestCase
 
         // Assert
         $this->assertTrue($validator->fails());
-        $this->assertArrayHasKey('type', $validator->errors()->toArray());
+        $this->assertArrayHasKey('engine', $validator->errors()->toArray());
     }
 
     /**
@@ -139,7 +139,7 @@ class InstallDatabaseRequestTest extends TestCase
     {
         // Arrange
         $data = [
-            'type' => DatabaseType::MySQL->value,
+            'engine' => DatabaseEngine::MySQL->value,
             'root_password' => 'password123',
         ];
 
@@ -160,7 +160,7 @@ class InstallDatabaseRequestTest extends TestCase
     {
         // Arrange
         $data = [
-            'type' => DatabaseType::MySQL->value,
+            'engine' => DatabaseEngine::MySQL->value,
             'version' => str_repeat('1', 17),
             'root_password' => 'password123',
         ];
@@ -193,7 +193,7 @@ class InstallDatabaseRequestTest extends TestCase
         foreach ($validVersions as $version) {
             $data = [
                 'name' => 'test_db',
-                'type' => DatabaseType::MySQL->value,
+                'engine' => DatabaseEngine::MySQL->value,
                 'version' => $version,
                 'root_password' => 'password123',
             ];
@@ -213,7 +213,7 @@ class InstallDatabaseRequestTest extends TestCase
     {
         // Arrange
         $data = [
-            'type' => DatabaseType::MySQL->value,
+            'engine' => DatabaseEngine::MySQL->value,
             'version' => '8.0',
         ];
 
@@ -234,7 +234,7 @@ class InstallDatabaseRequestTest extends TestCase
     {
         // Arrange
         $data = [
-            'type' => DatabaseType::MySQL->value,
+            'engine' => DatabaseEngine::MySQL->value,
             'version' => '8.0',
             'root_password' => 'pass',
         ];
@@ -257,7 +257,7 @@ class InstallDatabaseRequestTest extends TestCase
         // Arrange
         $data = [
             'name' => 'test_db',
-            'type' => DatabaseType::MySQL->value,
+            'engine' => DatabaseEngine::MySQL->value,
             'version' => '8.0',
             'root_password' => 'password',
         ];
@@ -278,7 +278,7 @@ class InstallDatabaseRequestTest extends TestCase
     {
         // Arrange
         $data = [
-            'type' => DatabaseType::MySQL->value,
+            'engine' => DatabaseEngine::MySQL->value,
             'version' => '8.0',
             'root_password' => str_repeat('a', 129),
         ];
@@ -301,7 +301,7 @@ class InstallDatabaseRequestTest extends TestCase
         // Arrange
         $data = [
             'name' => 'test_db',
-            'type' => DatabaseType::MySQL->value,
+            'engine' => DatabaseEngine::MySQL->value,
             'version' => '8.0',
             'root_password' => str_repeat('a', 128),
         ];
@@ -322,7 +322,7 @@ class InstallDatabaseRequestTest extends TestCase
     {
         // Arrange
         $data = [
-            'type' => DatabaseType::MySQL->value,
+            'engine' => DatabaseEngine::MySQL->value,
             'version' => '8.0',
             'root_password' => 'password123',
         ];
@@ -345,7 +345,7 @@ class InstallDatabaseRequestTest extends TestCase
         // Arrange
         $data = [
             'name' => 'my_database',
-            'type' => DatabaseType::MySQL->value,
+            'engine' => DatabaseEngine::MySQL->value,
             'version' => '8.0',
             'root_password' => 'password123',
         ];
@@ -367,7 +367,7 @@ class InstallDatabaseRequestTest extends TestCase
         // Arrange
         $data = [
             'name' => str_repeat('a', 65),
-            'type' => DatabaseType::MySQL->value,
+            'engine' => DatabaseEngine::MySQL->value,
             'version' => '8.0',
             'root_password' => 'password123',
         ];
@@ -390,7 +390,7 @@ class InstallDatabaseRequestTest extends TestCase
         // Arrange
         $data = [
             'name' => 'my database',
-            'type' => DatabaseType::MySQL->value,
+            'engine' => DatabaseEngine::MySQL->value,
             'version' => '8.0',
             'root_password' => 'password123',
         ];
@@ -426,7 +426,7 @@ class InstallDatabaseRequestTest extends TestCase
         foreach ($invalidNames as $name) {
             $data = [
                 'name' => $name,
-                'type' => DatabaseType::MySQL->value,
+                'engine' => DatabaseEngine::MySQL->value,
                 'version' => '8.0',
                 'root_password' => 'password123',
             ];
@@ -460,7 +460,7 @@ class InstallDatabaseRequestTest extends TestCase
         foreach ($validNames as $name) {
             $data = [
                 'name' => $name,
-                'type' => DatabaseType::MySQL->value,
+                'engine' => DatabaseEngine::MySQL->value,
                 'version' => '8.0',
                 'root_password' => 'password123',
             ];
@@ -481,7 +481,7 @@ class InstallDatabaseRequestTest extends TestCase
         // Arrange
         $data = [
             'name' => 'test_db',
-            'type' => DatabaseType::MySQL->value,
+            'engine' => DatabaseEngine::MySQL->value,
             'version' => '8.0',
             'root_password' => 'password123',
         ];
@@ -503,7 +503,7 @@ class InstallDatabaseRequestTest extends TestCase
         // Arrange
         $data = [
             'name' => 'test_db',
-            'type' => DatabaseType::MySQL->value,
+            'engine' => DatabaseEngine::MySQL->value,
             'version' => '8.0',
             'root_password' => 'password123',
             'port' => 3306,
@@ -525,7 +525,7 @@ class InstallDatabaseRequestTest extends TestCase
     {
         // Arrange
         $data = [
-            'type' => DatabaseType::MySQL->value,
+            'engine' => DatabaseEngine::MySQL->value,
             'version' => '8.0',
             'root_password' => 'password123',
             'port' => 0,
@@ -548,7 +548,7 @@ class InstallDatabaseRequestTest extends TestCase
     {
         // Arrange
         $data = [
-            'type' => DatabaseType::MySQL->value,
+            'engine' => DatabaseEngine::MySQL->value,
             'version' => '8.0',
             'root_password' => 'password123',
             'port' => 65536,
@@ -572,7 +572,7 @@ class InstallDatabaseRequestTest extends TestCase
         // Arrange
         $data = [
             'name' => 'test_db',
-            'type' => DatabaseType::MySQL->value,
+            'engine' => DatabaseEngine::MySQL->value,
             'version' => '8.0',
             'root_password' => 'password123',
             'port' => 1,
@@ -595,7 +595,7 @@ class InstallDatabaseRequestTest extends TestCase
         // Arrange
         $data = [
             'name' => 'test_db',
-            'type' => DatabaseType::MySQL->value,
+            'engine' => DatabaseEngine::MySQL->value,
             'version' => '8.0',
             'root_password' => 'password123',
             'port' => 65535,
@@ -627,7 +627,7 @@ class InstallDatabaseRequestTest extends TestCase
         foreach ($commonPorts as $port) {
             $data = [
                 'name' => 'test_db',
-                'type' => DatabaseType::MySQL->value,
+                'engine' => DatabaseEngine::MySQL->value,
                 'version' => '8.0',
                 'root_password' => 'password123',
                 'port' => $port,
@@ -689,11 +689,132 @@ class InstallDatabaseRequestTest extends TestCase
         $this->assertIsArray($messages);
         $this->assertArrayHasKey('name.required', $messages);
         $this->assertArrayHasKey('name.regex', $messages);
-        $this->assertArrayHasKey('type.required', $messages);
+        $this->assertArrayHasKey('engine.required', $messages);
         $this->assertArrayHasKey('version.required', $messages);
         $this->assertArrayHasKey('root_password.required', $messages);
         $this->assertArrayHasKey('root_password.min', $messages);
         $this->assertArrayHasKey('port.min', $messages);
         $this->assertArrayHasKey('port.max', $messages);
+    }
+
+    /**
+     * Test validation passes for Redis with only engine and version (minimal).
+     */
+    public function test_validation_passes_for_redis_with_minimal_data(): void
+    {
+        // Arrange
+        $data = [
+            'engine' => DatabaseEngine::Redis->value,
+            'version' => '7.2',
+        ];
+
+        $request = new InstallDatabaseRequest;
+        $request->merge($data);
+
+        // Act
+        $validator = Validator::make($data, $request->rules());
+
+        // Assert
+        $this->assertFalse($validator->fails(), 'Redis should not require name or password');
+    }
+
+    /**
+     * Test validation passes for Redis with optional name.
+     */
+    public function test_validation_passes_for_redis_with_optional_name(): void
+    {
+        // Arrange
+        $data = [
+            'name' => 'my_redis',
+            'engine' => DatabaseEngine::Redis->value,
+            'version' => '7.2',
+        ];
+
+        $request = new InstallDatabaseRequest;
+        $request->merge($data);
+
+        // Act
+        $validator = Validator::make($data, $request->rules());
+
+        // Assert
+        $this->assertFalse($validator->fails(), 'Redis should accept an optional name');
+    }
+
+    /**
+     * Test validation passes for Redis with optional password.
+     */
+    public function test_validation_passes_for_redis_with_optional_password(): void
+    {
+        // Arrange
+        $data = [
+            'engine' => DatabaseEngine::Redis->value,
+            'version' => '7.2',
+            'root_password' => 'securepassword123',
+        ];
+
+        $request = new InstallDatabaseRequest;
+        $request->merge($data);
+
+        // Act
+        $validator = Validator::make($data, $request->rules());
+
+        // Assert
+        $this->assertFalse($validator->fails(), 'Redis should accept an optional password');
+    }
+
+    /**
+     * Test validation fails for Redis with password too short.
+     */
+    public function test_validation_fails_for_redis_with_password_too_short(): void
+    {
+        // Arrange
+        $data = [
+            'engine' => DatabaseEngine::Redis->value,
+            'version' => '7.2',
+            'root_password' => 'short',
+        ];
+
+        $request = new InstallDatabaseRequest;
+        $request->merge($data);
+
+        // Act
+        $validator = Validator::make($data, $request->rules());
+
+        // Assert
+        $this->assertTrue($validator->fails(), 'Redis password if provided must meet minimum length');
+        $this->assertArrayHasKey('root_password', $validator->errors()->toArray());
+    }
+
+    /**
+     * Test validation still requires name and password for database engines.
+     */
+    public function test_validation_requires_name_and_password_for_database_engines(): void
+    {
+        // Arrange
+        $databaseEngines = [
+            DatabaseEngine::MySQL,
+            DatabaseEngine::MariaDB,
+            DatabaseEngine::PostgreSQL,
+            DatabaseEngine::MongoDB,
+        ];
+
+        foreach ($databaseEngines as $engine) {
+            $data = [
+                'engine' => $engine->value,
+                'version' => '8.0',
+            ];
+
+            $request = new InstallDatabaseRequest;
+            $request->merge($data);
+
+            // Act
+            $validator = Validator::make($data, $request->rules());
+
+            // Assert
+            $this->assertTrue($validator->fails(), "Name and password should be required for {$engine->value}");
+            $errors = $validator->errors()->toArray();
+            $this->assertArrayHasKey('name', $errors, "Name should be required for {$engine->value}");
+            $this->assertArrayHasKey('root_password', $errors, "Password should be required for {$engine->value}");
+        }
     }
 }

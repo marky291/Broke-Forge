@@ -66,7 +66,7 @@ export interface ServiceIconProps {
  * @example
  * ```tsx
  * <ServiceIcon service="mysql" size="md" />
- * <ServiceIcon service={database.type} />
+ * <ServiceIcon service={database.engine} />
  * ```
  */
 export function ServiceIcon({ service, size = 'md', className }: ServiceIconProps) {

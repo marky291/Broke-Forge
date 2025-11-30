@@ -37,7 +37,7 @@ type AvailableServices = {
 type ServiceItem = {
     id: number;
     name: string;
-    type: string;
+    engine: string;
     version: string;
     port: number;
     status: string;
@@ -62,13 +62,13 @@ export default function Services({
     // Filter databases (exclude cache/queue like Redis)
     const databases = useMemo(() => {
         const allDatabases = server.databases || [];
-        return allDatabases.filter((db) => db.type !== 'redis');
+        return allDatabases.filter((db) => db.engine !== 'redis');
     }, [server.databases]);
 
     // Filter cache/queue services (Redis only)
     const cacheQueueServices = useMemo(() => {
         const allDatabases = server.databases || [];
-        return allDatabases.filter((db) => db.type === 'redis');
+        return allDatabases.filter((db) => db.engine === 'redis');
     }, [server.databases]);
 
     // Check if there's an active database (non-failed, non-uninstalling)
@@ -93,7 +93,7 @@ export default function Services({
 
     // Determine which service types are available for the current dialog
     const currentServices = installDialogType === 'database' ? availableDatabases : availableCacheQueue;
-    const availableTypeKeys = useMemo(() => Object.keys(currentServices || {}), [currentServices]);
+    const availableEngineKeys = useMemo(() => Object.keys(currentServices || {}), [currentServices]);
 
     const fallbackDefaults: Record<string, { version: string; port: number }> = useMemo(
         () => ({
@@ -106,28 +106,28 @@ export default function Services({
     );
 
     const resolveDefaults = useCallback(
-        (type: string | undefined) => {
-            if (!type) {
+        (engine: string | undefined) => {
+            if (!engine) {
                 return { version: '', port: 3306 };
             }
 
-            const config = currentServices?.[type];
+            const config = currentServices?.[engine];
 
             if (config) {
                 return { version: config.default_version, port: config.default_port };
             }
 
-            return fallbackDefaults[type] ?? { version: '', port: 3306 };
+            return fallbackDefaults[engine] ?? { version: '', port: 3306 };
         },
         [currentServices, fallbackDefaults],
     );
 
-    const initialType = availableTypeKeys[0] || 'mariadb';
-    const initialDefaults = resolveDefaults(initialType);
+    const initialEngine = availableEngineKeys[0] || 'mariadb';
+    const initialDefaults = resolveDefaults(initialEngine);
 
     const { data, setData, post, processing, errors, reset } = useForm({
         name: '',
-        type: initialType,
+        engine: initialEngine,
         version: initialDefaults.version,
         port: initialDefaults.port,
         root_password: '',
@@ -148,34 +148,34 @@ export default function Services({
         { title: 'Services', href: '#' },
     ];
 
-    const handleTypeChange = (type: string) => {
-        const defaults = resolveDefaults(type);
+    const handleEngineChange = (engine: string) => {
+        const defaults = resolveDefaults(engine);
 
-        setData('type', type);
+        setData('engine', engine);
         setData('version', defaults.version);
         setData('port', defaults.port);
     };
 
     useEffect(() => {
-        if (!availableTypeKeys.length) {
+        if (!availableEngineKeys.length) {
             return;
         }
 
-        const [firstType] = availableTypeKeys;
+        const [firstEngine] = availableEngineKeys;
 
-        if (!firstType) {
+        if (!firstEngine) {
             return;
         }
 
-        if (data.type && currentServices?.[data.type]) {
+        if (data.engine && currentServices?.[data.engine]) {
             return;
         }
 
-        const defaults = resolveDefaults(firstType);
-        setData('type', firstType);
+        const defaults = resolveDefaults(firstEngine);
+        setData('engine', firstEngine);
         setData('version', defaults.version);
         setData('port', defaults.port);
-    }, [currentServices, availableTypeKeys, data.type, resolveDefaults, setData]);
+    }, [currentServices, availableEngineKeys, data.engine, resolveDefaults, setData]);
 
     const handleInstallSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -217,7 +217,7 @@ export default function Services({
     };
 
     const handleDelete = (service: ServiceItem, serviceType: 'database' | 'cache-queue') => {
-        const serviceName = currentServices?.[service.type]?.name || service.type;
+        const serviceName = currentServices?.[service.engine]?.name || service.engine;
         const sitesCount = service.sites_count ?? 0;
 
         // Check if sites are using this database
@@ -235,7 +235,7 @@ export default function Services({
     };
 
     const handleRetry = (service: ServiceItem) => {
-        const serviceName = currentServices?.[service.type]?.name || service.type;
+        const serviceName = currentServices?.[service.engine]?.name || service.engine;
         if (!confirm(`Retry installing ${serviceName} ${service.version}?`)) {
             return;
         }
@@ -255,8 +255,8 @@ export default function Services({
 
     const getAvailableUpgradeVersions = (service: ServiceItem) => {
         const currentVersion = service.version;
-        const services = service.type === 'redis' ? availableCacheQueue : availableDatabases;
-        return Object.entries(services?.[service.type]?.versions || {}).filter(([value]) => {
+        const services = service.engine === 'redis' ? availableCacheQueue : availableDatabases;
+        return Object.entries(services?.[service.engine]?.versions || {}).filter(([value]) => {
             return parseFloat(value) > parseFloat(currentVersion);
         });
     };
@@ -306,16 +306,16 @@ export default function Services({
                     items={databases}
                     keyExtractor={(db) => db.id}
                     renderItem={(db) => {
-                        const hasDetailPage = ['mysql', 'mariadb', 'postgresql'].includes(db.type);
+                        const hasDetailPage = ['mysql', 'mariadb', 'postgresql'].includes(db.engine);
                         const isClickable = hasDetailPage && db.status === 'active';
                         const sitesCount = db.sites_count ?? 0;
                         const content = (
                             <div className="flex items-center justify-between gap-3">
                                 <div className="flex min-w-0 flex-1 items-center gap-3">
-                                    <ServiceIcon service={db.type as any} />
+                                    <ServiceIcon service={db.engine as any} />
                                     <div className="min-w-0 flex-1">
                                         <div className="truncate text-sm font-medium">
-                                            {availableDatabases?.[db.type]?.name || db.type} {db.version}
+                                            {availableDatabases?.[db.engine]?.name || db.engine} {db.version}
                                         </div>
                                         <div className="truncate text-xs text-muted-foreground">
                                             Port {db.port} · {db.name}
@@ -427,10 +427,10 @@ export default function Services({
                         renderItem={(service) => (
                             <div className="flex items-center justify-between gap-3">
                                 <div className="flex min-w-0 flex-1 items-center gap-3">
-                                    <ServiceIcon service={service.type as any} />
+                                    <ServiceIcon service={service.engine as any} />
                                     <div className="min-w-0 flex-1">
                                         <div className="truncate text-sm font-medium">
-                                            {availableCacheQueue?.[service.type]?.name || service.type} {service.version}
+                                            {availableCacheQueue?.[service.engine]?.name || service.engine} {service.version}
                                         </div>
                                         <div className="truncate text-xs text-muted-foreground">
                                             Port {service.port} · {service.name}
@@ -512,45 +512,47 @@ export default function Services({
                         )}
 
                         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                            {/* Service Type */}
+                            {/* Service Engine */}
                             <div className="space-y-2 md:col-span-2">
-                                <Label htmlFor="type">
-                                    {installDialogType === 'database' ? 'Database' : 'Service'} Type <span className="text-red-500">*</span>
+                                <Label htmlFor="engine">
+                                    {installDialogType === 'database' ? 'Database' : 'Service'} Engine <span className="text-red-500">*</span>
                                 </Label>
-                                <Select value={data.type} onValueChange={handleTypeChange}>
+                                <Select value={data.engine} onValueChange={handleEngineChange}>
                                     <SelectTrigger disabled={processing}>
-                                        <SelectValue placeholder={`Select ${installDialogType === 'database' ? 'database' : 'service'} type`} />
+                                        <SelectValue placeholder={`Select ${installDialogType === 'database' ? 'database' : 'service'} engine`} />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {Object.entries(currentServices || {}).map(([type, service]) => (
-                                            <SelectItem key={type} value={type}>
+                                        {Object.entries(currentServices || {}).map(([engineKey, service]) => (
+                                            <SelectItem key={engineKey} value={engineKey}>
                                                 {service.name}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
-                                {currentServices?.[data.type]?.description && (
-                                    <p className="text-xs text-muted-foreground">{currentServices[data.type].description}</p>
+                                {currentServices?.[data.engine]?.description && (
+                                    <p className="text-xs text-muted-foreground">{currentServices[data.engine].description}</p>
                                 )}
-                                {errors.type && <div className="text-sm text-red-600">{errors.type}</div>}
+                                {errors.engine && <div className="text-sm text-red-600">{errors.engine}</div>}
                             </div>
 
-                            {/* Name */}
-                            <div className="space-y-2 md:col-span-2">
-                                <Label htmlFor="name">{installDialogType === 'database' ? 'Database' : 'Instance'} Name</Label>
-                                <Input
-                                    id="name"
-                                    type="text"
-                                    value={data.name}
-                                    onChange={(e) => setData('name', e.target.value)}
-                                    placeholder={`Leave empty to use default (${data.type})`}
-                                    disabled={processing}
-                                />
-                                <p className="text-xs text-muted-foreground">
-                                    Optional. This is used to identify your {installDialogType === 'database' ? 'database' : 'instance'} in the list.
-                                </p>
-                                {errors.name && <div className="text-sm text-red-600">{errors.name}</div>}
-                            </div>
+                            {/* Name - only shown for databases */}
+                            {installDialogType === 'database' && (
+                                <div className="space-y-2 md:col-span-2">
+                                    <Label htmlFor="name">Database Name</Label>
+                                    <Input
+                                        id="name"
+                                        type="text"
+                                        value={data.name}
+                                        onChange={(e) => setData('name', e.target.value)}
+                                        placeholder={`Leave empty to use default (${data.engine})`}
+                                        disabled={processing}
+                                    />
+                                    <p className="text-xs text-muted-foreground">
+                                        Optional. This is used to identify your database in the list.
+                                    </p>
+                                    {errors.name && <div className="text-sm text-red-600">{errors.name}</div>}
+                                </div>
+                            )}
 
                             {/* Version */}
                             <div className="space-y-2">
@@ -562,7 +564,7 @@ export default function Services({
                                         <SelectValue placeholder="Select version" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {Object.entries(currentServices?.[data.type]?.versions || {}).map(([value, label]) => (
+                                        {Object.entries(currentServices?.[data.engine]?.versions || {}).map(([value, label]) => (
                                             <SelectItem key={value} value={value}>
                                                 {label}
                                             </SelectItem>
@@ -587,24 +589,26 @@ export default function Services({
                                 {errors.port && <div className="text-sm text-red-600">{errors.port}</div>}
                             </div>
 
-                            {/* Root Password */}
-                            <div className="space-y-2 md:col-span-2">
-                                <Label htmlFor="root_password">
-                                    {installDialogType === 'database' ? 'Root Password' : 'Password'} <span className="text-red-500">*</span>
-                                </Label>
-                                <Input
-                                    id="root_password"
-                                    type="password"
-                                    value={data.root_password}
-                                    onChange={(e) => setData('root_password', e.target.value)}
-                                    required
-                                    placeholder="Enter a secure password"
-                                    disabled={processing}
-                                    autoComplete="new-password"
-                                />
-                                <p className="text-xs text-muted-foreground">Strong password required (minimum 8 characters).</p>
-                                {errors.root_password && <div className="text-sm text-red-600">{errors.root_password}</div>}
-                            </div>
+                            {/* Root Password - only shown for databases */}
+                            {installDialogType === 'database' && (
+                                <div className="space-y-2 md:col-span-2">
+                                    <Label htmlFor="root_password">
+                                        Root Password <span className="text-red-500">*</span>
+                                    </Label>
+                                    <Input
+                                        id="root_password"
+                                        type="password"
+                                        value={data.root_password}
+                                        onChange={(e) => setData('root_password', e.target.value)}
+                                        required
+                                        placeholder="Enter a secure password"
+                                        disabled={processing}
+                                        autoComplete="new-password"
+                                    />
+                                    <p className="text-xs text-muted-foreground">Strong password required (minimum 8 characters).</p>
+                                    {errors.root_password && <div className="text-sm text-red-600">{errors.root_password}</div>}
+                                </div>
+                            )}
                         </div>
 
                         {/* Install Button */}
@@ -635,9 +639,9 @@ export default function Services({
                         <DialogDescription>
                             Update{' '}
                             {selectedService &&
-                                (availableDatabases?.[selectedService.type]?.name ||
-                                    availableCacheQueue?.[selectedService.type]?.name ||
-                                    selectedService.type)}{' '}
+                                (availableDatabases?.[selectedService.engine]?.name ||
+                                    availableCacheQueue?.[selectedService.engine]?.name ||
+                                    selectedService.engine)}{' '}
                             to a newer version.
                         </DialogDescription>
                     </DialogHeader>
@@ -777,9 +781,9 @@ export default function Services({
                             {selectedServiceForLogs && (
                                 <>
                                     Error log for{' '}
-                                    {availableDatabases?.[selectedServiceForLogs.type]?.name ||
-                                        availableCacheQueue?.[selectedServiceForLogs.type]?.name ||
-                                        selectedServiceForLogs.type}{' '}
+                                    {availableDatabases?.[selectedServiceForLogs.engine]?.name ||
+                                        availableCacheQueue?.[selectedServiceForLogs.engine]?.name ||
+                                        selectedServiceForLogs.engine}{' '}
                                     {selectedServiceForLogs.version}
                                 </>
                             )}

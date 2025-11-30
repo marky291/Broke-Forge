@@ -29,7 +29,7 @@ class DatabaseSchemaInstaller extends PackageInstaller implements \App\Packages\
     protected function commands(string $schemaName, string $characterSet, string $collation): array
     {
         $rootPassword = $this->database->root_password;
-        $databaseType = $this->database->type->value;
+        $databaseType = $this->database->engine->value;
 
         if (in_array($databaseType, ['mysql', 'mariadb'])) {
             return [

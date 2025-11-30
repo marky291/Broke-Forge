@@ -17,7 +17,7 @@ class RedisRemover extends PackageRemover implements \App\Packages\Core\Base\Ser
      */
     protected function markResourceAsFailed(string $errorMessage): void
     {
-        $this->server->databases()->where('type', 'redis')->latest()->first()?->update([
+        $this->server->databases()->where('engine', 'redis')->latest()->first()?->update([
             'status' => TaskStatus::Failed,
             'error_message' => $errorMessage,
         ]);
@@ -28,7 +28,7 @@ class RedisRemover extends PackageRemover implements \App\Packages\Core\Base\Ser
      */
     public function execute(): void
     {
-        $database = $this->server->databases()->where('type', 'redis')->latest()->first();
+        $database = $this->server->databases()->where('engine', 'redis')->latest()->first();
         $port = $database?->port ?? 6379;
 
         $this->remove($this->commands($port));
