@@ -1,22 +1,5 @@
 {
-  "permissions": {
-    "allow": [
-      "Bash",
-      "*",
-      "mcp__playwright__browser_fill_form",
-      "mcp__playwright__browser_take_screenshot",
-      "mcp__laravel-boost__tinker",
-      "mcp__laravel-boost__database-schema",
-      "mcp__laravel-boost__read-log-entries",
-      "mcp__laravel-boost__browser-logs",
-      "mcp__laravel-boost__database-query",
-      "mcp__microsoft-playwright-mcp__browser_navigate",
-      "mcp__microsoft-playwright-mcp__browser_resize",
-      "mcp__microsoft-playwright-mcp__browser_take_screenshot",
-      "mcp__microsoft-playwright-mcp__browser_click"
-    ]
-  },
-  "enabledMcpjsonServers": [
+  "disabledMcpjsonServers": [
     "laravel-boost",
     "herd"
   ]

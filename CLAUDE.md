@@ -1,111 +1,3 @@
-# Guidelines
-
-- Always use Laravel boost MCP.
-- Always write tests when working on code.
-- Always use claude skill for test related prompts.
-- Always maintain test suite.
-- Always use claude skill for laravel testing when writing tests.
-- Always ensure authorization gates on controllers - Users can only view and manage their own servers and sites, protecting user data and preventing unauthorized access.
-- Always ensure the React frontend matches the backend structure and naming for consistency.
-- 
-## Reverb Package Lifecycle Pattern
-
-**⚠️ MANDATORY for packages with real-time status updates** - When building packages that require real-time status updates (firewall rules, scheduled tasks, SSL certificates, deployments, etc.), you **MUST** use the **Reverb Package Lifecycle** pattern:
-
-1. **Create database record FIRST** with `status: 'pending'` before dispatching job
-2. **Job receives record ID** (not data array) and manages status lifecycle: pending → installing → active/failed
-3. **Model events automatically broadcast** changes via Laravel Reverb (never manually dispatch events)
-4. **Frontend uses useEcho + router.reload()** to fetch fresh data when WebSocket events arrive
-
-**Key principle:** Event-driven architecture where model changes automatically trigger broadcasts, and frontend fetches updated resource data via Inertia. **No polling required.**
-
-### When to Use This Pattern
-
-**✅ USE when:**
-- Users need to see progress in **real-time**
-- Operation takes **>2 seconds** to complete
-- Resource has status transitions (pending → installing → active/failed)
-- Creating **user-facing resources** (firewall rules, tasks, certificates)
-
-**❌ DON'T USE when:**
-- Initial server provisioning (one-time setup)
-
-### Quick Implementation Checklist
-
-1. Add `status` column to migration (string, default 'pending')
-2. Add `'status'` to model's `$fillable`
-3. Add model `booted()` with `created()`, `updated()`, `deleted()` event listeners
-4. Controller creates record with `status: 'pending'`, then dispatches job with record ID
-5. Job accepts record ID, updates status through lifecycle
-6. Frontend uses `useEcho()` + `router.reload()` for real-time updates
-7. Write tests for all status transitions
-
-**Reference Implementation:** `app/Packages/Services/Firewall/FirewallRuleInstallerJob.php` + `app/Models/ServerFirewallRule.php`
-
-## Package Organization Structure
-
-**⚠️ MANDATORY** - All service-related classes must be organized within `app/Packages/Services/{ServiceName}/` following Laravel best practices for folder structure:
-
-### Directory Structure
-```
-app/Packages/Services/{ServiceName}/
-├── Commands/          # Artisan commands (auto-discovered via bootstrap/app.php)
-├── Events/            # Domain events
-├── Listeners/         # Event listeners
-├── Notifications/     # Email/notification classes
-├── Jobs/              # Background jobs (suffix: Job.php)
-└── Services/          # Service classes (no suffix)
-```
-
-### Naming Conventions
-- **Jobs**: Suffix with `Job` (e.g., `FirewallRuleInstallerJob.php`)
-- **Commands**: Suffix with `Command` (e.g., `EvaluateServerMonitorsCommand.php`)
-- **Events**: Suffix with `Event` (e.g., `MonitorTriggeredEvent.php`)
-- **Listeners**: Descriptive name (e.g., `SendMonitorAlertNotification.php`)
-- **Notifications**: Suffix with `Notification` (e.g., `MonitorTriggeredNotification.php`)
-- **Services**: Descriptive name based on purpose (e.g., `FirewallRuleInstaller.php`)
-
-### Namespace Structure
-```php
-// Events
-namespace App\Packages\Services\{ServiceName}\Events;
-
-// Listeners
-namespace App\Packages\Services\{ServiceName}\Listeners;
-
-// Notifications
-namespace App\Packages\Services\{ServiceName}\Notifications;
-
-// Commands
-namespace App\Packages\Services\{ServiceName}\Commands;
-
-// Jobs
-namespace App\Packages\Services\{ServiceName};
-```
-
-### Auto-Discovery Configuration
-Commands in `app/Packages/` are auto-discovered via `bootstrap/app.php`:
-
-```php
-->withCommands([
-    __DIR__.'/../app/Packages',
-])
-```
-
-### Listeners Registration
-Event listeners must be registered in `app/Providers/EventServiceProvider.php`:
-
-```php
-protected $subscribe = [
-    \App\Packages\Services\{ServiceName}\Listeners\ListenerClass::class,
-];
-```
-
-### Example Implementations
-- **Monitoring**: `app/Packages/Services/Monitoring/` - Events, Listeners, Notifications, Commands for server monitoring alerts
-- **Firewall**: `app/Packages/Services/Firewall/` - Jobs and services for firewall rule management
-- **Scheduler**: `app/Packages/Services/Scheduler/` - Jobs and services for scheduled task management
-
 <laravel-boost-guidelines>
 === foundation rules ===
 
@@ -116,12 +8,13 @@ The Laravel Boost guidelines are specifically curated by Laravel maintainers for
 ## Foundational Context
 This application is a Laravel application and its main Laravel ecosystems package & versions are below. You are an expert with them all. Ensure you abide by these specific packages & versions.
 
-- php - 8.4.12
+- php - 8.4.15
 - inertiajs/inertia-laravel (INERTIA) - v2
 - laravel/cashier (CASHIER) - v16
 - laravel/framework (LARAVEL) - v12
 - laravel/horizon (HORIZON) - v5
 - laravel/prompts (PROMPTS) - v0
+- laravel/reverb (REVERB) - v1
 - laravel/socialite (SOCIALITE) - v5
 - laravel/wayfinder (WAYFINDER) - v0
 - laravel/mcp (MCP) - v0
@@ -135,7 +28,6 @@ This application is a Laravel application and its main Laravel ecosystems packag
 - eslint (ESLINT) - v9
 - laravel-echo (ECHO) - v2
 - prettier (PRETTIER) - v3
-
 
 ## Conventions
 - You must follow all existing code conventions used in this application. When creating or editing a file, check sibling files for the correct structure, approach, naming.
@@ -228,6 +120,14 @@ protected function isAccessible(User $user, ?string $path = null): bool
 - That being said, keys in an Enum should follow existing application Enum conventions.
 
 
+=== tests rules ===
+
+## Test Enforcement
+
+- Every change must be programmatically tested. Write a new test or update an existing test, then run the affected tests to make sure they pass.
+- Run the minimum number of tests needed to ensure code quality and speed. Use `php artisan test` with a specific filename or filter.
+
+
 === inertia-laravel/core rules ===
 
 ## Inertia Core
@@ -273,7 +173,7 @@ Route::get('/users', function () {
 ## Do Things the Laravel Way
 
 - Use `php artisan make:` commands to create new files (i.e. migrations, controllers, models, etc.). You can list available Artisan commands using the `list-artisan-commands` tool.
-- If you're creating a generic PHP class, use `artisan make:class`.
+- If you're creating a generic PHP class, use `php artisan make:class`.
 - Pass `--no-interaction` to all Artisan commands to ensure they work without user input. You should also pass the correct `--options` to ensure correct behavior.
 
 ### Database
@@ -308,7 +208,7 @@ Route::get('/users', function () {
 ### Testing
 - When creating models for tests, use the factories for the models. Check if the factory has custom states that can be used before manually setting up the model.
 - Faker: Use methods such as `$this->faker->word()` or `fake()->randomDigit()`. Follow existing conventions whether to use `$this->faker` or `fake()`.
-- When creating tests, make use of `php artisan make:test [options] <name>` to create a feature test, and pass `--unit` to create a unit test. Most tests should be feature tests.
+- When creating tests, make use of `php artisan make:test [options] {name}` to create a feature test, and pass `--unit` to create a unit test. Most tests should be feature tests.
 
 ### Vite Error
 - If you receive an "Illuminate\Foundation\ViteException: Unable to locate file in Vite manifest" error, you can run `npm run build` or ask the user to run `npm run dev` or `composer run dev`.
@@ -336,6 +236,60 @@ Route::get('/users', function () {
 - Casts can and likely should be set in a `casts()` method on a model rather than the `$casts` property. Follow existing conventions from other models.
 
 
+=== wayfinder/core rules ===
+
+## Laravel Wayfinder
+
+Wayfinder generates TypeScript functions and types for Laravel controllers and routes which you can import into your client side code. It provides type safety and automatic synchronization between backend routes and frontend code.
+
+### Development Guidelines
+- Always use `search-docs` to check wayfinder correct usage before implementing any features.
+- Always Prefer named imports for tree-shaking (e.g., `import { show } from '@/actions/...'`)
+- Avoid default controller imports (prevents tree-shaking)
+- Run `php artisan wayfinder:generate` after route changes if Vite plugin isn't installed
+
+### Feature Overview
+- Form Support: Use `.form()` with `--with-form` flag for HTML form attributes — `<form {...store.form()}>` → `action="/posts" method="post"`
+- HTTP Methods: Call `.get()`, `.post()`, `.patch()`, `.put()`, `.delete()` for specific methods — `show.head(1)` → `{ url: "/posts/1", method: "head" }`
+- Invokable Controllers: Import and invoke directly as functions. For example, `import StorePost from '@/actions/.../StorePostController'; StorePost()`
+- Named Routes: Import from `@/routes/` for non-controller routes. For example, `import { show } from '@/routes/post'; show(1)` for route name `post.show`
+- Parameter Binding: Detects route keys (e.g., `{post:slug}`) and accepts matching object properties — `show("my-post")` or `show({ slug: "my-post" })`
+- Query Merging: Use `mergeQuery` to merge with `window.location.search`, set values to `null` to remove — `show(1, { mergeQuery: { page: 2, sort: null } })`
+- Query Parameters: Pass `{ query: {...} }` in options to append params — `show(1, { query: { page: 1 } })` → `"/posts/1?page=1"`
+- Route Objects: Functions return `{ url, method }` shaped objects — `show(1)` → `{ url: "/posts/1", method: "get" }`
+- URL Extraction: Use `.url()` to get URL string — `show.url(1)` → `"/posts/1"`
+
+### Example Usage
+
+<code-snippet name="Wayfinder Basic Usage" lang="typescript">
+    // Import controller methods (tree-shakable)
+    import { show, store, update } from '@/actions/App/Http/Controllers/PostController'
+
+    // Get route object with URL and method...
+    show(1) // { url: "/posts/1", method: "get" }
+
+    // Get just the URL...
+    show.url(1) // "/posts/1"
+
+    // Use specific HTTP methods...
+    show.get(1) // { url: "/posts/1", method: "get" }
+    show.head(1) // { url: "/posts/1", method: "head" }
+
+    // Import named routes...
+    import { show as postShow } from '@/routes/post' // For route name 'post.show'
+    postShow(1) // { url: "/posts/1", method: "get" }
+</code-snippet>
+
+
+### Wayfinder + Inertia
+If your application uses the `<Form>` component from Inertia, you can use Wayfinder to generate form action and method automatically.
+<code-snippet name="Wayfinder Form Component (React)" lang="typescript">
+
+<Form {...store.form()}><input name="title" /></Form>
+
+</code-snippet>
+
+
 === pint/core rules ===
 
 ## Laravel Pint Code Formatter
@@ -348,7 +302,7 @@ Route::get('/users', function () {
 
 ## PHPUnit Core
 
-- This application uses PHPUnit for testing. All tests must be written as PHPUnit classes. Use `php artisan make:test --phpunit <name>` to create a new test.
+- This application uses PHPUnit for testing. All tests must be written as PHPUnit classes. Use `php artisan make:test --phpunit {name}` to create a new test.
 - If you see a test using "Pest", convert it to PHPUnit.
 - Every time a test has been updated, run that singular test.
 - When the tests relating to your feature are passing, ask the user if they would like to also run the entire test suite to make sure everything is still passing.
@@ -445,6 +399,13 @@ export default () => (
 
 - Always use Tailwind CSS v4 - do not use the deprecated utilities.
 - `corePlugins` is not supported in Tailwind v4.
+- In Tailwind v4, configuration is CSS-first using the `@theme` directive — no separate `tailwind.config.js` file is needed.
+<code-snippet name="Extending Theme in CSS" lang="css">
+@theme {
+  --color-brand: oklch(0.72 0.11 178);
+}
+</code-snippet>
+
 - In Tailwind v4, you import Tailwind using a regular CSS `@import` statement, not using the `@tailwind` directives used in v3:
 
 <code-snippet name="Tailwind v4 Import Tailwind Diff" lang="diff">
@@ -472,12 +433,4 @@ export default () => (
 | overflow-ellipsis | text-ellipsis |
 | decoration-slice | box-decoration-slice |
 | decoration-clone | box-decoration-clone |
-
-
-=== tests rules ===
-
-## Test Enforcement
-
-- Every change must be programmatically tested. Write a new test or update an existing test, then run the affected tests to make sure they pass.
-- Run the minimum number of tests needed to ensure code quality and speed. Use `php artisan test` with a specific filename or filter.
 </laravel-boost-guidelines>

@@ -1,14 +1,9 @@
 {
     "agents": [
-        "claude_code",
-        "codex",
-        "copilot"
+        "claude_code"
     ],
     "editors": [
-        "claude_code",
-        "phpstorm",
-        "vscode"
+        "claude_code"
     ],
-    "guidelines": [],
-    "herd_mcp": true
+    "guidelines": []
 }
