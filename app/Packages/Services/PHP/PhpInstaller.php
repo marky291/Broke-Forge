@@ -57,6 +57,7 @@ class PhpInstaller extends PackageInstaller implements ServerPackage
             "php{$phpVersion->value}-soap",
             "php{$phpVersion->value}-opcache",
             "php{$phpVersion->value}-readline",
+            "php{$phpVersion->value}-redis",
         ]);
 
         $this->install($this->commands($phpVersion, $phpPackages));

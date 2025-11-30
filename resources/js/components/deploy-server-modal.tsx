@@ -61,7 +61,7 @@ interface DeployServerModalProps {
 
 export default function DeployServerModal({ trigger }: DeployServerModalProps) {
     const [defaultName, setDefaultName] = useState<string>('');
-    const [phpVersion, setPhpVersion] = useState<string>('8.3');
+    const [phpVersion, setPhpVersion] = useState<string>('8.4');
     const [provider, setProvider] = useState<ServerProvider>('custom');
     const [addSshKeyToGithub, setAddSshKeyToGithub] = useState<boolean>(true);
     const [open, setOpen] = useState(false);
@@ -70,7 +70,7 @@ export default function DeployServerModal({ trigger }: DeployServerModalProps) {
 
     const handleDialogOpen = () => {
         setDefaultName(generateFriendlyName());
-        setPhpVersion('8.3');
+        setPhpVersion('8.4');
         setProvider('custom');
         setAddSshKeyToGithub(true);
     };
@@ -145,8 +145,9 @@ export default function DeployServerModal({ trigger }: DeployServerModalProps) {
                                         <SelectValue placeholder="Select PHP version" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="8.4">PHP 8.4 (Latest)</SelectItem>
-                                        <SelectItem value="8.3">PHP 8.3 (Stable)</SelectItem>
+                                        <SelectItem value="8.5">PHP 8.5</SelectItem>
+                                        <SelectItem value="8.4">PHP 8.4 (Default)</SelectItem>
+                                        <SelectItem value="8.3">PHP 8.3</SelectItem>
                                         <SelectItem value="8.2">PHP 8.2</SelectItem>
                                         <SelectItem value="8.1">PHP 8.1</SelectItem>
                                     </SelectContent>

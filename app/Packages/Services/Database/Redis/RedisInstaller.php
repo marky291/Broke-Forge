@@ -15,14 +15,14 @@ class RedisInstaller extends PackageInstaller implements \App\Packages\Core\Base
     /**
      * Execute the Redis server installation
      */
-    public function execute(string $version, int $port, string $password): void
+    public function execute(string $version, int $port, ?string $password): void
     {
         $this->install($this->commands($version, $port, $password));
     }
 
-    protected function commands(string $version, int $port, string $password): array
+    protected function commands(string $version, int $port, ?string $password): array
     {
-        return [
+        $commands = [
             // Update package lists
             'DEBIAN_FRONTEND=noninteractive apt-get update -y',
 
@@ -32,9 +32,8 @@ class RedisInstaller extends PackageInstaller implements \App\Packages\Core\Base
             // Install Redis server
             'DEBIAN_FRONTEND=noninteractive apt-get install -y redis-server',
 
-            // Configure Redis for remote access and authentication
+            // Configure Redis for remote access
             "sed -i 's/^bind .*/bind 0.0.0.0/' /etc/redis/redis.conf",
-            "sed -i 's/^# requirepass .*/requirepass {$password}/' /etc/redis/redis.conf",
             "sed -i 's/^port .*/port {$port}/' /etc/redis/redis.conf",
             "sed -i 's/^supervised no/supervised systemd/' /etc/redis/redis.conf",
 
@@ -43,7 +42,14 @@ class RedisInstaller extends PackageInstaller implements \App\Packages\Core\Base
 
             // Set max memory policy (LRU eviction)
             "echo 'maxmemory-policy allkeys-lru' >> /etc/redis/redis.conf",
+        ];
 
+        // Configure authentication if password is provided
+        if ($password !== null) {
+            $commands[] = "sed -i 's/^# requirepass .*/requirepass {$password}/' /etc/redis/redis.conf";
+        }
+
+        $commands = array_merge($commands, [
             // Create backup directory
             'mkdir -p /var/backups/redis',
             'chown redis:redis /var/backups/redis',
@@ -56,8 +62,11 @@ class RedisInstaller extends PackageInstaller implements \App\Packages\Core\Base
 
             // Verify Redis is running
             'systemctl status redis-server --no-pager',
-            "redis-cli -p {$port} -a {$password} ping",
+            $password !== null
+                ? "redis-cli -p {$port} -a {$password} ping"
+                : "redis-cli -p {$port} ping",
+        ]);
 
-        ];
+        return $commands;
     }
 }

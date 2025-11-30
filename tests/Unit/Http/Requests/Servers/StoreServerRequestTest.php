@@ -4,6 +4,7 @@ namespace Tests\Unit\Http\Requests\Servers;
 
 use App\Enums\ServerProvider;
 use App\Http\Requests\Servers\StoreServerRequest;
+use App\Models\AvailablePhpVersion;
 use App\Models\Server;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -13,6 +14,14 @@ use Tests\TestCase;
 class StoreServerRequestTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Seed PHP versions for testing
+        $this->artisan('db:seed', ['--class' => 'AvailablePhpVersionSeeder']);
+    }
 
     /**
      * Test validation passes with all valid data.
@@ -390,7 +399,7 @@ class StoreServerRequestTest extends TestCase
     {
         // Arrange
         $request = new StoreServerRequest;
-        $validVersions = ['8.1', '8.2', '8.3', '8.4'];
+        $validVersions = AvailablePhpVersion::active()->pluck('version')->toArray();
         $counter = 10;
 
         foreach ($validVersions as $version) {

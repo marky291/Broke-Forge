@@ -22,38 +22,8 @@ class AvailablePhpVersionFactory extends Factory
             'is_default' => true,
             'is_deprecated' => false,
             'eol_date' => '2028-12-31',
-            'sort_order' => 6,
+            'sort_order' => 4,
         ];
-    }
-
-    /**
-     * Indicate that the PHP version is 7.4.
-     */
-    public function php74(): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'version' => '7.4',
-            'display_name' => 'PHP 7.4',
-            'is_default' => false,
-            'is_deprecated' => true,
-            'eol_date' => '2022-11-28',
-            'sort_order' => 1,
-        ]);
-    }
-
-    /**
-     * Indicate that the PHP version is 8.0.
-     */
-    public function php80(): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'version' => '8.0',
-            'display_name' => 'PHP 8.0',
-            'is_default' => false,
-            'is_deprecated' => true,
-            'eol_date' => '2023-11-26',
-            'sort_order' => 2,
-        ]);
     }
 
     /**
@@ -67,7 +37,7 @@ class AvailablePhpVersionFactory extends Factory
             'is_default' => false,
             'is_deprecated' => false,
             'eol_date' => '2025-12-31',
-            'sort_order' => 3,
+            'sort_order' => 1,
         ]);
     }
 
@@ -82,7 +52,7 @@ class AvailablePhpVersionFactory extends Factory
             'is_default' => false,
             'is_deprecated' => false,
             'eol_date' => '2026-12-31',
-            'sort_order' => 4,
+            'sort_order' => 2,
         ]);
     }
 
@@ -97,7 +67,7 @@ class AvailablePhpVersionFactory extends Factory
             'is_default' => false,
             'is_deprecated' => false,
             'eol_date' => '2027-12-31',
-            'sort_order' => 5,
+            'sort_order' => 3,
         ]);
     }
 
@@ -112,7 +82,7 @@ class AvailablePhpVersionFactory extends Factory
             'is_default' => true,
             'is_deprecated' => false,
             'eol_date' => '2028-12-31',
-            'sort_order' => 6,
+            'sort_order' => 4,
         ]);
     }
 
@@ -127,7 +97,7 @@ class AvailablePhpVersionFactory extends Factory
             'is_default' => false,
             'is_deprecated' => false,
             'eol_date' => null,
-            'sort_order' => 7,
+            'sort_order' => 5,
         ]);
     }
 

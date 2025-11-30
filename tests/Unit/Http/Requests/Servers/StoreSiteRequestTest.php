@@ -357,7 +357,7 @@ class StoreSiteRequestTest extends TestCase
         $server = Server::factory()->create(['user_id' => $user->id]);
 
         // Install all PHP versions that will be tested
-        $validVersions = ['7.4', '8.0', '8.1', '8.2', '8.3'];
+        $validVersions = ['8.1', '8.2', '8.3', '8.4', '8.5'];
         foreach ($validVersions as $version) {
             $this->installPhpVersion($server, $version);
         }

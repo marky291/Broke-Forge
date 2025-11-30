@@ -4,8 +4,6 @@ namespace App\Packages\Enums;
 
 enum PhpVersion: string
 {
-    case PHP74 = '7.4';
-    case PHP80 = '8.0';
     case PHP81 = '8.1';
     case PHP82 = '8.2';
     case PHP83 = '8.3';

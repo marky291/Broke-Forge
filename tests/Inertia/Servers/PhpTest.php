@@ -3,6 +3,7 @@
 namespace Tests\Inertia\Servers;
 
 use App\Enums\TaskStatus;
+use App\Models\AvailablePhpVersion;
 use App\Models\Server;
 use App\Models\ServerPhp;
 use App\Models\ServerPhpModule;
@@ -532,8 +533,8 @@ class PhpTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create(['user_id' => $user->id]);
 
-        // All versions from AvailablePhpVersion (including deprecated)
-        $availableVersions = ['7.4', '8.0', '8.1', '8.2', '8.3', '8.4', '8.5'];
+        // All active versions from AvailablePhpVersion
+        $availableVersions = AvailablePhpVersion::active()->pluck('version')->toArray();
 
         // Act & Assert - test each available version
         foreach ($availableVersions as $version) {

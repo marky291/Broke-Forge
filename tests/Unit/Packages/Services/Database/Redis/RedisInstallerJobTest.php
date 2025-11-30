@@ -198,4 +198,24 @@ class RedisInstallerJobTest extends TestCase
         $this->assertEquals(3306, $database->port);
         $this->assertEquals($server->id, $database->server_id);
     }
+
+    /**
+     * Test job can be constructed with null root_password (Redis allows passwordless auth).
+     */
+    public function test_job_accepts_null_root_password(): void
+    {
+        // Arrange
+        $server = Server::factory()->create();
+        $database = ServerDatabase::factory()->create([
+            'server_id' => $server->id,
+            'root_password' => null,
+        ]);
+
+        // Act
+        $job = new RedisInstallerJob($server, $database);
+
+        // Assert
+        $this->assertInstanceOf(RedisInstallerJob::class, $job);
+        $this->assertNull($job->serverDatabase->root_password);
+    }
 }

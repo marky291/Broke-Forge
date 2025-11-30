@@ -4,6 +4,7 @@ namespace Tests\Feature\Http\Controllers;
 
 use App\Enums\TaskStatus;
 use App\Models\Server;
+use App\Models\ServerPhp;
 use App\Models\ServerSupervisorTask;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -166,12 +167,17 @@ class ServerSupervisorControllerTest extends TestCase
             'user_id' => $user->id,
             'supervisor_status' => TaskStatus::Active,
         ]);
+        ServerPhp::factory()->create([
+            'server_id' => $server->id,
+            'version' => '8.4',
+            'status' => 'active',
+        ]);
 
         // Act
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/supervisor/tasks", [
                 'name' => 'Queue Worker',
-                'command' => 'php artisan queue:work',
+                'command' => 'php8.4 artisan queue:work',
                 'working_directory' => '/home/brokeforge',
                 'processes' => 2,
                 'user' => 'brokeforge',
@@ -186,7 +192,7 @@ class ServerSupervisorControllerTest extends TestCase
         $this->assertDatabaseHas('server_supervisor_tasks', [
             'server_id' => $server->id,
             'name' => 'Queue Worker',
-            'command' => 'php artisan queue:work',
+            'command' => 'php8.4 artisan queue:work',
             'working_directory' => '/home/brokeforge',
             'processes' => 2,
         ]);
@@ -402,11 +408,11 @@ class ServerSupervisorControllerTest extends TestCase
             'supervisor_status' => null,
         ]);
 
-        // Act
+        // Act - Use non-PHP command to test authorization without PHP validation
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/supervisor/tasks", [
                 'name' => 'Queue Worker',
-                'command' => 'php artisan queue:work',
+                'command' => 'node server.js',
                 'working_directory' => '/home/brokeforge',
                 'processes' => 1,
                 'user' => 'brokeforge',
@@ -431,11 +437,11 @@ class ServerSupervisorControllerTest extends TestCase
             'supervisor_status' => TaskStatus::Active,
         ]);
 
-        // Act
+        // Act - Use non-PHP command to test authorization without PHP validation
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/supervisor/tasks", [
                 'name' => 'Unauthorized Task',
-                'command' => 'php artisan test',
+                'command' => 'npm run build',
                 'working_directory' => '/home/brokeforge',
                 'processes' => 1,
                 'user' => 'brokeforge',

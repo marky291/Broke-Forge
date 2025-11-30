@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Packages\Services\Sites\Command\Rules\ValidPhpCommand;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateSupervisorTaskRequest extends FormRequest
@@ -21,9 +22,11 @@ class UpdateSupervisorTaskRequest extends FormRequest
      */
     public function rules(): array
     {
+        $server = $this->route('server');
+
         return [
             'name' => ['required', 'string', 'max:255'],
-            'command' => ['required', 'string', 'max:1000'],
+            'command' => ['required', 'string', 'max:1000', new ValidPhpCommand($server)],
             'working_directory' => ['required', 'string', 'max:500'],
             'processes' => ['required', 'integer', 'min:1', 'max:20'],
             'user' => ['required', 'string', 'max:255'],

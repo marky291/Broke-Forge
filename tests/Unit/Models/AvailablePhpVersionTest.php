@@ -25,9 +25,7 @@ class AvailablePhpVersionTest extends TestCase
     public function test_all_seeded_versions_exist(): void
     {
         // Act & Assert
-        $this->assertDatabaseCount('available_php_versions', 7);
-        $this->assertDatabaseHas('available_php_versions', ['version' => '7.4']);
-        $this->assertDatabaseHas('available_php_versions', ['version' => '8.0']);
+        $this->assertDatabaseCount('available_php_versions', 5);
         $this->assertDatabaseHas('available_php_versions', ['version' => '8.1']);
         $this->assertDatabaseHas('available_php_versions', ['version' => '8.2']);
         $this->assertDatabaseHas('available_php_versions', ['version' => '8.3']);
@@ -53,7 +51,7 @@ class AvailablePhpVersionTest extends TestCase
     public function test_is_deprecated_is_cast_to_boolean(): void
     {
         // Arrange
-        $version = AvailablePhpVersion::where('version', '7.4')->first();
+        $version = AvailablePhpVersion::factory()->deprecated()->create(['version' => '7.0']);
 
         // Act & Assert
         $this->assertIsBool($version->is_deprecated);
@@ -125,7 +123,7 @@ class AvailablePhpVersionTest extends TestCase
     public function test_is_deprecated_returns_true_for_deprecated_version(): void
     {
         // Arrange
-        $version = AvailablePhpVersion::where('version', '7.4')->first();
+        $version = AvailablePhpVersion::factory()->deprecated()->create(['version' => '7.0']);
 
         // Act & Assert
         $this->assertTrue($version->isDeprecated());
@@ -149,7 +147,7 @@ class AvailablePhpVersionTest extends TestCase
     public function test_is_end_of_life_returns_true_for_past_eol_date(): void
     {
         // Arrange
-        $version = AvailablePhpVersion::where('version', '7.4')->first();
+        $version = AvailablePhpVersion::factory()->deprecated()->create(['version' => '7.0']);
 
         // Act & Assert
         $this->assertTrue($version->isEndOfLife());
@@ -184,13 +182,15 @@ class AvailablePhpVersionTest extends TestCase
      */
     public function test_active_scope_excludes_deprecated_versions(): void
     {
+        // Arrange - add a deprecated version to test exclusion
+        AvailablePhpVersion::factory()->deprecated()->create(['version' => '7.0']);
+
         // Act
         $activeVersions = AvailablePhpVersion::active()->get();
 
         // Assert
         $this->assertCount(5, $activeVersions);
-        $this->assertFalse($activeVersions->contains('version', '7.4'));
-        $this->assertFalse($activeVersions->contains('version', '8.0'));
+        $this->assertFalse($activeVersions->contains('version', '7.0'));
         $this->assertTrue($activeVersions->contains('version', '8.1'));
         $this->assertTrue($activeVersions->contains('version', '8.2'));
         $this->assertTrue($activeVersions->contains('version', '8.3'));
@@ -207,38 +207,8 @@ class AvailablePhpVersionTest extends TestCase
         $orderedVersions = AvailablePhpVersion::ordered()->get();
 
         // Assert
-        $this->assertEquals('7.4', $orderedVersions->first()->version);
+        $this->assertEquals('8.1', $orderedVersions->first()->version);
         $this->assertEquals('8.5', $orderedVersions->last()->version);
-    }
-
-    /**
-     * Test that PHP 7.4 is deprecated.
-     */
-    public function test_php_74_is_deprecated(): void
-    {
-        // Arrange
-        $version = AvailablePhpVersion::where('version', '7.4')->first();
-
-        // Act & Assert
-        $this->assertTrue($version->isDeprecated());
-        $this->assertTrue($version->isEndOfLife());
-        $this->assertFalse($version->isDefault());
-        $this->assertEquals('PHP 7.4', $version->display_name);
-    }
-
-    /**
-     * Test that PHP 8.0 is deprecated.
-     */
-    public function test_php_80_is_deprecated(): void
-    {
-        // Arrange
-        $version = AvailablePhpVersion::where('version', '8.0')->first();
-
-        // Act & Assert
-        $this->assertTrue($version->isDeprecated());
-        $this->assertTrue($version->isEndOfLife());
-        $this->assertFalse($version->isDefault());
-        $this->assertEquals('PHP 8.0', $version->display_name);
     }
 
     /**

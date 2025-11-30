@@ -4,6 +4,7 @@ namespace Tests\Feature\Http\Controllers;
 
 use App\Enums\TaskStatus;
 use App\Models\Server;
+use App\Models\ServerPhp;
 use App\Models\ServerScheduledTask;
 use App\Models\ServerScheduledTaskRun;
 use App\Models\User;
@@ -354,12 +355,17 @@ class ServerSchedulerControllerTest extends TestCase
             'user_id' => $user->id,
             'scheduler_status' => TaskStatus::Active,
         ]);
+        ServerPhp::factory()->create([
+            'server_id' => $server->id,
+            'version' => '8.4',
+            'status' => 'active',
+        ]);
 
         // Act
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/scheduler/tasks", [
                 'name' => 'Daily Backup',
-                'command' => 'php artisan backup:run',
+                'command' => 'php8.4 artisan backup:run',
                 'frequency' => 'daily',
                 'send_notifications' => false,
                 'timeout' => 300,
@@ -372,7 +378,7 @@ class ServerSchedulerControllerTest extends TestCase
         $this->assertDatabaseHas('server_scheduled_tasks', [
             'server_id' => $server->id,
             'name' => 'Daily Backup',
-            'command' => 'php artisan backup:run',
+            'command' => 'php8.4 artisan backup:run',
             'frequency' => 'daily',
             'timeout' => 300,
         ]);
@@ -513,12 +519,17 @@ class ServerSchedulerControllerTest extends TestCase
             'user_id' => $user->id,
             'scheduler_status' => TaskStatus::Active,
         ]);
+        ServerPhp::factory()->create([
+            'server_id' => $server->id,
+            'version' => '8.4',
+            'status' => 'active',
+        ]);
 
         // Act
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/scheduler/tasks", [
                 'name' => 'Custom Task',
-                'command' => 'php artisan test',
+                'command' => 'php8.4 artisan test',
                 'frequency' => 'custom',
                 'cron_expression' => '0 6 * * *',
                 'timeout' => 300,
@@ -573,11 +584,11 @@ class ServerSchedulerControllerTest extends TestCase
             'scheduler_status' => TaskStatus::Active,
         ]);
 
-        // Act
+        // Act - Use non-PHP command to test authorization without PHP validation
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/scheduler/tasks", [
                 'name' => 'Unauthorized Task',
-                'command' => 'php artisan test',
+                'command' => 'npm run build',
                 'frequency' => 'daily',
             ]);
 

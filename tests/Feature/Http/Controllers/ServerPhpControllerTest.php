@@ -335,10 +335,10 @@ class ServerPhpControllerTest extends TestCase
         $user = User::factory()->create();
         $server = Server::factory()->create(['user_id' => $user->id]);
 
-        // Act
+        // Act - try to install an unsupported PHP version
         $response = $this->actingAs($user)
             ->post("/servers/{$server->id}/php/install", [
-                'version' => '7.4',
+                'version' => '5.6',
             ]);
 
         // Assert

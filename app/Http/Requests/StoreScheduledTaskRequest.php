@@ -5,6 +5,7 @@ namespace App\Http\Requests;
 use App\Enums\ScheduleFrequency;
 use App\Packages\Services\Sites\Command\Rules\SafeCommand;
 use App\Packages\Services\Sites\Command\Rules\ValidCronExpression;
+use App\Packages\Services\Sites\Command\Rules\ValidPhpCommand;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -28,9 +29,11 @@ class StoreScheduledTaskRequest extends FormRequest
      */
     public function rules(): array
     {
+        $server = $this->route('server');
+
         return [
             'name' => ['required', 'string', 'max:255'],
-            'command' => ['required', 'string', 'max:1000', new SafeCommand],
+            'command' => ['required', 'string', 'max:1000', new SafeCommand, new ValidPhpCommand($server)],
             'frequency' => ['required', Rule::enum(ScheduleFrequency::class)],
             'cron_expression' => ['nullable', 'string', 'max:255', 'required_if:frequency,custom', new ValidCronExpression],
             'send_notifications' => ['boolean'],

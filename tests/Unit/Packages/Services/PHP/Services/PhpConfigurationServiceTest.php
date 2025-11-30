@@ -401,22 +401,23 @@ class PhpConfigurationServiceTest extends TestCase
 
         // Assert - Should return 5 active versions (8.1, 8.2, 8.3, 8.4, 8.5)
         $this->assertCount(5, $versions);
-        $this->assertArrayNotHasKey('7.4', $versions); // Deprecated
-        $this->assertArrayNotHasKey('8.0', $versions); // Deprecated
+        $this->assertArrayHasKey('8.1', $versions);
+        $this->assertArrayHasKey('8.2', $versions);
+        $this->assertArrayHasKey('8.3', $versions);
+        $this->assertArrayHasKey('8.4', $versions);
+        $this->assertArrayHasKey('8.5', $versions);
     }
 
     /**
-     * Test getAllVersions returns all PHP versions including deprecated.
+     * Test getAllVersions returns all PHP versions.
      */
-    public function test_get_all_versions_returns_all_php_versions_including_deprecated(): void
+    public function test_get_all_versions_returns_all_php_versions(): void
     {
         // Act
         $versions = PhpConfigurationService::getAllVersions();
 
-        // Assert - Should return all 7 versions
-        $this->assertCount(7, $versions);
-        $this->assertArrayHasKey('7.4', $versions);
-        $this->assertArrayHasKey('8.0', $versions);
+        // Assert - Should return all 5 versions
+        $this->assertCount(5, $versions);
         $this->assertArrayHasKey('8.1', $versions);
         $this->assertArrayHasKey('8.2', $versions);
         $this->assertArrayHasKey('8.3', $versions);
@@ -448,10 +449,13 @@ class PhpConfigurationServiceTest extends TestCase
         // Act
         $rules = PhpConfigurationService::getValidationRules();
 
-        // Assert - validation should accept deprecated versions too
+        // Assert - validation should accept all available versions
         $versionRule = $rules['version'];
-        $this->assertStringContainsString('7.4', $versionRule);
-        $this->assertStringContainsString('8.0', $versionRule);
+        $this->assertStringContainsString('8.1', $versionRule);
+        $this->assertStringContainsString('8.2', $versionRule);
+        $this->assertStringContainsString('8.3', $versionRule);
+        $this->assertStringContainsString('8.4', $versionRule);
+        $this->assertStringContainsString('8.5', $versionRule);
     }
 
     /**

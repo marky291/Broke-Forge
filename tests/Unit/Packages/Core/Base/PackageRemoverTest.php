@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Unit\Packages\Base;
+namespace Tests\Unit\Packages\Core\Base;
 
 use App\Models\Server;
 use App\Packages\Core\Base\PackageRemover;

@@ -280,12 +280,12 @@ class ServerPhpTest extends TestCase
         // Arrange & Act
         Event::fake();
         $php1 = ServerPhp::factory()->create(['version' => '8.3']);
-        $php2 = ServerPhp::factory()->create(['version' => '7.4']);
+        $php2 = ServerPhp::factory()->create(['version' => '8.1']);
         $php3 = ServerPhp::factory()->create(['version' => '8.2.15']);
 
         // Assert
         $this->assertEquals('8.3', $php1->version);
-        $this->assertEquals('7.4', $php2->version);
+        $this->assertEquals('8.1', $php2->version);
         $this->assertEquals('8.2.15', $php3->version);
     }
 

@@ -14,7 +14,7 @@ class ServerPhp extends Model
 
     protected $fillable = [
         'server_id',
-        'version', // e.g., "8.3", "7.4", "8.2.15"
+        'version', // e.g., "8.3", "8.1", "8.2.15"
         'is_cli_default', // Whether this is the default PHP version for CLI
         'is_site_default', // Whether this is the default PHP version for sites
         'status',

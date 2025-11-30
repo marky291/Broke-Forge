@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 /**
  * Represents an available PHP version that can be installed on servers.
  *
- * This model defines available PHP versions (7.4, 8.0, 8.1, etc.)
+ * This model defines available PHP versions (8.1, 8.2, 8.3, etc.)
  * with their deprecation status and end-of-life dates.
  */
 class AvailablePhpVersion extends Model

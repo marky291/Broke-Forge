@@ -636,6 +636,21 @@ export default function Tasks({
                                 placeholder="e.g., php artisan backup:run"
                                 required
                             />
+                            {server.phps.filter((php) => php.status === 'active').length > 0 && (
+                                <p className="text-xs text-muted-foreground">
+                                    Available PHP commands:{' '}
+                                    {server.phps
+                                        .filter((php) => php.status === 'active')
+                                        .map((php) => (
+                                            <code
+                                                key={php.id}
+                                                className="mx-0.5 rounded bg-neutral-100 px-1 py-0.5 font-mono dark:bg-neutral-800"
+                                            >
+                                                php{php.version}
+                                            </code>
+                                        ))}
+                                </p>
+                            )}
                             {scheduledErrors.command && <p className="text-sm text-red-600">{scheduledErrors.command}</p>}
                         </div>
 
@@ -736,6 +751,21 @@ export default function Tasks({
                                 placeholder="e.g., php artisan queue:work"
                                 required
                             />
+                            {server.phps.filter((php) => php.status === 'active').length > 0 && (
+                                <p className="text-xs text-muted-foreground">
+                                    Available PHP commands:{' '}
+                                    {server.phps
+                                        .filter((php) => php.status === 'active')
+                                        .map((php) => (
+                                            <code
+                                                key={php.id}
+                                                className="mx-0.5 rounded bg-neutral-100 px-1 py-0.5 font-mono dark:bg-neutral-800"
+                                            >
+                                                php{php.version}
+                                            </code>
+                                        ))}
+                                </p>
+                            )}
                             {workerErrors.command && <p className="text-sm text-red-600">{workerErrors.command}</p>}
                         </div>
 
@@ -841,6 +871,21 @@ export default function Tasks({
                                 placeholder="e.g., php artisan queue:work"
                                 required
                             />
+                            {server.phps.filter((php) => php.status === 'active').length > 0 && (
+                                <p className="text-xs text-muted-foreground">
+                                    Available PHP commands:{' '}
+                                    {server.phps
+                                        .filter((php) => php.status === 'active')
+                                        .map((php) => (
+                                            <code
+                                                key={php.id}
+                                                className="mx-0.5 rounded bg-neutral-100 px-1 py-0.5 font-mono dark:bg-neutral-800"
+                                            >
+                                                php{php.version}
+                                            </code>
+                                        ))}
+                                </p>
+                            )}
                             {editWorkerErrors.command && <p className="text-sm text-red-600">{editWorkerErrors.command}</p>}
                         </div>
 
