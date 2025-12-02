@@ -47,8 +47,10 @@ class SiteGitDeploymentJob extends Taskable
 
     protected function handleFailure(Model $model, \Exception $e): void
     {
-        // Don't store error output in database - it's in the remote log file
-        $this->updateStatus($model, $this->getFailedStatus());
+        // Only update status if not already failed (installer may have already handled it)
+        if ($model->fresh()->status !== TaskStatus::Failed) {
+            $this->updateStatus($model, $this->getFailedStatus());
+        }
 
         \Illuminate\Support\Facades\Log::error("{$this->getOperationName()} failed", array_merge(
             $this->getLogContext($model),
@@ -63,8 +65,7 @@ class SiteGitDeploymentJob extends Taskable
     {
         $model = $this->findModelForFailure();
 
-        if ($model) {
-            // Don't store error output in database - it's in the remote log file
+        if ($model && $model->status !== TaskStatus::Failed) {
             $this->updateStatus($model, $this->getFailedStatus());
         }
 

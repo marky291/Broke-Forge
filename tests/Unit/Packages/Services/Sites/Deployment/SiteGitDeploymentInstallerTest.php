@@ -2,9 +2,13 @@
 
 namespace Tests\Unit\Packages\Services\Sites\Deployment;
 
+use App\Enums\TaskStatus;
 use App\Models\Server;
+use App\Models\ServerDeployment;
+use App\Models\ServerSite;
 use App\Packages\Services\Sites\Deployment\SiteGitDeploymentInstaller;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use RuntimeException;
 use Tests\TestCase;
 
 class SiteGitDeploymentInstallerTest extends TestCase
@@ -213,5 +217,81 @@ class SiteGitDeploymentInstallerTest extends TestCase
 
         // Assert - should not be modified
         $this->assertEquals('cat /etc/php/8.3/fpm/php.ini', $result);
+    }
+
+    /**
+     * Test that execute re-throws exceptions after marking deployment as failed.
+     */
+    public function test_execute_rethrows_exception_when_install_fails(): void
+    {
+        // Arrange
+        $server = Server::factory()->create();
+        $site = ServerSite::factory()
+            ->withGit()
+            ->create(['server_id' => $server->id]);
+        $deployment = ServerDeployment::factory()
+            ->pending()
+            ->create([
+                'server_id' => $server->id,
+                'server_site_id' => $site->id,
+            ]);
+
+        $installer = $this->getMockBuilder(SiteGitDeploymentInstaller::class)
+            ->setConstructorArgs([$server])
+            ->onlyMethods(['install'])
+            ->getMock();
+
+        $installer->method('install')
+            ->willThrowException(new RuntimeException('Failed to clone repository'));
+
+        $installer->setSite($site);
+
+        // Assert - exception should be re-thrown
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Failed to clone repository');
+
+        // Act
+        $installer->execute($site, $deployment);
+    }
+
+    /**
+     * Test that execute marks deployment as failed when install fails.
+     */
+    public function test_execute_marks_deployment_as_failed_when_install_fails(): void
+    {
+        // Arrange
+        $server = Server::factory()->create();
+        $site = ServerSite::factory()
+            ->withGit()
+            ->create(['server_id' => $server->id]);
+        $deployment = ServerDeployment::factory()
+            ->pending()
+            ->create([
+                'server_id' => $server->id,
+                'server_site_id' => $site->id,
+            ]);
+
+        $installer = $this->getMockBuilder(SiteGitDeploymentInstaller::class)
+            ->setConstructorArgs([$server])
+            ->onlyMethods(['install'])
+            ->getMock();
+
+        $installer->method('install')
+            ->willThrowException(new RuntimeException('Failed to clone repository'));
+
+        $installer->setSite($site);
+
+        // Act - catch the exception to verify status
+        try {
+            $installer->execute($site, $deployment);
+        } catch (RuntimeException $e) {
+            // Expected
+        }
+
+        // Assert - deployment should be marked as failed
+        $deployment->refresh();
+        $this->assertEquals(TaskStatus::Failed, $deployment->status);
+        $this->assertEquals(1, $deployment->exit_code);
+        $this->assertNotNull($deployment->completed_at);
     }
 }
