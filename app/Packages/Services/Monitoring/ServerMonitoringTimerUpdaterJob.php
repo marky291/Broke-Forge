@@ -17,27 +17,6 @@ class ServerMonitoringTimerUpdaterJob implements ShouldQueue
 {
     use Queueable;
 
-    /**
-     * The number of seconds the job can run before timing out.
-     *
-     * @var int
-     */
-    public $timeout = 600;
-
-    /**
-     * The number of times the job may be attempted.
-     *
-     * @var int
-     */
-    public $tries = 0;
-
-    /**
-     * The number of exceptions to allow before failing.
-     *
-     * @var int
-     */
-    public $maxExceptions = 3;
-
     public function __construct(
         public Server $server,
         public int $intervalSeconds

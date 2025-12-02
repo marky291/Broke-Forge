@@ -17,11 +17,6 @@ use Illuminate\Database\Eloquent\Model;
 abstract class BaseFrameworkInstaller extends Taskable
 {
     /**
-     * The number of exceptions to allow before failing.
-     */
-    public $maxExceptions = 1;
-
-    /**
      * Track the current installation step for error reporting.
      */
     protected ?int $currentStep = null;

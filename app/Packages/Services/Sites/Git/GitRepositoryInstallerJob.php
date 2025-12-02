@@ -20,25 +20,6 @@ class GitRepositoryInstallerJob implements ShouldQueue
     use Queueable;
 
     /**
-     * The number of seconds the job can run before timing out.
-     */
-    public $timeout = 600;
-
-    /**
-     * The number of times the job may be attempted.
-     *
-     * @var int
-     */
-    public $tries = 0;
-
-    /**
-     * The number of exceptions to allow before failing.
-     *
-     * @var int
-     */
-    public $maxExceptions = 3;
-
-    /**
      * Create a new job instance.
      */
     public function __construct(

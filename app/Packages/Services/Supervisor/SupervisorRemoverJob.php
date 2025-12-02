@@ -18,12 +18,6 @@ class SupervisorRemoverJob implements ShouldQueue
 {
     use Queueable;
 
-    public $timeout = 600;
-
-    public $tries = 0;
-
-    public $maxExceptions = 3;
-
     public function __construct(
         public Server $server
     ) {}

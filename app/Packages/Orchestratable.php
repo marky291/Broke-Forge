@@ -25,23 +25,6 @@ abstract class Orchestratable implements ShouldQueue
     use Queueable;
 
     /**
-     * The number of seconds the job can run before timing out.
-     */
-    public $timeout = 600;
-
-    /**
-     * The number of times the job may be attempted.
-     * Set to 1 to fail immediately on exception (no retries).
-     * Orchestrators should not retry as sub-jobs may have already completed.
-     */
-    public $tries = 1;
-
-    /**
-     * The number of exceptions to allow before failing.
-     */
-    public $maxExceptions = 3;
-
-    /**
      * The server instance for this operation.
      */
     public Server $server;

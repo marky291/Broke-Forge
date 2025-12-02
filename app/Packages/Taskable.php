@@ -23,21 +23,6 @@ abstract class Taskable implements ShouldQueue
     use Queueable;
 
     /**
-     * The number of seconds the job can run before timing out.
-     */
-    public $timeout = 600;
-
-    /**
-     * The number of times the job may be attempted.
-     */
-    public $tries = 0;
-
-    /**
-     * The number of exceptions to allow before failing.
-     */
-    public $maxExceptions = 3;
-
-    /**
      * The server instance for this operation.
      */
     public Server $server;

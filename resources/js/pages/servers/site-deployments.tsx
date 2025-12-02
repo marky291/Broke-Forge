@@ -2,6 +2,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CardContainer } from '@/components/ui/card-container';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { PageHeader } from '@/components/ui/page-header';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
@@ -11,7 +12,7 @@ import { show as showServer } from '@/routes/servers';
 import { type BreadcrumbItem, type ServerSite } from '@/types';
 import { Head, router, useForm } from '@inertiajs/react';
 import { useEcho } from '@laravel/echo-react';
-import { CheckCircle2, Clock, Eye, GitCommitHorizontal, Loader2, Rocket, RotateCcw, XCircle } from 'lucide-react';
+import { CheckCircle2, Clock, FileText, GitCommitHorizontal, Loader2, MoreVertical, Rocket, RotateCcw, XCircle } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 type Deployment = {
@@ -454,7 +455,7 @@ export default function SiteDeployments({ site }: { site: ServerSite }) {
                                                     className={`text-sm ${deployment.status === 'failed' ? 'text-red-600 dark:text-red-400' : 'text-muted-foreground'}`}
                                                 >
                                                     {deployment.status === 'failed'
-                                                        ? 'Deployment failed - Click to view log'
+                                                        ? 'Deployment failed'
                                                         : deployment.branch
                                                           ? `Deployed from ${deployment.branch}`
                                                           : 'Deployment successful'}
@@ -477,17 +478,21 @@ export default function SiteDeployments({ site }: { site: ServerSite }) {
                                                     </Button>
                                                 )}
 
-                                                {/* View Output Button - Only show if log file exists */}
+                                                {/* Options Menu - Only show if log file exists */}
                                                 {deployment.log_file_path && (
-                                                    <Button
-                                                        size="sm"
-                                                        variant="ghost"
-                                                        onClick={() => handleViewOutput(deployment)}
-                                                        className="h-8 w-8 p-0"
-                                                        title="View deployment output"
-                                                    >
-                                                        <Eye className="h-4 w-4" />
-                                                    </Button>
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                                                <MoreVertical className="h-4 w-4" />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuItem onClick={() => handleViewOutput(deployment)}>
+                                                                <FileText className="mr-2 h-4 w-4" />
+                                                                View Error Log
+                                                            </DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
                                                 )}
                                             </div>
                                         </div>
