@@ -443,6 +443,9 @@ export default function SiteDeployments({ site }: { site: ServerSite }) {
                                                 )}
                                                 {deployment.status === 'success' && <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-500" />}
                                                 {deployment.status === 'failed' && <XCircle className="h-5 w-5 shrink-0 text-red-500" />}
+                                                {(deployment.status === 'pending' || deployment.status === 'updating') && (
+                                                    <Loader2 className="h-5 w-5 shrink-0 animate-spin text-blue-500" />
+                                                )}
                                                 {deployment.commit_sha && (
                                                     <div className="flex items-center gap-2">
                                                         <GitCommitHorizontal className="h-4 w-4 text-muted-foreground" />
@@ -456,9 +459,11 @@ export default function SiteDeployments({ site }: { site: ServerSite }) {
                                                 >
                                                     {deployment.status === 'failed'
                                                         ? 'Deployment failed'
-                                                        : deployment.branch
-                                                          ? `Deployed from ${deployment.branch}`
-                                                          : 'Deployment successful'}
+                                                        : deployment.status === 'pending' || deployment.status === 'updating'
+                                                          ? 'Deploying...'
+                                                          : deployment.branch
+                                                            ? `Deployed from ${deployment.branch}`
+                                                            : 'Deployment successful'}
                                                 </span>
                                             </div>
                                             <div className="flex items-center gap-3">
